@@ -15,6 +15,7 @@ import {
   Tag,
   Typography,
   message,
+  Spin,
 } from 'antd';
 import {
   CloseOutlined,
@@ -31,8 +32,7 @@ import {
   TeamOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { branches, products, shops as defaultShops } from '../../data/shopData';
-import { getLiveStores } from '../../data/frontEndControlStore';
+import { fetchShops, fetchBranches, fetchProducts } from '../../utils/apiconfig';
 import { publicTheme } from '../../utils/webTheme';
 import TelegramMiniAppModal from '../../components/web/shared/TelegramMiniAppModal';
 import RetailShopCard from '../../components/web/shared/RetailShopCard';
@@ -52,12 +52,38 @@ export default function Shops() {
   const [branch, setBranch] = useState('all');
   const [minRating, setMinRating] = useState('all');
   const [fastReplyOnly, setFastReplyOnly] = useState(false);
-  const [shops, setShops] = useState(getLiveStores);
+  const [shops, setShops] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const handleUpdate = (e) => setShops(e.detail);
-    window.addEventListener('aura_frontend_stores_updated', handleUpdate);
-    return () => window.removeEventListener('aura_frontend_stores_updated', handleUpdate);
+    let isMounted = true;
+    setLoading(true);
+    Promise.all([
+      fetchShops(),
+      fetchBranches(),
+      fetchProducts({ limit: 100 }),
+    ])
+      .then(([shopsRes, branchesRes, productsRes]) => {
+        if (!isMounted) return;
+        if (shopsRes?.success && Array.isArray(shopsRes.data)) {
+          setShops(shopsRes.data);
+        }
+        if (branchesRes?.success && Array.isArray(branchesRes.data)) {
+          setBranches(branchesRes.data);
+        }
+        if (productsRes?.success && Array.isArray(productsRes.data)) {
+          setProducts(productsRes.data);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.warn('Error loading shops from API:', err);
+        if (isMounted) setLoading(false);
+      });
+
+    return () => { isMounted = false; };
   }, []);
 
   const [previewShop, setPreviewShop] = useState(null);
@@ -136,18 +162,28 @@ export default function Shops() {
 
       const matchesSearch =
         !query ||
-        shop.name.toLowerCase().includes(query) ||
+        shop.name?.toLowerCase().includes(query) ||
         shop.summary?.toLowerCase().includes(query) ||
+        shop.tagline?.toLowerCase().includes(query) ||
+        shop.city?.toLowerCase().includes(query) ||
         (shop.branch && shop.branch.toLowerCase().includes(query)) ||
-        (shop.specialties && shop.specialties.some((s) => s.toLowerCase().includes(query)));
+        (shop.specialties && Array.isArray(shop.specialties) && shop.specialties.some((s) => s.toLowerCase().includes(query)));
 
-      const matchesBranch = branch === 'all' || shop.branch === branch;
+      const matchesBranch = branch === 'all' || shop.branch === branch || shop.city === branch;
       const matchesRating = minRating === 'all' || (shop.rating || 0) >= Number(minRating);
       const matchesFastReply = !fastReplyOnly || (shop.responseTime && shop.responseTime.includes('5 min'));
 
       return matchesSearch && matchesBranch && matchesRating && matchesFastReply;
     });
   }, [shops, search, branch, minRating, fastReplyOnly]);
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '100px 0' }}>
+        <Spin size="large" tip="Loading verified suppliers from database..." />
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: '100%', paddingBottom: 48 }}>
@@ -181,7 +217,7 @@ export default function Shops() {
               style={{ width: '100%', height: 40 }}
               options={[
                 { label: 'All Logistics Hubs', value: 'all' },
-                ...branches.filter((b) => b.id !== 'all').map((b) => ({ label: `📍 ${b.name}`, value: b.id })),
+                ...branches.filter((b) => b.id !== 'all').map((b) => ({ label: `📍 ${b.name}`, value: b.id || b.name })),
               ]}
             />
           </Col>
@@ -230,7 +266,7 @@ export default function Shops() {
       ) : (
         <Row gutter={screens.xs ? [12, 12] : screens.sm ? [14, 14] : [18, 18]} style={{ width: '100%' }}>
           {filteredShops.map((shop) => {
-            const shopProducts = products.filter((p) => p.shopId === shop.id);
+            const shopProducts = products.filter((p) => (p.shop_id || p.biller_id || p.shopId) === shop.id);
             const isWishlisted = wishlistedShopIds.includes(shop.id);
 
             return (
@@ -259,7 +295,7 @@ export default function Shops() {
         open={Boolean(previewShop)}
         onClose={() => setPreviewShop(null)}
         onOpenTelegram={(s) => setTelegramShop(s)}
-        shopProducts={previewShop ? products.filter((p) => p.shopId === previewShop.id) : []}
+        shopProducts={previewShop ? products.filter((p) => (p.shop_id || p.biller_id || p.shopId) === previewShop.id) : []}
       />
 
       {/* Telegram Gateway Modal */}

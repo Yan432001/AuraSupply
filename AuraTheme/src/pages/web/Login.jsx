@@ -27,6 +27,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import AuraLogo from '../../components/common/AuraLogo';
 import SocialAuthModal, { GoogleIcon, TelegramIcon } from '../../components/common/SocialAuthModal';
+import { loginUser } from '../../utils/apiconfig';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -48,21 +49,21 @@ export default function Login() {
     setErrorMsg('');
 
     try {
-      const res = await axios.post('/api/auth/login', {
+      const res = await loginUser({
         username: values.emailOrUsername,
         password: values.password
       });
 
-      if (res.data?.success && res.data?.token) {
-        const token = res.data.token;
-        const profile = res.data.profile || res.data.user || {};
+      if (res?.success && (res?.token || res?.data?.token)) {
+        const token = res.token || res.data?.token;
+        const profile = res.profile || res.data?.profile || res.user || res.data?.user || res.data || {};
         localStorage.setItem('token', token);
         const userData = {
           id: profile.id,
-          name: profile.first_name ? `${profile.first_name} ${profile.last_name || ''}`.trim() : profile.username,
-          username: profile.username,
-          email: profile.email,
-          role: profile.role || 'admin',
+          name: profile.first_name ? `${profile.first_name} ${profile.last_name || ''}`.trim() : (profile.username || profile.name || values.emailOrUsername),
+          username: profile.username || values.emailOrUsername,
+          email: profile.email || values.emailOrUsername,
+          role: profile.role || (profile.group_id === 1 ? 'admin' : profile.group_id === 2 ? 'owner' : 'customer'),
           group_id: profile.group_id,
           token: token,
           avatar: profile.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
@@ -79,33 +80,15 @@ export default function Login() {
           navigate(from, { replace: true });
         }
         return;
+      } else {
+        setErrorMsg(res?.message || res?.error?.message || 'Invalid username or password');
+        setLoading(false);
       }
     } catch (err) {
-      console.warn('Real login failed, falling back:', err?.response?.data?.error?.message || err.message);
-      if (err.response?.status === 401) {
-        setErrorMsg(err.response?.data?.error?.message || 'Invalid username or password');
-        setLoading(false);
-        return;
-      }
+      console.warn('Real login error:', err);
+      setErrorMsg(err.message || 'Invalid username or password');
+      setLoading(false);
     }
-
-    // Resilient fallback if server is unreachable
-    const email = values.emailOrUsername.toLowerCase();
-    const isAdmin = email.includes('admin') || values.emailOrUsername === 'admin';
-    const fallbackUser = {
-      id: `user-${Date.now()}`,
-      name: isAdmin ? 'Admin Director' : (values.emailOrUsername.split('@')[0] || 'Aura Member'),
-      email: email.includes('@') ? email : `${email}@auraglobal.com`,
-      role: isAdmin ? 'owner' : 'customer',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-      joinedAt: new Date().toISOString(),
-      tier: 'System Master'
-    };
-    login(fallbackUser);
-    message.success(`Welcome back, ${fallbackUser.name}!`);
-    setLoading(false);
-    if (isAdmin) navigate('/admins/dashboard');
-    else navigate(from, { replace: true });
   };
 
   // Quick 1-Click Demo Login using real DB credentials
@@ -114,45 +97,36 @@ export default function Login() {
     setErrorMsg('');
     try {
       const creds = type === 'admin'
-        ? { username: 'admin', password: 'admin' }
+        ? { username: 'admin', password: 'password' }
         : { username: 'audit', password: 'password' };
 
-      const res = await axios.post('/api/auth/login', creds);
-      if (res.data?.success && res.data?.token) {
-        const token = res.data.token;
-        const profile = res.data.profile || res.data.user || {};
+      const res = await loginUser(creds);
+      if (res?.success && (res?.token || res?.data?.token)) {
+        const token = res.token || res.data?.token;
+        const profile = res.profile || res.data?.profile || res.user || res.data?.user || res.data || {};
         localStorage.setItem('token', token);
         const userData = {
           id: profile.id,
-          name: profile.username,
+          name: profile.username || 'System User',
           username: profile.username,
           email: profile.email,
-          role: profile.role || 'owner',
+          role: profile.role || 'admin',
           group_id: profile.group_id,
           token: token,
           avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80',
           tier: 'System Master'
         };
         login(userData);
-        message.success(`Logged in as ${profile.username} (Role: ${profile.role})`);
+        message.success(`Logged in as ${profile.username}`);
         navigate('/admins/dashboard');
-        return;
+      } else {
+        setErrorMsg(res?.message || res?.error?.message || 'Login failed');
       }
-    } catch (_) {}
-
-    // Fallback demo user
-    const fallback = {
-      id: 28,
-      name: 'Super Admin',
-      username: 'admin',
-      email: 'admin@aurasupply.com',
-      role: 'owner',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80',
-      tier: 'System Master'
-    };
-    login(fallback);
-    message.success('Logged in as Super Admin!');
-    navigate('/admins/dashboard');
+    } catch (err) {
+      setErrorMsg(err.message || 'Quick login error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

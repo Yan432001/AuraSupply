@@ -42,6 +42,7 @@ import { useNetworkStatus } from '../../contexts/NetworkStatusContext';
 import OfflineWarningBanner from '../../components/common/OfflineWarningBanner';
 import { exportSingleOrderPdf } from '../../utils/orderPdfExporter';
 import OftenOrderedTogetherWidget from '../../components/web/cart/OftenOrderedTogetherWidget';
+import { submitOrder } from '../../utils/apiconfig';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -86,7 +87,7 @@ export default function Cart() {
     setCheckoutModalOpen(true);
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!isOnline) {
       message.error('Cannot submit order: Offline.');
       return;
@@ -98,11 +99,8 @@ export default function Cart() {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const orderRef = `AUR-${Math.floor(100000 + Math.random() * 900000)}`;
-      const orderData = {
-        orderId: orderRef,
-        createdAt: new Date().toLocaleString(),
+    try {
+      const orderPayload = {
         customer: {
           company: companyName,
           taxId: taxId,
@@ -113,6 +111,30 @@ export default function Cart() {
           address: shippingAddress,
           notes: orderNotes,
         },
+        deliveryMethod,
+        paymentMethod,
+        poNumber,
+        notes: orderNotes,
+        items: cart.map((item) => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity || 1,
+          price: item.price || 0,
+          unit_price: item.price || 0,
+          shop_id: item.shop_id || item.biller_id || 1,
+        })),
+        shipping: shippingFee,
+        discount: bulkDiscount,
+      };
+
+      const res = await submitOrder(orderPayload);
+      const orderRef = res?.data?.reference_no || (res?.data?.orderId ? `AUR-${res.data.orderId}` : `AUR-${Math.floor(100000 + Math.random() * 900000)}`);
+
+      const orderData = {
+        orderId: orderRef,
+        dbId: res?.data?.orderId,
+        createdAt: new Date().toLocaleString(),
+        customer: orderPayload.customer,
         deliveryMethod,
         paymentMethod,
         items: [...cart],
@@ -133,8 +155,12 @@ export default function Cart() {
       setIsSubmitting(false);
       setCheckoutModalOpen(false);
       setCompletedOrder(orderData);
-      message.success(`Procurement Order ${orderRef} confirmed!`);
-    }, 800);
+      message.success(`Procurement Order ${orderRef} recorded in real database!`);
+    } catch (err) {
+      console.error('Order submission error:', err);
+      message.error(err.message || 'Error recording order. Please try again.');
+      setIsSubmitting(false);
+    }
   };
 
   // SUCCESS SCREEN

@@ -28,6 +28,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import AuraLogo from '../../components/common/AuraLogo';
 import SocialAuthModal, { GoogleIcon, TelegramIcon } from '../../components/common/SocialAuthModal';
+import { registerCustomer } from '../../utils/apiconfig';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -41,37 +42,52 @@ export default function Register() {
   const [socialModalOpen, setSocialModalOpen] = useState(false);
   const [socialProvider, setSocialProvider] = useState('google');
 
-  const onFinish = (values) => {
+  const onFinish = async (values) => {
     setLoading(true);
     setErrorMsg('');
 
-    setTimeout(() => {
-      const newUser = {
-        id: `user-${Date.now()}`,
-        name: values.fullName.trim(),
+    try {
+      const res = await registerCustomer({
+        fullName: values.fullName.trim(),
         email: values.email.toLowerCase().trim(),
         phone: values.phone?.trim() || '',
+        password: values.password || '123456',
         memberType: values.memberType || 'customer',
-        role: 'customer',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-        joinedAt: new Date().toISOString(),
-        tier: 'Bronze VIP Member',
-        loyaltyPoints: 100, // Welcome bonus points!
-      };
+      });
 
-      // Store in registered users catalog
-      try {
-        const existing = JSON.parse(localStorage.getItem('aura_registered_members') || '[]');
-        existing.push(newUser);
-        localStorage.setItem('aura_registered_members', JSON.stringify(existing));
-      } catch {}
+      if (res?.success && (res?.data || res?.user)) {
+        const userObj = res.data || res.user;
+        const newUser = {
+          id: userObj.id,
+          name: userObj.name || values.fullName.trim(),
+          email: userObj.email || values.email.toLowerCase().trim(),
+          phone: userObj.phone || values.phone?.trim() || '',
+          memberType: values.memberType || 'customer',
+          role: 'customer',
+          token: userObj.token,
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+          joinedAt: new Date().toISOString(),
+          tier: 'Bronze VIP Member',
+          loyaltyPoints: 100,
+        };
 
-      // Log user in
-      login(newUser);
-      message.success(`Welcome to Aura Supply, ${newUser.name}! You received 100 welcome reward points! 🎉`);
+        if (userObj.token) {
+          localStorage.setItem('token', userObj.token);
+        }
+
+        login(newUser);
+        message.success(`Welcome to Aura Supply, ${newUser.name}! Your account is registered in the database.`);
+        setLoading(false);
+        navigate('/profile');
+      } else {
+        setErrorMsg(res?.message || res?.error || 'Registration failed. Please try again.');
+        setLoading(false);
+      }
+    } catch (err) {
+      console.warn('Registration error:', err);
+      setErrorMsg(err.message || 'Error creating account. Please try again.');
       setLoading(false);
-      navigate('/profile');
-    }, 650);
+    }
   };
 
   return (

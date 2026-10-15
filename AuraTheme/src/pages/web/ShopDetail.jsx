@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Avatar,
   Button,
@@ -13,6 +13,7 @@ import {
   message,
   notification,
   Divider,
+  Spin,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -31,8 +32,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import ProductQuickViewModal from '../../components/web/shared/ProductQuickViewModal';
 import RetailProductCard from '../../components/web/shared/RetailProductCard';
 import TelegramMiniAppModal from '../../components/web/shared/TelegramMiniAppModal';
-import { products, shops } from '../../data/shopData';
-import simpleData from '../../../../data/simpleData';
+import { fetchShopById, fetchProducts } from '../../utils/apiconfig';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { animateAddToCart } from '../../utils/helpers';
@@ -52,71 +52,47 @@ export default function ShopDetail() {
   const [search, setSearch] = useState('');
   const [previewProduct, setPreviewProduct] = useState(null);
   const [telegramModal, setTelegramModal] = useState({ open: false, shop: null, product: null });
+  const [shop, setShop] = useState(null);
+  const [shopProducts, setShopProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Resolve shop from simpleData or legacy shops
-  const shop = useMemo(() => {
-    const foundStore = (simpleData.stores || []).find(
-      (s) => s.slug === shopId || String(s.id) === String(shopId)
-    );
-    if (foundStore) {
-      return {
-        id: foundStore.slug,
-        slug: foundStore.slug,
-        storeId: foundStore.id,
-        name: foundStore.name,
-        company: foundStore.company,
-        summary: foundStore.tagline || 'Artisan store with live Telegram Mini App E-Menu ordering.',
-        address: foundStore.address,
-        rating: foundStore.rating || 4.9,
-        reviews: foundStore.reviewsCount || 140,
-        followers: 12400,
-        responseTime: 'within 5 min',
-        heroImage: foundStore.banner || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1200&h=400&fit=crop',
-        logoText: foundStore.name.slice(0, 2),
-        logo: foundStore.logo,
-        telegram_group_name: foundStore.telegram_group_name || 'Kitchen Staff Group',
-        specialties: ['Telegram E-Menu', 'Live Kitchen Dispatch', 'Instant Checkout'],
-        established: '2022',
-      };
-    }
-    return shops.find((item) => item.id === shopId || item.slug === shopId) || shops[0];
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    fetchShopById(shopId)
+      .then((res) => {
+        if (!isMounted) return;
+        if (res?.success && res.data) {
+          setShop(res.data);
+          return fetchProducts({ shop_id: res.data.id, limit: 100 });
+        }
+        return null;
+      })
+      .then((pRes) => {
+        if (!isMounted) return;
+        if (pRes?.success && Array.isArray(pRes.data)) {
+          setShopProducts(pRes.data);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.warn('Error fetching shop detail from API:', err);
+        if (isMounted) setLoading(false);
+      });
+
+    return () => { isMounted = false; };
   }, [shopId]);
 
-  const shopProducts = useMemo(() => {
-    const query = search.toLowerCase();
-    const simpleProducts = (simpleData.products || [])
-      .filter((p) => {
-        if (!shop) return false;
-        if (shop.storeId) return Number(p.biller_id) === Number(shop.storeId);
-        return false;
-      })
-      .map((p) => ({
-        id: `sp-${p.id}`,
-        name: p.name,
-        price: p.price,
-        image: p.image,
-        brand: shop.name,
-        category: p.category_id === 1 ? 'Coffee' : p.category_id === 2 ? 'Teas' : p.category_id === 3 ? 'Bakery' : 'Specialty',
-        description: p.details || p.name,
-        features: ['Freshly Prepared', 'Telegram Direct Dispatch'],
-        inStock: true,
-        rating: 4.9,
-        reviews: 28,
-        shopId: shop.slug,
-      }));
-
-    const legacyProducts = products.filter(
-      (product) => product.shopId === shopId || product.shopId === shop?.id
-    );
-
-    const merged = [...simpleProducts, ...legacyProducts];
-    return merged.filter(
+  const filteredProducts = useMemo(() => {
+    const query = search.toLowerCase().trim();
+    if (!query) return shopProducts;
+    return shopProducts.filter(
       (product) =>
-        product.name.toLowerCase().includes(query) ||
-        (product.brand && product.brand.toLowerCase().includes(query)) ||
-        (product.category && product.category.toLowerCase().includes(query))
+        product.name?.toLowerCase().includes(query) ||
+        product.brand?.toLowerCase().includes(query) ||
+        product.category?.toLowerCase().includes(query)
     );
-  }, [search, shopId, shop]);
+  }, [search, shopProducts]);
 
   const handleOrder = (product, triggerElement) => {
     animateAddToCart({
@@ -138,6 +114,14 @@ export default function ShopDetail() {
       messageApi.success('Storefront link copied!');
     }
   };
+
+  if (loading) {
+    return (
+      <div style={{ padding: '100px 20px', textAlign: 'center' }}>
+        <Spin size="large" tip="Loading supplier profile and catalog from database..." />
+      </div>
+    );
+  }
 
   if (!shop) {
     return (
@@ -277,7 +261,7 @@ export default function ShopDetail() {
         }}
       >
         <div style={{ fontSize: 14, fontWeight: 800, color: publicTheme.text }}>
-          Supplier Products ({shopProducts.length})
+          Supplier Products ({filteredProducts.length})
         </div>
 
         <Input
@@ -291,19 +275,25 @@ export default function ShopDetail() {
       </div>
 
       {/* Product Grid */}
-      <Row gutter={screens.xs ? [12, 12] : [16, 16]}>
-        {shopProducts.map((product) => (
-          <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
-            <RetailProductCard
-              product={product}
-              onPreview={setPreviewProduct}
-              onOrder={handleOrder}
-              onWishlist={toggleWishlist}
-              isWishlisted={wishlist.some((item) => item.id === product.id)}
-            />
-          </Col>
-        ))}
-      </Row>
+      {filteredProducts.length === 0 ? (
+        <Card style={{ borderRadius: 16, textAlign: 'center', padding: '40px 20px', border: `1px solid ${publicTheme.border}` }}>
+          <Text style={{ color: publicTheme.subtext }}>No products found matching your search.</Text>
+        </Card>
+      ) : (
+        <Row gutter={screens.xs ? [12, 12] : [16, 16]}>
+          {filteredProducts.map((product) => (
+            <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
+              <RetailProductCard
+                product={product}
+                onPreview={setPreviewProduct}
+                onOrder={handleOrder}
+                onWishlist={toggleWishlist}
+                isWishlisted={wishlist.some((item) => item.id === product.id)}
+              />
+            </Col>
+          ))}
+        </Row>
+      )}
 
       {/* Quick View Modal */}
       <ProductQuickViewModal
@@ -318,7 +308,7 @@ export default function ShopDetail() {
         open={telegramModal.open}
         onClose={() => setTelegramModal({ open: false, shop: null, product: null })}
         shop={telegramModal.shop}
-        allProducts={products}
+        allProducts={shopProducts}
       />
     </div>
   );

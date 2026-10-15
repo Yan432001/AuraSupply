@@ -12,9 +12,11 @@ import {
   ArrowRightOutlined,
   GiftFilled,
 } from '@ant-design/icons';
+import { fetchBanners } from '../../../utils/apiconfig';
 
 // Curated high-impact promotion posters for Aura flagship stores
 const PROMO_POSTERS = [
+
   {
     id: 'promo-1',
     storeName: 'Aura Specialty Coffee',
@@ -99,13 +101,39 @@ const PROMO_POSTERS = [
 
 export default function PromotionPosterSlider({ onSelectPoster }) {
   const navigate = useNavigate();
+  const [posters, setPosters] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [copiedCode, setCopiedCode] = useState(null);
   const autoPlayTimerRef = useRef(null);
 
-  const totalPosters = PROMO_POSTERS.length;
-  const currentPoster = PROMO_POSTERS[currentIndex];
+  useEffect(() => {
+    let isMounted = true;
+    fetchBanners().then((res) => {
+      if (isMounted) {
+        if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+          setPosters(res.data);
+        } else if (Array.isArray(res?.banners) && res.banners.length > 0) {
+          setPosters(res.banners);
+        } else {
+          setPosters(PROMO_POSTERS);
+        }
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (isMounted) {
+        setPosters(PROMO_POSTERS);
+        setLoading(false);
+      }
+    });
+
+    return () => { isMounted = false; };
+  }, []);
+
+  const activePosters = posters.length > 0 ? posters : PROMO_POSTERS;
+  const totalPosters = activePosters.length;
+  const currentPoster = activePosters[currentIndex] || activePosters[0];
 
   const handleNext = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % totalPosters);
@@ -114,6 +142,7 @@ export default function PromotionPosterSlider({ onSelectPoster }) {
   const handlePrev = useCallback(() => {
     setCurrentIndex((prev) => (prev - 1 + totalPosters) % totalPosters);
   }, [totalPosters]);
+
 
   // Auto-play timer (slides every 4.8 seconds when not hovered)
   useEffect(() => {
@@ -259,7 +288,7 @@ export default function PromotionPosterSlider({ onSelectPoster }) {
         <div className="pt-3 border-t border-white/15 flex items-center justify-between gap-3">
           {/* Carousel Slide Indicators */}
           <div className="flex items-center gap-1.5">
-            {PROMO_POSTERS.map((poster, idx) => (
+            {activePosters.map((poster, idx) => (
               <button
                 key={poster.id}
                 type="button"

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Button, Card, Col, Row, Space, Tag, Typography, message, Input } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Button, Card, Col, Row, Space, Tag, Typography, message, Input, Spin } from 'antd';
 import {
   BookOutlined,
   BulbOutlined,
@@ -14,10 +14,11 @@ import {
   ArrowRightOutlined,
 } from '@ant-design/icons';
 import { publicTheme } from '../../utils/webTheme';
+import { fetchPosts } from '../../utils/apiconfig';
 
 const { Title, Paragraph, Text } = Typography;
 
-const academyTracks = [
+const defaultAcademyTracks = [
   {
     id: 'procurement-101',
     title: 'B2B Procurement & Contract Sourcing',
@@ -77,6 +78,38 @@ const downloadableTemplates = [
 
 export default function Learn() {
   const [search, setSearch] = useState('');
+  const [tracks, setTracks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchPosts()
+      .then((res) => {
+        if (!isMounted) return;
+        if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped = res.data.map((p) => ({
+            id: p.slug || p.id,
+            title: p.title,
+            text: p.summary || p.content,
+            modules: p.duration || '6 Modules • 3 Hours',
+            badge: p.badge || p.category || 'Academy Track',
+            icon: <BookOutlined style={{ fontSize: 24, color: publicTheme.primary }} />
+          }));
+          setTracks(mapped);
+        } else {
+          setTracks(defaultAcademyTracks);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.warn('Learn posts fetch error:', err);
+        if (isMounted) {
+          setTracks(defaultAcademyTracks);
+          setLoading(false);
+        }
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   const handleDownload = (title) => {
     message.success(`Downloading: "${title}"`);
@@ -141,7 +174,7 @@ export default function Learn() {
           Core Sourcing & Operations Tracks
         </Title>
         <Row gutter={[20, 20]}>
-          {academyTracks.map((track) => (
+          {tracks.map((track) => (
             <Col xs={24} md={12} key={track.id}>
               <Card
                 className="b2b-card"

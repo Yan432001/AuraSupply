@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Row,
@@ -13,8 +13,11 @@ import {
   Rate,
   Divider,
   Breadcrumb,
-  message,
   Tooltip,
+  Spin,
+  Form,
+  Input as AntInput,
+  message,
 } from 'antd';
 import {
   ShoppingCartOutlined,
@@ -31,8 +34,7 @@ import {
   FileTextOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';
-import { products, baseProducts, shops } from '../../data/shopData';
-import simpleData from '../../../../data/simpleData';
+import { fetchProductBySlug, fetchProducts, fetchReviews, submitReview } from '../../utils/apiconfig';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { formatCurrency, publicTheme, B2B_WHOLESALE_TIERS, calculateTierPrice } from '../../utils/webTheme';
@@ -50,42 +52,91 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(5);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
+  const [foundProduct, setFoundProduct] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewName, setReviewName] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
-  const foundProduct = useMemo(() => {
-    if (!productId) return products[0] || null;
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    fetchProductBySlug(productId || '1')
+      .then((res) => {
+        if (!isMounted) return;
+        if (res?.success && res.data) {
+          setFoundProduct(res.data);
+          if (res.data.category_id) {
+            fetchProducts({ category_id: res.data.category_id, limit: 5 }).then((pRes) => {
+              if (isMounted && pRes?.success && Array.isArray(pRes.data)) {
+                setRelatedProducts(pRes.data.filter((p) => p.id !== res.data.id).slice(0, 4));
+              }
+            });
+          }
+          fetchReviews(res.data.id).then((rRes) => {
+            if (isMounted && rRes?.success && Array.isArray(rRes.data)) {
+              setReviews(rRes.data);
+            }
+          });
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.warn('Product load error:', err);
+        if (isMounted) setLoading(false);
+      });
 
-    const inShopData = (products || []).find(
-      (p) => String(p.id) === String(productId) || p.slug === productId
-    );
-    if (inShopData) return inShopData;
-
-    const inBase = (baseProducts || []).find(
-      (p) => String(p.id) === String(productId)
-    );
-    if (inBase) return inBase;
-
-    const inSimple = (simpleData.products || []).find(
-      (p) => String(p.id) === String(productId) || p.code === productId
-    );
-    if (inSimple) return inSimple;
-
-    return products[0] || null;
+    return () => { isMounted = false; };
   }, [productId]);
 
-  const matchingShop = useMemo(() => {
-    if (!foundProduct) return shops[0];
-    return (
-      shops.find((s) => s.id === foundProduct.shopId || s.slug === foundProduct.seller) ||
-      shops[0]
-    );
-  }, [foundProduct]);
+  const handleSubmitReview = async () => {
+    if (!reviewName.trim() || !reviewComment.trim()) {
+      message.warning('Please enter your name and comments.');
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      const res = await submitReview({
+        product_id: foundProduct.id,
+        reviewer_name: reviewName,
+        rating: reviewRating,
+        comment: reviewComment,
+      });
+      if (res?.success) {
+        message.success('Thank you! Your review has been saved to the database.');
+        setReviewComment('');
+        // Refresh reviews
+        const rRes = await fetchReviews(foundProduct.id);
+        if (rRes?.success && Array.isArray(rRes.data)) {
+          setReviews(rRes.data);
+        }
+      } else {
+        message.error(res?.error || 'Failed to submit review');
+      }
+    } catch (e) {
+      message.error(e.message || 'Error submitting review');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
-  const relatedProducts = useMemo(() => {
-    if (!foundProduct) return [];
-    return products
-      .filter((p) => p.id !== foundProduct.id && (p.category === foundProduct.category || p.shopId === foundProduct.shopId))
-      .slice(0, 4);
-  }, [foundProduct]);
+  const matchingShop = foundProduct?.shop || {
+    name: foundProduct?.brand || 'Aura Partner',
+    summary: 'Authorized B2B Supplier Partner',
+    rating: 4.9,
+    id: foundProduct?.biller_id || 1,
+  };
+
+  if (loading) {
+    return (
+      <div style={{ padding: '100px 20px', textAlign: 'center' }}>
+        <Spin size="large" tip="Loading product details from database..." />
+      </div>
+    );
+  }
 
   if (!foundProduct) {
     return (
@@ -516,6 +567,82 @@ export default function ProductDetailPage() {
                 </div>
               ),
             },
+            {
+              key: 'reviews',
+              label: `Customer Reviews (${reviews.length})`,
+              children: (
+                <div>
+                  <div style={{ marginBottom: 24 }}>
+                    <Title level={4} style={{ marginBottom: 16 }}>Verified Business Reviews</Title>
+                    {reviews.length === 0 ? (
+                      <Paragraph style={{ color: publicTheme.subtext }}>No reviews yet for this product. Be the first to review!</Paragraph>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {reviews.map((rev) => (
+                          <div
+                            key={rev.id}
+                            style={{
+                              padding: '16px 20px',
+                              borderRadius: 12,
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                              <span style={{ fontWeight: 700, color: publicTheme.text }}>{rev.reviewer_name}</span>
+                              <Rate disabled defaultValue={Number(rev.rating) || 5} style={{ fontSize: 13 }} />
+                            </div>
+                            <p style={{ margin: 0, color: publicTheme.subtext, fontSize: 13 }}>{rev.comment}</p>
+                            {rev.created_at && (
+                              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
+                                {new Date(rev.created_at).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <Divider />
+
+                  <div style={{ maxWidth: 600 }}>
+                    <Title level={4} style={{ marginBottom: 12 }}>Write a Commercial Review</Title>
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Rating:</label>
+                      <Rate value={reviewRating} onChange={setReviewRating} />
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Your Name / Company:</label>
+                      <AntInput
+                        placeholder="e.g. Acme Procurement Dept"
+                        value={reviewName}
+                        onChange={(e) => setReviewName(e.target.value)}
+                        style={{ borderRadius: 8 }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Review Comments:</label>
+                      <AntInput.TextArea
+                        rows={3}
+                        placeholder="Detail the quality, delivery speed, and wholesale reliability..."
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        style={{ borderRadius: 8 }}
+                      />
+                    </div>
+                    <Button
+                      type="primary"
+                      loading={submittingReview}
+                      onClick={handleSubmitReview}
+                      style={{ borderRadius: 8, height: 40, fontWeight: 700 }}
+                    >
+                      Submit Review to Database
+                    </Button>
+                  </div>
+                </div>
+              ),
+            },
           ]}
         />
       </Card>
@@ -548,7 +675,7 @@ export default function ProductDetailPage() {
         onClose={() => setTelegramModalOpen(false)}
         shop={matchingShop}
         product={foundProduct}
-        allProducts={products}
+        allProducts={[foundProduct, ...relatedProducts]}
       />
     </div>
   );

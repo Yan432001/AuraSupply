@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Row, Col, Typography, Space, Input, Button, Tag, message } from 'antd';
 import { Link } from 'react-router-dom';
 import {
@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import { publicTheme } from '../../../utils/webTheme';
 import AuraLogo from '../../common/AuraLogo';
+import { submitNewsletter, fetchShopSettings, fetchBranches } from '../../../utils/apiconfig';
 
 const { Text, Title } = Typography;
 
@@ -34,24 +35,44 @@ const footerOperations = [
   { label: 'Sales & Revenue Reports', to: '/admins/analytics/sales' },
 ];
 
-const footerHubs = [
-  { name: 'Phnom Penh Flagship Hub', desc: 'No. 128 Norodom Blvd, Daun Penh' },
-  { name: 'Bangkok Fulfillment Center', desc: 'Sathorn Industrial Logistics Park' },
-  { name: 'Rayong Cross-Border Yard', desc: 'Eastern Seaboard Freight Terminal' },
-  { name: 'Ho Chi Minh Transit Hub', desc: 'District 1 Port Logistics Annex' },
-];
-
 export default function Footer() {
   const [rfqEmail, setRfqEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [settings, setSettings] = useState(null);
+  const [hubs, setHubs] = useState([]);
 
-  const handleSubscribe = (e) => {
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([fetchShopSettings(), fetchBranches()])
+      .then(([sRes, bRes]) => {
+        if (!isMounted) return;
+        if (sRes?.success && sRes.data) setSettings(sRes.data);
+        if (bRes?.success && Array.isArray(bRes.data)) setHubs(bRes.data);
+      })
+      .catch((e) => console.warn('Footer settings load error:', e));
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleSubscribe = async (e) => {
     e.preventDefault();
     if (!rfqEmail || !rfqEmail.includes('@')) {
       message.error('Please enter a valid business email.');
       return;
     }
-    message.success('Thank you! Our B2B Procurement Desk will contact you within 2 hours.');
-    setRfqEmail('');
+    setSubmitting(true);
+    try {
+      const res = await submitNewsletter(rfqEmail);
+      if (res?.success) {
+        message.success('Thank you! Your inquiry has been saved to the database. Sourcing desk will contact you.');
+        setRfqEmail('');
+      } else {
+        message.error(res?.error || 'Failed to submit newsletter');
+      }
+    } catch (err) {
+      message.error(err.message || 'Error subscribing');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -141,11 +162,11 @@ export default function Footer() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: '#0f172a' }}>
                   <PhoneOutlined style={{ color: '#2f6fed' }} />
-                  <span>Procurement Hotline: <strong>+855 12 345 678</strong></span>
+                  <span>Procurement Hotline: <strong>{settings?.phone || '+855 12 345 678'}</strong></span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: '#0f172a' }}>
                   <MailOutlined style={{ color: '#2f6fed' }} />
-                  <span>Wholesale Desk: <strong>procurement@auraglobal.com</strong></span>
+                  <span>Wholesale Desk: <strong>{settings?.email || 'procurement@auraglobal.com'}</strong></span>
                 </div>
               </div>
 
@@ -210,12 +231,16 @@ export default function Footer() {
               Logistics & Hubs
             </div>
             <Space direction="vertical" size={12} style={{ width: '100%' }}>
-              {footerHubs.map((hub) => (
-                <div key={hub.name} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              {(hubs.length > 0 ? hubs : [
+                { name: 'Phnom Penh Flagship Hub', address: 'No. 128 Norodom Blvd, Daun Penh' },
+                { name: 'Bangkok Fulfillment Center', address: 'Sathorn Industrial Logistics Park' },
+                { name: 'Rayong Cross-Border Yard', address: 'Eastern Seaboard Freight Terminal' },
+              ]).map((hub, idx) => (
+                <div key={hub.id || hub.name || idx} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <EnvironmentOutlined style={{ color: '#2f6fed', marginTop: 3, flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>{hub.name}</div>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>{hub.desc}</div>
+                    <div style={{ fontSize: 11, color: '#64748b' }}>{hub.address || hub.desc || 'Fulfillment Terminal'}</div>
                   </div>
                 </div>
               ))}

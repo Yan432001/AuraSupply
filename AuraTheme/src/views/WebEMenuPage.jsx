@@ -24,6 +24,7 @@ import {
   PictureOutlined,
 } from '@ant-design/icons';
 import { message, Modal, Drawer, notification } from 'antd';
+import { fetchShops, fetchProducts, submitOrder } from '../utils/apiconfig';
 import simpleData from '../../../data/simpleData';
 import { useCart } from '../contexts/CartContext';
 import { publicTheme } from '../utils/webTheme';
@@ -548,26 +549,72 @@ export default function WebEMenuPage() {
   const { addItem, cartItems = [] } = useCart();
   const { headerRef } = useHeaderHeight();
 
+  const [dbStores, setDbStores] = useState([]);
+  const [dbFoods, setDbFoods] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([fetchShops(), fetchProducts({ limit: 150 })])
+      .then(([sRes, pRes]) => {
+        if (!isMounted) return;
+        if (sRes?.success && Array.isArray(sRes.data)) {
+          setDbStores(sRes.data);
+        }
+        if (pRes?.success && Array.isArray(pRes.data) && pRes.data.length > 0) {
+          const mapped = pRes.data.map((p) => {
+            const foundStore = sRes?.data?.find((s) => s.id === p.shop_id || s.id === p.biller_id);
+            return {
+              id: String(p.id),
+              rawId: p.id,
+              name: p.name,
+              category: p.category || 'Specialty',
+              price: Number(p.price || 0),
+              originalPrice: Number((p.price * 1.2).toFixed(2)),
+              rating: Number(p.rating || 4.9),
+              reviews: Number(p.reviews_count || 42),
+              time: '10-15 min',
+              image: p.image,
+              storeSlug: foundStore?.slug || p.shop?.slug || 'sbc-store',
+              storeName: foundStore?.name || p.brand || 'Aura Partner',
+              description: p.description || p.details || p.name,
+              badge: p.featured ? 'Chef Special' : undefined,
+              nutrition: { calories: '320 kcal', prep: 'Artisan Batch' },
+            };
+          });
+          setDbFoods(mapped);
+        }
+      })
+      .catch((e) => console.warn('EMenu DB fetch error:', e));
+
+    return () => { isMounted = false; };
+  }, []);
+
+  const activeFoods = useMemo(() => {
+    return dbFoods.length > 0 ? dbFoods : MOCK_WEB_FOODS;
+  }, [dbFoods]);
+
   // Active Store
   const currentSlug = storeSlug || 'aura-bakery';
   const currentStore = useMemo(() => {
+    const foundDbStore = dbStores.find((s) => s.slug === currentSlug || String(s.id) === String(currentSlug));
+    if (foundDbStore) return foundDbStore;
     return (
       (simpleData.stores || []).find((s) => s.slug === currentSlug) ||
       STORES_LIST.find((s) => s.slug === currentSlug) ||
       STORES_LIST[0]
     );
-  }, [currentSlug]);
+  }, [currentSlug, dbStores]);
 
   // Categories dynamically extracted for current store
   const storeCategories = useMemo(() => {
-    const foodsForStore = MOCK_WEB_FOODS.filter((f) => f.storeSlug === currentSlug);
+    const foodsForStore = activeFoods.filter((f) => f.storeSlug === currentSlug);
     const uniqueCats = Array.from(new Set(foodsForStore.map((f) => f.category)));
     if (uniqueCats.length > 0) {
       return uniqueCats;
     }
     // Fallback default matching image.png
     return ['Breakfast', 'Lunch', 'Dinner', 'Dessert & juice', 'Coffee'];
-  }, [currentSlug]);
+  }, [currentSlug, activeFoods]);
 
   // Active category filter (defaults to first category, e.g. 'Breakfast')
   const [activeCategory, setActiveCategory] = useState(storeCategories[0] || 'Breakfast');
@@ -586,20 +633,20 @@ export default function WebEMenuPage() {
 
   // Total favorites count for current store items
   const currentStoreFavoritesCount = useMemo(() => {
-    const list = MOCK_WEB_FOODS.filter((f) => f.storeSlug === currentSlug);
-    return (list.length ? list : MOCK_WEB_FOODS).filter((f) => isFavorite(f.id)).length;
-  }, [currentSlug, isFavorite]);
+    const list = activeFoods.filter((f) => f.storeSlug === currentSlug);
+    return (list.length ? list : activeFoods).filter((f) => isFavorite(f.id)).length;
+  }, [currentSlug, isFavorite, activeFoods]);
 
   // Dynamic quick tags based on items in active category (matching image.png concept)
   const categoryQuickTags = useMemo(() => {
-    const foodsInCat = MOCK_WEB_FOODS.filter(
+    const foodsInCat = activeFoods.filter(
       (f) => f.storeSlug === currentSlug && f.category === activeCategory
     );
     if (foodsInCat.length > 0) {
       return foodsInCat.map((f) => f.name);
     }
     return ['Pancake', 'Bagel', 'Cinnamon Roll', 'French Toast', 'Omelet', 'Croissants', 'Muffins'];
-  }, [currentSlug, activeCategory]);
+  }, [currentSlug, activeCategory, activeFoods]);
 
   // Modal & Cart Drawer State
   const [quickViewItem, setQuickViewItem] = useState(null);
@@ -739,17 +786,17 @@ export default function WebEMenuPage() {
 
   // Total foods count for active store
   const storeTotalFoodsCount = useMemo(() => {
-    const list = MOCK_WEB_FOODS.filter((f) => f.storeSlug === currentSlug);
-    return list.length || MOCK_WEB_FOODS.length;
-  }, [currentSlug]);
+    const list = activeFoods.filter((f) => f.storeSlug === currentSlug);
+    return list.length || activeFoods.length;
+  }, [currentSlug, activeFoods]);
 
   // Filter foods based on store, category, favorites, and real-time search query
   const displayedFoods = useMemo(() => {
-    let list = MOCK_WEB_FOODS.filter((f) => f.storeSlug === currentSlug);
+    let list = activeFoods.filter((f) => f.storeSlug === currentSlug);
 
-    // If store has no items in mock, show all
+    // If store has no items for this slug, show all
     if (list.length === 0) {
-      list = MOCK_WEB_FOODS;
+      list = activeFoods;
     }
 
     if (showFavoritesOnly) {
@@ -780,7 +827,7 @@ export default function WebEMenuPage() {
     }
 
     return list;
-  }, [currentSlug, activeCategory, searchQuery, showFavoritesOnly, isFavorite]);
+  }, [currentSlug, activeCategory, searchQuery, showFavoritesOnly, isFavorite, activeFoods]);
 
   return (
     <div className="bg-[#FAF9F6] min-h-screen text-slate-800 font-sans pb-28 antialiased selection:bg-[#A31D1D] selection:text-white">
@@ -1258,7 +1305,14 @@ export default function WebEMenuPage() {
                     grandTotal: parseFloat(cartTotalAmount),
                     customer: { name: 'Dine-In Customer', address: tableNumber },
                   });
-                  message.success(`Order #${refNo} for ${tableNumber} placed & routed to Telegram Kitchen Group! 🎉`);
+                  submitOrder({
+                    customer: { name: 'Dine-In Customer', address: tableNumber },
+                    items: localCart.map((i) => ({ id: i.id, name: i.name, quantity: i.quantity, price: i.price, shop_id: currentStore?.id || 1 })),
+                    notes: `${diningOption} - ${tableNumber}`,
+                    deliveryMethod: diningOption.toLowerCase(),
+                  }).catch((err) => console.warn('EMenu DB order write:', err));
+
+                  message.success(`Order #${refNo} for ${tableNumber} placed & recorded in database! 🎉`);
                   setLocalCart([]);
                   setCartDrawerOpen(false);
                 }}

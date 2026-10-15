@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, Row, Col, Button, Tag, Typography, Space, message, Tooltip } from 'antd';
 import {
   PlusOutlined,
@@ -10,7 +10,7 @@ import {
   GiftOutlined,
 } from '@ant-design/icons';
 import { useCart } from '../../../contexts/CartContext';
-import { products } from '../../../data/shopData';
+import { fetchProducts } from '../../../utils/apiconfig';
 
 const { Text, Title } = Typography;
 
@@ -27,17 +27,27 @@ const categorySynergies = {
   food: ['coffee', 'bakery', 'food'],
 };
 
-// Default high-converting complementary items if cart items have no specific category
-const fallbackFeaturedIds = ['prod-5', 'prod-4', 'prod-7', 'prod-6'];
-
 export default function OftenOrderedTogetherWidget({ className = '', style = {} }) {
   const { cart, addToCart } = useCart();
+  const [availableProducts, setAvailableProducts] = useState([]);
   const [addedItemIds, setAddedItemIds] = useState(new Set());
   const [isAddingAll, setIsAddingAll] = useState(false);
 
+  useEffect(() => {
+    let isMounted = true;
+    fetchProducts({ limit: 30 })
+      .then((res) => {
+        if (isMounted && res?.success && Array.isArray(res.data)) {
+          setAvailableProducts(res.data);
+        }
+      })
+      .catch((err) => console.warn('Could not load recommendations:', err));
+    return () => { isMounted = false; };
+  }, []);
+
   // Derive all active complementary recommendations based on current cart
   const recommendations = useMemo(() => {
-    if (!cart || cart.length === 0) return [];
+    if (!cart || cart.length === 0 || availableProducts.length === 0) return [];
 
     const cartIds = new Set(cart.map((item) => String(item.id)));
     const cartCategories = new Set(
@@ -52,7 +62,7 @@ export default function OftenOrderedTogetherWidget({ className = '', style = {} 
     });
 
     // Score and filter candidate products
-    const candidates = products
+    const candidates = availableProducts
       .filter((p) => !cartIds.has(String(p.id)) && p.inStock !== false)
       .map((product) => {
         let score = 0;
@@ -97,24 +107,21 @@ export default function OftenOrderedTogetherWidget({ className = '', style = {} 
     // Return top 3 complementary items
     const topMatches = candidates.slice(0, 3);
 
-    // If less than 3, backfill from fallback items
+    // If less than 3, backfill from availableProducts
     if (topMatches.length < 3) {
-      fallbackFeaturedIds.forEach((id) => {
+      availableProducts.forEach((p) => {
         if (topMatches.length >= 3) return;
-        if (!cartIds.has(id) && !topMatches.some((p) => p.id === id)) {
-          const fallbackProd = products.find((p) => p.id === id);
-          if (fallbackProd) {
-            topMatches.push({
-              ...fallbackProd,
-              pairingReason: 'Frequently paired add-on',
-            });
-          }
+        if (!cartIds.has(String(p.id)) && !topMatches.some((match) => match.id === p.id)) {
+          topMatches.push({
+            ...p,
+            pairingReason: 'Frequently paired add-on',
+          });
         }
       });
     }
 
     return topMatches;
-  }, [cart]);
+  }, [cart, availableProducts]);
 
   // If no items in cart or no suggestions available, don't display
   if (!cart || cart.length === 0 || recommendations.length === 0) {

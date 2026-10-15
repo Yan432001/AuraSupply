@@ -17,6 +17,7 @@ import {
   message,
   notification,
   Spin,
+  Empty,
   Table,
   Tooltip,
 } from 'antd';
@@ -40,7 +41,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import ProductQuickViewModal from '../../components/web/shared/ProductQuickViewModal';
 import RetailProductCard from '../../components/web/shared/RetailProductCard';
 import TelegramMiniAppModal from '../../components/web/shared/TelegramMiniAppModal';
-import { brands, products, shopCategories, shops, branches } from '../../data/shopData';
+import { fetchProducts, fetchCategories, fetchBrands, fetchShops, fetchBranches } from '../../utils/apiconfig';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { animateAddToCart } from '../../utils/helpers';
@@ -60,6 +61,42 @@ const Products = () => {
   const urlQuery = searchParams.get('q') || '';
   const urlCategory = searchParams.get('category') || 'all';
 
+  const [productsList, setProductsList] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [brandsList, setBrandsList] = useState([]);
+  const [shopsList, setShopsList] = useState([]);
+  const [branchesList, setBranchesList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([
+      fetchProducts({ limit: 200 }),
+      fetchCategories(),
+      fetchBrands(),
+      fetchShops(),
+      fetchBranches()
+    ]).then(([pRes, cRes, bRes, sRes, brRes]) => {
+      if (!isMounted) return;
+      if (pRes?.success && Array.isArray(pRes.data)) setProductsList(pRes.data);
+      if (cRes?.success && Array.isArray(cRes.data)) setCategoriesList(cRes.data);
+      if (bRes?.success && Array.isArray(bRes.data)) setBrandsList(bRes.data);
+      if (sRes?.success && Array.isArray(sRes.data)) setShopsList(sRes.data);
+      if (brRes?.success && Array.isArray(brRes.data)) setBranchesList(brRes.data);
+      setLoading(false);
+    }).catch((err) => {
+      console.warn('Products load notice:', err);
+      if (isMounted) setLoading(false);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  const products = productsList;
+  const shopCategories = categoriesList;
+  const brands = brandsList.map((b) => b.name);
+  const shops = shopsList;
+  const branches = branchesList.map((b) => ({ id: b.id || b.name, name: b.name }));
+
   const [search, setSearch] = useState(urlQuery);
   const [category, setCategory] = useState(urlCategory);
   const [brand, setBrand] = useState('all');
@@ -75,6 +112,7 @@ const Products = () => {
 
   const [previewProduct, setPreviewProduct] = useState(null);
   const [telegramProduct, setTelegramProduct] = useState(null);
+
 
   useEffect(() => {
     if (urlQuery !== undefined) setSearch(urlQuery);
@@ -592,7 +630,12 @@ const Products = () => {
 
         {/* Products Content Area */}
         <Col xs={24} lg={screens.lg && filtersOpen ? 18 : 24} xl={screens.lg && filtersOpen ? 19 : 24}>
-          {filteredProducts.length === 0 ? (
+          {loading ? (
+            <div style={{ padding: '80px 20px', textAlign: 'center' }}>
+              <Spin size="large" />
+              <div style={{ marginTop: 16, color: publicTheme.subtext, fontWeight: 600 }}>Loading wholesale catalog from database...</div>
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <Card
               style={{
                 borderRadius: 24,

@@ -40,8 +40,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../../../contexts/CartContext';
 import { useWishlist } from '../../../contexts/WishlistContext';
 import { useAuth } from '../../../contexts/AuthContext';
-import { products, shops } from '../../../data/shopData';
-import simpleData from '../../../../data/simpleData';
+import { fetchProducts, fetchShops } from '../../../utils/apiconfig';
 import { formatCurrency, publicTheme } from '../../../utils/webTheme';
 import OfflineWarningBanner from '../../common/OfflineWarningBanner';
 import AuraLogo from '../../common/AuraLogo';
@@ -124,24 +123,36 @@ const Header = ({ currentPage }) => {
   }, []);
 
   const [selectedStoreFilter, setSelectedStoreFilter] = useState('all');
+  const [dbProducts, setDbProducts] = useState([]);
+  const [dbShops, setDbShops] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([fetchShops(), fetchProducts({ limit: 100 })])
+      .then(([sRes, pRes]) => {
+        if (!isMounted) return;
+        if (sRes?.success && Array.isArray(sRes.data)) setDbShops(sRes.data);
+        if (pRes?.success && Array.isArray(pRes.data)) setDbProducts(pRes.data);
+      })
+      .catch((err) => console.warn('Header catalog load error:', err));
+    return () => { isMounted = false; };
+  }, []);
 
   // Consolidated Master Catalog of all products across all stores
   const allStoresCatalog = useMemo(() => {
     const storeMap = new Map();
-    (simpleData.stores || []).forEach((st) => {
+    dbShops.forEach((st) => {
       storeMap.set(st.id, st);
       storeMap.set(st.slug, st);
-      storeMap.set(st.biller_id, st);
     });
 
-    const storeProducts = (simpleData.products || []).map((p) => {
+    return dbProducts.map((p) => {
       const store =
+        storeMap.get(p.shop_id) ||
         storeMap.get(p.biller_id) ||
-        storeMap.get(p.store_id) ||
-        (simpleData.stores || []).find((s) => s.id === p.biller_id) ||
-        { name: 'Aura Store', slug: 'sbc-store', emoji: '🏪' };
+        { name: p.brand || 'Aura Partner', slug: 'sbc-store', emoji: '🏪' };
 
-      const storeName = store.name || 'Aura Partner';
+      const storeName = store.name || p.brand || 'Aura Partner';
       const storeSlug = store.slug || 'sbc-store';
       const storeEmoji =
         store.emoji ||
@@ -169,47 +180,25 @@ const Header = ({ currentPage }) => {
         image:
           p.image ||
           'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80',
-        category:
-          p.category ||
-          (storeName.includes('Bakery')
-            ? 'Bakery'
-            : storeName.includes('Coffee')
-            ? 'Coffee'
-            : 'Store Menu'),
+        category: p.category || 'Supplies',
         brand: storeName,
         storeName,
         storeSlug,
         storeEmoji,
         isStoreItem: true,
-        description: p.details || p.description || `Specialty menu item served at ${storeName}.`,
-        targetUrl: `/shop/${storeSlug}?item=${p.id}`,
+        description: p.description || p.details || `Specialty item available from ${storeName}.`,
+        targetUrl: `/products/${p.id}`,
         menuUrl: `/shop/menu/${storeSlug}`,
       };
     });
-
-    const retailProducts = (products || []).map((p) => {
-      const matchingShop = (shops || []).find((s) => s.id === p.shopId);
-      return {
-        ...p,
-        rawId: p.id,
-        storeName: matchingShop?.name || p.brand || 'Aura Supply',
-        storeSlug: matchingShop?.id || 'sbc-store',
-        storeEmoji: '🛍️',
-        isStoreItem: false,
-        targetUrl: `/products#${p.id}`,
-        menuUrl: `/products#${p.id}`,
-      };
-    });
-
-    return [...storeProducts, ...retailProducts];
-  }, []);
+  }, [dbProducts, dbShops]);
 
   // Universal Global Search Computation across all entities
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) {
       return {
-        shops: shops.slice(0, 3),
+        shops: dbShops.slice(0, 3),
         products: allStoresCatalog.slice(0, 5),
         services: serviceItems.slice(0, 2),
         learn: learnItems.slice(0, 2),
@@ -220,18 +209,14 @@ const Header = ({ currentPage }) => {
       };
     }
 
-    const matchedShops = (shops || []).filter(
+    const matchedShops = (dbShops || []).filter(
       (s) =>
-        s.name.toLowerCase().includes(q) ||
-        s.summary.toLowerCase().includes(q) ||
+        s.name?.toLowerCase().includes(q) ||
+        s.summary?.toLowerCase().includes(q) ||
+        s.tagline?.toLowerCase().includes(q) ||
         (s.branch && s.branch.toLowerCase().includes(q)) ||
-        (s.specialties && s.specialties.some((spec) => spec.toLowerCase().includes(q)))
-    );
-
-    const simpleStoreMatches = (simpleData.stores || []).filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        s.slug.toLowerCase().includes(q)
+        (s.city && s.city.toLowerCase().includes(q)) ||
+        (s.specialties && Array.isArray(s.specialties) && s.specialties.some((spec) => spec.toLowerCase().includes(q)))
     );
 
     // Filter products across all stores

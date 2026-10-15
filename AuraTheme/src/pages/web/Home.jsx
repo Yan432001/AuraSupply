@@ -38,10 +38,9 @@ import {
   TeamOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import simpleData from '../../../../data/simpleData';
-import { shops as defaultShops, products as defaultRetailProducts, shopCategories, getLiveProducts } from '../../data/shopData';
-import { getLiveStores, getStorefrontSettings } from '../../data/frontEndControlStore';
+import { fetchProducts, fetchCategories, fetchShops, fetchShopSettings } from '../../utils/apiconfig';
 import { useCart } from '../../contexts/CartContext';
+
 import { useWishlist } from '../../contexts/WishlistContext';
 import { publicTheme, formatCurrency, formatCompact } from '../../utils/webTheme';
 import { animateAddToCart } from '../../utils/helpers';
@@ -86,25 +85,41 @@ export default function Home() {
   const [previewProduct, setPreviewProduct] = useState(null);
   const [telegramProduct, setTelegramProduct] = useState(null);
 
-  // Live Front End sync state
-  const [shops, setShops] = useState(getLiveStores);
-  const [retailProducts, setRetailProducts] = useState(getLiveProducts);
-  const [storefrontSettings, setStorefrontSettings] = useState(getStorefrontSettings);
+  // Real Database Data State
+  const [shops, setShops] = useState([]);
+  const [retailProducts, setRetailProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [storefrontSettings, setStorefrontSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const handleStoresUpdated = (e) => setShops(e.detail);
-    const handleProductsUpdated = (e) => setRetailProducts(e.detail);
-    const handleSettingsUpdated = (e) => setStorefrontSettings(e.detail);
+    let isMounted = true;
+    Promise.all([
+      fetchShops(),
+      fetchProducts({ featured: 1, limit: 30 }),
+      fetchCategories(),
+      fetchShopSettings()
+    ]).then(([shopsRes, prodsRes, catsRes, settingsRes]) => {
+      if (!isMounted) return;
+      if (shopsRes?.success && Array.isArray(shopsRes.data)) {
+        setShops(shopsRes.data);
+      }
+      if (prodsRes?.success && Array.isArray(prodsRes.data)) {
+        setRetailProducts(prodsRes.data);
+      }
+      if (catsRes?.success && Array.isArray(catsRes.data)) {
+        setCategories(catsRes.data);
+      }
+      if (settingsRes?.success && settingsRes.data) {
+        setStorefrontSettings(settingsRes.data);
+      }
+      setLoading(false);
+    }).catch((err) => {
+      console.warn('Home data load notice:', err);
+      if (isMounted) setLoading(false);
+    });
 
-    window.addEventListener('aura_frontend_stores_updated', handleStoresUpdated);
-    window.addEventListener('aura_live_products_updated', handleProductsUpdated);
-    window.addEventListener('aura_frontend_settings_updated', handleSettingsUpdated);
-
-    return () => {
-      window.removeEventListener('aura_frontend_stores_updated', handleStoresUpdated);
-      window.removeEventListener('aura_live_products_updated', handleProductsUpdated);
-      window.removeEventListener('aura_frontend_settings_updated', handleSettingsUpdated);
-    };
+    return () => { isMounted = false; };
   }, []);
 
   // Shop favorites & wishlist
@@ -135,39 +150,26 @@ export default function Home() {
     }
   };
 
-  const stores = simpleData.stores || [];
-  const categories = simpleData.categories || [];
-  const products = simpleData.products || [];
+  const stores = shops;
+  const products = retailProducts;
 
   const handleOpenTelegramModal = (storeOrShop) => {
     if (!storeOrShop) return;
-    const SELLER_SLUG_MAP = {
-      'seller-1': 'sbc-store',
-      'seller-2': 'aura-bakery',
-      'seller-3': 'aura-lounge',
-      'seller-4': 'aura-bistro',
-      'seller-5': 'aura-tech',
-      'seller-6': 'sbc-store',
-    };
 
     const resolvedSlug =
       storeOrShop.slug ||
-      SELLER_SLUG_MAP[storeOrShop.id] ||
-      (simpleData.stores || []).find(
-        (s) =>
-          s.id === storeOrShop.id ||
-          s.slug === storeOrShop.id ||
-          s.name?.toLowerCase() === storeOrShop.name?.toLowerCase()
-      )?.slug ||
+      storeOrShop.store_slug ||
+      storeOrShop.id ||
       'sbc-store';
 
-    const matchedStore = (simpleData.stores || []).find((s) => s.slug === resolvedSlug);
+    const matchedStore = (shops || []).find((s) => s.slug === resolvedSlug || s.id === storeOrShop.id);
 
     setTelegramShop({
       ...storeOrShop,
       id: storeOrShop.id || resolvedSlug,
       slug: resolvedSlug,
       name: storeOrShop.name || matchedStore?.name || 'Aura Store',
+
       branch: storeOrShop.branch || 'phnom-penh',
       rating: storeOrShop.rating || matchedStore?.rating || 4.9,
       followers: storeOrShop.followers || 12400,

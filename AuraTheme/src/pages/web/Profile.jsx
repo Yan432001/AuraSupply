@@ -40,6 +40,7 @@ import axios from 'axios';
 import OrderReceiptModal from '../../components/common/OrderReceiptModal';
 import { formatCurrency, publicTheme } from '../../utils/webTheme';
 import { exportSingleOrderPdf } from '../../utils/orderPdfExporter';
+import { fetchOrders } from '../../utils/apiconfig';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -84,11 +85,17 @@ export default function Profile() {
   const fetchUserOrders = async (isSilent = false) => {
     if (!isSilent) setLoadingOrders(true);
     try {
-      // 1. Fetch from backend API
-      const res = await axios.get('/api/tma/orders').catch(() => null);
+      // 1. Fetch real orders from database API
+      const res = await fetchOrders().catch(() => null);
       let apiOrders = [];
-      if (res?.data?.status) {
-        apiOrders = res.data.orders || res.data.data || [];
+      if (res?.success && Array.isArray(res.data)) {
+        apiOrders = res.data.map((o) => ({
+          ...o,
+          orderId: o.reference_no || `AUR-${o.id}`,
+          total: o.grand_total || o.total,
+          createdAt: o.date ? new Date(o.date).toLocaleString() : new Date().toLocaleString(),
+          status: o.status || 'Confirmed',
+        }));
       }
 
       // 2. Fetch from local storage web order history
@@ -98,7 +105,16 @@ export default function Profile() {
       } catch (_) {}
 
       // Combine and deduplicate
-      const combined = [...localOrders, ...apiOrders];
+      const seen = new Set();
+      const combined = [];
+      [...apiOrders, ...localOrders].forEach((item) => {
+        const idKey = item.orderId || item.reference_no || item.id;
+        if (idKey && !seen.has(idKey)) {
+          seen.add(idKey);
+          combined.push(item);
+        }
+      });
+
       setOrders(combined);
       setLastSyncTime(new Date());
       setSyncSecondsAgo(0);

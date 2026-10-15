@@ -65,7 +65,16 @@ async function startServer() {
     console.warn('[Telegram Controller] Warning mounting Telegram routes:', err.message);
   }
 
+  // AuraTheme Public Website & Sourcing API Endpoints (Real Database Data)
+  try {
+    require('./API/app/config/route/web/themePublic.route')(app);
+    console.log('[Route] Mounted /api (AuraTheme Public Endpoints)');
+  } catch (err) {
+    console.warn('[Route] Warning mounting AuraTheme public routes:', err.message);
+  }
+
   // Mount Admin & ERP Module Routes
+
   const adminRoutes = [
     'erpMaster',
     'auth',

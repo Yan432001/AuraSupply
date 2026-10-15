@@ -24,7 +24,7 @@ import {
   ArrowRightOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { submitContact } from '../../utils/apiconfig';
 import { publicTheme } from '../../utils/webTheme';
 
 const { Title, Text, Paragraph } = Typography;
@@ -329,25 +329,27 @@ Phone: ${phone}
 Branches: ${branchCount}
 Details: ${details}`;
 
-      const res = await axios.post('/api/cms/inquiries', {
+      const res = await submitContact({
         name: `${contactName} (${businessName})`,
         email,
+        phone,
+        subject: `Service Inquiry: ${formService}`,
         message: messageContent,
       });
 
-      if (res.data?.status || res.status === 200) {
+      if (res?.success) {
         setSubmitted(true);
-        message.success('Thank you! Your service inquiry has been submitted to our team.');
+        message.success('Thank you! Your service inquiry has been recorded in the database.');
         setBusinessName('');
         setContactName('');
         setEmail('');
         setPhone('');
         setDetails('');
       } else {
-        message.error('Could not submit inquiry. Please try again.');
+        message.error(res?.error || 'Could not submit inquiry. Please try again.');
       }
     } catch (err) {
-      message.error(err.response?.data?.error || err.message || 'Error sending inquiry');
+      message.error(err.message || 'Error sending inquiry');
     } finally {
       setSubmitting(false);
     }
