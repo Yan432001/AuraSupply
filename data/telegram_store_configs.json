@@ -19,14 +19,14 @@
     },
     "notificationTemplate": "detailed",
     "stats": {
-      "totalOrdersRouted": 70,
+      "totalOrdersRouted": 77,
       "lastRoutedAt": "Just now"
     },
     "status": "connected",
     "telegram_bot_username": "@auraglobalsource_bot",
     "last_test_result": {
       "success": true,
-      "timestamp": "2026-10-15T09:10:27.919Z",
+      "timestamp": "2026-10-15T09:44:57.796Z",
       "error": null
     }
   },
@@ -51,15 +51,15 @@
     },
     "notificationTemplate": "compact",
     "stats": {
-      "totalOrdersRouted": 143,
+      "totalOrdersRouted": 144,
       "lastRoutedAt": "Just now"
     },
     "status": "error",
     "telegram_bot_username": "@aura_emenu_order_bot",
     "last_test_result": {
       "success": false,
-      "timestamp": "2026-10-11T15:10:49.494Z",
-      "error": "Bad Request: chat not found"
+      "timestamp": "2026-10-15T09:44:53.807Z",
+      "error": "Unauthorized"
     }
   },
   {
@@ -95,7 +95,7 @@
     "botUsername": "@aura_emenu_order_bot",
     "botToken": "",
     "botTokenPreview": "8613686...1lCw",
-    "botStatus": "connected",
+    "botStatus": "error",
     "groupId": "-1002678129045",
     "groupTitle": "Aura Bistro - Head Chef & Orders Group",
     "groupInviteLink": "https://t.me/+AuraBistroKitchen",
@@ -108,8 +108,14 @@
     },
     "notificationTemplate": "detailed",
     "stats": {
-      "totalOrdersRouted": 67,
-      "lastRoutedAt": "45 min ago"
+      "totalOrdersRouted": 68,
+      "lastRoutedAt": "Just now"
+    },
+    "status": "error",
+    "last_test_result": {
+      "success": false,
+      "timestamp": "2026-10-15T09:45:02.898Z",
+      "error": "Unauthorized"
     }
   },
   {

@@ -242,12 +242,45 @@ const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigat
     });
   };
 
+const moduleIndexPermissionMap = {
+  inventory: ['products-index', 'products'],
+  procurement: ['purchases-index', 'purchases'],
+  sales: ['sales-index', 'sales'],
+  pos: ['pos-index', 'pos'],
+  asset: ['assets-index', 'assets'],
+  crm: ['customers-index', 'leads-index', 'crm'],
+  hr: ['hr-index', 'attendances-index', 'hr'],
+  payroll: ['payrolls-index', 'payroll-index', 'payroll'],
+  clinic: ['clinic', 'clinic-index', 'patients-index'],
+  accounting: ['accounts-index', 'account-index', 'accounts'],
+  loans: ['loans-index', 'loan-index', 'loans'],
+  property: ['property-index', 'property'],
+  reports: ['reports-index', 'reports', 'account_report-index'],
+  settings: ['settings-index', 'system_settings-index', 'system_settings', 'users-index', 'group_permissions-index'],
+  cms: ['settings-index', 'cms', 'cms-index'],
+  'front-end': ['settings-index', 'front-end', 'products-index'],
+};
+
+const hasUserPermission = (user, moduleKey) => {
+  if (!user) return true;
+  // Owner (level 1) bypasses all permission checks
+  if (user.level === 1 || user.group?.level === 1 || user.group_id === 1 || user.role === 'owner') {
+    return true;
+  }
+  if (!Array.isArray(user.permissions) || user.permissions.length === 0) {
+    return true;
+  }
+  const expectedKeys = moduleIndexPermissionMap[moduleKey] || [`${moduleKey}-index`, moduleKey];
+  return expectedKeys.some((k) => user.permissions.includes(k));
+};
+
   const modulesByKey = useMemo(() => Object.fromEntries(erpModules.map((module) => [module.key, module])), []);
 
-  // Filter out any closed/disabled modules and apply role-based visibility
+  // Filter out any closed/disabled modules and apply role & -index permission visibility
   const visibleModules = useMemo(() => {
     return erpModules.filter((module) => {
       if (!isModuleOpen(module.key)) return false;
+      if (!hasUserPermission(user, module.key)) return false;
       // If role is buyer, restrict to buyer-relevant modules
       if (user?.role === 'buyer' && !['sales', 'inventory', 'reports'].includes(module.key)) return false;
       if (user?.role === 'supplier' && !['purchases', 'inventory', 'reports'].includes(module.key)) return false;
@@ -262,6 +295,7 @@ const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigat
         ...section,
         keys: section.keys.filter((moduleKey) => {
           if (!isModuleOpen(moduleKey)) return false;
+          if (!hasUserPermission(user, moduleKey)) return false;
           if (user?.role === 'buyer' && !['sales', 'inventory', 'reports'].includes(moduleKey)) return false;
           if (user?.role === 'supplier' && !['purchases', 'inventory', 'reports'].includes(moduleKey)) return false;
           if (!term) return true;
@@ -383,7 +417,7 @@ const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigat
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {favorites.map(favKey => {
               const favMod = modulesByKey[favKey];
-              if (!favMod) return null;
+              if (!favMod || !isModuleOpen(favKey) || !hasUserPermission(user, favKey)) return null;
               const isFavActive = activeModuleKey === favKey;
               return (
                 <button

@@ -99,10 +99,18 @@ const ModernAuraLogin = () => {
       });
 
       if (res.data?.success && res.data?.data) {
-        const { token, user } = res.data.data;
+        const { token, user, group, permissions, branches } = res.data.data;
+        const enrichedUser = {
+          ...user,
+          group,
+          role: group?.name || user.role,
+          level: group?.level ?? user.level,
+          permissions: permissions || [],
+          branches: branches || []
+        };
         localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        login(user);
+        localStorage.setItem('user', JSON.stringify(enrichedUser));
+        login(enrichedUser);
         message.success(`Welcome back, ${user.first_name || user.username}!`);
         navigate('/admins/dashboard');
       } else {

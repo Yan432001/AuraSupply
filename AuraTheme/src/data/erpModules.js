@@ -578,9 +578,12 @@ export const erpModules = [
         leaf('units', 'Units', 'Maintain item unit definitions.'),
         leaf('warehouses', 'Warehouses & Branches', 'Maintain warehouse and location records.', { route: '/admins/settings/branches' }),
       ]),
-      group('settings-access', 'Access & Recovery', 'Users, roles, and backups.', [
-        leaf('user-groups', 'User Groups', 'Define role permissions and access boundaries.'),
-        leaf('users', 'Users', 'Maintain users and operator permissions.'),
+      group('settings-access', 'Access & Governance', 'Users, roles, and security audit.', [
+        leaf('user-groups', 'Roles & Ingress Policies', 'Define role permissions and access boundaries.', { route: '/admins/access-control' }),
+        leaf('permissions', 'Permission Matrix (777 Keys)', 'Configure normalized group permission matrix.', { route: '/admins/settings/permissions' }),
+        leaf('supplier-approvals', 'Supplier Approvals', 'Verify and approve supplier registrations.', { route: '/admins?module=settings&menu=supplier-approvals' }),
+        leaf('users', 'Users Directory', 'Maintain users and operator permissions.', { route: '/admins/settings/users' }),
+        leaf('audit-trails', 'Security & Audit Logs', 'Real-time login telemetry and audit trails.', { route: '/admins?module=settings&menu=audit-trails' }),
         leaf('backups', 'Backups', 'Check backup integrity and restore readiness.'),
         leaf('languages', 'Languages', 'Control installed languages and defaults.'),
       ]),

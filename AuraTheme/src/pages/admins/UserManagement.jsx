@@ -556,6 +556,13 @@ const UserManagement = () => {
             Refresh
           </Button>
           <Button
+            icon={<SafetyCertificateOutlined />}
+            onClick={() => window.location.href = '/admins/access-control'}
+            style={{ borderRadius: 10, borderColor: '#7c3aed', color: '#7c3aed', fontWeight: 600 }}
+          >
+            Role Governance & Matrix
+          </Button>
+          <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleOpenCreate}

@@ -1,16 +1,18 @@
 const jwt = require('jsonwebtoken');
 const { db, access_token_key } = require('../config/utill/helper');
 const { sendError } = require('../config/utill/response');
+const accessControlService = require('../services/accessControl.service');
 
 const JWT_SECRET = process.env.JWT_SECRET || access_token_key || 'AURA_ERP_SECRET_TOKEN_2026';
 
 /**
- * 1. Authenticate JWT Bearer Token strictly against `aura_users`
+ * 1. Authenticate JWT Bearer Token strictly against aura_users & aura_groups
  */
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     let userId = null;
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
       try {
@@ -20,42 +22,42 @@ const authenticate = async (req, res, next) => {
         return sendError(res, 'Session token expired or invalid. Please sign in again.', 401);
       }
     } else if (process.env.NODE_ENV !== 'production' || req.query.dev === '1') {
-      // In development / demo environment, fallback to primary administrator (id: 1)
+      // In local dev/demo environment, default to root owner (id: 1)
       userId = 1;
     } else {
       return sendError(res, 'Authentication required. No bearer token provided.', 401);
     }
+
     if (!userId) {
-      return sendError(res, 'Malformed token credentials.', 401);
+      return sendError(res, 'Malformed credentials.', 401);
     }
 
-    // Query aura_users directly - Single Source of Truth
+    // Query aura_users joined with aura_groups
     const [rows] = await db.query(`
-      SELECT id, username, email, first_name, last_name, phone, role, level,
-             permissions, status, active, theme, language, avatar, biller_id, warehouse_id
-      FROM aura_users
-      WHERE id = ? AND deleted_at IS NULL
+      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.phone,
+             u.group_id, u.status, u.active, u.theme, u.avatar,
+             g.name AS group_name, g.description AS group_description, g.level AS group_level,
+             g.allow_admin_login, g.allow_web_login
+      FROM aura_users u
+      JOIN aura_groups g ON g.id = u.group_id
+      WHERE u.id = ? AND u.deleted_at IS NULL
       LIMIT 1
     `, [userId]);
 
     if (!rows || rows.length === 0) {
-      return sendError(res, 'User account not found.', 401);
+      return sendError(res, 'User account not found or removed.', 401);
     }
 
     const user = rows[0];
-    if (user.status !== 'active' && user.active !== 1) {
-      return sendError(res, 'Account is inactive or suspended. Contact administrator.', 403);
+    if (user.status !== 'active') {
+      return sendError(res, `Account is currently ${user.status}. Access denied.`, 403);
     }
 
-    // Parse JSON permissions
-    let parsedPerms = {};
-    if (user.permissions) {
-      try {
-        parsedPerms = typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions;
-      } catch (_) {
-        parsedPerms = {};
-      }
-    }
+    // Retrieve allowed branches & permissions
+    const [permissions, branches] = await Promise.all([
+      accessControlService.getUserAllowedPermissions(user.id, user.group_id, user.group_level),
+      accessControlService.getUserAllowedBranches(user.id, user.group_level)
+    ]);
 
     req.user = {
       id: user.id,
@@ -63,16 +65,17 @@ const authenticate = async (req, res, next) => {
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
-      role: user.role || 'staff',
-      level: user.level || 3,
-      permissions: parsedPerms,
-      theme: user.theme || 'light',
-      language: user.language || 'english',
-      biller_id: user.biller_id,
-      warehouse_id: user.warehouse_id
+      role: user.group_name,
+      level: user.group_level,
+      group_id: user.group_id,
+      theme: user.theme || 'light'
     };
     req.user_id = user.id;
-    req.role = user.role;
+    req.role = user.group_name;
+    req.level = user.group_level;
+    req.permissions = permissions;
+    req.branches = branches;
+    req.branchIds = branches.map(b => b.id);
 
     next();
   } catch (err) {
@@ -82,7 +85,7 @@ const authenticate = async (req, res, next) => {
 };
 
 /**
- * 2. Check if an ERP Module is enabled in `aura_module_settings`
+ * 2. Check if an ERP Module is enabled in aura_module_settings
  */
 const checkModuleEnabled = (moduleKey) => {
   return async (req, res, next) => {
@@ -92,7 +95,6 @@ const checkModuleEnabled = (moduleKey) => {
         [moduleKey]
       );
 
-      // If module row exists and is explicitly disabled
       if (rows && rows.length > 0 && rows[0].is_enabled === 0) {
         return sendError(res, `Module '${moduleKey}' is currently disabled in ERP settings.`, 403);
       }
@@ -114,57 +116,69 @@ const requireRole = (...allowedRoles) => {
       return sendError(res, 'Unauthenticated', 401);
     }
 
-    // Super-admin bypass
+    // Super-admin bypass (level 1)
     if (req.user.role === 'owner' || req.user.level === 1) {
       return next();
     }
 
     const flatRoles = allowedRoles.flat().map(r => r.toLowerCase());
-    if (flatRoles.includes((req.user.role || '').toLowerCase())) {
+    if (flatRoles.includes(req.user.role.toLowerCase())) {
       return next();
     }
 
-    return sendError(res, `Access denied. Role '${req.user.role}' is not authorized for this resource.`, 403);
+    return sendError(res, `Access denied. Requires one of roles: [${flatRoles.join(', ')}]`, 403);
   };
 };
 
 /**
- * 4. Enforce Granular Permission Check on module and action (e.g., 'inventory', 'create')
+ * 4. Granular Server-Side Permission Check using aura_user_can()
+ * Uses normalized permission keys (e.g. 'sales-index', 'products-add', 'system_settings')
+ * Owner (level 1) bypasses checks automatically.
  */
-const requirePermission = (moduleKey, action = 'view') => {
-  return (req, res, next) => {
+const requirePermission = (permissionKey) => {
+  return async (req, res, next) => {
     if (!req.user) {
       return sendError(res, 'Unauthenticated', 401);
     }
 
-    // Super-admin / owner bypass
-    if (req.user.role === 'owner' || req.user.level === 1) {
+    // Owner bypass (level 1)
+    if (req.user.level === 1 || req.user.role === 'owner') {
       return next();
     }
 
-    const perms = req.user.permissions || {};
-    const modPerms = perms[moduleKey];
-
-    if (modPerms && (modPerms[action] === true || modPerms['all'] === true)) {
+    // Fast check in cached array if already loaded
+    if (req.permissions && req.permissions.includes(permissionKey)) {
       return next();
     }
 
-    // Role-level fallback for managers
-    if (req.user.role === 'admin' && ['view', 'create', 'edit'].includes(action)) {
+    // SQL check fallback via aura_user_can()
+    const can = await accessControlService.userCan(req.user.id, permissionKey);
+    if (can) {
       return next();
     }
 
-    return sendError(
-      res,
-      `Permission denied. You do not possess '${action}' access for module '${moduleKey}'.`,
-      403
-    );
+    return sendError(res, `Access denied: Missing required permission '${permissionKey}'`, 403);
   };
+};
+
+/**
+ * 5. Branch Scope Filter
+ * Attaches permitted branch IDs so controllers can scope SQL data:
+ * `WHERE biller_id IN (?)`
+ */
+const branchScopeFilter = (req, res, next) => {
+  if (req.user && (req.user.level === 1 || req.user.role === 'owner' || req.user.role === 'admin')) {
+    req.isUnrestrictedBranch = true;
+  } else {
+    req.isUnrestrictedBranch = false;
+  }
+  next();
 };
 
 module.exports = {
   authenticate,
   checkModuleEnabled,
   requireRole,
-  requirePermission
+  requirePermission,
+  branchScopeFilter
 };

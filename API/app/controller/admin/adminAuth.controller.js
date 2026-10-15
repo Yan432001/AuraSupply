@@ -1,311 +1,454 @@
-const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const { db, access_token_key } = require('../../config/utill/helper');
 const { sendSuccess, sendError } = require('../../config/utill/response');
-const { logActivity } = require('../../services/auditLogger.service');
+const tokenService = require('../../services/token.service');
+const accessControlService = require('../../services/accessControl.service');
 
 const JWT_SECRET = process.env.JWT_SECRET || access_token_key || 'AURA_ERP_SECRET_TOKEN_2026';
-const TOKEN_EXPIRY = '24h';
-const REFRESH_EXPIRY_DAYS = 7;
+const ACCESS_TOKEN_EXPIRY = '2h'; // Short access token
 
 /**
  * POST /api/admin/auth/login
- * User login with Bcrypt / SHA1 fallback, JWT issuance, and session recording
+ * Administrative Authentication
+ *
+ * Enforces:
+ *   - Accept username or email + password
+ *   - Verify bcrypt ($2b$ hashes) or legacy sha1 with auto-upgrade
+ *   - Allow ONLY if: status='active', deleted_at IS NULL, locked_until is empty or past,
+ *     and aura_groups.allow_admin_login = 1
+ *   - Wrong password: failed_login_count + 1; lock 15 min after 5 tries; log to aura_login_attempts (area='admin')
+ *   - Success: reset counter, set last_login_at, write aura_user_logins (area='admin', success=1),
+ *     issue short access token + refresh token (store SHA-256 in aura_user_tokens)
+ *   - Return: user, group, allowed permission keys (array), allowed branches (aura_user_billers)
  */
 exports.login = async (req, res) => {
   try {
-    const { username, password, remember_me } = req.body;
+    const { username, password, remember_me = false } = req.body;
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+
     if (!username || !password) {
-      return sendError(res, 'Username and password are required', 400);
+      return sendError(res, 'Username or email and password are required', 400);
     }
 
-    const query = `
-      SELECT id, username, email, password, first_name, last_name, phone,
-             role, level, permissions, status, active, theme, language, avatar,
-             biller_id, warehouse_id
-      FROM aura_users
-      WHERE (username = ? OR email = ?) AND deleted_at IS NULL
+    const cleanLogin = username.trim().toLowerCase();
+
+    // Query aura_users joined with aura_groups
+    const [users] = await db.query(`
+      SELECT u.id, u.username, u.email, u.password, u.password_algo, u.group_id,
+             u.status, u.active, u.first_name, u.last_name, u.phone, u.avatar, u.theme,
+             u.failed_login_count, u.locked_until, u.deleted_at,
+             g.name AS group_name, g.description AS group_description, g.level AS group_level,
+             g.allow_admin_login, g.allow_web_login
+      FROM aura_users u
+      JOIN aura_groups g ON g.id = u.group_id
+      WHERE (LOWER(u.username) = ? OR LOWER(u.email) = ?) AND u.deleted_at IS NULL
       LIMIT 1
-    `;
-    const [rows] = await db.query(query, [username.trim(), username.trim()]);
+    `, [cleanLogin, cleanLogin]);
 
-    if (!rows || rows.length === 0) {
-      return sendError(res, 'Invalid credentials. User does not exist.', 401);
+    if (!users || users.length === 0) {
+      await db.query(`
+        INSERT INTO aura_login_attempts (login, ip_address, area, time)
+        VALUES (?, ?, 'admin', NOW())
+      `, [cleanLogin, ipAddress]);
+      return sendError(res, 'Invalid credentials', 401);
     }
 
-    const user = rows[0];
+    const user = users[0];
 
-    // Check account status
-    if (user.status !== 'active' && user.active !== 1) {
-      return sendError(res, 'Account is currently deactivated or suspended. Please contact admin.', 403);
+    // Check account lockout (15 minutes after 5 failed tries)
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      const remainingMinutes = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
+      return sendError(
+        res,
+        `Account temporarily locked due to too many failed attempts. Please try again in ${remainingMinutes} minute(s).`,
+        423
+      );
     }
 
-    // Password verification (Dual-algorithm: modern Bcrypt + legacy Ion Auth SHA1)
-    let isMatch = false;
-    try {
-      isMatch = await bcrypt.compare(password, user.password);
-    } catch (_) {
-      isMatch = false;
+    // Check admin portal privilege (aura_groups.allow_admin_login = 1)
+    if (Number(user.allow_admin_login) !== 1) {
+      return sendError(res, 'Access denied: Your account role does not have administrative permissions.', 403);
     }
 
-    if (!isMatch && user.password && user.password.length === 40) {
-      const salt = user.password.substring(0, 10);
-      const candidate = salt + crypto.createHash('sha1').update(salt + password).digest('hex').substring(0, 30);
-      if (candidate === user.password) {
-        isMatch = true;
-        // Transparently upgrade legacy SHA1 hash to modern bcrypt
-        const modernHash = await bcrypt.hash(password, 10);
-        await db.query('UPDATE aura_users SET password = ? WHERE id = ?', [modernHash, user.id]);
+    // Check user account status
+    if (user.status !== 'active') {
+      if (user.status === 'pending') {
+        return sendError(res, 'Account is pending approval by an administrator.', 403);
+      }
+      return sendError(res, `Account is ${user.status}. Please contact system support.`, 403);
+    }
+
+    // Check migrated accounts with password '!'
+    if (user.password === '!') {
+      return sendError(
+        res,
+        'Your account was migrated from the legacy system. Please use "Forgot Password" to set your password.',
+        400,
+        { requiresPasswordReset: true }
+      );
+    }
+
+    // Password Verification (bcrypt with legacy sha1 fallback & auto-upgrade)
+    let passwordMatches = false;
+    let needsUpgradeToBcrypt = false;
+
+    if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$')) {
+      passwordMatches = await bcrypt.compare(password, user.password);
+    } else {
+      // Legacy SHA1 check
+      const sha1Hash = crypto.createHash('sha1').update(password).digest('hex');
+      if (sha1Hash === user.password) {
+        passwordMatches = true;
+        needsUpgradeToBcrypt = true;
       }
     }
 
-    if (!isMatch) {
-      return sendError(res, 'Invalid credentials. Incorrect password.', 401);
-    }
+    // Handle Wrong Password
+    if (!passwordMatches) {
+      const newFailedCount = (user.failed_login_count || 0) + 1;
+      let lockUntilSql = 'NULL';
+      let isNowLocked = false;
 
-    // Parse JSON permissions
-    let parsedPerms = {};
-    if (user.permissions) {
-      try {
-        parsedPerms = typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions;
-      } catch (_) {
-        parsedPerms = {};
+      if (newFailedCount >= 5) {
+        lockUntilSql = 'DATE_ADD(NOW(), INTERVAL 15 MINUTE)';
+        isNowLocked = true;
       }
+
+      await db.query(`
+        UPDATE aura_users
+        SET failed_login_count = ?, locked_until = ${lockUntilSql}
+        WHERE id = ?
+      `, [newFailedCount, user.id]);
+
+      await db.query(`
+        INSERT INTO aura_login_attempts (login, ip_address, area, time)
+        VALUES (?, ?, 'admin', NOW())
+      `, [cleanLogin, ipAddress]);
+
+      if (isNowLocked) {
+        return sendError(res, 'Too many failed login attempts. Account locked for 15 minutes.', 423);
+      }
+
+      const attemptsRemaining = 5 - newFailedCount;
+      return sendError(res, `Invalid credentials. ${attemptsRemaining} attempt(s) remaining before temporary lockout.`, 401);
     }
 
-    // Generate JWT access token
+    // Auto-upgrade legacy hash to modern bcrypt if needed
+    if (needsUpgradeToBcrypt) {
+      const newBcryptHash = await bcrypt.hash(password, 10);
+      await db.query(`
+        UPDATE aura_users
+        SET password = ?, password_algo = 'bcrypt'
+        WHERE id = ?
+      `, [newBcryptHash, user.id]);
+    }
+
+    // Successful login -> Reset lockout counter and update login telemetry
+    await db.query(`
+      UPDATE aura_users
+      SET failed_login_count = 0,
+          locked_until = NULL,
+          last_login_at = NOW(),
+          last_login_ip = ?
+      WHERE id = ?
+    `, [ipAddress, user.id]);
+
+    // Record login in aura_user_logins (area='admin', success=1)
+    await db.query(`
+      INSERT INTO aura_user_logins (user_id, area, success, ip_address, user_agent, time)
+      VALUES (?, 'admin', 1, ?, ?, NOW())
+    `, [user.id, ipAddress, userAgent]);
+
+    // Issue JWT short access token
     const tokenPayload = {
       id: user.id,
       username: user.username,
       email: user.email,
-      role: user.role,
-      level: user.level
+      group_id: user.group_id,
+      role: user.group_name,
+      level: user.group_level,
+      area: 'admin'
     };
+    const accessToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
 
-    const accessToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
-    const refreshToken = crypto.randomBytes(32).toString('hex');
-    const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-
-    // Record session in aura_user_sessions
-    const sessionId = crypto.randomUUID();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + (remember_me ? 30 : REFRESH_EXPIRY_DAYS));
-
-    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '127.0.0.1';
-    const userAgent = (req.headers['user-agent'] || '').slice(0, 255);
-
-    await db.query(`
-      INSERT INTO aura_user_sessions (id, user_id, token_hash, ip_address, user_agent, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `, [sessionId, user.id, refreshTokenHash, String(ip).slice(0, 45), userAgent, expiresAt]);
-
-    // Update user last login
-    await db.query(`
-      UPDATE aura_users
-      SET last_login_at = NOW(), last_login_ip = ?
-      WHERE id = ?
-    `, [String(ip).slice(0, 45), user.id]);
-
-    // Log audit activity
-    req.user = user;
-    await logActivity({
-      req,
-      action: 'login',
-      tableName: 'aura_users',
-      recordId: user.id,
-      newValues: { ip, userAgent }
+    // Issue refresh token (stored as SHA-256 only in aura_user_tokens)
+    const refreshExpirySeconds = remember_me ? 30 * 24 * 3600 : 7 * 24 * 3600;
+    const refreshTokenRecord = await tokenService.issueToken({
+      userId: user.id,
+      type: 'refresh',
+      area: 'admin',
+      expiresInSeconds: refreshExpirySeconds,
+      ipAddress,
+      userAgent
     });
 
-    const userProfile = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      phone: user.phone,
-      role: user.role,
-      level: user.level,
-      permissions: parsedPerms,
-      theme: user.theme || 'light',
-      language: user.language || 'english',
-      avatar: user.avatar,
-      biller_id: user.biller_id,
-      warehouse_id: user.warehouse_id
+    // If remember me requested, issue dedicated remember token
+    let rememberToken = null;
+    if (remember_me) {
+      const rem = await tokenService.issueToken({
+        userId: user.id,
+        type: 'remember',
+        area: 'admin',
+        expiresInSeconds: 30 * 24 * 3600,
+        ipAddress,
+        userAgent
+      });
+      rememberToken = rem.plainToken;
+    }
+
+    // Fetch allowed permission keys (array) and allowed branches
+    const [allowedPermissions, allowedBranches] = await Promise.all([
+      accessControlService.getUserAllowedPermissions(user.id, user.group_id, user.group_level),
+      accessControlService.getUserAllowedBranches(user.id, user.group_level)
+    ]);
+
+    // Build standard response payload
+    const responseData = {
+      token: accessToken,
+      refreshToken: refreshTokenRecord.plainToken,
+      rememberToken,
+      expiresIn: ACCESS_TOKEN_EXPIRY,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone,
+        avatar: user.avatar,
+        theme: user.theme || 'light'
+      },
+      group: {
+        id: user.group_id,
+        name: user.group_name,
+        description: user.group_description,
+        level: user.group_level,
+        allow_admin_login: user.allow_admin_login,
+        allow_web_login: user.allow_web_login
+      },
+      permissions: allowedPermissions,
+      branches: allowedBranches
     };
 
-    return sendSuccess(res, {
-      token: accessToken,
-      refreshToken,
-      user: userProfile,
-      profile: userProfile
-    }, 'Authentication successful');
+    return sendSuccess(res, responseData, 'Authentication successful');
   } catch (err) {
-    console.error('[AdminAuth Login Error]', err);
-    return sendError(res, 'Internal server error during authentication', 500, err.message);
+    console.error('[Admin Login Error]', err);
+    return sendError(res, 'Authentication failed due to server error', 500, err.message);
   }
 };
 
 /**
  * POST /api/admin/auth/logout
- * Terminate user session
+ * Revoke refresh token and terminate session
  */
 exports.logout = async (req, res) => {
   try {
-    const userId = req.user?.id || req.body?.user_id;
-    if (userId) {
-      await db.query('DELETE FROM aura_user_sessions WHERE user_id = ?', [userId]);
-      await logActivity({
-        req,
-        action: 'logout',
-        tableName: 'aura_users',
-        recordId: userId
-      });
+    const { refreshToken } = req.body;
+    if (refreshToken) {
+      await tokenService.revokeToken(refreshToken);
+    }
+    if (req.user?.id) {
+      await tokenService.revokeAllUserTokens(req.user.id, 'refresh');
     }
     return sendSuccess(res, null, 'Logged out successfully');
   } catch (err) {
-    return sendError(res, 'Failed to log out', 500, err.message);
+    return sendError(res, 'Failed to logout', 500, err.message);
   }
 };
 
 /**
  * POST /api/admin/auth/refresh
- * Refresh access token using refresh token
+ * Exchange refresh token for fresh access token
  */
 exports.refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
     if (!refreshToken) {
-      return sendError(res, 'Refresh token required', 400);
+      return sendError(res, 'Refresh token is required', 400);
     }
 
-    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    const [sessions] = await db.query(`
-      SELECT s.*, u.username, u.email, u.role, u.level, u.status
-      FROM aura_user_sessions s
-      JOIN aura_users u ON s.user_id = u.id
-      WHERE s.token_hash = ? AND s.expires_at > NOW() AND u.deleted_at IS NULL
+    const tokenRow = await tokenService.validateToken(refreshToken, 'refresh', 'admin');
+    if (!tokenRow) {
+      return sendError(res, 'Refresh token is invalid, expired, or revoked', 401);
+    }
+
+    // Fetch user and group
+    const [users] = await db.query(`
+      SELECT u.id, u.username, u.email, u.group_id, u.status,
+             g.name AS group_name, g.level AS group_level, g.allow_admin_login
+      FROM aura_users u
+      JOIN aura_groups g ON g.id = u.group_id
+      WHERE u.id = ? AND u.deleted_at IS NULL AND u.status = 'active'
       LIMIT 1
-    `, [tokenHash]);
+    `, [tokenRow.user_id]);
 
-    if (!sessions || sessions.length === 0) {
-      return sendError(res, 'Invalid or expired refresh token', 401);
+    if (!users || users.length === 0 || Number(users[0].allow_admin_login) !== 1) {
+      return sendError(res, 'User account not eligible for token refresh', 403);
     }
 
-    const session = sessions[0];
-    const newAccessToken = jwt.sign({
-      id: session.user_id,
-      username: session.username,
-      email: session.email,
-      role: session.role,
-      level: session.level
-    }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+    const user = users[0];
+    const newAccessToken = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        group_id: user.group_id,
+        role: user.group_name,
+        level: user.group_level,
+        area: 'admin'
+      },
+      JWT_SECRET,
+      { expiresIn: ACCESS_TOKEN_EXPIRY }
+    );
 
-    return sendSuccess(res, { token: newAccessToken }, 'Token refreshed successfully');
+    return sendSuccess(res, {
+      token: newAccessToken,
+      expiresIn: ACCESS_TOKEN_EXPIRY
+    }, 'Access token renewed');
   } catch (err) {
-    return sendError(res, 'Failed to refresh token', 500, err.message);
+    return sendError(res, 'Token refresh failed', 500, err.message);
   }
 };
 
 /**
  * GET /api/admin/auth/profile
- * Get authenticated user profile & permissions
+ * Get authenticated user profile with live permissions & branch scopes
  */
 exports.getProfile = async (req, res) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return sendError(res, 'Unauthenticated', 401);
-    }
-
-    const [rows] = await db.query(`
-      SELECT id, username, email, first_name, last_name, phone,
-             role, level, permissions, status, theme, language, avatar,
-             biller_id, warehouse_id, last_login_at
-      FROM aura_users
-      WHERE id = ? AND deleted_at IS NULL
+    const userId = req.user.id;
+    const [users] = await db.query(`
+      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.phone,
+             u.avatar, u.theme, u.group_id, u.status, u.created_at, u.last_login_at,
+             g.name AS group_name, g.description AS group_description, g.level AS group_level,
+             g.allow_admin_login, g.allow_web_login
+      FROM aura_users u
+      JOIN aura_groups g ON g.id = u.group_id
+      WHERE u.id = ? AND u.deleted_at IS NULL
       LIMIT 1
     `, [userId]);
 
-    if (!rows || rows.length === 0) {
+    if (!users || users.length === 0) {
       return sendError(res, 'User not found', 404);
     }
 
-    const user = rows[0];
-    let parsedPerms = {};
-    if (user.permissions) {
-      try {
-        parsedPerms = typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions;
-      } catch (_) {
-        parsedPerms = {};
-      }
-    }
-    user.permissions = parsedPerms;
+    const user = users[0];
+    const [permissions, branches] = await Promise.all([
+      accessControlService.getUserAllowedPermissions(user.id, user.group_id, user.group_level),
+      accessControlService.getUserAllowedBranches(user.id, user.group_level)
+    ]);
 
-    return sendSuccess(res, user, 'Profile retrieved');
+    return sendSuccess(res, {
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone,
+        avatar: user.avatar,
+        theme: user.theme,
+        last_login_at: user.last_login_at
+      },
+      group: {
+        id: user.group_id,
+        name: user.group_name,
+        description: user.group_description,
+        level: user.group_level,
+        allow_admin_login: user.allow_admin_login
+      },
+      permissions,
+      branches
+    });
   } catch (err) {
-    return sendError(res, 'Failed to retrieve profile', 500, err.message);
+    return sendError(res, 'Failed to fetch user profile', 500, err.message);
   }
 };
 
 /**
  * POST /api/admin/auth/forgot-password
- * Send or generate password reset verification code
+ * Issue one-use 1-hour password reset token stored as SHA-256
  */
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) {
-      return sendError(res, 'Email address is required', 400);
+      return sendError(res, 'Registered email address is required', 400);
     }
 
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const [rows] = await db.query('SELECT id, username FROM aura_users WHERE email = ? LIMIT 1', [email.trim()]);
+    const cleanEmail = email.trim().toLowerCase();
+    const [users] = await db.query(
+      'SELECT id, username, email FROM aura_users WHERE LOWER(email) = ? AND deleted_at IS NULL LIMIT 1',
+      [cleanEmail]
+    );
 
-    if (rows && rows.length > 0) {
-      await db.query(`
-        UPDATE aura_users
-        SET forgotten_password_code = ?, forgotten_password_time = UNIX_TIMESTAMP()
-        WHERE id = ?
-      `, [resetCode, rows[0].id]);
+    if (!users || users.length === 0) {
+      // Return generic success to prevent email enumeration
+      return sendSuccess(res, null, 'If that email is registered, password reset instructions have been generated.');
     }
 
-    // Always return success to prevent email enumeration
-    return sendSuccess(res, { resetCode }, 'Password reset instructions sent (Code simulation for local testing: ' + resetCode + ')');
+    const user = users[0];
+    const { plainToken, expiresAt } = await tokenService.issueToken({
+      userId: user.id,
+      type: 'password_reset',
+      area: 'admin',
+      expiresInSeconds: 3600, // 1 hour validity
+      ipAddress: req.ip
+    });
+
+    return sendSuccess(res, {
+      resetToken: plainToken,
+      expiresAt,
+      message: 'Password reset token generated. In production, this is emailed to the user.'
+    }, 'Password reset instructions generated');
   } catch (err) {
-    return sendError(res, 'Failed to process password reset', 500, err.message);
+    return sendError(res, 'Failed to process forgot password request', 500, err.message);
   }
 };
 
 /**
  * POST /api/admin/auth/reset-password
- * Reset user password with code
+ * Consume password reset token and update password with bcrypt
  */
 exports.resetPassword = async (req, res) => {
   try {
-    const { email, code, new_password } = req.body;
-    if (!email || !code || !new_password) {
-      return sendError(res, 'Email, reset code, and new password are required', 400);
+    const { token, new_password } = req.body;
+    if (!token || !new_password) {
+      return sendError(res, 'Token and new password are required', 400);
     }
 
-    const [rows] = await db.query(`
-      SELECT id FROM aura_users
-      WHERE email = ? AND forgotten_password_code = ?
-      LIMIT 1
-    `, [email.trim(), code.trim()]);
-
-    if (!rows || rows.length === 0) {
-      return sendError(res, 'Invalid reset code or email address', 400);
+    if (new_password.length < 6) {
+      return sendError(res, 'Password must be at least 6 characters', 400);
     }
 
-    const newHash = await bcrypt.hash(new_password, 10);
+    const tokenRow = await tokenService.validateToken(token, 'password_reset');
+    if (!tokenRow) {
+      return sendError(res, 'Password reset token is invalid, expired, or already used', 400);
+    }
+
+    const hash = await bcrypt.hash(new_password, 10);
+
+    // Update password, reset lockout and failure counts
     await db.query(`
       UPDATE aura_users
-      SET password = ?, forgotten_password_code = NULL, forgotten_password_time = NULL
+      SET password = ?,
+          password_algo = 'bcrypt',
+          failed_login_count = 0,
+          locked_until = NULL,
+          updated_at = NOW()
       WHERE id = ?
-    `, [newHash, rows[0].id]);
+    `, [hash, tokenRow.user_id]);
 
-    return sendSuccess(res, null, 'Password successfully reset. You may now sign in.');
+    // Mark token as used
+    await tokenService.markTokenUsed(tokenRow.id);
+
+    // Invalidate any other active sessions
+    await tokenService.revokeAllUserTokens(tokenRow.user_id);
+
+    return sendSuccess(res, null, 'Password successfully reset. You may now log in with your new credentials.');
   } catch (err) {
     return sendError(res, 'Failed to reset password', 500, err.message);
   }

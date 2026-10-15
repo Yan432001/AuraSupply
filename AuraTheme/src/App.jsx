@@ -39,6 +39,7 @@ import UserManagement from './pages/admins/UserManagement';
 import AdminQrCodeGeneratorPage from './pages/admins/AdminQrCodeGeneratorPage';
 import AdminModulesManager from './pages/admins/AdminModulesManager';
 import AdminBranchesManager from './pages/admins/AdminBranchesManager';
+import AdminAccessControlManager from './pages/admins/AdminAccessControlManager';
 import AdminFrontEndManager from './pages/admins/AdminFrontEndManager';
 import ModernAuraLogin from './pages/admins/auth/ModernAuraLogin';
 import { AdminModulesProvider } from './contexts/AdminModulesContext';
@@ -139,6 +140,10 @@ const AppContent = () => {
         <Route path="settings/system" element={<AdminDashboardRouter />} />
         <Route path="settings/categories" element={<CategoriesPage />} />
         <Route path="settings/users" element={<UserManagement />} />
+        <Route path="access-control" element={<AdminAccessControlManager />} />
+        <Route path="settings/access" element={<AdminAccessControlManager />} />
+        <Route path="settings/roles" element={<AdminAccessControlManager initialTab="groups" />} />
+        <Route path="settings/permissions" element={<AdminAccessControlManager initialTab="matrix" />} />
         <Route path="modules" element={<AdminModulesManager />} />
         <Route path="settings/modules" element={<AdminModulesManager />} />
         <Route path="branches" element={<AdminBranchesManager />} />

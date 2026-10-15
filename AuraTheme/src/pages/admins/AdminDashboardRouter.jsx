@@ -18,6 +18,7 @@ import { getModuleByKey } from '../../data/erpModules';
 import OrdersManagement from './OrdersManagement';
 import CustomersManagement from './CustomersManagement';
 import UserManagement from './UserManagement';
+import AdminAccessControlManager from './AdminAccessControlManager';
 import CategoriesPage from './CategoriesPage';
 import InventoryReport from './InventoryReport';
 import SalesReport from './SalesReport';
@@ -48,6 +49,31 @@ const AdminDashboardRouter = () => {
     (moduleKey === 'settings' && (menuKey === 'branches' || menuKey === 'billers' || menuKey === 'warehouses'))
   ) {
     return <AdminBranchesManager />;
+  }
+
+  // Access Control & Role Governance (aura_groups, aura_permission_keys, aura_user_billers, aura_user_permissions)
+  if (
+    moduleKey === 'access' ||
+    moduleKey === 'access-control' ||
+    moduleKey === 'roles' ||
+    moduleKey === 'permissions' ||
+    menuKey === 'access-control' ||
+    menuKey === 'permissions' ||
+    menuKey === 'group-permissions' ||
+    menuKey === 'user-groups' ||
+    menuKey === 'roles' ||
+    menuKey === 'supplier-approvals' ||
+    menuKey === 'audit-trails' ||
+    (moduleKey === 'settings' && (menuKey === 'access-control' || menuKey === 'permissions' || menuKey === 'roles' || menuKey === 'user-groups'))
+  ) {
+    const tab = menuKey === 'supplier-approvals'
+      ? 'pending-suppliers'
+      : (menuKey === 'permissions' || menuKey === 'group-permissions')
+      ? 'matrix'
+      : menuKey === 'audit-trails'
+      ? 'telemetry'
+      : 'groups';
+    return <AdminAccessControlManager initialTab={tab} />;
   }
 
   // If module is 'front-end' or 'frontend' or any front-office menu, render AdminFrontEndManager
