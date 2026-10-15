@@ -5,6 +5,7 @@ import { NotificationProvider } from '../pages/admins/NotificationContext';
 import HeaderDefault from '../pages/admins/AdminHeaderDefault';
 import Head from '../pages/admins/AdminHead';
 import FooterDefault from '../pages/admins/AdminFooterDefault';
+import AdminModuleScrollSlidebar from '../components/web/shared/AdminModuleScrollSlidebar';
 import { erpModules } from '../data/erpModules';
 import { useAdminTheme } from '../hooks/useAdminTheme';
 import { useAdminModules } from '../hooks/useAdminModules';
@@ -160,6 +161,8 @@ const AdminLayout = () => {
             isMobile={isMobile}
             showModuleMenu={showSidebar}
           />
+
+          {showSidebar && <AdminModuleScrollSlidebar />}
 
           <Content
             style={{

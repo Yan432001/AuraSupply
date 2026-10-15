@@ -241,7 +241,7 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick }) => {
           overflowY: 'auto',
           overflowX: 'hidden',
           padding: collapsed ? '10px 8px' : '12px 10px',
-          scrollbarWidth: 'none',
+          scrollBehavior: 'smooth',
         }}
         className="erp-sidebar-scroll"
       >
