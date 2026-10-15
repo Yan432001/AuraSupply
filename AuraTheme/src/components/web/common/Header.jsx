@@ -20,8 +20,11 @@ import {
   BookOutlined,
   CoffeeOutlined,
   CompassOutlined,
+  DownOutlined,
   HeartOutlined,
   HomeOutlined,
+  LoginOutlined,
+  LogoutOutlined,
   MenuOutlined,
   SearchOutlined,
   ShopOutlined,
@@ -30,6 +33,7 @@ import {
   TeamOutlined,
   ThunderboltOutlined,
   ToolOutlined,
+  UserAddOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -339,7 +343,10 @@ const Header = ({ currentPage }) => {
         navigate('/login');
         break;
       case 'signup':
-        navigate('/login');
+        navigate('/login?tab=register');
+        break;
+      case 'admins':
+        navigate('/admins/dashboard');
         break;
       case 'logout':
         logout();
@@ -351,10 +358,68 @@ const Header = ({ currentPage }) => {
     setDrawerVisible(false);
   };
 
-  const userMenuItems = [
-    ...(user ? [{ key: 'profile', label: 'My Profile' }] : [{ key: 'login', label: 'Login' }]),
-    user ? { key: 'logout', label: 'Logout' } : { key: 'signup', label: 'Sign Up' },
-  ];
+  const userMenuItems = useMemo(() => {
+    if (user) {
+      return [
+        {
+          key: 'user-info',
+          disabled: true,
+          label: (
+            <div style={{ padding: '2px 0' }}>
+              <div style={{ fontWeight: 800, fontSize: 13, color: publicTheme.text }}>{user.name}</div>
+              <div style={{ fontSize: 11, color: publicTheme.subtext }}>{user.email || user.role || 'Member'}</div>
+            </div>
+          ),
+        },
+        { type: 'divider' },
+        {
+          key: 'profile',
+          icon: <UserOutlined style={{ color: publicTheme.primary }} />,
+          label: 'My Profile & Settings',
+        },
+        {
+          key: 'admins',
+          icon: <ThunderboltOutlined style={{ color: '#f59e0b' }} />,
+          label: 'Operations & ERP Portal',
+        },
+        { type: 'divider' },
+        {
+          key: 'logout',
+          icon: <LogoutOutlined style={{ color: '#ef4444' }} />,
+          label: 'Sign Out of Workspace',
+          danger: true,
+        },
+      ];
+    }
+    return [
+      {
+        key: 'guest-info',
+        disabled: true,
+        label: (
+          <div style={{ padding: '2px 0' }}>
+            <div style={{ fontWeight: 800, fontSize: 12.5, color: publicTheme.text }}>Guest Workspace</div>
+            <div style={{ fontSize: 11, color: publicTheme.subtext }}>Public Catalog & Ordering Mode</div>
+          </div>
+        ),
+      },
+      { type: 'divider' },
+      {
+        key: 'login',
+        icon: <LoginOutlined style={{ color: publicTheme.primary }} />,
+        label: 'Sign In to Workspace',
+      },
+      {
+        key: 'signup',
+        icon: <UserAddOutlined style={{ color: '#10b981' }} />,
+        label: 'Create Account / Register',
+      },
+      {
+        key: 'admins',
+        icon: <ThunderboltOutlined style={{ color: '#f59e0b' }} />,
+        label: 'ERP Operations Portal (/admins)',
+      },
+    ];
+  }, [user]);
 
   const handleSelectResult = (targetUrl) => {
     setIsSearchFocused(false);
@@ -1321,21 +1386,155 @@ const Header = ({ currentPage }) => {
       {/* Responsive Navigation Drawer */}
       <Drawer
         title={
-          <Space>
-            <Avatar icon={<UserOutlined />} size={32} style={{ background: publicTheme.primary }} />
-            <span style={{ fontWeight: 700 }}>{user ? `${user.name}'s workspace` : 'Guest workspace'}</span>
-          </Space>
+          <Dropdown
+            menu={{
+              items: userMenuItems,
+              onClick: handleMenuClick,
+            }}
+            trigger={['click']}
+            placement="bottomLeft"
+          >
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label="Workspace & Account Selector"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                padding: '7px 10px',
+                borderRadius: 12,
+                background: 'rgba(47, 111, 237, 0.05)',
+                border: `1px solid ${publicTheme.softBorder || 'rgba(0,0,0,0.08)'}`,
+                cursor: 'pointer',
+                transition: 'all 0.18s ease',
+                userSelect: 'none',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(47, 111, 237, 0.1)';
+                e.currentTarget.style.borderColor = publicTheme.primary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(47, 111, 237, 0.05)';
+                e.currentTarget.style.borderColor = publicTheme.softBorder || 'rgba(0,0,0,0.08)';
+              }}
+            >
+              <Space size={10} style={{ minWidth: 0, flex: 1 }}>
+                <Avatar
+                  icon={<UserOutlined />}
+                  size={32}
+                  style={{
+                    background: publicTheme.primary,
+                    flexShrink: 0,
+                    boxShadow: `0 2px 8px ${publicTheme.primary}44`,
+                  }}
+                />
+                <div style={{ textAlign: 'left', lineHeight: 1.25, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontWeight: 800,
+                      fontSize: 13,
+                      color: publicTheme.text,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {user ? `${user.name}'s workspace` : 'Guest workspace'}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: publicTheme.primary, fontWeight: 600 }}>
+                    {user ? (user.role || 'Active Member') : 'Tap to switch or sign in ▾'}
+                  </div>
+                </div>
+              </Space>
+              <DownOutlined style={{ fontSize: 11, color: publicTheme.primary, flexShrink: 0, marginLeft: 6 }} />
+            </div>
+          </Dropdown>
         }
         placement="left"
         onClose={() => setDrawerVisible(false)}
         open={drawerVisible}
         styles={{
           body: { padding: '16px' },
-          header: { padding: '14px 16px' },
+          header: { padding: '12px 14px' },
         }}
         width={screens.xs ? 280 : 320}
       >
         <Space direction="vertical" size={8} style={{ width: '100%' }}>
+          {/* Workspace Quick Mode Card inside drawer */}
+          <div
+            style={{
+              padding: '10px 12px',
+              borderRadius: 14,
+              background: user ? 'rgba(47, 111, 237, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+              border: `1px solid ${publicTheme.softBorder}`,
+              marginBottom: 4,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                🏢 Workspace Mode
+              </span>
+              <Tag color={user ? 'blue' : 'default'} style={{ margin: 0, borderRadius: 6, fontWeight: 700, fontSize: 10.5 }}>
+                {user ? 'Authenticated' : 'Guest Mode'}
+              </Tag>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {!user ? (
+                <>
+                  <Button
+                    size="small"
+                    type="primary"
+                    icon={<LoginOutlined />}
+                    onClick={() => {
+                      navigate('/login');
+                      setDrawerVisible(false);
+                    }}
+                    style={{ flex: 1, borderRadius: 8, fontWeight: 700, fontSize: 12 }}
+                  >
+                    Sign In
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<UserAddOutlined />}
+                    onClick={() => {
+                      navigate('/login?tab=register');
+                      setDrawerVisible(false);
+                    }}
+                    style={{ flex: 1, borderRadius: 8, fontSize: 12 }}
+                  >
+                    Register
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    size="small"
+                    icon={<UserOutlined />}
+                    onClick={() => {
+                      navigate('/profile');
+                      setDrawerVisible(false);
+                    }}
+                    style={{ flex: 1, borderRadius: 8, fontWeight: 600, fontSize: 12 }}
+                  >
+                    Profile
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<ThunderboltOutlined />}
+                    onClick={() => {
+                      navigate('/admins/dashboard');
+                      setDrawerVisible(false);
+                    }}
+                    style={{ flex: 1, borderRadius: 8, fontWeight: 600, fontSize: 12 }}
+                  >
+                    ERP Portal
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
           <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 6px' }}>
             Navigation
           </div>
@@ -1468,24 +1667,41 @@ const Header = ({ currentPage }) => {
               </Button>
             </>
           ) : (
-            <Button
-              block
-              type="primary"
-              onClick={() => {
-                navigate('/login');
-                setDrawerVisible(false);
-              }}
-              style={{
-                height: 42,
-                borderRadius: 12,
-                background: publicTheme.ribbon,
-                border: 'none',
-                fontWeight: 700,
-                fontSize: 13,
-              }}
-            >
-              Sign In / Register
-            </Button>
+            <Space direction="vertical" size={8} style={{ width: '100%' }}>
+              <Button
+                block
+                type="primary"
+                icon={<LoginOutlined />}
+                onClick={() => {
+                  navigate('/login');
+                  setDrawerVisible(false);
+                }}
+                style={{
+                  height: 42,
+                  borderRadius: 12,
+                  fontWeight: 700,
+                  fontSize: 13,
+                }}
+              >
+                Sign In to Account
+              </Button>
+              <Button
+                block
+                icon={<UserAddOutlined />}
+                onClick={() => {
+                  navigate('/login?tab=register');
+                  setDrawerVisible(false);
+                }}
+                style={{
+                  height: 40,
+                  borderRadius: 12,
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                Register New Account
+              </Button>
+            </Space>
           )}
         </Space>
       </Drawer>

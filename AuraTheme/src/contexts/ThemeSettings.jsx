@@ -479,7 +479,7 @@ const ThemeSettings = ({ buttonStyle }) => {
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', marginTop: 4 }}>
                     <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
-                      Active: <strong style={{ color: adminTheme.primary }}>{currentPresetInfo.name}</strong>
+                      Active: <strong style={{ color: adminTheme.primary }}>{customSettings?.customPrimary ? `Custom (${adminTheme.primary})` : currentPresetInfo.name}</strong>
                     </Text>
                     <Button
                       size="small"
@@ -499,29 +499,70 @@ const ThemeSettings = ({ buttonStyle }) => {
 
                   {/* Quick Custom Primary Color */}
                   <div>
-                    <Text strong style={{ fontSize: 12.5, color: adminTheme.text, display: 'block', marginBottom: 8 }}>
-                      Custom Primary Accent
-                    </Text>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                      {quickColors.map((item) => (
-                        <div
-                          key={item.hex}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <Text strong style={{ fontSize: 12.5, color: adminTheme.text }}>
+                        Custom Primary Accent
+                      </Text>
+                      {customSettings?.customPrimary && (
+                        <Button
+                          size="small"
+                          type="text"
                           onClick={() => {
-                            updateCustomTheme({ buttonBg: item.hex + '18' });
+                            updateCustomTheme({ customPrimary: null });
+                            message.info('Reverted to preset primary color');
                           }}
-                          style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: '50%',
-                            background: item.hex,
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                            transition: 'transform 0.15s ease',
+                          style={{ fontSize: 11, padding: '0 4px', height: 'auto', color: adminTheme.subtext }}
+                        >
+                          Clear Custom
+                        </Button>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                      {quickColors.map((item) => {
+                        const isCurrentActive = adminTheme.primary?.toLowerCase() === item.hex.toLowerCase();
+                        return (
+                          <button
+                            key={item.hex}
+                            type="button"
+                            onClick={() => {
+                              updateCustomTheme({ customPrimary: item.hex });
+                              message.success(`Applied ${item.label} primary accent!`);
+                            }}
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: '50%',
+                              background: item.hex,
+                              cursor: 'pointer',
+                              border: isCurrentActive ? '2px solid #ffffff' : '2px solid transparent',
+                              boxShadow: isCurrentActive
+                                ? `0 0 0 2px ${item.hex}, 0 4px 10px rgba(0,0,0,0.25)`
+                                : '0 2px 6px rgba(0,0,0,0.15)',
+                              transform: isCurrentActive ? 'scale(1.12)' : 'none',
+                              transition: 'all 0.18s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: 0,
+                              outline: 'none',
+                            }}
+                            title={item.label}
+                          >
+                            {isCurrentActive && <CheckOutlined style={{ fontSize: 12, color: '#ffffff' }} />}
+                          </button>
+                        );
+                      })}
+                      <div style={{ marginLeft: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <ColorPicker
+                          value={adminTheme.primary}
+                          onChange={(color) => {
+                            const hex = color.toHexString();
+                            updateCustomTheme({ customPrimary: hex });
                           }}
-                          className="hover:scale-110 active:scale-95"
-                          title={item.label}
+                          size="small"
+                          showText
                         />
-                      ))}
+                      </div>
                     </div>
                   </div>
                 </div>

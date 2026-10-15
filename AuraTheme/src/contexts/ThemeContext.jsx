@@ -88,7 +88,8 @@ export const ThemeProvider = ({ children }) => {
   const themeConfigs = useMemo(() => {
     const isDark = themeMode === 'dark';
 
-    const buildTokens = (primary, success, warning, error, info, accentLight, accentDark) => {
+    const buildTokens = (presetPrimary, success, warning, error, info, accentLight, accentDark) => {
+      const primary = customSettings?.customPrimary || presetPrimary;
       // Dynamic mode-aware checks: prevents light colors from overriding dark mode and vice versa
       const resolveDarkColor = (customVal, darkCustomVal, defaultVal) => {
         if (darkCustomVal && !isColorLight(darkCustomVal)) return darkCustomVal;
@@ -384,6 +385,7 @@ export const ThemeProvider = ({ children }) => {
     setCustomSettings((prev) => {
       const updated = {
         ...prev,
+        customPrimary: null,
         buttonBg: null,
         lightHeaderBg: null,
         darkHeaderBg: null,
@@ -474,7 +476,7 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     const isDark = themeMode === 'dark';
     const activeCfg = themeConfigs[themePreset] || themeConfigs.default;
-    const primary = activeCfg?.token?.colorPrimary || '#2f6fed';
+    const primary = customSettings?.customPrimary || activeCfg?.token?.colorPrimary || '#2f6fed';
 
     const styleId = 'aura-admin-theme-vars';
     let style = document.getElementById(styleId);

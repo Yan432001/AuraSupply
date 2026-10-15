@@ -196,7 +196,7 @@ export const isColorLight = (colorStr) => {
 export const useAdminThemeTokens = (themeMode = 'light', presetPrimary, customSettings = {}) => {
   const isDark = themeMode === 'dark';
   const base = isDark ? adminThemeDark : adminThemeLight;
-  const primary = presetPrimary || base.primary;
+  const primary = customSettings?.customPrimary || presetPrimary || base.primary;
 
   const transparentConfig = customSettings?.transparentSystem;
   const isTransparent = Boolean(transparentConfig?.enabled);
