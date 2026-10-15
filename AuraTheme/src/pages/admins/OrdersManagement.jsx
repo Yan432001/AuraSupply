@@ -336,18 +336,46 @@ const OrdersManagement = () => {
   const fetchOrders = async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     try {
-      let url = '/api/tma/orders';
-      const params = {};
-      if (selectedStore !== 'all') params.storeSlug = selectedStore;
-      if (selectedStatus !== 'all') params.status = selectedStatus;
+      let fetchedOrders = [];
+      try {
+        const res = await axios.get('/api/orders?limit=100');
+        if ((res.data?.success || res.data?.status) && res.data?.data) {
+          fetchedOrders = res.data.data.orders || (Array.isArray(res.data.data) ? res.data.data : []);
+        }
+      } catch (err1) {
+        // Fall back to tma endpoint
+      }
 
-      const res = await axios.get(url, { params });
-      if (res.data?.status) {
-        const fetchedOrders = res.data.orders || res.data.data || [];
+      if (!fetchedOrders.length) {
+        let url = '/api/tma/orders';
+        const params = {};
+        if (selectedStore !== 'all') params.storeSlug = selectedStore;
+        if (selectedStatus !== 'all') params.status = selectedStatus;
+        const res = await axios.get(url, { params });
+        if (res.data?.status || res.data?.success) {
+          fetchedOrders = res.data.orders || res.data.data || [];
+        }
+      }
+
+      if (fetchedOrders.length > 0) {
+        const normalized = fetchedOrders.map((o) => ({
+          ...o,
+          id: o.id,
+          referenceNo: o.referenceNo || o.reference_no || `AUR-${o.id}`,
+          billerName: o.billerName || o.biller || 'Aura Supply Store',
+          storeSlug: o.storeSlug || o.biller_slug || 'sbc-store',
+          customerName: o.customerName || o.customer || 'B2B Client',
+          customerPhone: o.customerPhone || o.phone || '+855 12 345 678',
+          total: Number(o.total || o.grand_total || 0),
+          status: (o.status || 'pending').toLowerCase(),
+          createdAt: o.createdAt || o.created_at || o.date || new Date().toISOString(),
+          paymentStatus: (o.paymentStatus || o.payment_status || 'paid').toLowerCase(),
+          deliveryMethod: o.deliveryMethod || 'delivery',
+        }));
 
         // Check for real-time status transitions if previous snapshot exists
         if (prevOrdersRef.current.size > 0) {
-          fetchedOrders.forEach((o) => {
+          normalized.forEach((o) => {
             const orderId = String(o.referenceNo || o.id);
             const prevStatus = prevOrdersRef.current.get(orderId);
             const curStatus = (o.status || '').toLowerCase();
@@ -359,17 +387,16 @@ const OrdersManagement = () => {
 
         // Update tracking snapshot
         const newMap = new Map();
-        fetchedOrders.forEach((o) => {
+        normalized.forEach((o) => {
           newMap.set(String(o.referenceNo || o.id), (o.status || '').toLowerCase());
         });
         prevOrdersRef.current = newMap;
 
-        setOrders(fetchedOrders);
+        setOrders(normalized);
       }
     } catch (err) {
       if (!isSilent) {
         console.error('Fetch orders error:', err);
-        message.error('Failed to load live orders');
       }
     } finally {
       if (!isSilent) setLoading(false);

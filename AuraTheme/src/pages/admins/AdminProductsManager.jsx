@@ -87,10 +87,26 @@ export default function AdminProductsManager() {
   const fetchLiveCatalog = async () => {
     setIsSyncing(true);
     try {
-      const res = await axios.get('/api/admin/products?limit=250');
-      if (res.data?.status && Array.isArray(res.data?.data) && res.data.data.length > 0) {
-        setProductsList(res.data.data);
-        saveLiveProducts(res.data.data);
+      let prods = [];
+      try {
+        const res = await axios.get('/api/admin/products?limit=250');
+        if ((res.data?.status || res.data?.success) && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+          prods = res.data.data;
+        }
+      } catch (adminErr) {
+        // Fall back to public endpoint
+      }
+
+      if (!prods.length) {
+        const publicRes = await axios.get('/api/products?limit=250');
+        if (publicRes.data?.success && Array.isArray(publicRes.data?.data?.products)) {
+          prods = publicRes.data.data.products;
+        }
+      }
+
+      if (prods.length > 0) {
+        setProductsList(prods);
+        saveLiveProducts(prods);
       }
     } catch (err) {
       console.warn('Backend product fetch note:', err.message);

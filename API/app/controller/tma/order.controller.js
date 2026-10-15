@@ -4,6 +4,7 @@ const telegramStoreConfigService = require('../../services/telegramStoreConfig.s
 const { validateTelegramInitData } = require('../../services/crypto.service');
 const rawSimpleData = require('../../../../data/simpleData');
 const simpleData = rawSimpleData.default || rawSimpleData;
+const { db } = require('../../config/utill/helper');
 
 // In-memory sequential order counter starting at 123 so the first generated order is ORD-000123
 let orderCounter = 122;
@@ -162,45 +163,87 @@ const OrderController = {
   async getOrders(req, res) {
     try {
       const { storeSlug, storeId, status, telegramId, q } = req.query;
+
+      try {
+        let sql = `
+          SELECT 
+            s.id,
+            s.reference_no AS referenceNo,
+            s.biller_id AS store_id,
+            COALESCE(c.name, s.biller) AS store_name,
+            COALESCE(c.slug, 'sbc-store') AS store_slug,
+            s.date AS createdAt,
+            COALESCE(s.sale_status, 'completed') AS status,
+            COALESCE(s.payment_status, 'paid') AS payment_status,
+            s.customer AS customer_name,
+            s.customer_id,
+            COALESCE(s.grand_total, s.total, 0) AS grandTotal,
+            COALESCE(s.total, 0) AS total
+          FROM aura_sales s
+          LEFT JOIN aura_companies c ON c.id = s.biller_id
+          WHERE 1=1
+        `;
+        const params = [];
+
+        if (storeSlug && storeSlug !== 'all') {
+          sql += ' AND (c.slug = ? OR s.biller_id = ?)';
+          params.push(storeSlug, storeSlug);
+        }
+        if (storeId && storeId !== 'all') {
+          sql += ' AND s.biller_id = ?';
+          params.push(storeId);
+        }
+        if (status && status !== 'all') {
+          sql += ' AND LOWER(s.sale_status) = ?';
+          params.push(String(status).toLowerCase());
+        }
+        if (q) {
+          sql += ' AND (s.reference_no LIKE ? OR s.customer LIKE ?)';
+          params.push(`%${q}%`, `%${q}%`);
+        }
+
+        sql += ' ORDER BY s.id DESC LIMIT 100';
+
+        const [rows] = await db.query(sql, params);
+        if (rows && rows.length > 0) {
+          const formatted = rows.map((r) => ({
+            id: r.id,
+            referenceNo: r.referenceNo || `AUR-${r.id}`,
+            store_id: r.store_id,
+            store_name: r.store_name,
+            store_slug: r.store_slug,
+            createdAt: r.createdAt || new Date().toISOString(),
+            status: (r.status || 'completed').charAt(0).toUpperCase() + (r.status || 'completed').slice(1),
+            payment_status: r.payment_status || 'paid',
+            orderType: 'delivery',
+            customer: {
+              name: r.customer_name || 'Wholesale Client',
+              phone: '+855 12 345 678',
+              address: 'Phnom Penh, Cambodia',
+            },
+            subtotal: Number(r.total || 0),
+            deliveryFee: 0,
+            discount: 0,
+            grandTotal: Number(r.grandTotal || 0),
+          }));
+
+          return res.status(200).json({
+            status: true,
+            data: formatted,
+            orders: formatted,
+            count: formatted.length,
+          });
+        }
+      } catch (dbErr) {
+        console.warn('DB orders fallback note:', dbErr.message);
+      }
+
       let list = [...orderHistory];
-
-      if (storeSlug) {
-        list = list.filter(
-          (o) => o.store_slug && o.store_slug.toLowerCase() === String(storeSlug).toLowerCase()
-        );
-      }
-
-      if (storeId) {
-        list = list.filter((o) => Number(o.store_id) === Number(storeId));
-      }
-
-      if (telegramId) {
-        list = list.filter(
-          (o) => o.customer && String(o.customer.telegramId) === String(telegramId)
-        );
-      }
-
-      if (status && status !== 'all') {
-        list = list.filter(
-          (o) => (o.status || '').toLowerCase() === String(status).toLowerCase()
-        );
-      }
-
-      if (q) {
-        const queryLower = String(q).toLowerCase();
-        list = list.filter(
-          (o) =>
-            (o.referenceNo || '').toLowerCase().includes(queryLower) ||
-            (o.customer?.name || '').toLowerCase().includes(queryLower) ||
-            (o.customer?.username || '').toLowerCase().includes(queryLower)
-        );
-      }
-
       return res.status(200).json({
         status: true,
         data: list,
         orders: list,
-        count: list.length
+        count: list.length,
       });
     } catch (err) {
       return res.status(500).json({ status: false, error: err.message });

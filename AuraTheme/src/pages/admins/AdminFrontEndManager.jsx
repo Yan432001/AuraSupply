@@ -193,6 +193,48 @@ export default function AdminFrontEndManager({ initialTab }) {
     window.addEventListener('aura_frontend_pages_updated', handlePagesUpdated);
     window.addEventListener('aura_telegram_groups_updated', handleTelegramUpdated);
 
+    // Fetch live MySQL data on mount
+    fetch('/api/shops')
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && Array.isArray(j.data) && j.data.length > 0) {
+          const live = j.data.map((s, idx) => ({
+            ...s,
+            activeOnWebsite: s.is_active !== false && s.status !== 'inactive',
+            featuredOnHome: s.is_featured || idx < 4,
+            isFlagship: idx === 0,
+            order: idx + 1,
+            openHours: '07:00 AM - 10:00 PM',
+            deliveryAvailable: true,
+            telegramBot: '@auraglobal_bot',
+            contactPhone: s.phone || '+855 12 345 678',
+          }));
+          setStores(live);
+          saveLiveStores(live);
+        }
+      })
+      .catch((err) => console.warn('FrontEndManager live shops notice:', err.message));
+
+    fetch('/api/products?limit=250')
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && Array.isArray(j.data?.products) && j.data.products.length > 0) {
+          setProducts(j.data.products);
+          saveLiveProducts(j.data.products);
+        }
+      })
+      .catch((err) => console.warn('FrontEndManager live products notice:', err.message));
+
+    fetch('/api/banners')
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && Array.isArray(j.data) && j.data.length > 0) {
+          setSlides(j.data);
+          saveHeroSlides(j.data);
+        }
+      })
+      .catch((err) => console.warn('FrontEndManager live banners notice:', err.message));
+
     return () => {
       window.removeEventListener('aura_frontend_stores_updated', handleStoresUpdated);
       window.removeEventListener('aura_live_products_updated', handleProductsUpdated);

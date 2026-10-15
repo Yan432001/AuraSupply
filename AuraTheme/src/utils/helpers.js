@@ -70,17 +70,21 @@ export const animateAddToCart = ({ triggerElement, productImage }) => {
 };
 
 export const request = async (url = '', method = 'GET', data = {}) => {
+    const base = (APIConfig.baseURL || '/api').replace(/\/$/, '');
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     return axios({
-        url: APIConfig.baseURL + url,
+        url: `${base}${cleanUrl}`,
         method: method,
         data: data,
-        headers: APIConfig.headers,
+        headers: {
+            ...APIConfig.headers,
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
     }).then((response) => {
-        
         return response.data;
     }).catch((error) => {
-        console.log("API Request Error:", error);
-        // throw error;
+        console.warn("API Request Notice:", error?.message || error);
         return false;
     });
 };
