@@ -139,6 +139,7 @@ const ThemePublicController = {
           p.image,
           p.category_id,
           p.biller_id,
+          p.project_id,
           p.unit,
           p.details,
           p.product_details,
@@ -151,13 +152,16 @@ const ThemePublicController = {
           c.name AS category_name,
           c.slug AS category_slug,
           comp.name AS store_name,
+          comp.name AS biller_name,
           comp.slug AS store_slug,
           comp.logo AS store_logo,
+          proj.project_name,
           COALESCE(SUM(wp.quantity), p.quantity, 0) AS in_stock
         FROM aura_products p
         LEFT JOIN aura_categories c ON p.category_id = c.id
         LEFT JOIN aura_brands b ON (p.brand = b.id OR p.brand = b.name)
         LEFT JOIN aura_companies comp ON p.biller_id = comp.id
+        LEFT JOIN aura_projects proj ON p.project_id = proj.project_id
         LEFT JOIN aura_warehouses_products wp ON wp.product_id = p.id
         WHERE ${whereSql}
         GROUP BY p.id
@@ -185,6 +189,10 @@ const ThemePublicController = {
           categorySlug: p.category_slug || 'general',
           brand: p.brand || p.store_name || 'Aura Partner',
           biller_id: p.biller_id || 1,
+          billerName: p.biller_name || p.store_name || `Store #${p.biller_id || 1}`,
+          shopName: p.store_name || p.biller_name || `Store #${p.biller_id || 1}`,
+          project_id: p.project_id || null,
+          projectName: p.project_name || '',
           shopId: p.store_slug || String(p.biller_id || 1),
           seller: p.store_name || 'Aura Partner',
           sellerSlug: p.store_slug || 'sbc-store',
@@ -1158,6 +1166,294 @@ const ThemePublicController = {
     } catch (err) {
       console.error('[ThemePublicController.registerCustomer]', err);
       return sendError(res, err.message, 500);
+    }
+  },
+
+  /**
+   * GET /api/billers (Stores & Corporate Billers)
+   * Strictly aura_companies where group_name = 'biller' and (group_id IS NULL or group_id = 0)
+   */
+  async getBillers(req, res) {
+    try {
+      const [billers] = await db.query(`
+        SELECT 
+          c.id, c.code, c.name, c.company, c.slug, c.address,
+          c.phone, c.email, c.city, c.country, c.logo, c.banner,
+          c.currency_code, c.currency_symbol, c.rating, c.reviews_count,
+          c.operating_hours,
+          COUNT(DISTINCT pr.project_id) AS projects_count,
+          COUNT(DISTINCT p.id) AS products_count
+        FROM aura_companies c
+        LEFT JOIN aura_projects pr ON pr.biller_id = c.id
+        LEFT JOIN aura_products p ON p.biller_id = c.id
+        WHERE c.group_name = 'biller' AND (c.group_id IS NULL OR c.group_id = 0)
+        GROUP BY c.id
+        ORDER BY c.id ASC
+      `);
+
+      return sendSuccess(res, billers, 'Billers fetched successfully');
+    } catch (err) {
+      console.error('[ThemePublicController.getBillers]', err);
+      return sendError(res, 'Failed to fetch billers: ' + err.message, 500);
+    }
+  },
+
+  /**
+   * GET /api/projects
+   * Projects by biller_id (aura_projects where biller_id = companies.id)
+   */
+  async getProjects(req, res) {
+    try {
+      const { biller_id, status } = req.query;
+      let sql = `
+        SELECT 
+          p.project_id, p.project_name, p.project_code, p.biller_id,
+          c.name AS biller_name, c.company AS biller_company,
+          p.start_date, p.end_date, p.target, p.description, p.status, p.approve_status
+        FROM aura_projects p
+        LEFT JOIN aura_companies c ON c.id = p.biller_id
+        WHERE 1=1
+      `;
+      const params = [];
+
+      if (biller_id && biller_id !== 'all') {
+        sql += ' AND p.biller_id = ?';
+        params.push(biller_id);
+      }
+
+      if (status && status !== 'all') {
+        sql += ' AND p.status = ?';
+        params.push(status);
+      }
+
+      sql += ' ORDER BY p.project_id ASC';
+
+      const [projects] = await db.query(sql, params);
+      return sendSuccess(res, projects, 'Projects fetched successfully');
+    } catch (err) {
+      console.error('[ThemePublicController.getProjects]', err);
+      return sendError(res, 'Failed to fetch projects: ' + err.message, 500);
+    }
+  },
+
+  /**
+   * GET /api/units
+   */
+  async getUnits(req, res) {
+    try {
+      const [units] = await db.query(`SELECT id, code, name FROM aura_units ORDER BY id ASC`);
+      return sendSuccess(res, units, 'Units fetched successfully');
+    } catch (err) {
+      return sendSuccess(res, [
+        { id: 1, code: 'pc', name: 'Piece (pc)' },
+        { id: 2, code: 'box', name: 'Box' },
+        { id: 3, code: 'kg', name: 'Kilogram (kg)' },
+        { id: 4, code: 'pack', name: 'Pack' },
+        { id: 5, code: 'case', name: 'Case / Carton' }
+      ], 'Units fallback');
+    }
+  },
+
+  /**
+   * GET /api/warehouses
+   */
+  async getWarehouses(req, res) {
+    try {
+      const [wh] = await db.query(`SELECT id, code, name, address FROM aura_warehouses ORDER BY id ASC`);
+      return sendSuccess(res, wh, 'Warehouses fetched successfully');
+    } catch (err) {
+      return sendSuccess(res, [
+        { id: 1, code: 'HQ', name: 'Central Warehouse Phnom Penh' },
+        { id: 2, code: 'W2', name: 'Showroom Store' }
+      ], 'Warehouses fallback');
+    }
+  },
+
+  /**
+   * POST /api/products (Create Product with all multi-tab fields)
+   */
+  async createProduct(req, res) {
+    try {
+      const {
+        name,
+        code,
+        barcode,
+        type = 'standard',
+        category_id,
+        unit = 1,
+        purchase_unit = 1,
+        sale_unit = 1,
+        currency = 'DOLLAR',
+        price = 0,
+        cost = 0,
+        biller_id,
+        project_id,
+        image,
+        gallery = [],
+        item_code,
+        serial_no,
+        max_serial,
+        batch_numer,
+        second_name,
+        weight,
+        barcode_symbology = 'Code128',
+        brand,
+        tax_rate,
+        tax_method = 'exclusive',
+        alert_quantity = 10,
+        expiry_alert_days,
+        stock_type,
+        details,
+        product_details,
+        supplier1,
+        supplier1price,
+        supplier1_part_no,
+        promotion,
+        promo_price,
+        start_date,
+        end_date,
+        variants = [],
+        quantity = 50,
+        warehouse_id = 1
+      } = req.body;
+
+      if (!name) {
+        return sendError(res, 'Product name is required', 400);
+      }
+
+      const generatedCode = code || barcode || `PRD-${Date.now().toString().slice(-6)}`;
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString().slice(-4);
+
+      const [insertResult] = await db.query(`
+        INSERT INTO aura_products (
+          code, name, type, category_id, unit, purchase_unit, sale_unit, currency,
+          price, cost, biller_id, project_id, image, slug, item_code, serial_no,
+          max_serial, batch_numer, second_name, weight, barcode_symbology, brand,
+          tax_rate, tax_method, alert_quantity, expiry_alert_days, stock_type,
+          details, product_details, supplier1, supplier1price, supplier1_part_no,
+          promotion, promo_price, start_date, end_date, status
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, 1
+        )
+      `, [
+        generatedCode, name, type, category_id || 1, unit, purchase_unit, sale_unit, currency,
+        price, cost, biller_id || 3, project_id || null, image || '', slug, item_code || '', serial_no || '',
+        max_serial || '', batch_numer || '', second_name || '', weight || '', barcode_symbology, brand || null,
+        tax_rate || null, tax_method, alert_quantity, expiry_alert_days || null, stock_type || null,
+        details || '', product_details || '', supplier1 || '', supplier1price || 0, supplier1_part_no || '',
+        promotion ? 1 : 0, promo_price || null, start_date || null, end_date || null
+      ]);
+
+      const newProductId = insertResult.insertId;
+
+      // Warehouse Stock
+      await db.query(`
+        INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity, avg_cost)
+        VALUES (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), avg_cost = VALUES(avg_cost)
+      `, [newProductId, warehouse_id, quantity, cost]);
+
+      // Gallery Photos
+      if (Array.isArray(gallery) && gallery.length > 0) {
+        for (const photoUrl of gallery) {
+          if (photoUrl && String(photoUrl).trim()) {
+            await db.query(`INSERT INTO aura_product_photos (product_id, photo) VALUES (?, ?)`, [newProductId, String(photoUrl).trim()]);
+          }
+        }
+      }
+
+      // Variants
+      if (Array.isArray(variants) && variants.length > 0) {
+        for (const v of variants) {
+          if (v && v.name) {
+            await db.query(`
+              INSERT INTO aura_product_variants (product_id, name, cost, price, quantity)
+              VALUES (?, ?, ?, ?, ?)
+            `, [newProductId, v.name, cost, v.price || price, v.quantity || 10]);
+          }
+        }
+      }
+
+      return sendSuccess(res, {
+        id: newProductId,
+        code: generatedCode,
+        name,
+        slug,
+        price,
+        biller_id,
+        project_id
+      }, 'Product created successfully', null, 201);
+    } catch (err) {
+      console.error('[ThemePublicController.createProduct]', err);
+      return sendError(res, 'Failed to create product: ' + err.message, 500);
+    }
+  },
+
+  /**
+   * PUT /api/products/:id (Update Product)
+   */
+  async updateProduct(req, res) {
+    try {
+      const { id } = req.params;
+      const data = req.body;
+
+      const [existing] = await db.query('SELECT id FROM aura_products WHERE id = ?', [id]);
+      if (!existing || existing.length === 0) {
+        return sendError(res, 'Product not found', 404);
+      }
+
+      const updates = [];
+      const params = [];
+
+      const allowedFields = [
+        'name', 'code', 'type', 'category_id', 'unit', 'purchase_unit', 'sale_unit',
+        'currency', 'price', 'cost', 'biller_id', 'project_id', 'image', 'item_code',
+        'serial_no', 'max_serial', 'batch_numer', 'second_name', 'weight', 'barcode_symbology',
+        'brand', 'tax_rate', 'tax_method', 'alert_quantity', 'expiry_alert_days', 'stock_type',
+        'details', 'product_details', 'supplier1', 'supplier1price', 'supplier1_part_no',
+        'promotion', 'promo_price', 'start_date', 'end_date', 'featured', 'status'
+      ];
+
+      for (const field of allowedFields) {
+        if (data[field] !== undefined) {
+          updates.push(`${field} = ?`);
+          params.push(data[field]);
+        }
+      }
+
+      if (updates.length > 0) {
+        params.push(id);
+        await db.query(`UPDATE aura_products SET ${updates.join(', ')} WHERE id = ?`, params);
+      }
+
+      // Update gallery if supplied
+      if (Array.isArray(data.gallery)) {
+        await db.query('DELETE FROM aura_product_photos WHERE product_id = ?', [id]);
+        for (const p of data.gallery) {
+          if (p && String(p).trim()) {
+            await db.query('INSERT INTO aura_product_photos (product_id, photo) VALUES (?, ?)', [id, String(p).trim()]);
+          }
+        }
+      }
+
+      // Update stock if supplied
+      if (data.quantity !== undefined) {
+        await db.query(`
+          INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity, avg_cost)
+          VALUES (?, 1, ?, ?)
+          ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)
+        `, [id, data.quantity, data.cost || 0]);
+      }
+
+      return sendSuccess(res, 'Product updated successfully', { id, ...data });
+    } catch (err) {
+      console.error('[ThemePublicController.updateProduct]', err);
+      return sendError(res, 'Failed to update product: ' + err.message, 500);
     }
   }
 };

@@ -15,17 +15,18 @@ async function logActivity({ req, action, tableName, recordId = null, oldValues 
 
     const sql = `
       INSERT INTO aura_activity_logs (
-        user_id, username, role, action, table_name, record_id, old_values, new_values, ip_address, user_agent, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        user_id, username, module, action, entity_type, entity_id, description, old_values, new_values, ip_address, user_agent, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `;
 
     await db.query(sql, [
       userId,
       username,
-      role,
+      tableName || 'inventory',
       action.toLowerCase(),
-      tableName,
+      tableName || 'aura_products',
       recordId ? String(recordId) : null,
+      `${action.toUpperCase()} on ${tableName} (ID: ${recordId || 'N/A'})`,
       oldValues ? JSON.stringify(oldValues) : null,
       newValues ? JSON.stringify(newValues) : null,
       String(ip).slice(0, 45),

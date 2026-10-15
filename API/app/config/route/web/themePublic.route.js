@@ -46,4 +46,20 @@ module.exports = (app) => {
   // Currency & Branch Locations
   app.get('/api/currencies', ctrl.getCurrencies);
   app.get('/api/branches', ctrl.getBranches);
+
+  // Billers (Stores where group_name = 'biller' and group_id IS NULL) & Store Projects
+  app.get('/api/billers', ctrl.getBillers);
+  app.get('/api/admin/billers', ctrl.getBillers);
+  app.get('/api/projects', ctrl.getProjects);
+  app.get('/api/admin/projects', ctrl.getProjects);
+
+  // Units & Warehouses
+  app.get('/api/units', ctrl.getUnits);
+  app.get('/api/admin/units', ctrl.getUnits);
+  app.get('/api/warehouses', ctrl.getWarehouses);
+  app.get('/api/admin/warehouses', ctrl.getWarehouses);
+
+  // Multi-tab Product Insert & Update
+  app.post('/api/products', ctrl.createProduct);
+  app.put('/api/products/:id', ctrl.updateProduct);
 };

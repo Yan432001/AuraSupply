@@ -17,6 +17,8 @@ function formatProduct(p) {
     }
   }
 
+  const storeName = p.biller_name || p.biller_company || (p.biller_id ? `Store #${p.biller_id}` : 'Main Store');
+
   return {
     id: p.id,
     key: p.id,
@@ -40,7 +42,35 @@ function formatProduct(p) {
     featured: Boolean(p.featured),
     slug: p.slug || '',
     biller_id: p.biller_id || 1,
-    unit: p.unit || 1
+    billerName: storeName,
+    shopName: storeName,
+    seller: storeName,
+    brand: p.brand || storeName,
+    project_id: p.project_id || null,
+    projectName: p.project_name || '',
+    projectCode: p.project_code || '',
+    unit: p.unit || 1,
+    purchase_unit: p.purchase_unit || 1,
+    sale_unit: p.sale_unit || 1,
+    currency: p.currency || 'USD',
+    barcode_symbology: p.barcode_symbology || 'Code128',
+    item_code: p.item_code || '',
+    serial_no: p.serial_no || '',
+    max_serial: p.max_serial || '',
+    batch_numer: p.batch_numer || '',
+    second_name: p.second_name || '',
+    weight: p.weight || '',
+    tax_rate: p.tax_rate || null,
+    tax_method: p.tax_method || 'exclusive',
+    expiry_alert_days: p.expiry_alert_days || null,
+    stock_type: p.stock_type || null,
+    supplier1: p.supplier1 || '',
+    supplier1price: p.supplier1price || 0,
+    supplier1_part_no: p.supplier1_part_no || '',
+    promotion: p.promotion || 0,
+    promo_price: p.promo_price || null,
+    start_date: p.start_date || null,
+    end_date: p.end_date || null
   };
 }
 
@@ -56,6 +86,8 @@ exports.getProducts = async (req, res) => {
       category,
       stock,
       status,
+      biller_id,
+      project_id,
       page = 1,
       limit = 100,
       sort_by = 'p.id',
@@ -66,9 +98,16 @@ exports.getProducts = async (req, res) => {
       SELECT 
         p.*,
         c.name AS category_name,
-        c.code AS category_code
+        c.code AS category_code,
+        comp.name AS biller_name,
+        comp.company AS biller_company,
+        comp.slug AS biller_slug,
+        proj.project_name,
+        proj.project_code
       FROM aura_products p
       LEFT JOIN aura_categories c ON p.category_id = c.id
+      LEFT JOIN aura_companies comp ON p.biller_id = comp.id
+      LEFT JOIN aura_projects proj ON p.project_id = proj.project_id
       WHERE 1=1
     `;
     const params = [];
@@ -85,6 +124,16 @@ exports.getProducts = async (req, res) => {
     } else if (category && category !== 'all') {
       query += ` AND (c.name = ? OR c.code = ?)`;
       params.push(category, category);
+    }
+
+    if (biller_id && biller_id !== 'all') {
+      query += ` AND p.biller_id = ?`;
+      params.push(biller_id);
+    }
+
+    if (project_id && project_id !== 'all') {
+      query += ` AND p.project_id = ?`;
+      params.push(project_id);
     }
 
     if (stock === 'in_stock') {
@@ -107,7 +156,7 @@ exports.getProducts = async (req, res) => {
     query += ` ORDER BY ${safeCol} ${safeOrder}`;
 
     // Pagination
-    const numLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 500);
+    const numLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 500);
     const numOffset = (Math.max(parseInt(page) || 1, 1) - 1) * numLimit;
     query += ` LIMIT ${numLimit} OFFSET ${numOffset}`;
 
@@ -176,65 +225,164 @@ exports.getProductById = async (req, res) => {
 
 /**
  * POST /api/admin/products & POST /api/products
- * Create new product
+ * Create new product with all multi-tab fields (Required, Details, Variants, Supplier, Promotion)
  */
 exports.addProducts = async (req, res) => {
   try {
     const {
       name,
       code,
-      price,
-      cost = 0,
-      quantity = 0,
-      alert_quantity = 5,
-      category_id = 1,
-      details = '',
+      barcode,
       type = 'standard',
+      category_id = 1,
+      unit = 1,
+      purchase_unit = 1,
+      sale_unit = 1,
+      currency = 'USD',
+      price = 0,
+      cost = 0,
       biller_id = 1,
-      image = ''
+      project_id = null,
+      image = '',
+      gallery = [],
+      item_code = '',
+      serial_no = '',
+      max_serial = '',
+      batch_numer = '',
+      second_name = '',
+      weight = '',
+      barcode_symbology = 'Code128',
+      brand = null,
+      tax_rate = null,
+      tax_method = 'exclusive',
+      alert_quantity = 5,
+      expiry_alert_days = null,
+      stock_type = null,
+      details = '',
+      product_details = '',
+      supplier1 = '',
+      supplier1price = 0,
+      supplier1_part_no = '',
+      promotion = 0,
+      promo_price = null,
+      start_date = null,
+      end_date = null,
+      variants = [],
+      quantity = 50,
+      warehouse_id = 1
     } = req.body;
 
     if (!name || name.trim() === '') {
       return res.status(400).json({ status: false, message: 'Product name is required' });
     }
 
-    const safeCode = (code && code.trim() !== '') ? code.trim() : Math.floor(10000000 + Math.random() * 90000000).toString();
-    const safeSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    const safeCode = (code || barcode || '').trim() || `PRD-${Date.now().toString().slice(-6)}`;
+    const safeSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Date.now().toString().slice(-4);
     const safePrice = parseFloat(price) || 0;
     const safeCost = parseFloat(cost) || 0;
     const safeQuantity = parseFloat(quantity) || 0;
 
     const [result] = await db.query(`
       INSERT INTO aura_products 
-      (code, name, slug, price, cost, quantity, alert_quantity, category_id, details, type, biller_id, image, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+      (
+        code, name, type, category_id, unit, purchase_unit, sale_unit, currency,
+        price, cost, biller_id, project_id, image, slug, item_code, serial_no,
+        max_serial, batch_numer, second_name, weight, barcode_symbology, brand,
+        tax_rate, tax_method, alert_quantity, expiry_alert_days, stock_type,
+        details, product_details, supplier1, supplier1price, supplier1_part_no,
+        promotion, promo_price, start_date, end_date, quantity, status
+      )
+      VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, 1
+      )
     `, [
       safeCode,
       name.trim(),
-      safeSlug,
+      type,
+      parseInt(category_id) || 1,
+      unit,
+      purchase_unit,
+      sale_unit,
+      currency,
       safePrice,
       safeCost,
-      safeQuantity,
-      parseFloat(alert_quantity) || 5,
-      parseInt(category_id) || 1,
-      details,
-      type,
       parseInt(biller_id) || 1,
-      image || ''
+      project_id ? parseInt(project_id) : null,
+      image || '',
+      safeSlug,
+      item_code || '',
+      serial_no || '',
+      max_serial || '',
+      batch_numer || '',
+      second_name || '',
+      weight || '',
+      barcode_symbology || 'Code128',
+      brand || null,
+      tax_rate || null,
+      tax_method || 'exclusive',
+      parseFloat(alert_quantity) || 5,
+      expiry_alert_days ? parseInt(expiry_alert_days) : null,
+      stock_type || null,
+      details || '',
+      product_details || details || '',
+      supplier1 || '',
+      parseFloat(supplier1price) || 0,
+      supplier1_part_no || '',
+      promotion ? 1 : 0,
+      promo_price ? parseFloat(promo_price) : null,
+      start_date || null,
+      end_date || null,
+      safeQuantity
     ]);
 
     const newId = result.insertId;
+
+    // Stock in warehouse
+    await db.query(`
+      INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity, avg_cost)
+      VALUES (?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), avg_cost = VALUES(avg_cost)
+    `, [newId, warehouse_id || 1, safeQuantity, safeCost]);
+
+    // Save Gallery photos
+    if (Array.isArray(gallery) && gallery.length > 0) {
+      for (const photoUrl of gallery) {
+        if (photoUrl && String(photoUrl).trim()) {
+          await db.query(`INSERT INTO aura_product_photos (product_id, photo) VALUES (?, ?)`, [newId, String(photoUrl).trim()]);
+        }
+      }
+    }
+
+    // Save Variants
+    if (Array.isArray(variants) && variants.length > 0) {
+      for (const v of variants) {
+        if (v && v.name) {
+          await db.query(`
+            INSERT INTO aura_product_variants (product_id, name, cost, price, quantity)
+            VALUES (?, ?, ?, ?, ?)
+          `, [newId, v.name, safeCost, parseFloat(v.price) || safePrice, parseFloat(v.quantity) || 10]);
+        }
+      }
+    }
+
     const [createdRows] = await db.query(`
-      SELECT p.*, c.name AS category_name 
+      SELECT p.*, c.name AS category_name, comp.name AS biller_name, comp.company AS biller_company, proj.project_name
       FROM aura_products p 
       LEFT JOIN aura_categories c ON p.category_id = c.id 
+      LEFT JOIN aura_companies comp ON p.biller_id = comp.id
+      LEFT JOIN aura_projects proj ON p.project_id = proj.project_id
       WHERE p.id = ?
     `, [newId]);
 
     res.status(201).json({
       status: true,
       message: 'Product created successfully',
-      data: formatProduct(createdRows[0] || { id: newId, name, code: safeCode, price: safePrice, quantity: safeQuantity })
+      data: formatProduct(createdRows[0] || { id: newId, name, code: safeCode, price: safePrice, quantity: safeQuantity, biller_id, project_id })
     });
   } catch (err) {
     console.error("Add product error:", err);
@@ -261,10 +409,27 @@ exports.updateProducts = async (req, res) => {
       quantity,
       alert_quantity,
       category_id,
+      biller_id,
+      project_id,
+      unit,
+      purchase_unit,
+      sale_unit,
+      currency,
+      item_code,
+      serial_no,
+      batch_numer,
+      second_name,
+      weight,
+      barcode_symbology,
+      tax_rate,
+      tax_method,
       details,
+      product_details,
       status,
       featured,
-      image
+      image,
+      gallery,
+      variants
     } = req.body;
 
     const fields = [];
@@ -300,9 +465,69 @@ exports.updateProducts = async (req, res) => {
       fields.push('category_id = ?');
       values.push(parseInt(category_id) || 1);
     }
+    if (biller_id !== undefined) {
+      fields.push('biller_id = ?');
+      values.push(parseInt(biller_id) || 1);
+    }
+    if (project_id !== undefined) {
+      fields.push('project_id = ?');
+      values.push(project_id ? parseInt(project_id) : null);
+    }
+    if (unit !== undefined) {
+      fields.push('unit = ?');
+      values.push(unit);
+    }
+    if (purchase_unit !== undefined) {
+      fields.push('purchase_unit = ?');
+      values.push(purchase_unit);
+    }
+    if (sale_unit !== undefined) {
+      fields.push('sale_unit = ?');
+      values.push(sale_unit);
+    }
+    if (currency !== undefined) {
+      fields.push('currency = ?');
+      values.push(currency);
+    }
+    if (item_code !== undefined) {
+      fields.push('item_code = ?');
+      values.push(item_code);
+    }
+    if (serial_no !== undefined) {
+      fields.push('serial_no = ?');
+      values.push(serial_no);
+    }
+    if (batch_numer !== undefined) {
+      fields.push('batch_numer = ?');
+      values.push(batch_numer);
+    }
+    if (second_name !== undefined) {
+      fields.push('second_name = ?');
+      values.push(second_name);
+    }
+    if (weight !== undefined) {
+      fields.push('weight = ?');
+      values.push(weight);
+    }
+    if (barcode_symbology !== undefined) {
+      fields.push('barcode_symbology = ?');
+      values.push(barcode_symbology);
+    }
+    if (tax_rate !== undefined) {
+      fields.push('tax_rate = ?');
+      values.push(tax_rate);
+    }
+    if (tax_method !== undefined) {
+      fields.push('tax_method = ?');
+      values.push(tax_method);
+    }
     if (details !== undefined) {
       fields.push('details = ?');
       values.push(details);
+    }
+    if (product_details !== undefined) {
+      fields.push('product_details = ?');
+      values.push(product_details);
     }
     if (status !== undefined) {
       fields.push('status = ?');
@@ -317,17 +542,36 @@ exports.updateProducts = async (req, res) => {
       values.push(image);
     }
 
-    if (fields.length === 0) {
-      return res.json({ status: true, message: 'No fields to update' });
+    if (fields.length > 0) {
+      values.push(id);
+      await db.query(`UPDATE aura_products SET ${fields.join(', ')} WHERE id = ?`, values);
     }
 
-    values.push(id);
-    await db.query(`UPDATE aura_products SET ${fields.join(', ')} WHERE id = ?`, values);
+    // Update gallery if supplied
+    if (Array.isArray(gallery)) {
+      await db.query('DELETE FROM aura_product_photos WHERE product_id = ?', [id]);
+      for (const p of gallery) {
+        if (p && String(p).trim()) {
+          await db.query('INSERT INTO aura_product_photos (product_id, photo) VALUES (?, ?)', [id, String(p).trim()]);
+        }
+      }
+    }
+
+    // Update warehouse stock if quantity changed
+    if (quantity !== undefined) {
+      await db.query(`
+        INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity, avg_cost)
+        VALUES (?, 1, ?, ?)
+        ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)
+      `, [id, parseFloat(quantity) || 0, parseFloat(cost) || 0]);
+    }
 
     const [updatedRows] = await db.query(`
-      SELECT p.*, c.name AS category_name 
+      SELECT p.*, c.name AS category_name, comp.name AS biller_name, comp.company AS biller_company, proj.project_name
       FROM aura_products p 
       LEFT JOIN aura_categories c ON p.category_id = c.id 
+      LEFT JOIN aura_companies comp ON p.biller_id = comp.id
+      LEFT JOIN aura_projects proj ON p.project_id = proj.project_id
       WHERE p.id = ?
     `, [id]);
 

@@ -222,7 +222,7 @@ if (botToken) {
   // Helper to register user and send credentials directly to their personal chat
   async function registerAndSendCredentials(ctx, token = 'auth_telegram') {
     try {
-      const TelegramAuthController = require('../controller/tma/telegramAuth.controller');
+      const TelegramAuthController = require('../../API/app/controller/tma/telegramAuth.controller');
       const result = await TelegramAuthController.handleBotStartAuth(token, ctx.from);
       if (result) {
         const { credentials } = result;
