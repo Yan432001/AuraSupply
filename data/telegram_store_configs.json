@@ -51,7 +51,7 @@
     },
     "notificationTemplate": "compact",
     "stats": {
-      "totalOrdersRouted": 144,
+      "totalOrdersRouted": 145,
       "lastRoutedAt": "Just now"
     },
     "status": "connected",
