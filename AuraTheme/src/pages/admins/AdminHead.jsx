@@ -185,8 +185,8 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                   width: 7,
                   height: 7,
                   borderRadius: '50%',
-                  background: '#3b82f6',
-                  boxShadow: '0 0 8px rgba(59, 130, 246, 0.8)',
+                  background: adminTheme.primary,
+                  boxShadow: `0 0 8px ${adminTheme.primary}cc`,
                   display: 'inline-block',
                   flexShrink: 0,
                 }}
@@ -316,14 +316,14 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                     width: 18,
                     height: 18,
                     borderRadius: 5,
-                    background: 'rgba(59, 130, 246, 0.15)',
+                    background: adminTheme.sidebarActiveBg,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                   }}
                 >
-                  <ShopOutlined style={{ color: '#3b82f6', fontSize: 11 }} />
+                  <ShopOutlined style={{ color: adminTheme.primary, fontSize: 11 }} />
                 </div>
                 <span style={{ fontWeight: 600, fontSize: 12, maxWidth: isMobile ? 110 : 150, color: headerTextColor }} className="truncate">
                   {activeBranch?.name || 'Select Branch'}

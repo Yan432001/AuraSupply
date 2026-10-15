@@ -9,6 +9,7 @@ import AdminModuleScrollSlidebar from '../components/web/shared/AdminModuleScrol
 import { erpModules } from '../data/erpModules';
 import { useAdminTheme } from '../hooks/useAdminTheme';
 import { useAdminModules } from '../hooks/useAdminModules';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { Content } = Layout;
 const MOBILE_BREAKPOINT = 992;
@@ -23,6 +24,7 @@ const NO_SIDEBAR_ROUTES = [
 
 const AdminLayout = () => {
   const adminTheme = useAdminTheme();
+  const { themeMode, themePreset } = useTheme();
   const location = useLocation();
   const { moduleState, toggleModule } = useAdminModules();
   const [collapsed, setCollapsed] = useState(false);
@@ -54,8 +56,8 @@ const AdminLayout = () => {
   useEffect(() => {
     const doc = document.documentElement;
     const body = document.body;
-    const mode = localStorage.getItem('admin-theme') || 'light';
-    const preset = localStorage.getItem('admin-theme-preset') || 'default';
+    const mode = themeMode === 'dark' ? 'dark' : 'light';
+    const preset = themePreset || 'default';
 
     doc.classList.add('admin-active');
     doc.classList.remove('light', 'dark', 'theme-light', 'theme-dark');
@@ -91,7 +93,7 @@ const AdminLayout = () => {
         body.style.color = '#0f172a';
       }
     };
-  }, []);
+  }, [themeMode, themePreset]);
 
   const handleToggle = () => {
     if (isMobile) {

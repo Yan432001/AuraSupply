@@ -300,33 +300,174 @@ export const ThemeProvider = ({ children }) => {
   const toggleThemeMode = () => {
     const newMode = themeMode === 'light' ? 'dark' : 'light';
     setThemeMode(newMode);
-    localStorage.setItem('admin-theme', newMode);
+    try {
+      localStorage.setItem('admin-theme', newMode);
+      localStorage.setItem('admin-theme-mode', newMode);
+      localStorage.setItem('theme-mode', newMode);
+    } catch (_) {}
+
+    if (typeof document !== 'undefined') {
+      const doc = document.documentElement;
+      const body = document.body;
+      doc.setAttribute('data-mode', newMode);
+      doc.classList.remove('light', 'dark', 'theme-light', 'theme-dark');
+      doc.classList.add(newMode, `theme-${newMode}`);
+      doc.style.colorScheme = newMode;
+      if (body) {
+        body.setAttribute('data-mode', newMode);
+        body.classList.remove('light', 'dark', 'theme-light', 'theme-dark');
+        body.classList.add(newMode, `theme-${newMode}`);
+        body.style.colorScheme = newMode;
+      }
+    }
+
+    try {
+      window.dispatchEvent(
+        new CustomEvent('admin_theme_changed', {
+          detail: { themeMode: newMode, themePreset, isDark: newMode === 'dark' },
+        })
+      );
+    } catch (_) {}
   };
 
   const setThemeModeExplicit = (mode) => {
     setThemeMode(mode);
-    localStorage.setItem('admin-theme', mode);
+    try {
+      localStorage.setItem('admin-theme', mode);
+      localStorage.setItem('admin-theme-mode', mode);
+      localStorage.setItem('theme-mode', mode);
+    } catch (_) {}
+
+    if (typeof document !== 'undefined') {
+      const doc = document.documentElement;
+      const body = document.body;
+      doc.setAttribute('data-mode', mode);
+      doc.classList.remove('light', 'dark', 'theme-light', 'theme-dark');
+      doc.classList.add(mode, `theme-${mode}`);
+      doc.style.colorScheme = mode;
+      if (body) {
+        body.setAttribute('data-mode', mode);
+        body.classList.remove('light', 'dark', 'theme-light', 'theme-dark');
+        body.classList.add(mode, `theme-${mode}`);
+        body.style.colorScheme = mode;
+      }
+    }
+
+    try {
+      window.dispatchEvent(
+        new CustomEvent('admin_theme_changed', {
+          detail: { themeMode: mode, themePreset, isDark: mode === 'dark' },
+        })
+      );
+    } catch (_) {}
   };
 
   const changePreset = (preset) => {
     if (!themeConfigs[preset]) return;
     setThemePreset(preset);
-    localStorage.setItem('admin-theme-preset', preset);
+    try {
+      localStorage.setItem('admin-theme-preset', preset);
+    } catch (_) {}
+
+    const wallpaperMap = {
+      default: 'aurora',
+      emeraldFintech: 'emerald',
+      violetPrestige: 'cosmic',
+      amberElegance: 'sunset',
+      roseSunset: 'sunset',
+      slateExecutive: 'minimal',
+      cyberCyan: 'cyber',
+      darkModern: 'minimal',
+    };
+    const targetWallpaper = wallpaperMap[preset] || 'aurora';
+
+    setCustomSettings((prev) => {
+      const updated = {
+        ...prev,
+        buttonBg: null,
+        lightHeaderBg: null,
+        darkHeaderBg: null,
+        lightHeaderColor: null,
+        darkHeaderColor: null,
+        lightSidebarBg: null,
+        darkSidebarBg: null,
+        lightCardBg: null,
+        darkCardBg: null,
+        headerBg: null,
+        headerColor: null,
+        sidebarBg: null,
+        cardBg: null,
+        transparentSystem: {
+          ...(prev?.transparentSystem || DEFAULT_THEME_SETTINGS.transparentSystem),
+          wallpaper: targetWallpaper,
+        },
+      };
+      try {
+        localStorage.setItem('admin-custom-theme-settings', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+
+    if (typeof document !== 'undefined') {
+      const doc = document.documentElement;
+      const body = document.body;
+      doc.setAttribute('data-theme', preset);
+      if (body) body.setAttribute('data-theme', preset);
+    }
+
+    try {
+      window.dispatchEvent(
+        new CustomEvent('admin_theme_changed', {
+          detail: { themeMode, themePreset: preset, isDark: themeMode === 'dark' },
+        })
+      );
+    } catch (_) {}
   };
 
   const updateCustomTheme = (settings) => {
     const merged = { ...customSettings, ...settings };
     setCustomSettings(merged);
-    localStorage.setItem('admin-custom-theme-settings', JSON.stringify(merged));
+    try {
+      localStorage.setItem('admin-custom-theme-settings', JSON.stringify(merged));
+    } catch (_) {}
   };
 
   const resetToDefaultTheme = () => {
     setThemeMode('light');
     setThemePreset('default');
     setCustomSettings(DEFAULT_THEME_SETTINGS);
-    localStorage.removeItem('admin-theme');
-    localStorage.removeItem('admin-theme-preset');
-    localStorage.removeItem('admin-custom-theme-settings');
+    try {
+      localStorage.removeItem('admin-theme');
+      localStorage.removeItem('admin-theme-mode');
+      localStorage.removeItem('theme-mode');
+      localStorage.removeItem('admin-theme-preset');
+      localStorage.removeItem('admin-custom-theme-settings');
+    } catch (_) {}
+
+    if (typeof document !== 'undefined') {
+      const doc = document.documentElement;
+      const body = document.body;
+      doc.setAttribute('data-mode', 'light');
+      doc.setAttribute('data-theme', 'default');
+      doc.classList.remove('dark', 'theme-dark');
+      doc.classList.add('light', 'theme-light');
+      doc.style.colorScheme = 'light';
+      if (body) {
+        body.setAttribute('data-mode', 'light');
+        body.setAttribute('data-theme', 'default');
+        body.classList.remove('dark', 'theme-dark');
+        body.classList.add('light', 'theme-light');
+        body.style.colorScheme = 'light';
+      }
+    }
+
+    try {
+      window.dispatchEvent(
+        new CustomEvent('admin_theme_changed', {
+          detail: { themeMode: 'light', themePreset: 'default', isDark: false },
+        })
+      );
+    } catch (_) {}
   };
 
   // Apply custom CSS variables for global styles
@@ -383,7 +524,7 @@ export const ThemeProvider = ({ children }) => {
     const isGlass = Boolean(customSettings.transparentSystem?.enabled);
 
     style.textContent = `
-      .admin-layout, .ant-layout.admin-layout, [data-admin-theme] {
+      :root, html, body.admin-active, .admin-layout, .ant-layout.admin-layout, [data-admin-theme], [data-theme] {
         --admin-primary: ${primary};
         --admin-font-family: ${customSettings.fontFamily};
         --admin-font-size: ${densityMetrics.fontSize}px;

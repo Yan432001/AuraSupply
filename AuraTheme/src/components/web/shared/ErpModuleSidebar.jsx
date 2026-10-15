@@ -151,7 +151,7 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
             style={{
               width: '100%',
               border: isActive ? `1px solid ${adminTheme.sidebarActiveBg}` : '1px solid transparent',
-              background: isActive ? (adminTheme.sidebarActiveBg || 'rgba(59, 130, 246, 0.14)') : 'transparent',
+              background: isActive ? adminTheme.sidebarActiveBg : 'transparent',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
@@ -159,7 +159,7 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
               borderRadius: 8,
               cursor: 'pointer',
               textAlign: 'left',
-              color: isActive ? (adminTheme.sidebarActiveText || '#60a5fa') : adminTheme.subtext,
+              color: isActive ? adminTheme.sidebarActiveText : adminTheme.subtext,
               fontSize: 12.5,
               fontWeight: isActive ? 600 : 500,
               transition: 'all 0.15s ease',
@@ -182,8 +182,8 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
                 width: 4,
                 height: 4,
                 borderRadius: '50%',
-                background: isActive ? (adminTheme.primary || '#3b82f6') : 'currentColor',
-                boxShadow: isActive ? '0 0 6px rgba(59, 130, 246, 0.8)' : 'none',
+                background: isActive ? adminTheme.primary : 'currentColor',
+                boxShadow: isActive ? `0 0 6px ${adminTheme.primary}` : 'none',
                 flexShrink: 0,
               }}
             />
@@ -331,13 +331,13 @@ const hasUserPermission = (user, moduleKey) => {
                   borderRadius: 11,
                   position: 'relative',
                   border: isActive
-                    ? '1px solid rgba(59, 130, 246, 0.4)'
+                    ? `1px solid ${adminTheme.primary}66`
                     : '1px solid transparent',
                   background: isActive
-                    ? (adminTheme.sidebarActiveBg || 'rgba(59, 130, 246, 0.16)')
+                    ? adminTheme.sidebarActiveBg
                     : 'transparent',
                   color: isActive
-                    ? (adminTheme.sidebarActiveText || '#60a5fa')
+                    ? adminTheme.sidebarActiveText
                     : adminTheme.subtext,
                   display: 'flex',
                   alignItems: 'center',
@@ -372,8 +372,8 @@ const hasUserPermission = (user, moduleKey) => {
                       bottom: 10,
                       width: 3.5,
                       borderRadius: '0 4px 4px 0',
-                      background: adminTheme.primary || '#3b82f6',
-                      boxShadow: '0 0 10px rgba(59, 130, 246, 0.8)',
+                      background: adminTheme.primary,
+                      boxShadow: `0 0 10px ${adminTheme.primary}aa`,
                     }}
                   />
                 )}
@@ -425,9 +425,9 @@ const hasUserPermission = (user, moduleKey) => {
                   type="button"
                   onClick={() => onNavigate(favKey, null)}
                   style={{
-                    border: isFavActive ? '1px solid #3b82f6' : `1px solid ${adminTheme.sidebarBorder}`,
-                    background: isFavActive ? 'rgba(59, 130, 246, 0.18)' : (adminTheme.isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)'),
-                    color: isFavActive ? '#60a5fa' : adminTheme.subtext,
+                    border: isFavActive ? `1px solid ${adminTheme.primary}` : `1px solid ${adminTheme.sidebarBorder}`,
+                    background: isFavActive ? adminTheme.sidebarActiveBg : (adminTheme.isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)'),
+                    color: isFavActive ? adminTheme.sidebarActiveText : adminTheme.subtext,
                     borderRadius: 6,
                     padding: '3px 8px',
                     fontSize: 11,
@@ -500,12 +500,12 @@ const hasUserPermission = (user, moduleKey) => {
                     style={{
                       width: '100%',
                       border: isActive && !activeMenuKey
-                        ? `1px solid rgba(59, 130, 246, 0.3)`
+                        ? `1px solid ${adminTheme.primary}55`
                         : '1px solid transparent',
                       background: isActive && !activeMenuKey
-                        ? (adminTheme.sidebarActiveBg || 'rgba(59, 130, 246, 0.14)')
+                        ? adminTheme.sidebarActiveBg
                         : 'transparent',
-                      color: isActive ? (adminTheme.sidebarActiveText || '#60a5fa') : adminTheme.text,
+                      color: isActive ? adminTheme.sidebarActiveText : adminTheme.text,
                       display: 'flex',
                       alignItems: 'center',
                       gap: 10,
@@ -539,10 +539,10 @@ const hasUserPermission = (user, moduleKey) => {
                         justifyContent: 'center',
                         fontSize: 14,
                         background: isActive
-                          ? 'rgba(59, 130, 246, 0.2)'
-                          : 'rgba(255, 255, 255, 0.05)',
+                          ? adminTheme.sidebarActiveBg
+                          : (adminTheme.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(15, 23, 42, 0.03)'),
                         color: isActive
-                          ? (adminTheme.sidebarActiveText || '#60a5fa')
+                          ? adminTheme.sidebarActiveText
                           : (module.accent || adminTheme.subtext),
                         flexShrink: 0,
                       }}

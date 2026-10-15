@@ -398,19 +398,31 @@ const ThemeSettings = ({ buttonStyle }) => {
                       return (
                         <Col span={12} key={preset.key}>
                           <div
-                            onClick={() => changePreset(preset.key)}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              changePreset(preset.key);
+                              message.success(`Switched to ${preset.name} Theme Concept!`);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                changePreset(preset.key);
+                                message.success(`Switched to ${preset.name} Theme Concept!`);
+                              }
+                            }}
                             style={{
                               padding: '12px 14px',
                               borderRadius: 14,
-                              background: adminTheme.card,
+                              background: isSelected ? (themeMode === 'dark' ? 'rgba(255,255,255,0.06)' : '#ffffff') : adminTheme.card,
                               border: isSelected
                                 ? `2px solid ${preset.primary}`
                                 : `1px solid ${adminTheme.border}`,
                               cursor: 'pointer',
                               position: 'relative',
-                              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                              transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
                               boxShadow: isSelected
-                                ? `0 8px 24px -4px ${preset.primary}33`
+                                ? `0 8px 24px -4px ${preset.primary}44, 0 0 0 2px ${preset.primary}22`
                                 : '0 2px 6px rgba(0,0,0,0.02)',
                               transform: isSelected ? 'scale(1.02)' : 'none',
                             }}
@@ -429,7 +441,7 @@ const ThemeSettings = ({ buttonStyle }) => {
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                                  boxShadow: `0 2px 8px ${preset.primary}88`,
                                 }}
                               >
                                 <CheckOutlined style={{ fontSize: 11 }} />
@@ -458,6 +470,24 @@ const ThemeSettings = ({ buttonStyle }) => {
                       );
                     })}
                   </Row>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', marginTop: 4 }}>
+                    <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
+                      Active: <strong style={{ color: adminTheme.primary }}>{currentPresetInfo.name}</strong>
+                    </Text>
+                    <Button
+                      size="small"
+                      type="link"
+                      icon={<UndoOutlined style={{ fontSize: 11 }} />}
+                      onClick={() => {
+                        changePreset('default');
+                        message.success('Restored Aura Concept Blue default!');
+                      }}
+                      style={{ fontSize: 11, padding: 0, height: 'auto' }}
+                    >
+                      Reset to Official Blue
+                    </Button>
+                  </div>
 
                   <Divider style={{ margin: '14px 0 8px' }} />
 

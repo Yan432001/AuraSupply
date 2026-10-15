@@ -143,7 +143,7 @@ const hexToRgba = (hex, alpha) => {
 };
 
 // Wallpaper generators for Transparent Background System
-export const getWallpaperBackground = (wallpaperKey, isDark) => {
+export const getWallpaperBackground = (wallpaperKey, isDark, primary = '#2f6fed') => {
   switch (wallpaperKey) {
     case 'cyber':
       return `radial-gradient(at 15% 15%, rgba(6, 182, 212, ${isDark ? 0.35 : 0.22}) 0px, transparent 55%), radial-gradient(at 85% 85%, rgba(99, 102, 241, ${isDark ? 0.4 : 0.28}) 0px, transparent 55%), radial-gradient(at 50% 50%, rgba(236, 72, 153, ${isDark ? 0.25 : 0.16}) 0px, transparent 65%), linear-gradient(180deg, ${isDark ? '#050811' : '#f0fdff'} 0%, ${isDark ? '#0b1329' : '#e0f2fe'} 100%)`;
@@ -154,10 +154,10 @@ export const getWallpaperBackground = (wallpaperKey, isDark) => {
     case 'cosmic':
       return `radial-gradient(at 30% 30%, rgba(147, 51, 234, 0.45) 0px, transparent 50%), radial-gradient(at 70% 60%, rgba(59, 130, 246, 0.4) 0px, transparent 50%), radial-gradient(at 20% 80%, rgba(236, 72, 153, 0.3) 0px, transparent 50%), linear-gradient(145deg, #020617 0%, #0b0f19 100%)`;
     case 'minimal':
-      return `radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.16), transparent 40%), radial-gradient(circle at 90% 90%, rgba(14, 165, 233, 0.16), transparent 40%), linear-gradient(180deg, ${isDark ? '#0a0e17' : '#f8fafc'} 0%, ${isDark ? '#0f172a' : '#f1f5f9'} 100%)`;
+      return `radial-gradient(circle at 10% 10%, ${hexToRgba(primary, isDark ? 0.22 : 0.14)}, transparent 40%), radial-gradient(circle at 90% 90%, rgba(255, 122, 61, ${isDark ? 0.1 : 0.06}), transparent 40%), linear-gradient(180deg, ${isDark ? '#0a0e17' : '#f8fafc'} 0%, ${isDark ? '#0f172a' : '#f1f5f9'} 100%)`;
     case 'aurora':
     default:
-      return `radial-gradient(at 0% 0%, rgba(47, 111, 237, ${isDark ? 0.45 : 0.28}) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(124, 58, 237, ${isDark ? 0.4 : 0.24}) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(16, 185, 129, ${isDark ? 0.3 : 0.18}) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(234, 88, 12, ${isDark ? 0.25 : 0.14}) 0px, transparent 50%), linear-gradient(135deg, ${isDark ? '#080c14' : '#f0f4ff'} 0%, ${isDark ? '#0f172a' : '#e6edfd'} 100%)`;
+      return `radial-gradient(at 0% 0%, ${hexToRgba(primary, isDark ? 0.45 : 0.28)} 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(124, 58, 237, ${isDark ? 0.35 : 0.22}) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(16, 185, 129, ${isDark ? 0.28 : 0.16}) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(234, 88, 12, ${isDark ? 0.22 : 0.12}) 0px, transparent 50%), linear-gradient(135deg, ${isDark ? '#080c14' : '#f0f4ff'} 0%, ${isDark ? '#0f172a' : '#e6edfd'} 100%)`;
   }
 };
 
@@ -258,12 +258,17 @@ export const useAdminThemeTokens = (themeMode = 'light', presetPrimary, customSe
   const headerButtonBg = isHeaderLight ? 'rgba(15, 23, 42, 0.035)' : 'rgba(255, 255, 255, 0.06)';
   const headerInputBg = isHeaderLight ? 'rgba(15, 23, 42, 0.03)' : 'rgba(255, 255, 255, 0.05)';
 
+  const solidPageBg = isDark
+    ? `radial-gradient(circle at 8% 6%, ${hexToRgba(primary, 0.14)}, transparent 32%), radial-gradient(circle at 92% 8%, rgba(255, 122, 61, 0.05), transparent 25%), linear-gradient(180deg, #0b0f19 0%, #0f172a 100%)`
+    : `radial-gradient(circle at 8% 6%, ${hexToRgba(primary, 0.08)}, transparent 32%), radial-gradient(circle at 92% 8%, rgba(255, 122, 61, 0.04), transparent 25%), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)`;
+
   if (!isTransparent) {
     return {
       ...base,
       isDark,
       themeMode,
       primary,
+      pageBackground: solidPageBg,
       headerBg,
       headerColor,
       headerText: headerColor,
@@ -279,14 +284,14 @@ export const useAdminThemeTokens = (themeMode = 'light', presetPrimary, customSe
       sidebarBorder: headerBorder,
       border: headerBorder,
       sidebarActiveText: primary,
-      sidebarActiveBg: hexToRgba(primary, isDark ? 0.22 : 0.12),
+      sidebarActiveBg: hexToRgba(primary, isDark ? 0.22 : 0.10),
       isTransparent: false,
     };
   }
 
   const glow = transparentConfig.glassBorderGlow !== false;
   const wallpaperKey = transparentConfig.wallpaper || 'aurora';
-  const pageBg = getWallpaperBackground(wallpaperKey, isDark);
+  const pageBg = getWallpaperBackground(wallpaperKey, isDark, primary);
 
   const cardRgba = hexToRgba(rawCardBg, opacityFraction);
 
@@ -323,7 +328,7 @@ export const useAdminThemeTokens = (themeMode = 'light', presetPrimary, customSe
     sidebarBorder: glassBorder,
     primary,
     sidebarActiveText: primary,
-    sidebarActiveBg: hexToRgba(primary, isDark ? 0.24 : 0.14),
+    sidebarActiveBg: hexToRgba(primary, isDark ? 0.24 : 0.12),
     isTransparent: true,
     glassBlur: transparentConfig.blurRadius || 20,
     glassSaturation: transparentConfig.saturation || 140,

@@ -954,8 +954,8 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                                           style={{
                                             padding: '8px 12px',
                                             borderRadius: 8,
-                                            border: isChecked ? '1px solid #3b82f6' : `1px solid ${adminTheme.sidebarBorder || 'rgba(0,0,0,0.06)'}`,
-                                            background: isChecked ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+                                            border: isChecked ? `1px solid ${adminTheme.primary}` : `1px solid ${adminTheme.sidebarBorder || 'rgba(0,0,0,0.06)'}`,
+                                            background: isChecked ? adminTheme.sidebarActiveBg : 'transparent',
                                             cursor: 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -1466,8 +1466,8 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
               style={{
                 padding: '8px 12px',
                 borderRadius: 8,
-                border: userAssignedBranchIds.includes(b.id) ? '1px solid #3b82f6' : '1px solid rgba(0,0,0,0.08)',
-                background: userAssignedBranchIds.includes(b.id) ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
+                border: userAssignedBranchIds.includes(b.id) ? `1px solid ${adminTheme.primary}` : `1px solid ${adminTheme.sidebarBorder || 'rgba(0,0,0,0.08)'}`,
+                background: userAssignedBranchIds.includes(b.id) ? adminTheme.sidebarActiveBg : 'transparent',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between'

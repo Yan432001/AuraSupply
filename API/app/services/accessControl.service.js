@@ -125,15 +125,18 @@ async function logAuditTrail({
   newValues = null,
   ipAddress = null
 }) {
-  try {
+    const eventVal = ['insert', 'update', 'delete'].includes(String(action || '').toLowerCase())
+      ? String(action).toLowerCase()
+      : (action === 'create' ? 'insert' : (action === 'delete' || action === 'remove' ? 'delete' : 'update'));
+
     await db.query(`
       INSERT INTO aura_user_audit_trails (
-        user_id, table_name, action, old_values, new_values, ip_address, created_at
+        user_id, table_name, event, old_values, new_values, ip_address, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, NOW())
     `, [
       userId || null,
       tableName || 'system',
-      action,
+      eventVal,
       oldValues ? JSON.stringify(oldValues) : null,
       newValues ? JSON.stringify(newValues) : null,
       ipAddress || null

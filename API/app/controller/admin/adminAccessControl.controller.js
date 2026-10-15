@@ -565,7 +565,7 @@ exports.getAuditTrails = async (req, res) => {
     const total = countRows?.[0]?.total || 0;
 
     const [logs] = await db.query(`
-      SELECT a.id, a.user_id, a.table_name, a.action, a.old_values, a.new_values,
+      SELECT a.id, a.user_id, a.table_name, a.event AS action, a.event, a.old_values, a.new_values,
              a.ip_address, a.created_at,
              u.username, u.first_name
       FROM aura_user_audit_trails a

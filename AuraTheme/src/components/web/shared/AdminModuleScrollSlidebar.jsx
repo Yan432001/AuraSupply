@@ -288,20 +288,20 @@ export default function AdminModuleScrollSlidebar() {
                 padding: '5px 11px',
                 borderRadius: 8,
                 border: isActive
-                  ? `1px solid ${item.accent || '#3b82f6'}`
+                  ? `1px solid ${adminTheme.primary}`
                   : `1px solid ${adminTheme.sidebarBorder || 'rgba(0, 0, 0, 0.06)'}`,
                 background: isActive
-                  ? (adminTheme.isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)')
+                  ? adminTheme.sidebarActiveBg
                   : (adminTheme.isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)'),
                 color: isActive
-                  ? (adminTheme.isDark ? '#93c5fd' : '#1d4ed8')
+                  ? adminTheme.sidebarActiveText
                   : adminTheme.text,
                 fontSize: 12,
                 fontWeight: isActive ? 700 : 500,
                 cursor: 'pointer',
                 transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
                 outline: 'none',
-                boxShadow: isActive ? `0 2px 8px rgba(59, 130, 246, 0.2)` : 'none',
+                boxShadow: isActive ? `0 2px 10px ${adminTheme.primary}44` : 'none',
                 flexShrink: 0
               }}
               onMouseEnter={(e) => {
