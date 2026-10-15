@@ -96,7 +96,7 @@ export default function Home() {
     let isMounted = true;
     Promise.all([
       fetchShops(),
-      fetchProducts({ featured: 1, limit: 30 }),
+      fetchProducts({ limit: 100 }),
       fetchCategories(),
       fetchShopSettings()
     ]).then(([shopsRes, prodsRes, catsRes, settingsRes]) => {
@@ -528,7 +528,7 @@ export default function Home() {
         {/* 6-Card Responsive Grid matching Shops Page */}
         <Row gutter={screens.xs ? [12, 12] : screens.sm ? [14, 14] : [18, 18]} style={{ width: '100%' }}>
           {shops.map((shop) => {
-            const shopProducts = retailProducts.filter((p) => p.shopId === shop.id);
+            const shopProducts = retailProducts.filter((p) => Number(p.biller_id || p.shop_id || p.shopId) === Number(shop.biller_id || shop.id));
             const isWishlisted = wishlistedShopIds.includes(shop.id);
 
             return (
@@ -611,7 +611,7 @@ export default function Home() {
         open={Boolean(previewShop)}
         onClose={() => setPreviewShop(null)}
         onOpenTelegram={(s) => handleOpenTelegramModal(s)}
-        shopProducts={previewShop ? retailProducts.filter((p) => p.shopId === previewShop.id) : []}
+        shopProducts={previewShop ? retailProducts.filter((p) => Number(p.biller_id || p.shop_id || p.shopId) === Number(previewShop.biller_id || previewShop.id)) : []}
       />
 
       {/* Telegram Mini App Gateway Modal */}

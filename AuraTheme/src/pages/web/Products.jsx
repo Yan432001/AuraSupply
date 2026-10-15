@@ -60,6 +60,7 @@ const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlQuery = searchParams.get('q') || '';
   const urlCategory = searchParams.get('category') || 'all';
+  const urlShopId = searchParams.get('biller_id') || searchParams.get('shop_id') || searchParams.get('shop') || 'all';
 
   const [productsList, setProductsList] = useState([]);
   const [categoriesList, setCategoriesList] = useState([]);
@@ -71,7 +72,7 @@ const Products = () => {
   useEffect(() => {
     let isMounted = true;
     Promise.all([
-      fetchProducts({ limit: 200 }),
+      fetchProducts({ limit: 500 }),
       fetchCategories(),
       fetchBrands(),
       fetchShops(),
@@ -101,7 +102,7 @@ const Products = () => {
   const [category, setCategory] = useState(urlCategory);
   const [brand, setBrand] = useState('all');
   const [branch, setBranch] = useState('all');
-  const [shopId, setShopId] = useState('all');
+  const [shopId, setShopId] = useState(urlShopId);
   const [stockOnly, setStockOnly] = useState(false);
   const [moqFilter, setMoqFilter] = useState('all'); // 'all' | 'low' (<=5) | 'bulk' (>5)
   const [priceRange, setPriceRange] = useState([0, 1600]);
@@ -121,6 +122,10 @@ const Products = () => {
   useEffect(() => {
     if (urlCategory && urlCategory !== 'all') setCategory(urlCategory);
   }, [urlCategory]);
+
+  useEffect(() => {
+    if (urlShopId && urlShopId !== 'all') setShopId(urlShopId);
+  }, [urlShopId]);
 
   const defaultInitialCount = viewMode === 'grid6' ? 18 : 12;
   const [visibleCount, setVisibleCount] = useState(defaultInitialCount);
@@ -164,7 +169,10 @@ const Products = () => {
       const matchesCategory = category === 'all' || product.category === category;
       const matchesBrand = brand === 'all' || product.brand === brand;
       const matchesBranch = branch === 'all' || product.branch === branch;
-      const matchesShop = shopId === 'all' || product.shopId === shopId;
+      const matchesShop =
+        shopId === 'all' ||
+        Number(product.biller_id || product.shop_id || product.shopId) === Number(shopId) ||
+        String(product.biller_id) === String(shopId);
       const matchesStock = !stockOnly || product.inStock;
       const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
 

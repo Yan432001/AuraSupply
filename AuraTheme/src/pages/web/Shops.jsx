@@ -63,7 +63,7 @@ export default function Shops() {
     Promise.all([
       fetchShops(),
       fetchBranches(),
-      fetchProducts({ limit: 100 }),
+      fetchProducts({ limit: 500 }),
     ])
       .then(([shopsRes, branchesRes, productsRes]) => {
         if (!isMounted) return;
@@ -266,7 +266,7 @@ export default function Shops() {
       ) : (
         <Row gutter={screens.xs ? [12, 12] : screens.sm ? [14, 14] : [18, 18]} style={{ width: '100%' }}>
           {filteredShops.map((shop) => {
-            const shopProducts = products.filter((p) => (p.shop_id || p.biller_id || p.shopId) === shop.id);
+            const shopProducts = products.filter((p) => Number(p.biller_id || p.shop_id || p.shopId) === Number(shop.biller_id || shop.id));
             const isWishlisted = wishlistedShopIds.includes(shop.id);
 
             return (
@@ -295,7 +295,7 @@ export default function Shops() {
         open={Boolean(previewShop)}
         onClose={() => setPreviewShop(null)}
         onOpenTelegram={(s) => setTelegramShop(s)}
-        shopProducts={previewShop ? products.filter((p) => (p.shop_id || p.biller_id || p.shopId) === previewShop.id) : []}
+        shopProducts={previewShop ? products.filter((p) => Number(p.biller_id || p.shop_id || p.shopId) === Number(previewShop.biller_id || previewShop.id)) : []}
       />
 
       {/* Telegram Gateway Modal */}

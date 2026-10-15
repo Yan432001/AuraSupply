@@ -64,7 +64,8 @@ export default function ShopDetail() {
         if (!isMounted) return;
         if (res?.success && res.data) {
           setShop(res.data);
-          return fetchProducts({ shop_id: res.data.id, limit: 100 });
+          const storeBillerId = res.data.biller_id || res.data.id;
+          return fetchProducts({ biller_id: storeBillerId, limit: 100 });
         }
         return null;
       })
@@ -276,8 +277,19 @@ export default function ShopDetail() {
 
       {/* Product Grid */}
       {filteredProducts.length === 0 ? (
-        <Card style={{ borderRadius: 16, textAlign: 'center', padding: '40px 20px', border: `1px solid ${publicTheme.border}` }}>
-          <Text style={{ color: publicTheme.subtext }}>No products found matching your search.</Text>
+        <Card style={{ borderRadius: 16, textAlign: 'center', padding: '60px 20px', border: `1px solid ${publicTheme.border}` }}>
+          <ShopOutlined style={{ fontSize: 44, color: '#94a3b8', marginBottom: 12 }} />
+          <Title level={4} style={{ color: publicTheme.text, marginBottom: 6 }}>
+            {search ? 'No products match your search keyword' : 'This store currently has no products published in its catalog.'}
+          </Title>
+          <Text style={{ color: publicTheme.subtext, display: 'block', marginBottom: 16 }}>
+            {search ? 'Try clearing your search term to see other items.' : 'Check back later or browse other verified factory suppliers.'}
+          </Text>
+          {search ? (
+            <Button onClick={() => setSearch('')}>Clear Search</Button>
+          ) : (
+            <Button type="primary" onClick={() => navigate('/shops')}>Explore All Suppliers</Button>
+          )}
         </Card>
       ) : (
         <Row gutter={screens.xs ? [12, 12] : [16, 16]}>

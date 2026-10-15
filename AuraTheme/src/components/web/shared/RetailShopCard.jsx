@@ -36,16 +36,7 @@ const RetailShopCard = ({
   const isTablet = screens.sm && !screens.lg;
   const isCompact = !screens.lg;
 
-  const targetSlug =
-    shop.slug ||
-    (shop.id === 'seller-2' ? 'aura-bakery' :
-     shop.id === 'seller-1' ? 'sbc-store' :
-     shop.id === 'seller-3' ? 'aura-bistro' :
-     shop.id === 'seller-4' ? 'aura-lounge' :
-     shop.id === 'seller-5' ? 'aura-tech' :
-     shop.id === 'seller-6' ? 'apex-pc' :
-     shop.id === 'seller-7' ? 'velour-apparel' :
-     shop.id || 'aura-bakery');
+  const targetSlug = shop.slug || `store-${shop.id}`;
 
   const handleVisit = () => {
     navigate(`/shops/${shop.id}`);

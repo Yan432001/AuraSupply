@@ -58,11 +58,19 @@ const ThemePublicController = {
         params.push(brand, brand, brand);
       }
 
-      // Shop / Biller filter
+      // Shop / Biller filter (strictly by companies.id or store slug)
       const effectiveShop = shop_id || biller_id;
       if (effectiveShop && effectiveShop !== 'all') {
-        whereConditions.push('(p.biller_id = ? OR comp.slug = ? OR comp.store_slug = ?)');
-        params.push(effectiveShop, effectiveShop, effectiveShop);
+        const isNumeric = /^\d+$/.test(String(effectiveShop));
+        if (isNumeric) {
+          whereConditions.push('p.biller_id = ?');
+          params.push(parseInt(effectiveShop));
+        } else {
+          whereConditions.push('(comp.slug = ? OR comp.store_slug = ?)');
+          params.push(effectiveShop, effectiveShop);
+        }
+        whereConditions.push("comp.group_name = 'biller'");
+        whereConditions.push("(comp.group_id IS NULL OR comp.group_id = 0)");
       }
 
       // Text search
@@ -188,12 +196,17 @@ const ThemePublicController = {
           category: p.category_name || 'General',
           categorySlug: p.category_slug || 'general',
           brand: p.brand || p.store_name || 'Aura Partner',
-          biller_id: p.biller_id || 1,
-          billerName: p.biller_name || p.store_name || `Store #${p.biller_id || 1}`,
-          shopName: p.store_name || p.biller_name || `Store #${p.biller_id || 1}`,
+          biller_id: p.biller_id,
+          storeId: p.biller_id,
+          shop_id: p.biller_id,
+          shopId: p.biller_id,
+          billerName: p.biller_name || p.store_name || `Store #${p.biller_id}`,
+          shopName: p.store_name || p.biller_name || `Store #${p.biller_id}`,
+          storeName: p.store_name || p.biller_name || `Store #${p.biller_id}`,
+          store_name: p.store_name || p.biller_name || `Store #${p.biller_id}`,
+          storeSlug: p.store_slug || `store-${p.biller_id}`,
           project_id: p.project_id || null,
           projectName: p.project_name || '',
-          shopId: p.store_slug || String(p.biller_id || 1),
           seller: p.store_name || 'Aura Partner',
           sellerSlug: p.store_slug || 'sbc-store',
           sellerLogo: p.store_logo || null,
@@ -416,7 +429,12 @@ const ThemePublicController = {
     try {
       const { search, branch } = req.query;
 
-      let whereConditions = ["c.group_name IN ('biller', 'supplier')", 'c.is_active = 1'];
+      // Strictly stores from companies table where group_name = 'biller' and group_id IS NULL
+      let whereConditions = [
+        "c.group_name = 'biller'",
+        "(c.group_id IS NULL OR c.group_id = 0)",
+        "c.is_active = 1"
+      ];
       const params = [];
 
       if (search && search.trim() !== '') {
@@ -426,8 +444,8 @@ const ThemePublicController = {
       }
 
       if (branch && branch !== 'all') {
-        whereConditions.push('c.city LIKE ?');
-        params.push(`%${branch}%`);
+        whereConditions.push('(c.city LIKE ? OR c.address LIKE ?)');
+        params.push(`%${branch}%`, `%${branch}%`);
       }
 
       const whereSql = whereConditions.join(' AND ');
@@ -447,7 +465,7 @@ const ThemePublicController = {
       `, params);
 
       const data = rows.map(s => ({
-        id: s.slug || s.id,
+        id: s.id, // Strictly companies.id
         storeId: s.id,
         biller_id: s.id,
         slug: s.slug || s.store_slug || `store-${s.id}`,
@@ -461,6 +479,7 @@ const ThemePublicController = {
         email: s.email || '',
         logo: s.logo || null,
         banner: s.banner || null,
+        heroImage: s.banner || s.logo || null,
         theme_color: s.theme_color || '#2F6FED',
         currency_code: s.currency_code || 'USD',
         currency_symbol: s.currency_symbol || '$',
@@ -469,7 +488,7 @@ const ThemePublicController = {
         reviewsCount: parseInt(s.reviews_count) || 120,
         productsCount: parseInt(s.products_count) || 0,
         operating_hours: s.operating_hours || '8:00 AM - 9:00 PM',
-        role: s.group_name === 'biller' ? 'Direct Merchant' : 'Verified Supplier',
+        role: 'Direct Biller Store',
         is_active: 1,
         is_open: true
       }));
@@ -489,7 +508,7 @@ const ThemePublicController = {
 
   /**
    * GET /api/shops/:id
-   * Single store profile
+   * Single store profile (strictly aura_companies where group_name = 'biller' and group_id IS NULL)
    */
   async getShopById(req, res) {
     try {
@@ -505,7 +524,8 @@ const ThemePublicController = {
           COUNT(DISTINCT p.id) AS products_count
         FROM aura_companies c
         LEFT JOIN aura_products p ON p.biller_id = c.id AND p.status = 1
-        WHERE ${isNumeric ? 'c.id = ? OR c.slug = ? OR c.store_slug = ?' : 'c.slug = ? OR c.store_slug = ? OR c.id = ?'}
+        WHERE c.group_name = 'biller' AND (c.group_id IS NULL OR c.group_id = 0)
+          AND (${isNumeric ? 'c.id = ? OR c.slug = ? OR c.store_slug = ?' : 'c.slug = ? OR c.store_slug = ? OR c.id = ?'})
         GROUP BY c.id
         LIMIT 1
       `, [id, id, id]);
@@ -516,7 +536,7 @@ const ThemePublicController = {
 
       const s = rows[0];
       const data = {
-        id: s.slug || s.id,
+        id: s.id, // Strictly companies.id
         storeId: s.id,
         biller_id: s.id,
         slug: s.slug || s.store_slug || `store-${s.id}`,
@@ -530,7 +550,7 @@ const ThemePublicController = {
         email: s.email || '',
         logo: s.logo || null,
         banner: s.banner || null,
-        heroImage: s.banner || null,
+        heroImage: s.banner || s.logo || null,
         theme_color: s.theme_color || '#2F6FED',
         currency_code: s.currency_code || 'USD',
         currency_symbol: s.currency_symbol || '$',
@@ -539,7 +559,8 @@ const ThemePublicController = {
         reviewsCount: parseInt(s.reviews_count) || 120,
         productsCount: parseInt(s.products_count) || 0,
         operating_hours: s.operating_hours || '8:00 AM - 9:00 PM',
-        specialties: ['Telegram E-Menu', 'Live Kitchen Dispatch', 'Instant Checkout'],
+        specialties: ['Direct Store', 'Live Kitchen Dispatch', 'Instant Checkout'],
+        role: 'Direct Biller Store',
         is_active: 1,
         is_open: true
       };

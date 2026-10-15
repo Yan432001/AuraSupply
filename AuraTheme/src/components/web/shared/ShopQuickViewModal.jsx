@@ -72,23 +72,17 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
           .toUpperCase()
       : 'SH');
 
-  // Resolve products for this shop (match shopId, seller, slug, or name)
+  // Resolve products for this shop (strictly matching biller_id / shop.id)
   const effectiveProducts =
     shopProducts && shopProducts.length > 0
       ? shopProducts
       : (masterProducts || []).filter(
           (p) =>
-            p.shopId === shop.id ||
-            p.seller === shop.id ||
-            p.storeSlug === shop.slug ||
-            p.shopName === shop.name
+            Number(p.biller_id || p.shop_id || p.storeId || p.shopId) === Number(shop.biller_id || shop.id)
         );
 
-  // If still empty, supply the top items from masterProducts so catalog is never blank
-  const displayProducts =
-    effectiveProducts.length > 0
-      ? effectiveProducts
-      : (masterProducts || []).slice(0, 6);
+  // Strictly show products belonging to this store - never mix or fallback to foreign products
+  const displayProducts = effectiveProducts;
 
   const filteredDisplayProducts =
     activeTab === 'discount'
@@ -954,15 +948,19 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                   >
                     <ShoppingOutlined style={{ fontSize: 36, color: '#94a3b8', marginBottom: 8 }} />
                     <div style={{ fontSize: 14, fontWeight: 700, color: publicTheme.text }}>
-                      No items matched this filter
+                      {displayProducts.length === 0
+                        ? 'This store currently has no products published in its catalog.'
+                        : 'No items matched this filter'}
                     </div>
-                    <Button
-                      type="default"
-                      onClick={() => setActiveTab('all')}
-                      style={{ borderRadius: 10, marginTop: 12 }}
-                    >
-                      Show All Items
-                    </Button>
+                    {displayProducts.length > 0 && activeTab !== 'all' && (
+                      <Button
+                        type="default"
+                        onClick={() => setActiveTab('all')}
+                        style={{ borderRadius: 10, marginTop: 12 }}
+                      >
+                        Show All Items
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div
