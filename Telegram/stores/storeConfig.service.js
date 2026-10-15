@@ -490,10 +490,6 @@ class TelegramStoreConfigService {
         'UPDATE aura_companies SET telegram_chat_id = ? WHERE slug = ? OR store_slug = ?',
         [updated.groupId, storeSlug, storeSlug]
       ).catch(() => {});
-      db.query(
-        'UPDATE aura_tma_stores SET telegram_chat_id = ?, telegram_bot_token = ? WHERE store_slug = ?',
-        [updated.groupId, updated.botToken || null, storeSlug]
-      ).catch(() => {});
     } catch (_) {}
 
     const decrypted = this.getDecryptedBotToken(storeSlug);
