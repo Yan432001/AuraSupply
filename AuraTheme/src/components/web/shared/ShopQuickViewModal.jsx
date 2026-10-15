@@ -22,28 +22,43 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { formatCompact, formatCurrency, publicTheme } from '../../../utils/webTheme';
 import { BOTFATHER_CONFIG } from './TelegramMiniAppModal';
-import { products as masterProducts } from '../../../data/shopData';
+import { fetchProducts } from '../../../utils/apiconfig';
+import { mapProduct } from '../../../utils/dataMappers';
 import { useWishlist } from '../../../contexts/WishlistContext';
 
 const { Paragraph, Text, Title } = Typography;
 const { useBreakpoint } = Grid;
-
-const FALLBACK_BANNERS = [
-  'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=1400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=1400&fit=crop&q=80',
-];
-
-const FALLBACK_PRODUCT_IMAGE =
-  'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
 
 const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts = [] }) => {
   const navigate = useNavigate();
   const screens = useBreakpoint();
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  const [liveProducts, setLiveProducts] = useState([]);
+  const [loadingProds, setLoadingProds] = useState(false);
   const { isWishlisted: checkIsWishlisted, toggleWishlist } = useWishlist() || {};
+
+  // Fetch store products if not passed via props
+  React.useEffect(() => {
+    if (!open || !shop?.id) return;
+    if (shopProducts && shopProducts.length > 0) {
+      setLiveProducts(shopProducts);
+      return;
+    }
+    setLoadingProds(true);
+    fetchProducts({ biller_id: shop.id, limit: 50 })
+      .then((res) => {
+        if (res?.success && Array.isArray(res.data)) {
+          setLiveProducts(res.data.map(mapProduct));
+        } else if (res?.data?.products && Array.isArray(res.data.products)) {
+          setLiveProducts(res.data.products.map(mapProduct));
+        } else {
+          setLiveProducts([]);
+        }
+      })
+      .catch(() => setLiveProducts([]))
+      .finally(() => setLoadingProds(false));
+  }, [open, shop?.id, shopProducts]);
 
   if (!shop) {
     return null;
@@ -52,12 +67,8 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
   const isMobile = !screens.md;
   const isTablet = screens.md && !screens.lg;
 
-  // Resolve banner image with robust fallbacks
-  const bannerImage =
-    shop.heroImage ||
-    shop.banner ||
-    shop.image ||
-    FALLBACK_BANNERS[0];
+  // Resolve banner image
+  const bannerImage = shop.heroImage || shop.banner || shop.image || null;
 
   // Resolve logo
   const logoSrc = shop.logo || shop.logoUrl;
@@ -73,16 +84,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
       : 'SH');
 
   // Resolve products for this shop (strictly matching biller_id / shop.id)
-  const effectiveProducts =
-    shopProducts && shopProducts.length > 0
-      ? shopProducts
-      : (masterProducts || []).filter(
-          (p) =>
-            Number(p.biller_id || p.shop_id || p.storeId || p.shopId) === Number(shop.biller_id || shop.id)
-        );
-
-  // Strictly show products belonging to this store - never mix or fallback to foreign products
-  const displayProducts = effectiveProducts;
+  const displayProducts = liveProducts.length > 0 ? liveProducts : (shopProducts || []);
 
   const filteredDisplayProducts =
     activeTab === 'discount'

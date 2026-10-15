@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Avatar, Badge, Button, Card, Col, Empty, Flex, Row, Space, Table, Tag, Typography } from 'antd';
 import { CheckCircleFilled, PlusOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getMenuByKey, getModuleByKey, moduleHealthLabel } from '../../data/erpModules';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { fetchOrders } from '../../utils/apiconfig';
 
 const { Text, Title } = Typography;
 
@@ -14,27 +15,7 @@ const healthTone = {
   paused: { bg: '#f2f3f5', color: '#8a94a6' },
 };
 
-const mockRows = (moduleLabel) => {
-  const safeStr = String(moduleLabel || 'ERP').replace(/[^a-zA-Z0-9]/g, '');
-  const prefix = (safeStr.slice(0, 3) || 'ERP').toUpperCase();
-  return Array.from({ length: 6 }).map((_, i) => ({
-    key: i,
-    id: `#${prefix}-${1040 + i}`,
-    name: [
-      'Riverside Order',
-      'North Branch Batch',
-      'Central Ledger Entry',
-      'East Depot Transfer',
-      'Weekly Snapshot',
-      'Partner Reconciliation',
-    ][i],
-    status: ['Active', 'Pending', 'Active', 'Review', 'Active', 'Pending'][i],
-    updated: ['2 hours ago', 'Yesterday', '3 days ago', '5 days ago', '1 week ago', '2 weeks ago'][i],
-    amount: 1200 + i * 460,
-  }));
-};
-
-const statusColor = { Active: 'green', Pending: 'gold', Review: 'blue' };
+const statusColor = { Active: 'green', Pending: 'gold', Review: 'blue', Completed: 'green' };
 
 const ModuleWorkspace = () => {
   const adminTheme = useAdminTheme();
@@ -47,11 +28,35 @@ const ModuleWorkspace = () => {
   const module = useMemo(() => getModuleByKey(moduleKey) || {}, [moduleKey]);
   const menu = useMemo(() => getMenuByKey(moduleKey, menuKey) || null, [moduleKey, menuKey]);
 
-  // Define rows to fix ReferenceError
-  const rows = useMemo(() => {
-    const label = menu?.label || module?.label || 'ERP';
-    return mockRows(label);
-  }, [menu?.label, module?.label]);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    fetchOrders()
+      .then((res) => {
+        if (!isMounted) return;
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        const mapped = list.map((item, idx) => ({
+          key: item.id || idx,
+          id: item.referenceNo || `#REC-${item.id}`,
+          name: item.customer?.name || item.store_name || 'Commercial Transaction',
+          status: item.status || 'Active',
+          updated: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Recently',
+          amount: Number(item.grandTotal || item.subtotal || 0),
+        }));
+        setRows(mapped);
+      })
+      .catch((err) => {
+        console.error('Failed to load workspace orders:', err);
+        if (isMounted) setRows([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+    return () => { isMounted = false; };
+  }, [moduleKey, menuKey]);
 
   const accent = module?.accent || adminTheme.primary || '#2563eb';
   const health = module?.health || 'stable';
@@ -175,13 +180,13 @@ const ModuleWorkspace = () => {
             {menuLabel} Records
           </Title>
           <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>
-            Preview data — connect this workspace to live records when ready
+            Live records from database (aura_v1_db)
           </Text>
         </Flex>
         {rows && rows.length ? (
-          <Table columns={columns} dataSource={rows} pagination={false} size="small" scroll={{ x: 560 }} />
+          <Table columns={columns} dataSource={rows} loading={loading} pagination={{ pageSize: 8 }} size="small" scroll={{ x: 560 }} />
         ) : (
-          <Empty description="No records yet" />
+          <Empty description={loading ? "Loading records from database..." : "No records found in this workspace"} />
         )}
       </Card>
     </Space>

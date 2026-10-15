@@ -158,13 +158,12 @@ export default function ProductDetailPage() {
   const basePrice = Number(foundProduct.price || 0);
   const tierCalc = calculateTierPrice(basePrice, quantity);
 
-  // Gallery images array
-  const galleryImages = [
-    foundProduct.image,
-    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&fit=crop',
-    'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&fit=crop',
-    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&fit=crop',
-  ].filter(Boolean);
+  // Real gallery images from database
+  const galleryImages = (
+    Array.isArray(foundProduct.images) && foundProduct.images.length > 0
+      ? foundProduct.images
+      : [foundProduct.image || '/assets/uploads/no_image.png']
+  ).filter(Boolean);
 
   const handleAddToCart = () => {
     addItem({

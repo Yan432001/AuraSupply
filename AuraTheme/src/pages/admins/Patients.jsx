@@ -60,6 +60,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getMenuByKey, getModuleByKey, moduleHealthLabel } from '../../data/erpModules';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { fetchAdminCustomers } from '../../utils/apiconfig';
 import dayjs from 'dayjs';
 
 const { Text, Title } = Typography;
@@ -74,218 +75,7 @@ const healthTone = {
   paused: { bg: '#f2f3f5', color: '#8a94a6' },
 };
 
-// Mock patient data with more comprehensive information
-const mockPatients = [
-  {
-    id: '#PAT-1001',
-    name: 'Sarah Johnson',
-    gender: 'Female',
-    age: 34,
-    dateOfBirth: '1990-05-15',
-    phone: '+1 (555) 123-4567',
-    email: 'sarah.j@email.com',
-    address: '123 Main St, New York, NY 10001',
-    status: 'Active',
-    bloodType: 'A+',
-    allergies: ['Penicillin', 'Dust'],
-    lastVisit: '2 hours ago',
-    nextAppointment: '2024-01-20',
-    doctor: 'Dr. Smith',
-    department: 'Cardiology',
-    avatar: 'SJ',
-    insurance: 'Blue Cross',
-    emergencyContact: 'John Johnson - +1 (555) 987-6543',
-    medicalHistory: ['Hypertension', 'Type 2 Diabetes'],
-    currentMedications: ['Lisinopril 10mg', 'Metformin 500mg'],
-    notes: 'Patient responds well to treatment. Regular follow-ups required.',
-    visits: [
-      { date: '2024-01-15', type: 'Follow-up', doctor: 'Dr. Smith', notes: 'Blood pressure stable' },
-      { date: '2024-01-10', type: 'Consultation', doctor: 'Dr. Smith', notes: 'Initial assessment' },
-    ],
-  },
-  {
-    id: '#PAT-1002',
-    name: 'Michael Chen',
-    gender: 'Male',
-    age: 45,
-    dateOfBirth: '1979-08-22',
-    phone: '+1 (555) 234-5678',
-    email: 'michael.c@email.com',
-    address: '456 Oak Ave, Los Angeles, CA 90001',
-    status: 'Active',
-    bloodType: 'O-',
-    allergies: ['None'],
-    lastVisit: 'Yesterday',
-    nextAppointment: '2024-01-18',
-    doctor: 'Dr. Johnson',
-    department: 'Neurology',
-    avatar: 'MC',
-    insurance: 'Aetna',
-    emergencyContact: 'Lisa Chen - +1 (555) 876-5432',
-    medicalHistory: ['Migraine', 'Chronic Back Pain'],
-    currentMedications: ['Sumatriptan 50mg', 'Gabapentin 300mg'],
-    notes: 'Scheduled for MRI next week.',
-    visits: [
-      { date: '2024-01-17', type: 'Follow-up', doctor: 'Dr. Johnson', notes: 'MRI scheduled' },
-    ],
-  },
-  {
-    id: '#PAT-1003',
-    name: 'Emily Rodriguez',
-    gender: 'Female',
-    age: 28,
-    dateOfBirth: '1996-03-10',
-    phone: '+1 (555) 345-6789',
-    email: 'emily.r@email.com',
-    address: '789 Pine St, Miami, FL 33101',
-    status: 'Pending',
-    bloodType: 'B+',
-    allergies: ['Shellfish'],
-    lastVisit: '3 days ago',
-    nextAppointment: '2024-01-22',
-    doctor: 'Dr. Williams',
-    department: 'Pediatrics',
-    avatar: 'ER',
-    insurance: 'UnitedHealth',
-    emergencyContact: 'Maria Rodriguez - +1 (555) 765-4321',
-    medicalHistory: ['Asthma'],
-    currentMedications: ['Albuterol Inhaler'],
-    notes: 'New patient. Initial assessment completed.',
-    visits: [
-      { date: '2024-01-19', type: 'Initial', doctor: 'Dr. Williams', notes: 'Asthma assessment' },
-    ],
-  },
-  {
-    id: '#PAT-1004',
-    name: 'David Kim',
-    gender: 'Male',
-    age: 52,
-    dateOfBirth: '1972-11-30',
-    phone: '+1 (555) 456-7890',
-    email: 'david.k@email.com',
-    address: '321 Elm Blvd, Chicago, IL 60601',
-    status: 'Review',
-    bloodType: 'AB+',
-    allergies: ['Latex'],
-    lastVisit: '5 days ago',
-    nextAppointment: '2024-01-25',
-    doctor: 'Dr. Brown',
-    department: 'Orthopedics',
-    avatar: 'DK',
-    insurance: 'Cigna',
-    emergencyContact: 'Amy Kim - +1 (555) 654-3210',
-    medicalHistory: ['Arthritis', 'Knee Surgery'],
-    currentMedications: ['Ibuprofen 400mg', 'Omeprazole 20mg'],
-    notes: 'Post-surgery recovery progress is good.',
-    visits: [
-      { date: '2024-01-20', type: 'Surgery Follow-up', doctor: 'Dr. Brown', notes: 'Recovery on track' },
-    ],
-  },
-  {
-    id: '#PAT-1005',
-    name: 'Lisa Thompson',
-    gender: 'Female',
-    age: 31,
-    dateOfBirth: '1993-07-18',
-    phone: '+1 (555) 567-8901',
-    email: 'lisa.t@email.com',
-    address: '654 Cedar Ln, Seattle, WA 98101',
-    status: 'Active',
-    bloodType: 'A-',
-    allergies: ['Peanuts'],
-    lastVisit: '1 week ago',
-    nextAppointment: '2024-01-28',
-    doctor: 'Dr. Davis',
-    department: 'Dermatology',
-    avatar: 'LT',
-    insurance: 'Humana',
-    emergencyContact: 'Mark Thompson - +1 (555) 543-2109',
-    medicalHistory: ['Eczema', 'Skin Allergies'],
-    currentMedications: ['Hydrocortisone Cream'],
-    notes: 'Skin condition improving with treatment.',
-    visits: [
-      { date: '2024-01-14', type: 'Treatment', doctor: 'Dr. Davis', notes: 'Prescribed new cream' },
-    ],
-  },
-  {
-    id: '#PAT-1006',
-    name: 'James Wilson',
-    gender: 'Male',
-    age: 67,
-    dateOfBirth: '1957-09-05',
-    phone: '+1 (555) 678-9012',
-    email: 'james.w@email.com',
-    address: '987 Maple Dr, Boston, MA 02101',
-    status: 'Pending',
-    bloodType: 'O+',
-    allergies: ['Sulfa Drugs'],
-    lastVisit: '2 weeks ago',
-    nextAppointment: '2024-02-01',
-    doctor: 'Dr. Miller',
-    department: 'Cardiology',
-    avatar: 'JW',
-    insurance: 'Medicare',
-    emergencyContact: 'Anne Wilson - +1 (555) 432-1098',
-    medicalHistory: ['Heart Attack', 'High Cholesterol'],
-    currentMedications: ['Atorvastatin 20mg', 'Aspirin 81mg'],
-    notes: 'Requires regular heart monitoring.',
-    visits: [
-      { date: '2024-01-08', type: 'Cardiac Check', doctor: 'Dr. Miller', notes: 'EKG performed' },
-    ],
-  },
-  {
-    id: '#PAT-1007',
-    name: 'Maria Garcia',
-    gender: 'Female',
-    age: 29,
-    dateOfBirth: '1995-12-25',
-    phone: '+1 (555) 789-0123',
-    email: 'maria.g@email.com',
-    address: '147 Birch St, Denver, CO 80201',
-    status: 'Active',
-    bloodType: 'B-',
-    allergies: ['Penicillin'],
-    lastVisit: '3 days ago',
-    nextAppointment: '2024-01-19',
-    doctor: 'Dr. Martinez',
-    department: 'Obstetrics',
-    avatar: 'MG',
-    insurance: 'Kaiser Permanente',
-    emergencyContact: 'Carlos Garcia - +1 (555) 321-0987',
-    medicalHistory: ['Pregnancy', 'Gestational Diabetes'],
-    currentMedications: ['Prenatal Vitamins'],
-    notes: 'Due date: March 2024',
-    visits: [
-      { date: '2024-01-17', type: 'Prenatal', doctor: 'Dr. Martinez', notes: 'Baby developing well' },
-    ],
-  },
-  {
-    id: '#PAT-1008',
-    name: 'Robert Taylor',
-    gender: 'Male',
-    age: 41,
-    dateOfBirth: '1983-04-14',
-    phone: '+1 (555) 890-1234',
-    email: 'robert.t@email.com',
-    address: '258 Spruce Ct, San Francisco, CA 94101',
-    status: 'Review',
-    bloodType: 'AB-',
-    allergies: ['Morphine'],
-    lastVisit: '6 days ago',
-    nextAppointment: '2024-01-24',
-    doctor: 'Dr. Anderson',
-    department: 'Neurology',
-    avatar: 'RT',
-    insurance: 'Blue Shield',
-    emergencyContact: 'Jennifer Taylor - +1 (555) 210-9876',
-    medicalHistory: ['Epilepsy', 'TBI'],
-    currentMedications: ['Levetiracetam 500mg'],
-    notes: 'Seizure frequency has decreased significantly.',
-    visits: [
-      { date: '2024-01-16', type: 'Neurology Review', doctor: 'Dr. Anderson', notes: 'Good progress' },
-    ],
-  },
-];
+
 
 const statusColor = {
   Active: 'green',
@@ -314,8 +104,8 @@ const Patients = () => {
   }, [adminTheme.isDark, module.health]);
 
   // State
-  const [patients, setPatients] = useState(mockPatients);
-  const [loading, setLoading] = useState(false);
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDepartment, setFilterDepartment] = useState('all');
@@ -325,6 +115,51 @@ const Patients = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [activeTab, setActiveTab] = useState('1');
   const [form] = Form.useForm();
+
+  const loadCustomers = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchAdminCustomers();
+      const rawList = res?.data || (Array.isArray(res) ? res : []);
+      const mapped = rawList.map((c) => ({
+        id: `#CUS-${c.id}`,
+        name: c.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : (c.name || c.username || c.company || `Customer #${c.id}`),
+        gender: c.gender ? (c.gender.toLowerCase() === 'female' ? 'Female' : 'Male') : 'Unspecified',
+        age: c.age || 30,
+        dateOfBirth: c.dob || '1995-01-01',
+        phone: c.phone || 'N/A',
+        email: c.email || 'N/A',
+        address: c.address || 'Phnom Penh, Cambodia',
+        status: c.active ? 'Active' : 'Inactive',
+        bloodType: 'A+',
+        allergies: ['None'],
+        lastVisit: c.created_at ? dayjs(c.created_at).format('YYYY-MM-DD') : 'Recently',
+        nextAppointment: '-',
+        doctor: 'Account Manager',
+        department: c.customer_group_name || 'Standard Account',
+        avatar: (c.first_name || c.name || 'C').slice(0, 2).toUpperCase(),
+        insurance: 'Standard Corporate',
+        emergencyContact: c.phone || 'N/A',
+        medicalHistory: ['Account Active'],
+        currentMedications: [],
+        notes: `Customer group: ${c.customer_group_name || 'General'}. Registered account.`,
+        visits: [
+          { date: dayjs(c.created_at || undefined).format('YYYY-MM-DD'), type: 'Registration', doctor: 'System', notes: 'Account created' }
+        ],
+      }));
+      setPatients(mapped);
+    } catch (err) {
+      console.error('Failed to load customers:', err);
+      message.error('Failed to load customers from database');
+      setPatients([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCustomers();
+  }, []);
 
   // Filter patients
   const filteredPatients = useMemo(() => {
@@ -609,12 +444,7 @@ const Patients = () => {
   };
 
   const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setPatients([...mockPatients]);
-      setLoading(false);
-      message.success('Data refreshed');
-    }, 800);
+    loadCustomers().then(() => message.success('Customer data refreshed from database'));
   };
 
   const handlePrint = () => {

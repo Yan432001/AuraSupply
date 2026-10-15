@@ -63,16 +63,6 @@ import {
 } from '@ant-design/icons';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
-  getLiveStores,
-  saveLiveStores,
-  getStorefrontSettings,
-  saveStorefrontSettings,
-  getHeroSlides,
-  saveHeroSlides,
-  getPublicPages,
-  savePublicPages,
-} from '../../data/frontEndControlStore';
-import {
   getAllStoreTelegramConfigs,
   getStoreTelegramConfig,
   saveStoreTelegramConfig,
@@ -80,12 +70,79 @@ import {
   getTelegramRoutingLogs,
   syncStoreTelegramConfigsWithServer,
 } from '../../data/telegramStoreGroupManager';
-import {
-  getLiveProducts,
-  saveLiveProducts,
-  shopCategories,
-  branches,
-} from '../../data/shopData';
+import { fetchCategories, fetchBranches, fetchShops, fetchProducts, fetchBanners, fetchShopSettings } from '../../utils/apiconfig';
+
+const FRONTEND_STORES_KEY = 'aura_frontend_stores_v3';
+const FRONTEND_SETTINGS_KEY = 'aura_frontend_settings_v2';
+const FRONTEND_SLIDES_KEY = 'aura_frontend_slides_v2';
+const FRONTEND_PAGES_KEY = 'aura_frontend_pages_v2';
+const LIVE_PRODUCTS_KEY = 'aura_admin_live_products_v2';
+
+const getLiveStores = () => {
+  try {
+    const raw = localStorage.getItem(FRONTEND_STORES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+const saveLiveStores = (st) => {
+  try {
+    localStorage.setItem(FRONTEND_STORES_KEY, JSON.stringify(st));
+  } catch (_) {}
+};
+const getStorefrontSettings = () => {
+  try {
+    const raw = localStorage.getItem(FRONTEND_SETTINGS_KEY);
+    return raw ? JSON.parse(raw) : { announcement: { enabled: true, text: 'Aura Supply Storefront' }, branding: { siteTitle: 'Aura Supply' } };
+  } catch {
+    return { announcement: { enabled: true, text: 'Aura Supply Storefront' }, branding: { siteTitle: 'Aura Supply' } };
+  }
+};
+const saveStorefrontSettings = (s) => {
+  try {
+    localStorage.setItem(FRONTEND_SETTINGS_KEY, JSON.stringify(s));
+  } catch (_) {}
+};
+const getHeroSlides = () => {
+  try {
+    const raw = localStorage.getItem(FRONTEND_SLIDES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+const saveHeroSlides = (sl) => {
+  try {
+    localStorage.setItem(FRONTEND_SLIDES_KEY, JSON.stringify(sl));
+  } catch (_) {}
+};
+const getPublicPages = () => {
+  try {
+    const raw = localStorage.getItem(FRONTEND_PAGES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+const savePublicPages = (p) => {
+  try {
+    localStorage.setItem(FRONTEND_PAGES_KEY, JSON.stringify(p));
+  } catch (_) {}
+};
+const getLiveProducts = () => {
+  try {
+    const raw = localStorage.getItem(LIVE_PRODUCTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+const saveLiveProducts = (p) => {
+  try {
+    localStorage.setItem(LIVE_PRODUCTS_KEY, JSON.stringify(p));
+  } catch (_) {}
+};
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { formatCurrency } from '../../utils/uiTheme';
 
@@ -94,6 +151,16 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 export default function AdminFrontEndManager({ initialTab }) {
+  const [shopCategories, setShopCategories] = useState([]);
+  const [branches, setBranches] = useState([]);
+
+  useEffect(() => {
+    fetchCategories().then(res => { if (res?.success && Array.isArray(res.data)) setShopCategories(res.data); });
+    fetchBranches().then(res => { if (res?.success && Array.isArray(res.data)) setBranches(res.data); });
+    fetchShops().then(res => { if (res?.success && Array.isArray(res.data) && res.data.length > 0) setStores(res.data); });
+    fetchProducts({ limit: 100 }).then(res => { if (res?.success && Array.isArray(res.data) && res.data.length > 0) setProducts(res.data); });
+    fetchBanners().then(res => { if (res?.success && Array.isArray(res.data) && res.data.length > 0) setSlides(res.data); });
+  }, []);
   const adminTheme = useAdminTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -1025,7 +1092,7 @@ export default function AdminFrontEndManager({ initialTab }) {
             </Col>
             <Col span={12}>
               <Form.Item name="image" label="Image URL">
-                <Input placeholder="https://images.unsplash.com/..." />
+                <Input placeholder="/assets/uploads/image.png or https://..." />
               </Form.Item>
             </Col>
           </Row>
@@ -1098,7 +1165,7 @@ export default function AdminFrontEndManager({ initialTab }) {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="image" label="Slide Background Image URL" rules={[{ required: true }]}>
-                <Input placeholder="https://images.unsplash.com/..." />
+                <Input placeholder="/assets/uploads/image.png or https://..." />
               </Form.Item>
             </Col>
             <Col span={12}>

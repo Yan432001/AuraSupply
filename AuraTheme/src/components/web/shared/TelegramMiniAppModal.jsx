@@ -20,7 +20,6 @@ import {
   StarFilled,
 } from '@ant-design/icons';
 import { formatCurrency } from '../../../utils/webTheme';
-import { sellers } from '../../../data/shopData';
 import AuraLogo from '../../common/AuraLogo';
 
 // Telegram staff & kitchen dispatch channels per shop
@@ -71,7 +70,7 @@ export default function TelegramMiniAppModal({
         name: shop.name || 'Aura Store',
         rating: shop.rating || 4.9,
         branch: shop.branch || 'phnom-penh',
-        heroImage: shop.heroImage || shop.banner || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80',
+        heroImage: shop.heroImage || shop.banner || shop.logo || null,
         logo: shop.logo,
         logoText: shop.logoText || shop.name?.slice(0, 2) || 'AS',
       };
@@ -84,7 +83,7 @@ export default function TelegramMiniAppModal({
         name: product.storeName || product.shopName || product.billerName || 'Aura Store',
         rating: product.rating || 4.9,
         branch: 'phnom-penh',
-        heroImage: product.sellerLogo || product.image || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80',
+        heroImage: product.sellerLogo || product.image || null,
         logoText: (product.storeName || product.shopName || 'AS').slice(0, 2).toUpperCase(),
       };
     }
@@ -94,7 +93,7 @@ export default function TelegramMiniAppModal({
       name: 'Aura Specialty Store',
       rating: 4.9,
       branch: 'phnom-penh',
-      heroImage: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80',
+      heroImage: null,
       logoText: 'AS',
     };
   }, [shop, product]);

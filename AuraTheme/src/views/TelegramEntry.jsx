@@ -3,18 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTelegram } from '../hooks/useTelegram';
 import AuraLogo from '../components/common/AuraLogo';
 
-const SELLER_SLUG_MAP = {
-  'seller-1': 'sbc-store',
-  'seller-2': 'aura-bakery',
-  'seller-3': 'aura-lounge',
-  'seller-4': 'aura-bistro',
-  'seller-5': 'aura-tech',
-  'seller-6': 'sbc-store',
-};
-
 const resolveStoreSlug = (raw) => {
   if (!raw) return 'sbc-store';
-  if (SELLER_SLUG_MAP[raw]) return SELLER_SLUG_MAP[raw];
   return raw;
 };
 

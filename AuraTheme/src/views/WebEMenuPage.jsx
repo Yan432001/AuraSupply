@@ -44,504 +44,6 @@ import {
   getStoreDeletedCount,
 } from '../data/menuImageManager';
 
-// Master Multi-Business Catalog covering Breakfast, Bakery, Coffee, Bistro, Mobile Phones, Computers, and Fashion
-const MOCK_WEB_FOODS = [
-  // ==========================================
-  // BREAKFAST & VIENNOISERIE (Matches image.png exactly)
-  // ==========================================
-  {
-    id: 'food-bk-1',
-    name: 'Pancake',
-    category: 'Breakfast',
-    price: 2.0,
-    originalPrice: 3.5,
-    rating: 5.0,
-    reviews: 189,
-    time: '10 min',
-    image: 'https://images.unsplash.com/photo-1528207776546-365bb710ee93?w=600&auto=format&fit=crop&q=80',
-    description: 'Start your day right with our fluffy pancakes, served fresh every morning.',
-    portion: 'Triple Fluffy Stack',
-    calories: '420 kcal',
-    storeSlug: 'aura-bakery',
-  },
-  {
-    id: 'food-bk-2',
-    name: 'Bagel',
-    category: 'Breakfast',
-    price: 2.0,
-    originalPrice: 3.0,
-    rating: 4.9,
-    reviews: 142,
-    time: '5 min',
-    image: 'https://images.unsplash.com/photo-1585478259715-876acc5be8eb?w=600&auto=format&fit=crop&q=80',
-    description: 'Delight in our freshly baked bagels, perfect for any time of day.',
-    portion: 'Toasted with Cream Cheese',
-    calories: '310 kcal',
-    storeSlug: 'aura-bakery',
-  },
-  {
-    id: 'food-bk-3',
-    name: 'Cinnamon Roll',
-    category: 'Breakfast',
-    price: 2.0,
-    originalPrice: 3.2,
-    rating: 5.0,
-    reviews: 210,
-    time: '30 min',
-    image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop&q=80',
-    description: 'Celebrate the sweet indulgence of our cinnamon rolls, baked fresh daily.',
-    portion: 'Jumbo Swirl with Vanilla Glaze',
-    calories: '480 kcal',
-    storeSlug: 'aura-bakery',
-  },
-  {
-    id: 'food-bk-4',
-    name: 'French Toast',
-    category: 'Breakfast',
-    price: 2.0,
-    originalPrice: 3.5,
-    rating: 4.9,
-    reviews: 165,
-    time: '20 min',
-    image: 'https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=600&auto=format&fit=crop&q=80',
-    description: 'Savor our French toast, a breakfast classic made to perfection.',
-    portion: 'Brioche with Maple & Berries',
-    calories: '460 kcal',
-    storeSlug: 'aura-bakery',
-  },
-  {
-    id: 'food-bk-5',
-    name: 'Sweet Crepes',
-    category: 'Breakfast',
-    price: 2.0,
-    originalPrice: 3.0,
-    rating: 4.8,
-    reviews: 130,
-    time: '15 min',
-    image: 'https://images.unsplash.com/photo-1519676867240-f03562e64548?w=600&auto=format&fit=crop&q=80',
-    description: 'Indulge in our sweet crepes, a delectable treat for any occasion.',
-    portion: 'Folded Crêpe with Berry Compote',
-    calories: '320 kcal',
-    storeSlug: 'aura-bakery',
-  },
-  {
-    id: 'food-bk-6',
-    name: 'Omelet',
-    category: 'Breakfast',
-    price: 2.0,
-    originalPrice: 3.5,
-    rating: 4.9,
-    reviews: 155,
-    time: '10 min',
-    image: 'https://images.unsplash.com/photo-1510693206972-df098062cb71?w=600&auto=format&fit=crop&q=80',
-    description: 'Enjoy our fluffy omelets, made with farm-fresh eggs and your choice of fillings.',
-    portion: 'Fresh Country Herb Omelet',
-    calories: '380 kcal',
-    storeSlug: 'aura-bakery',
-  },
-  {
-    id: 'food-bk-7',
-    name: 'Croissants',
-    category: 'Breakfast',
-    price: 2.0,
-    originalPrice: 3.0,
-    rating: 5.0,
-    reviews: 320,
-    time: '25 min',
-    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=600&auto=format&fit=crop&q=80',
-    description: 'Savor the flaky goodness of our croissants, freshly baked to perfection.',
-    portion: 'Golden French Butter Croissant',
-    calories: '290 kcal',
-    storeSlug: 'aura-bakery',
-  },
-  {
-    id: 'food-bk-8',
-    name: 'Muffins',
-    category: 'Breakfast',
-    price: 2.0,
-    originalPrice: 3.0,
-    rating: 4.8,
-    reviews: 118,
-    time: '35 min',
-    image: 'https://images.unsplash.com/photo-1607958996333-41aef7caefaa?w=600&auto=format&fit=crop&q=80',
-    description: 'Delight in our moist and flavorful muffins, baked fresh daily.',
-    portion: 'Wild Blueberry Streusel Muffin',
-    calories: '340 kcal',
-    storeSlug: 'aura-bakery',
-  },
-
-  // ==========================================
-  // LUNCH SELECTIONS
-  // ==========================================
-  {
-    id: 'food-ln-1',
-    name: 'Spicy Burger',
-    category: 'Lunch',
-    price: 10.9,
-    originalPrice: 13.9,
-    rating: 4.9,
-    reviews: 142,
-    time: '12 min',
-    image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80',
-    description: 'Crispy flame-grilled beef patty with smoked chipotle sauce, aged cheddar, crisp lettuce, and pickles.',
-    portion: 'Single Gourmet Patty',
-    calories: '650 kcal',
-    storeSlug: 'aura-bistro',
-  },
-  {
-    id: 'food-ln-2',
-    name: 'French Fry Share Box',
-    category: 'Lunch',
-    price: 5.5,
-    originalPrice: 7.0,
-    rating: 5.0,
-    reviews: 210,
-    time: '8 min',
-    image: 'https://images.unsplash.com/photo-1576107232684-1279f3908594?w=600&auto=format&fit=crop&q=80',
-    description: 'Golden crispy double-fried Idaho russet potatoes seasoned with sea salt and fresh rosemary.',
-    portion: 'Large Share Box',
-    calories: '380 kcal',
-    storeSlug: 'aura-bistro',
-  },
-  {
-    id: 'food-ln-3',
-    name: 'San Marzano Penne Pasta',
-    category: 'Lunch',
-    price: 10.9,
-    originalPrice: 14.0,
-    rating: 4.9,
-    reviews: 98,
-    time: '15 min',
-    image: 'https://images.unsplash.com/photo-1621996346565-e3d5d6281691?w=600&auto=format&fit=crop&q=80',
-    description: 'Al dente penne pasta tossed in slow-simmered San Marzano tomato marinara and shaved Parmigiano-Reggiano.',
-    portion: 'Regular Bowl (350g)',
-    calories: '520 kcal',
-    storeSlug: 'aura-bistro',
-  },
-  {
-    id: 'food-ln-4',
-    name: 'Artisan Club Sandwich',
-    category: 'Lunch',
-    price: 8.5,
-    originalPrice: 11.0,
-    rating: 4.8,
-    reviews: 135,
-    time: '10 min',
-    image: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=600&auto=format&fit=crop&q=80',
-    description: 'Triple-decker artisan toasted sourdough club sandwich with herb roast chicken, crisp bacon, avocado, and Dijon mayo.',
-    portion: 'Full Cut Sandwich',
-    calories: '580 kcal',
-    storeSlug: 'aura-bakery',
-  },
-
-  // ==========================================
-  // DINNER SPECIALS
-  // ==========================================
-  {
-    id: 'food-dn-1',
-    name: 'Ribeye Steak Frites',
-    category: 'Dinner',
-    price: 18.5,
-    originalPrice: 22.0,
-    rating: 5.0,
-    reviews: 154,
-    time: '25 min',
-    image: 'https://images.unsplash.com/photo-1558030006-450675393462?w=600&auto=format&fit=crop&q=80',
-    description: 'Grass-fed Australian ribeye steak seared with thyme butter, served with truffle fries and peppercorn jus.',
-    portion: '280g Prime Cut',
-    calories: '820 kcal',
-    storeSlug: 'aura-bistro',
-  },
-  {
-    id: 'food-dn-2',
-    name: 'Margherita Neapolitan Pizza',
-    category: 'Dinner',
-    price: 12.0,
-    originalPrice: 15.0,
-    rating: 4.9,
-    reviews: 195,
-    time: '18 min',
-    image: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?w=600&auto=format&fit=crop&q=80',
-    description: 'Wood-fired sourdough crust topped with San Marzano tomatoes, buffalo mozzarella, fresh basil, and extra virgin olive oil.',
-    portion: '10 inch Neapolitan',
-    calories: '720 kcal',
-    storeSlug: 'aura-bistro',
-  },
-
-  // ==========================================
-  // DESSERT & JUICE
-  // ==========================================
-  {
-    id: 'food-ds-1',
-    name: 'Triple Chocolate Tart',
-    category: 'Dessert & juice',
-    price: 4.5,
-    originalPrice: 6.0,
-    rating: 4.9,
-    reviews: 165,
-    time: '5 min',
-    image: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=600&auto=format&fit=crop&q=80',
-    description: 'Dark Belgian chocolate ganache on cocoa sable pastry topped with crushed hazelnuts and gold leaf.',
-    portion: 'Individual Tart',
-    calories: '380 kcal',
-    storeSlug: 'aura-bakery',
-  },
-  {
-    id: 'food-ds-2',
-    name: 'Cascara Sparkling Cold Brew',
-    category: 'Dessert & juice',
-    price: 4.0,
-    originalPrice: 5.0,
-    rating: 4.9,
-    reviews: 120,
-    time: '3 min',
-    image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80',
-    description: 'Slow cold-steeped coffee cherry husks with sparkling tonic, fresh mint sprig, and hand-cut clear ice.',
-    portion: 'Chilled Glass (16oz)',
-    calories: '110 kcal',
-    storeSlug: 'sbc-store',
-  },
-
-  // ==========================================
-  // SPECIALTY COFFEE
-  // ==========================================
-  {
-    id: 'food-cf-1',
-    name: 'Spanish Iced Latte',
-    category: 'Coffee',
-    price: 4.25,
-    originalPrice: 5.0,
-    rating: 4.9,
-    reviews: 310,
-    time: '4 min',
-    image: 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=600&auto=format&fit=crop&q=80',
-    description: 'Signature double shot highland espresso shaken with condensed milk and velvety fresh milk over crystalline ice.',
-    portion: '16oz Glass',
-    calories: '220 kcal',
-    storeSlug: 'sbc-store',
-  },
-  {
-    id: 'food-cf-2',
-    name: 'Mondulkiri Hand Pour-Over (V60)',
-    category: 'Coffee',
-    price: 4.5,
-    originalPrice: 5.5,
-    rating: 5.0,
-    reviews: 178,
-    time: '6 min',
-    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&auto=format&fit=crop&q=80',
-    description: 'Single-origin washed Arabica from Bousra highlands with clean notes of pomelo, jasmine, and sugarcane.',
-    portion: 'Server Carafe (300ml)',
-    calories: '5 kcal',
-    storeSlug: 'sbc-store',
-  },
-
-  // ==========================================
-  // SMARTPHONES & MOBILE TECH (Nexus Mobile)
-  // ==========================================
-  {
-    id: 'mob-1',
-    name: 'iPhone 16 Pro Max 256GB',
-    category: 'Flagship Phones',
-    price: 1199.0,
-    originalPrice: 1299.0,
-    rating: 5.0,
-    reviews: 84,
-    time: 'Instant Stock',
-    image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&auto=format&fit=crop&q=80',
-    description: 'Grade 5 aerospace titanium design with Camera Control button and A18 Pro chip.',
-    portion: 'Desert Titanium',
-    calories: '256GB Storage',
-    storeSlug: 'nexus-mobile',
-  },
-  {
-    id: 'mob-2',
-    name: 'Samsung Galaxy S25 Ultra',
-    category: 'Flagship Phones',
-    price: 1249.0,
-    originalPrice: 1399.0,
-    rating: 4.9,
-    reviews: 62,
-    time: 'Instant Stock',
-    image: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=600&auto=format&fit=crop&q=80',
-    description: 'Galaxy AI flagship with built-in S-Pen, 200MP quad camera setup, and Snapdragon 8 Elite.',
-    portion: 'Titanium Black',
-    calories: '512GB Storage',
-    storeSlug: 'nexus-mobile',
-  },
-  {
-    id: 'mob-3',
-    name: 'Anker Prime 100W GaN Charger',
-    category: 'Fast Chargers',
-    price: 69.0,
-    originalPrice: 85.0,
-    rating: 4.9,
-    reviews: 140,
-    time: 'Ready for Pickup',
-    image: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=600&auto=format&fit=crop&q=80',
-    description: 'Ultra-compact GaNPrime tech charging phone, tablet, and laptop simultaneously at top speed.',
-    portion: '3-Port GaN Wall Block',
-    calories: '100W Total Output',
-    storeSlug: 'nexus-mobile',
-  },
-  {
-    id: 'mob-4',
-    name: 'Sony WH-1000XM5 Headphones',
-    category: 'Audio & Earbuds',
-    price: 349.0,
-    originalPrice: 399.0,
-    rating: 4.9,
-    reviews: 112,
-    time: 'Sealed Retail Box',
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80',
-    description: 'Industry-leading noise cancellation with dual processors, 8 microphones, and 30-hour battery life.',
-    portion: 'Wireless Over-Ear',
-    calories: '30h Playtime',
-    storeSlug: 'nexus-mobile',
-  },
-
-  // ==========================================
-  // COMPUTERS & WORKSTATIONS (Apex PC)
-  // ==========================================
-  {
-    id: 'pc-1',
-    name: 'MacBook Pro 16" M3 Max',
-    category: 'Creator Laptops',
-    price: 3499.0,
-    originalPrice: 3899.0,
-    rating: 5.0,
-    reviews: 48,
-    time: 'Factory Sealed',
-    image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&auto=format&fit=crop&q=80',
-    description: '16-core CPU, 40-core GPU, 48GB unified memory, and 1TB ultra-fast SSD.',
-    portion: 'Space Black 16"',
-    calories: '48GB RAM / 1TB SSD',
-    storeSlug: 'apex-pc',
-  },
-  {
-    id: 'pc-2',
-    name: 'Apex Liquid RTX 4090 Rig',
-    category: 'Custom Rigs',
-    price: 3890.0,
-    originalPrice: 4200.0,
-    rating: 4.9,
-    reviews: 35,
-    time: 'Pre-Tested 24h',
-    image: 'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=600&auto=format&fit=crop&q=80',
-    description: 'Intel Core i9-14900K, GeForce RTX 4090 24GB, custom dual-radiator hardline loop.',
-    portion: 'Full Tower Workstation',
-    calories: '64GB DDR5 / 2TB Gen5',
-    storeSlug: 'apex-pc',
-  },
-  {
-    id: 'pc-3',
-    name: 'Keychron Q1 Pro Mechanical',
-    category: 'Keyboards',
-    price: 199.0,
-    originalPrice: 229.0,
-    rating: 4.8,
-    reviews: 95,
-    time: 'Ready to Type',
-    image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&auto=format&fit=crop&q=80',
-    description: 'Full CNC aluminum body, hot-swappable switches, double-gasket design, and wireless Bluetooth.',
-    portion: '75% Layout Wireless',
-    calories: 'Carbon Black Edition',
-    storeSlug: 'apex-pc',
-  },
-  {
-    id: 'pc-4',
-    name: 'LG UltraFine 32" 4K Ergo',
-    category: 'Monitors',
-    price: 699.0,
-    originalPrice: 799.0,
-    rating: 4.9,
-    reviews: 58,
-    time: 'Includes Ergo Arm',
-    image: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=600&auto=format&fit=crop&q=80',
-    description: 'Nano IPS panel covering 98% DCI-P3 with ergonomic C-clamp arm and 90W USB-C delivery.',
-    portion: '32 inch 4K UHD',
-    calories: '98% DCI-P3 Color',
-    storeSlug: 'apex-pc',
-  },
-
-  // ==========================================
-  // CLOTHING & MINIMALIST APPAREL (Velour)
-  // ==========================================
-  {
-    id: 'clt-1',
-    name: 'Supima Cotton Minimalist Tee',
-    category: 'Tops & Linen',
-    price: 38.0,
-    originalPrice: 48.0,
-    rating: 4.9,
-    reviews: 145,
-    time: 'Hand-Tailored',
-    image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&auto=format&fit=crop&q=80',
-    description: '280 GSM heavyweight California Supima cotton tailored with seamless collar binding.',
-    portion: 'Heavyweight 280 GSM',
-    calories: '100% Organic Cotton',
-    storeSlug: 'velour-apparel',
-  },
-  {
-    id: 'clt-2',
-    name: 'French Normandy Linen Overshirt',
-    category: 'Tops & Linen',
-    price: 89.0,
-    originalPrice: 110.0,
-    rating: 4.8,
-    reviews: 82,
-    time: 'Garment Washed',
-    image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop&q=80',
-    description: 'Pure certified Normandy flax linen with garment-washed softness and mother-of-pearl buttons.',
-    portion: 'Relaxed Fit Overshirt',
-    calories: '100% Flax Linen',
-    storeSlug: 'velour-apparel',
-  },
-  {
-    id: 'clt-3',
-    name: 'Japanese Selvedge Raw Denim',
-    category: 'Japanese Denim',
-    price: 145.0,
-    originalPrice: 175.0,
-    rating: 4.9,
-    reviews: 73,
-    time: 'Vintage Looms',
-    image: 'https://images.unsplash.com/photo-1542272604-780c96856592?w=600&auto=format&fit=crop&q=80',
-    description: 'Woven on vintage Toyoda shuttle looms in Okayama with red selvedge ID and copper hardware.',
-    portion: '13.5oz Kurabo Mills',
-    calories: 'Classic Tapered Fit',
-    storeSlug: 'velour-apparel',
-  },
-  {
-    id: 'clt-4',
-    name: 'Italian Merino Wool Peacoat',
-    category: 'Jackets & Coats',
-    price: 295.0,
-    originalPrice: 360.0,
-    rating: 5.0,
-    reviews: 44,
-    time: 'Tuscan Atelier',
-    image: 'https://images.unsplash.com/photo-1544441893-675973e31985?w=600&auto=format&fit=crop&q=80',
-    description: 'Tailored in Tuscany from thick brushed Melton merino wool with cupro lining and horn buttons.',
-    portion: 'Double-Breasted Coat',
-    calories: '100% Merino Wool',
-    storeSlug: 'velour-apparel',
-  },
-];
-
-// Available 8 merchants across the platform
-// Merchant Yin owns 2 stores (Bakery & Coffee), 7 other merchants own 1 store each
-const STORES_LIST = [
-  { slug: 'aura-bakery', name: 'Aura Artisan Bakery', shortName: 'Bakery', emoji: '🥐', merchant: 'Yin', tag: 'Breakfast & Breads' },
-  { slug: 'sbc-store', name: 'Aura Specialty Coffee', shortName: 'Coffee', emoji: '☕', merchant: 'Yin', tag: 'Espresso & Roasts' },
-  { slug: 'aura-bistro', name: 'Aura French Bistro', shortName: 'Bistro', emoji: '🍽️', merchant: 'Pierre Dubois', tag: 'French Gastronomy' },
-  { slug: 'aura-lounge', name: 'Botanical Lounge & Matcha', shortName: 'Matcha', emoji: '🍵', merchant: 'Kenji Sato', tag: 'Ceremonial Tea' },
-  { slug: 'nexus-mobile', name: 'Nexus Mobile & Gadgets', shortName: 'Mobile', emoji: '📱', merchant: 'Alex Chen', tag: 'Phones & Gadgets' },
-  { slug: 'aura-tech', name: 'Aura Automation Tech', shortName: 'Tech', emoji: '💻', merchant: 'David Kim', tag: 'Smart Living' },
-  { slug: 'apex-pc', name: 'Apex PC & Workstation Hub', shortName: 'PCs', emoji: '🖥️', merchant: 'Elena Rostova', tag: 'Desktops & Rigs' },
-  { slug: 'velour-apparel', name: 'Velour Minimalist Apparel', shortName: 'Apparel', emoji: '👔', merchant: 'Marcus Vance', tag: 'Fashion & Tailoring' },
-];
-
 export default function WebEMenuPage() {
   const { storeSlug } = useParams();
   const navigate = useNavigate();
@@ -550,9 +52,11 @@ export default function WebEMenuPage() {
 
   const [dbStores, setDbStores] = useState([]);
   const [dbFoods, setDbFoods] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
+    setLoading(true);
     Promise.all([fetchShops(), fetchProducts({ limit: 150 })])
       .then(([sRes, pRes]) => {
         if (!isMounted) return;
@@ -561,19 +65,20 @@ export default function WebEMenuPage() {
         }
         if (pRes?.success && Array.isArray(pRes.data) && pRes.data.length > 0) {
           const mapped = pRes.data.map((p) => {
-            const foundStore = sRes?.data?.find((s) => s.id === p.shop_id || s.id === p.biller_id);
+            const foundStore = sRes?.data?.find((s) => Number(s.id) === Number(p.shop_id || p.biller_id));
             return {
               id: String(p.id),
               rawId: p.id,
               name: p.name,
-              category: p.category || 'Specialty',
+              category: p.category || p.category_name || 'Specialty',
               price: Number(p.price || 0),
-              originalPrice: Number((p.price * 1.2).toFixed(2)),
+              originalPrice: p.original_price ? Number(p.original_price) : Number((p.price * 1.2).toFixed(2)),
               rating: Number(p.rating || 4.9),
               reviews: Number(p.reviews_count || 42),
               time: '10-15 min',
-              image: p.image,
-              storeSlug: foundStore?.slug || p.shop?.slug || 'sbc-store',
+              image: p.image || '/assets/uploads/no_image.png',
+              biller_id: p.biller_id || p.shop_id,
+              storeSlug: foundStore?.slug || foundStore?.store_slug || p.shop?.slug || (p.biller_id ? `store-${p.biller_id}` : 'store'),
               storeName: foundStore?.name || p.brand || 'Aura Partner',
               description: p.description || p.details || p.name,
               badge: p.featured ? 'Chef Special' : undefined,
@@ -583,37 +88,30 @@ export default function WebEMenuPage() {
           setDbFoods(mapped);
         }
       })
-      .catch((e) => console.warn('EMenu DB fetch error:', e));
+      .catch((e) => console.warn('EMenu DB fetch error:', e))
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
 
     return () => { isMounted = false; };
   }, []);
 
-  const activeFoods = useMemo(() => {
-    return dbFoods.length > 0 ? dbFoods : MOCK_WEB_FOODS;
-  }, [dbFoods]);
+  const activeFoods = dbFoods;
 
   // Active Store
-  const currentSlug = storeSlug || 'aura-bakery';
+  const currentSlug = storeSlug || 'sbc-store';
   const currentStore = useMemo(() => {
-    const foundDbStore = dbStores.find((s) => s.slug === currentSlug || String(s.id) === String(currentSlug));
+    const foundDbStore = dbStores.find((s) => s.slug === currentSlug || s.store_slug === currentSlug || String(s.id) === String(currentSlug));
     if (foundDbStore) return foundDbStore;
-    return (
-      STORES_LIST.find((s) => s.slug === currentSlug) ||
-      dbStores[0] ||
-      STORES_LIST[0]
-    );
+    return dbStores[0] || null;
   }, [currentSlug, dbStores]);
 
   // Categories dynamically extracted for current store
   const storeCategories = useMemo(() => {
-    const foodsForStore = activeFoods.filter((f) => f.storeSlug === currentSlug);
-    const uniqueCats = Array.from(new Set(foodsForStore.map((f) => f.category)));
-    if (uniqueCats.length > 0) {
-      return uniqueCats;
-    }
-    // Fallback default matching image.png
-    return ['Breakfast', 'Lunch', 'Dinner', 'Dessert & juice', 'Coffee'];
-  }, [currentSlug, activeFoods]);
+    const foodsForStore = activeFoods.filter((f) => f.storeSlug === currentSlug || (currentStore && Number(f.biller_id) === Number(currentStore.id)));
+    const uniqueCats = Array.from(new Set(foodsForStore.map((f) => f.category).filter(Boolean)));
+    return uniqueCats;
+  }, [currentSlug, activeFoods, currentStore]);
 
   // Active category filter (defaults to first category, e.g. 'Breakfast')
   const [activeCategory, setActiveCategory] = useState(storeCategories[0] || 'Breakfast');
@@ -644,7 +142,7 @@ export default function WebEMenuPage() {
     if (foodsInCat.length > 0) {
       return foodsInCat.map((f) => f.name);
     }
-    return ['Pancake', 'Bagel', 'Cinnamon Roll', 'French Toast', 'Omelet', 'Croissants', 'Muffins'];
+    return [];
   }, [currentSlug, activeCategory, activeFoods]);
 
   // Modal & Cart Drawer State
@@ -888,22 +386,22 @@ export default function WebEMenuPage() {
         <div className="flex items-center gap-2.5">
           {/* Quick Store Switcher Pills */}
           <div className="hidden lg:flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-full text-xs font-bold">
-            {STORES_LIST.map((st) => (
+            {dbStores.slice(0, 8).map((st) => (
               <button
-                key={st.slug}
+                key={st.slug || st.id}
                 type="button"
                 onClick={() => {
-                  navigate(`/shop/menu/${st.slug}`);
+                  navigate(`/shop/menu/${st.slug || st.store_slug || st.id}`);
                   setSearchQuery('');
                 }}
                 className={`px-3 py-1 rounded-full transition cursor-pointer flex items-center gap-1.5 ${
-                  currentSlug === st.slug
+                  currentSlug === (st.slug || st.store_slug || String(st.id))
                     ? 'bg-[#A31D1D] text-white shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>{st.emoji}</span>
-                <span>{st.shortName}</span>
+                <span>🏪</span>
+                <span>{st.name || st.company}</span>
               </button>
             ))}
           </div>
@@ -1008,21 +506,21 @@ export default function WebEMenuPage() {
 
           {/* Store Switcher for Mobile / Tablet */}
           <div className="flex lg:hidden items-center justify-center gap-1.5 mt-4 overflow-x-auto pb-2 scrollbar-none">
-            {STORES_LIST.map((st) => (
+            {dbStores.slice(0, 8).map((st) => (
               <button
-                key={st.slug}
+                key={st.slug || st.id}
                 type="button"
                 onClick={() => {
-                  navigate(`/shop/menu/${st.slug}`);
+                  navigate(`/shop/menu/${st.slug || st.store_slug || st.id}`);
                   setSearchQuery('');
                 }}
                 className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 transition cursor-pointer ${
-                  currentSlug === st.slug
+                  currentSlug === (st.slug || st.store_slug || String(st.id))
                     ? 'bg-slate-900 text-white'
                     : 'bg-white text-slate-600 border border-slate-200'
                 }`}
               >
-                {st.emoji} {st.shortName}
+                🏪 {st.name || st.company}
               </button>
             ))}
           </div>
@@ -1115,7 +613,7 @@ export default function WebEMenuPage() {
                         onError={(e) => {
                           e.currentTarget.onerror = null;
                           e.currentTarget.src =
-                            'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
+                            '/assets/uploads/no_image.png';
                         }}
                         className="w-full h-full object-cover rounded-full"
                         loading="lazy"

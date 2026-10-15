@@ -74,11 +74,7 @@ export default function OrderStatusMiniBanner({
       if (isDismissed) return null;
       const saved = localStorage.getItem(ORDER_STORAGE_KEY);
       if (saved) return JSON.parse(saved);
-
-      // Seed an active order in 'Preparing' state so the banner is persistently visible
-      const initial = createDefaultMockOrder(storeName);
-      localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(initial));
-      return initial;
+      return null;
     } catch {
       return null;
     }
@@ -189,17 +185,7 @@ export default function OrderStatusMiniBanner({
   };
 
   if (!order) {
-    return (
-      <div className={`w-full px-3 py-1 flex items-center justify-end bg-slate-900/90 text-white text-[11px] ${className}`}>
-        <button
-          type="button"
-          onClick={handleResetMockOrder}
-          className="text-blue-300 hover:text-white underline cursor-pointer text-[10.5px] font-bold"
-        >
-          ⚡ Simulate Active Order
-        </button>
-      </div>
-    );
+    return null;
   }
 
   const isReady = order.status === 'Ready' || order.status === 'Ready for Pickup';

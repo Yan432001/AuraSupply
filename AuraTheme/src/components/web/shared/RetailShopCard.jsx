@@ -100,11 +100,11 @@ const RetailShopCard = ({
             }}
           >
             <img
-              src={shop.heroImage || shop.banner || shop.image || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&fit=crop'}
+              src={shop.heroImage || shop.banner || shop.image || '/assets/uploads/no_image.png'}
               alt={shop.name}
               onError={(e) => {
                 e.currentTarget.onerror = null;
-                e.currentTarget.src = 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&fit=crop';
+                e.currentTarget.src = '/assets/uploads/no_image.png';
               }}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />

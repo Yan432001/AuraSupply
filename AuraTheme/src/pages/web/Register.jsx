@@ -65,7 +65,7 @@ export default function Register() {
           memberType: values.memberType || 'customer',
           role: 'customer',
           token: userObj.token,
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+          avatar: null,
           joinedAt: new Date().toISOString(),
           tier: 'Bronze VIP Member',
           loyaltyPoints: 100,

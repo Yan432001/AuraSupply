@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Button, Card, Checkbox, Divider, Input, Select, Slider, Space, Tag, Typography } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Button, Card, Checkbox, Divider, Input, Select, Slider, Space, Tag, Typography, Spin } from 'antd';
 import { CheckCircleFilled, FilterOutlined, StarFilled } from '@ant-design/icons';
-import { branches, sellers, shopCategories } from '../../data/shopData';
+import { fetchCategories, fetchShops, fetchBranches } from '../../utils/apiconfig';
+import { mapCategory, mapShop } from '../../utils/dataMappers';
 import { publicTheme } from '../../utils/webTheme';
 
 const { Text, Title } = Typography;
@@ -13,15 +14,64 @@ const FilterSidebar = ({
   setSelectedSubcategory,
   selectedBranch,
   setSelectedBranch,
-  selectedSellers,
+  selectedSellers = [],
   setSelectedSellers,
-  priceRange,
+  priceRange = [0, 5000],
   setPriceRange,
+  categories: propCategories,
+  sellers: propSellers,
+  branches: propBranches,
 }) => {
   const [sellerSearch, setSellerSearch] = useState('');
+  const [categories, setCategories] = useState(propCategories || []);
+  const [sellers, setSellers] = useState(propSellers || []);
+  const [branches, setBranches] = useState(propBranches || [{ id: 'all', name: 'All Branches' }]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (propCategories && propCategories.length > 0) {
+      setCategories(propCategories);
+    }
+  }, [propCategories]);
+
+  useEffect(() => {
+    if (propSellers && propSellers.length > 0) {
+      setSellers(propSellers);
+    }
+  }, [propSellers]);
+
+  useEffect(() => {
+    if (propBranches && propBranches.length > 0) {
+      setBranches(propBranches);
+    }
+  }, [propBranches]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if ((!propCategories || !propCategories.length) || (!propSellers || !propSellers.length)) {
+      setLoading(true);
+      Promise.allSettled([fetchCategories(), fetchShops(), fetchBranches()])
+        .then(([catRes, shopRes, brRes]) => {
+          if (!isMounted) return;
+          if (catRes.status === 'fulfilled' && catRes.value?.success && Array.isArray(catRes.value.data)) {
+            setCategories(catRes.value.data.map(mapCategory));
+          }
+          if (shopRes.status === 'fulfilled' && shopRes.value?.success && Array.isArray(shopRes.value.data)) {
+            setSellers(shopRes.value.data.map(mapShop));
+          }
+          if (brRes.status === 'fulfilled' && brRes.value?.success && Array.isArray(brRes.value.data)) {
+            setBranches([{ id: 'all', name: 'All Branches' }, ...brRes.value.data]);
+          }
+        })
+        .finally(() => {
+          if (isMounted) setLoading(false);
+        });
+    }
+    return () => { isMounted = false; };
+  }, [propCategories, propSellers, propBranches]);
 
   const filteredSellers = sellers.filter((seller) =>
-    seller.name.toLowerCase().includes(sellerSearch.toLowerCase())
+    (seller.name || seller.company || '').toLowerCase().includes(sellerSearch.toLowerCase())
   );
 
   const handleSellerToggle = (sellerId) => {
@@ -34,10 +84,10 @@ const FilterSidebar = ({
 
   const clearAllFilters = () => {
     setSelectedCategory('all');
-    setSelectedSubcategory(null);
-    setSelectedBranch('all');
-    setSelectedSellers([]);
-    setPriceRange([0, 5000]);
+    setSelectedSubcategory?.(null);
+    setSelectedBranch?.('all');
+    setSelectedSellers?.([]);
+    setPriceRange?.([0, 5000]);
   };
 
   const activeFiltersCount = [
@@ -149,49 +199,52 @@ const FilterSidebar = ({
           <Text strong style={{ display: 'block', marginBottom: 12, color: publicTheme.text }}>
             Categories
           </Text>
-          <Space direction="vertical" style={{ width: '100%' }} size={8}>
-            <div
-              onClick={() => {
-                setSelectedCategory('all');
-                setSelectedSubcategory(null);
-              }}
-              style={{
-                padding: '12px 16px',
-                borderRadius: 16,
-                cursor: 'pointer',
-                background: selectedCategory === 'all' ? publicTheme.ribbon : publicTheme.cardMuted,
-                color: selectedCategory === 'all' ? 'white' : publicTheme.subtext,
-                fontWeight: selectedCategory === 'all' ? 700 : 500,
-                border: selectedCategory === 'all' ? 'none' : `1px solid ${publicTheme.softBorder}`,
-              }}
-            >
-              All Categories
-            </div>
-            {shopCategories.map((category) => (
+          {loading && !categories.length ? (
+            <div style={{ textAlign: 'center', padding: '12px 0' }}><Spin size="small" /></div>
+          ) : (
+            <Space direction="vertical" style={{ width: '100%' }} size={8}>
               <div
-                key={category.id}
                 onClick={() => {
-                  setSelectedCategory(category.id);
-                  setSelectedSubcategory(null);
+                  setSelectedCategory('all');
+                  setSelectedSubcategory?.(null);
                 }}
                 style={{
                   padding: '12px 16px',
                   borderRadius: 16,
                   cursor: 'pointer',
-                  background: selectedCategory === category.id ? publicTheme.ribbon : publicTheme.cardMuted,
-                  color: selectedCategory === category.id ? 'white' : publicTheme.subtext,
-                  fontWeight: selectedCategory === category.id ? 700 : 500,
-                  border: selectedCategory === category.id ? 'none' : `1px solid ${publicTheme.softBorder}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
+                  background: selectedCategory === 'all' ? publicTheme.ribbon : publicTheme.cardMuted,
+                  color: selectedCategory === 'all' ? 'white' : publicTheme.subtext,
+                  fontWeight: selectedCategory === 'all' ? 700 : 500,
+                  border: selectedCategory === 'all' ? 'none' : `1px solid ${publicTheme.softBorder}`,
                 }}
               >
-                <span>{category.icon}</span>
-                {category.name}
+                All Categories
               </div>
-            ))}
-          </Space>
+              {categories.map((category) => (
+                <div
+                  key={category.id}
+                  onClick={() => {
+                    setSelectedCategory(category.id);
+                    setSelectedSubcategory?.(null);
+                  }}
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: 16,
+                    cursor: 'pointer',
+                    background: selectedCategory === category.id ? publicTheme.ribbon : publicTheme.cardMuted,
+                    color: selectedCategory === category.id ? 'white' : publicTheme.subtext,
+                    fontWeight: selectedCategory === category.id ? 700 : 500,
+                    border: selectedCategory === category.id ? 'none' : `1px solid ${publicTheme.softBorder}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  {category.name}
+                </div>
+              ))}
+            </Space>
+          )}
         </div>
 
         {selectedCategory && selectedCategory !== 'all' && (
@@ -203,7 +256,7 @@ const FilterSidebar = ({
               </Text>
               <Space direction="vertical" style={{ width: '100%' }} size={8}>
                 <div
-                  onClick={() => setSelectedSubcategory(null)}
+                  onClick={() => setSelectedSubcategory?.(null)}
                   style={{
                     padding: '10px 16px',
                     borderRadius: 14,
@@ -215,12 +268,12 @@ const FilterSidebar = ({
                 >
                   All Subcategories
                 </div>
-                {shopCategories
-                  .find((category) => category.id === selectedCategory)
-                  ?.subcategories.map((subCategory) => (
+                {categories
+                  .find((cat) => cat.id === selectedCategory)
+                  ?.subcategories?.map((subCategory) => (
                     <div
                       key={subCategory.id}
-                      onClick={() => setSelectedSubcategory(subCategory.id)}
+                      onClick={() => setSelectedSubcategory?.(subCategory.id)}
                       style={{
                         padding: '10px 16px',
                         borderRadius: 14,
@@ -273,7 +326,7 @@ const FilterSidebar = ({
             size="small"
           />
           <Space direction="vertical" style={{ width: '100%' }} size={8}>
-            {filteredSellers.map((seller) => (
+            {filteredSellers.slice(0, 15).map((seller) => (
               <div
                 key={seller.id}
                 onClick={() => handleSellerToggle(seller.id)}
@@ -297,7 +350,7 @@ const FilterSidebar = ({
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
                     <StarFilled style={{ color: publicTheme.warning, fontSize: 12 }} />
                     <Text style={{ fontSize: 12, color: publicTheme.subtext }}>
-                      {seller.rating} ({seller.reviews})
+                      {seller.rating} ({seller.reviews || 42})
                     </Text>
                   </div>
                 </div>

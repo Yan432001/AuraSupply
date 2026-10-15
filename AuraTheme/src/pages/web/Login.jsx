@@ -66,7 +66,7 @@ export default function Login() {
           role: profile.role || (profile.group_id === 1 ? 'admin' : profile.group_id === 2 ? 'owner' : 'customer'),
           group_id: profile.group_id,
           token: token,
-          avatar: profile.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+          avatar: profile.avatar || null,
           tier: profile.role === 'owner' ? 'Owner / Director' : 'Administrator'
         };
 
@@ -113,7 +113,7 @@ export default function Login() {
           role: profile.role || 'admin',
           group_id: profile.group_id,
           token: token,
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80',
+          avatar: profile.avatar || null,
           tier: 'System Master'
         };
         login(userData);

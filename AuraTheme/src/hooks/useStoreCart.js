@@ -181,7 +181,7 @@ export function useStoreCart(storeSlug, storeName = '') {
           id: it.productId || it.id || idx,
           code: it.code || `PRD-${idx}`,
           name: it.name,
-          image: it.image || 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=500&h=500&fit=crop',
+          image: it.image || '/assets/uploads/no_image.png',
           price: unitPrice,
           basePrice: unitPrice,
           quantity: qty,

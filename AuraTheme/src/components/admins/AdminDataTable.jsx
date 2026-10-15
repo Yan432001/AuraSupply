@@ -276,7 +276,7 @@ export const generateCsvTemplate = (columns, sampleRecord = null) => {
     if (key.includes('author')) return '"Admin Aura"';
     if (key.includes('view') || key.includes('count')) return '"120"';
     if (key.includes('image') || key.includes('url') || key.includes('avatar') || key.includes('media')) {
-      return '"https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80"';
+      return '"/assets/uploads/sample.jpg"';
     }
     if (key.includes('date') || key.includes('created')) return `"${new Date().toISOString().slice(0, 10)}"`;
     if (key.includes('excerpt') || key.includes('description') || key.includes('content') || key.includes('note')) {

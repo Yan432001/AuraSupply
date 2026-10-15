@@ -389,7 +389,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <Avatar
                     size={28}
-                    src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&auto=format&fit=crop&q=80'}
+                    src={user?.avatar || undefined}
                     icon={<UserOutlined style={{ fontSize: 13 }} />}
                     style={{
                       border: '1.5px solid #f97316',

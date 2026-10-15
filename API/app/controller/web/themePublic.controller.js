@@ -3,7 +3,7 @@ const { sendSuccess, sendError } = require('../../config/utill/response');
 
 // Helper to format an image URL cleanly
 function formatImageUrl(img) {
-  if (!img) return 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80';
+  if (!img) return null;
   if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('/')) {
     return img;
   }
@@ -42,6 +42,16 @@ const ThemePublicController = {
 
       const whereConditions = ['p.status = 1'];
       const params = [];
+
+      // Check hide0 setting from aura_shop_settings
+      try {
+        const [settingsRows] = await db.query('SELECT hide0 FROM aura_shop_settings LIMIT 1');
+        if (settingsRows && settingsRows[0] && Number(settingsRows[0].hide0) === 1) {
+          if (stock !== 'all' && stock !== 'out_of_stock' && stock !== '0') {
+            whereConditions.push('p.quantity > 0');
+          }
+        }
+      } catch (_) {}
 
       // Category filter (by id, slug, or name)
       if (category_id && category_id !== 'all') {

@@ -177,7 +177,7 @@ export default function Home() {
         storeOrShop.heroImage ||
         storeOrShop.banner ||
         matchedStore?.banner ||
-        'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200&h=800&fit=crop',
+        '/assets/uploads/no_image.png',
       logo: storeOrShop.logo || matchedStore?.logo,
       logoText: storeOrShop.logoText || storeOrShop.name?.slice(0, 2)?.toUpperCase() || 'AS',
       summary:

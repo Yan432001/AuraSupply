@@ -3,16 +3,16 @@
  * Connects directly to backend API backed by MySQL (aura_v1_db)
  */
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
 export const APIConfig = {
-  baseURL: '/api',
+  baseURL: BASE_URL,
   version: '1.0',
   token: '',
   headers: {
     'Content-Type': 'application/json'
   }
 };
-
-const BASE_URL = '/api';
 
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
@@ -162,6 +162,15 @@ export async function registerCustomer(customerData) {
     method: 'POST',
     body: JSON.stringify(customerData)
   });
+}
+
+// 13. Admin ERP Data Fetchers
+export async function fetchAdminCustomers() {
+  return request('/admin/customers');
+}
+
+export async function fetchAdminUsers() {
+  return request('/admin/users');
 }
 
 export default {

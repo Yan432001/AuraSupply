@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Avatar,
   Button,
@@ -11,6 +11,9 @@ import {
   Space,
   Tag,
   Typography,
+  Spin,
+  Alert,
+  Empty,
 } from 'antd';
 import {
   AppstoreOutlined,
@@ -22,10 +25,12 @@ import {
   ShopOutlined,
   StarFilled,
   ThunderboltOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { products, sellers, shopCategories } from '../data/shopData';
-import { formatCurrency, publicTheme } from '../utils/webTheme';
+import { fetchProducts, fetchShops, fetchCategories } from '../../utils/apiconfig';
+import { mapProduct, mapShop, mapCategory } from '../../utils/dataMappers';
+import { formatCurrency, publicTheme } from '../../utils/webTheme';
 
 const { Title, Text, Paragraph } = Typography;
 const { useBreakpoint } = Grid;
@@ -63,11 +68,12 @@ const quickChannels = [
 ];
 
 const MarketplaceTile = ({ product, compact = false }) => {
-  const seller = sellers.find((item) => item.id === product.seller);
+  const navigate = useNavigate();
 
   return (
     <Card
       hoverable
+      onClick={() => navigate(`/products/${product.slug || product.id}`)}
       style={{
         borderRadius: compact ? 20 : 24,
         border: `1px solid ${shopTheme.border}`,
@@ -82,70 +88,133 @@ const MarketplaceTile = ({ product, compact = false }) => {
           <img
             src={product.image}
             alt={product.name}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/assets/uploads/no_image.png';
+            }}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
-          <Tag
-            style={{
-              position: 'absolute',
-              top: 12,
-              left: 12,
-              margin: 0,
-              borderRadius: 999,
-              border: 'none',
-              background: 'rgba(255,255,255,0.92)',
-              color: shopTheme.primary,
-              fontWeight: 700,
-            }}
-          >
-            {product.category}
-          </Tag>
+          {product.category && (
+            <Tag
+              style={{
+                position: 'absolute',
+                top: 12,
+                left: 12,
+                margin: 0,
+                borderRadius: 999,
+                border: 'none',
+                background: 'rgba(255,255,255,0.92)',
+                color: shopTheme.primary,
+                fontWeight: 700,
+              }}
+            >
+              {product.category}
+            </Tag>
+          )}
         </div>
       }
     >
-      <Space direction="vertical" size={compact ? 8 : 10} style={{ width: '100%' }}>
-        <Title level={5} style={{ margin: 0, color: publicTheme.text, fontSize: compact ? 15 : 16, lineHeight: 1.35 }}>
+      <Space direction="vertical" size={6} style={{ width: '100%' }}>
+        <Text style={{ fontSize: 12, color: publicTheme.subtext }}>
+          {product.storeName || 'Verified Supplier'}
+        </Text>
+        <Title
+          level={4}
+          style={{
+            margin: 0,
+            fontSize: compact ? 14 : 16,
+            lineHeight: 1.25,
+            color: publicTheme.text,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            minHeight: compact ? 36 : 40,
+          }}
+        >
           {product.name}
         </Title>
-        <Flex justify="space-between" align="end" gap={10}>
-          <div>
-            <Text strong style={{ display: 'block', color: shopTheme.primary, fontSize: compact ? 22 : 24 }}>
-              {formatCurrency(product.price)}
+        <Flex justify="space-between" align="baseline">
+          <Text strong style={{ color: shopTheme.primary, fontSize: compact ? 16 : 18 }}>
+            {formatCurrency(product.price)}
+          </Text>
+          {product.originalPrice && (
+            <Text delete style={{ color: publicTheme.subtext, fontSize: 12 }}>
+              {formatCurrency(product.originalPrice)}
             </Text>
-            <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>{seller?.name}</Text>
-          </div>
-          <Tag
-            style={{
-              margin: 0,
-              borderRadius: 999,
-              border: 'none',
-              background: shopTheme.soft,
-              color: shopTheme.primary,
-              fontWeight: 700,
-            }}
-          >
-            {product.inStock ? 'Hot' : 'Soon'}
-          </Tag>
+          )}
         </Flex>
       </Space>
     </Card>
   );
 };
 
-const ShopHome = () => {
+export default function ShopHome() {
   const navigate = useNavigate();
   const screens = useBreakpoint();
 
-  const hotProducts = useMemo(() => products.slice(0, 8), []);
-  const trendProducts = useMemo(() => products.slice(4, 12), []);
-  const categoryShowcase = useMemo(() => shopCategories.slice(0, 6), []);
+  const [productsList, setProductsList] = useState([]);
+  const [sellersList, setSellersList] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const loadData = () => {
+    setLoading(true);
+    setError(null);
+    Promise.allSettled([
+      fetchProducts({ limit: 60 }),
+      fetchShops(),
+      fetchCategories(),
+    ])
+      .then(([prodRes, shopRes, catRes]) => {
+        if (prodRes.status === 'fulfilled' && prodRes.value?.success && Array.isArray(prodRes.value.data)) {
+          setProductsList(prodRes.value.data.map(mapProduct));
+        } else if (prodRes.status === 'fulfilled' && prodRes.value?.data?.products && Array.isArray(prodRes.value.data.products)) {
+          setProductsList(prodRes.value.data.products.map(mapProduct));
+        } else {
+          setError(prodRes.value?.error || 'Could not load products catalog');
+        }
+
+        if (shopRes.status === 'fulfilled' && shopRes.value?.success && Array.isArray(shopRes.value.data)) {
+          setSellersList(shopRes.value.data.map(mapShop));
+        }
+
+        if (catRes.status === 'fulfilled' && catRes.value?.success && Array.isArray(catRes.value.data)) {
+          setCategoriesList(catRes.value.data.map(mapCategory));
+        }
+      })
+      .catch((err) => {
+        setError(err.message || 'Network error fetching shop data');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const hotProducts = useMemo(() => {
+    if (!searchQuery.trim()) return productsList.slice(0, 8);
+    const q = searchQuery.toLowerCase();
+    return productsList.filter(
+      (p) =>
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.category || '').toLowerCase().includes(q)
+    );
+  }, [productsList, searchQuery]);
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div style={{ minHeight: '100vh', padding: screens.xs ? '12px' : '24px' }}>
+      {/* Hero Welcome Banner */}
       <Card
         style={{
-          borderRadius: 34,
+          borderRadius: 36,
           border: `1px solid ${shopTheme.border}`,
-          background: 'linear-gradient(180deg, #fff7f1 0%, #fffdfb 100%)',
+          background: 'linear-gradient(135deg, #fff7f2 0%, #ffffff 58%, #fff0e6 100%)',
           boxShadow: shopTheme.shadow,
           marginBottom: 24,
           overflow: 'hidden',
@@ -168,17 +237,17 @@ const ShopHome = () => {
               >
                 Marketplace homepage
               </Tag>
-              <Title level={1} style={{ margin: '12px 0 6px', color: shopTheme.dark, fontSize: 'clamp(32px, 5vw, 54px)', lineHeight: 1.02 }}>
+              <Title level={1} style={{ margin: '12px 0 6px', color: shopTheme.dark, fontSize: 'clamp(28px, 5vw, 48px)', lineHeight: 1.05 }}>
                 Shop with a brighter, faster discovery page.
               </Title>
               <Paragraph style={{ margin: 0, color: '#7a4b2f', maxWidth: 720, fontSize: 16 }}>
-                This new Shop page is inspired by Taobao’s homepage pattern: bold search, category navigation, promotional blocks, and dense product discovery built for desktop and mobile browsing.
+                Bold search, category navigation, supplier channels, and dense product discovery connected live to real database inventory.
               </Paragraph>
             </div>
             <Space wrap>
               <Button
                 type="primary"
-                onClick={() => navigate('/sourcing')}
+                onClick={() => navigate('/shop')}
                 style={{
                   height: 46,
                   borderRadius: 999,
@@ -187,10 +256,10 @@ const ShopHome = () => {
                   fontWeight: 700,
                 }}
               >
-                Open sourcing
+                Open Full Catalog
               </Button>
               <Button
-                onClick={() => navigate('/community')}
+                onClick={() => navigate('/shops')}
                 style={{
                   height: 46,
                   borderRadius: 999,
@@ -199,7 +268,7 @@ const ShopHome = () => {
                   fontWeight: 700,
                 }}
               >
-                See service updates
+                All Verified Stores ({sellersList.length})
               </Button>
             </Space>
           </Flex>
@@ -209,6 +278,8 @@ const ShopHome = () => {
               size="large"
               prefix={<SearchOutlined style={{ color: shopTheme.primary }} />}
               placeholder="Search hot products, suppliers, and category deals"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 flex: 1,
                 minWidth: screens.xs ? '100%' : 320,
@@ -217,10 +288,12 @@ const ShopHome = () => {
                 border: `2px solid ${shopTheme.primary}`,
                 background: '#ffffff',
               }}
+              allowClear
             />
             <Button
               type="primary"
               size="large"
+              onClick={() => navigate(`/shop?q=${encodeURIComponent(searchQuery)}`)}
               style={{
                 height: 52,
                 borderRadius: 999,
@@ -239,6 +312,7 @@ const ShopHome = () => {
               {quickChannels.map((item) => (
                 <Button
                   key={item.title}
+                  onClick={() => navigate('/shop')}
                   style={{
                     height: 42,
                     borderRadius: 999,
@@ -258,386 +332,288 @@ const ShopHome = () => {
         </Space>
       </Card>
 
-      <Row gutter={[18, 18]} style={{ marginBottom: 24 }}>
-        <Col xs={24} lg={6}>
-          <Card
-            style={{
-              height: '100%',
-              borderRadius: 28,
-              border: `1px solid ${shopTheme.border}`,
-              background: '#ffffff',
-              boxShadow: shopTheme.shadow,
-            }}
-            styles={{ body: { padding: 18 } }}
-          >
-            <Space direction="vertical" size={10} style={{ width: '100%' }}>
-              <Text strong style={{ color: shopTheme.primary, fontSize: 16 }}>
-                Top categories
-              </Text>
-              {categoryShowcase.map((category) => (
-                <Flex
-                  key={category.id}
-                  justify="space-between"
-                  align="center"
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: 16,
-                    background: shopTheme.pale,
-                    border: `1px solid ${shopTheme.border}`,
-                  }}
-                >
-                  <Space size={10}>
-                    <Avatar
-                      size={34}
+      {/* Error state */}
+      {error && (
+        <Alert
+          type="error"
+          showIcon
+          message="Catalog Loading Error"
+          description={error}
+          action={
+            <Button size="small" danger onClick={loadData} icon={<ReloadOutlined />}>
+              Retry
+            </Button>
+          }
+          style={{ marginBottom: 24, borderRadius: 16 }}
+        />
+      )}
+
+      {/* Loading state */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '80px 0' }}>
+          <Spin size="large" />
+          <div style={{ marginTop: 16, color: publicTheme.subtext, fontWeight: 600 }}>Loading marketplace discovery...</div>
+        </div>
+      ) : (
+        <>
+          {/* Top Rail: Categories, Promo Zone, Seller Spotlight */}
+          <Row gutter={[18, 18]} style={{ marginBottom: 24 }}>
+            {/* Categories Showcase */}
+            <Col xs={24} lg={6}>
+              <Card
+                style={{
+                  borderRadius: 28,
+                  border: `1px solid ${shopTheme.border}`,
+                  background: '#ffffff',
+                  boxShadow: shopTheme.shadow,
+                  height: '100%',
+                }}
+                styles={{ body: { padding: 18 } }}
+              >
+                <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                  <Text strong style={{ color: shopTheme.primary, fontSize: 16 }}>
+                    Top categories
+                  </Text>
+                  {categoriesList.slice(0, 6).map((category) => (
+                    <Flex
+                      key={category.id}
+                      justify="space-between"
+                      align="center"
+                      onClick={() => navigate(`/shop?category_id=${category.id}`)}
                       style={{
-                        background: 'linear-gradient(135deg, #ff6a1a 0%, #ff9e5e 100%)',
-                        color: 'white',
-                        fontWeight: 800,
+                        padding: '12px 14px',
+                        borderRadius: 16,
+                        background: shopTheme.pale,
+                        border: `1px solid ${shopTheme.border}`,
+                        cursor: 'pointer',
                       }}
                     >
-                      {category.icon}
-                    </Avatar>
-                    <div>
-                      <Text strong style={{ color: publicTheme.text, display: 'block' }}>
-                        {category.name}
-                      </Text>
-                      <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>
-                        {category.subcategories.length} subcategories
-                      </Text>
-                    </div>
-                  </Space>
-                  <RightOutlined style={{ color: shopTheme.primary }} />
-                </Flex>
-              ))}
-            </Space>
-          </Card>
-        </Col>
+                      <div>
+                        <Text strong style={{ color: publicTheme.text, display: 'block' }}>
+                          {category.name}
+                        </Text>
+                        <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>
+                          {category.code}
+                        </Text>
+                      </div>
+                      <RightOutlined style={{ color: shopTheme.primary }} />
+                    </Flex>
+                  ))}
+                </Space>
+              </Card>
+            </Col>
 
-        <Col xs={24} lg={12}>
+            {/* Promo Middle Banner */}
+            <Col xs={24} lg={12}>
+              <Card
+                style={{
+                  borderRadius: 30,
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #ff6a1a 0%, #ff8240 48%, #ffb46f 100%)',
+                  boxShadow: shopTheme.shadow,
+                  height: '100%',
+                }}
+                styles={{ body: { padding: screens.xs ? 20 : 28 } }}
+              >
+                <Row gutter={[16, 16]} align="middle">
+                  <Col xs={24} md={14}>
+                    <Space direction="vertical" size={14}>
+                      <Tag
+                        style={{
+                          width: 'fit-content',
+                          margin: 0,
+                          borderRadius: 999,
+                          border: 'none',
+                          background: 'rgba(255,255,255,0.18)',
+                          color: 'white',
+                          fontWeight: 700,
+                        }}
+                      >
+                        Marketplace promo zone
+                      </Tag>
+                      <Title level={2} style={{ margin: 0, color: 'white', lineHeight: 1.05 }}>
+                        Big visuals, hot offers, and fast shopping entry points.
+                      </Title>
+                      <Paragraph style={{ margin: 0, color: 'rgba(255,255,255,0.86)', fontSize: 15 }}>
+                        Discover live commercial equipment, specialty beverages, and packaging direct from verified stores.
+                      </Paragraph>
+                      <Space wrap>
+                        <Button
+                          size="large"
+                          onClick={() => navigate('/shop')}
+                          style={{
+                            height: 46,
+                            borderRadius: 999,
+                            background: '#ffffff',
+                            color: shopTheme.primary,
+                            border: 'none',
+                            fontWeight: 800,
+                          }}
+                        >
+                          Shop flash sale
+                        </Button>
+                      </Space>
+                    </Space>
+                  </Col>
+                  <Col xs={24} md={10}>
+                    <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                      {promoCards.map((card) => (
+                        <div
+                          key={card.title}
+                          style={{
+                            borderRadius: 22,
+                            padding: 16,
+                            background: 'rgba(255,255,255,0.14)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.22)',
+                            color: 'white',
+                          }}
+                        >
+                          <Title level={4} style={{ margin: '0 0 6px', color: 'white', fontSize: 16 }}>
+                            {card.title}
+                          </Title>
+                          <Paragraph style={{ margin: 0, color: 'rgba(255,255,255,0.82)', fontSize: 13 }}>
+                            {card.text}
+                          </Paragraph>
+                        </div>
+                      ))}
+                    </Space>
+                  </Col>
+                </Row>
+              </Card>
+            </Col>
+
+            {/* Seller Spotlight */}
+            <Col xs={24} lg={6}>
+              <Space direction="vertical" size={18} style={{ width: '100%' }}>
+                <Card
+                  style={{
+                    borderRadius: 28,
+                    border: `1px solid ${shopTheme.border}`,
+                    background: '#ffffff',
+                    boxShadow: shopTheme.shadow,
+                  }}
+                  styles={{ body: { padding: 18 } }}
+                >
+                  <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                    <Text strong style={{ color: shopTheme.primary }}>Hot rankings</Text>
+                    {productsList.slice(0, 4).map((product, index) => (
+                      <Flex
+                        key={product.id}
+                        align="center"
+                        gap={12}
+                        onClick={() => navigate(`/products/${product.slug || product.id}`)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: '50%',
+                            background: index === 0 ? shopTheme.primary : shopTheme.soft,
+                            color: index === 0 ? 'white' : shopTheme.primary,
+                            display: 'grid',
+                            placeItems: 'center',
+                            fontWeight: 800,
+                          }}
+                        >
+                          {index + 1}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Text strong ellipsis style={{ display: 'block', color: publicTheme.text }}>
+                            {product.name}
+                          </Text>
+                          <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>
+                            {formatCurrency(product.price)}
+                          </Text>
+                        </div>
+                      </Flex>
+                    ))}
+                  </Space>
+                </Card>
+
+                <Card
+                  style={{
+                    borderRadius: 28,
+                    border: `1px solid ${shopTheme.border}`,
+                    background: 'linear-gradient(135deg, #fff3e8 0%, #fffaf5 100%)',
+                    boxShadow: shopTheme.shadow,
+                  }}
+                  styles={{ body: { padding: 18 } }}
+                >
+                  <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                    <Text strong style={{ color: shopTheme.primary }}>Verified Store Partners</Text>
+                    {sellersList.slice(0, 3).map((seller) => (
+                      <Flex
+                        key={seller.id}
+                        justify="space-between"
+                        align="center"
+                        onClick={() => navigate(`/shops/${seller.id || seller.slug}`)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div>
+                          <Text strong style={{ display: 'block', color: publicTheme.text }}>
+                            {seller.name}
+                          </Text>
+                          <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>
+                            {seller.city || 'Phnom Penh'}
+                          </Text>
+                        </div>
+                        <Space size={4}>
+                          <StarFilled style={{ color: '#ff9b44' }} />
+                          <Text strong style={{ color: shopTheme.primary }}>{seller.rating}</Text>
+                        </Space>
+                      </Flex>
+                    ))}
+                  </Space>
+                </Card>
+              </Space>
+            </Col>
+          </Row>
+
+          {/* Flash Sale Picks */}
           <Card
             style={{
               borderRadius: 30,
-              border: 'none',
-              background: 'linear-gradient(135deg, #ff6a1a 0%, #ff8240 48%, #ffb46f 100%)',
+              border: `1px solid ${shopTheme.border}`,
+              background: '#ffffff',
               boxShadow: shopTheme.shadow,
-              height: '100%',
+              marginBottom: 24,
             }}
-            styles={{ body: { padding: screens.xs ? 20 : 28 } }}
+            styles={{ body: { padding: screens.xs ? 18 : 24 } }}
           >
-            <Row gutter={[16, 16]} align="middle">
-              <Col xs={24} md={14}>
-                <Space direction="vertical" size={14}>
-                  <Tag
-                    style={{
-                      width: 'fit-content',
-                      margin: 0,
-                      borderRadius: 999,
-                      border: 'none',
-                      background: 'rgba(255,255,255,0.18)',
-                      color: 'white',
-                      fontWeight: 700,
-                    }}
-                  >
-                    Taobao-inspired promo zone
-                  </Tag>
-                  <Title level={2} style={{ margin: 0, color: 'white', lineHeight: 1.05 }}>
-                    Big visuals, hot offers, and fast shopping entry points.
-                  </Title>
-                  <Paragraph style={{ margin: 0, color: 'rgba(255,255,255,0.86)', fontSize: 15 }}>
-                    The center rail is designed to feel more like a vibrant marketplace homepage than a standard B2B grid, while still using your existing product catalog.
-                  </Paragraph>
-                  <Space wrap>
-                    <Button
-                      size="large"
-                      style={{
-                        height: 46,
-                        borderRadius: 999,
-                        background: '#ffffff',
-                        color: shopTheme.primary,
-                        border: 'none',
-                        fontWeight: 800,
-                      }}
-                    >
-                      Shop flash sale
-                    </Button>
-                    <Button
-                      size="large"
-                      style={{
-                        height: 46,
-                        borderRadius: 999,
-                        background: 'rgba(255,255,255,0.16)',
-                        color: 'white',
-                        borderColor: 'rgba(255,255,255,0.28)',
-                        fontWeight: 700,
-                      }}
-                    >
-                      New arrivals
-                    </Button>
-                  </Space>
-                </Space>
-              </Col>
-              <Col xs={24} md={10}>
-                <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                  {promoCards.map((item) => (
-                    <div
-                      key={item.title}
-                      style={{
-                        borderRadius: 22,
-                        padding: 18,
-                        background: item.accent,
-                        color: 'white',
-                        boxShadow: '0 16px 30px rgba(85, 33, 0, 0.14)',
-                      }}
-                    >
-                      <Text style={{ color: 'rgba(255,255,255,0.72)' }}>{item.title}</Text>
-                      <Title level={4} style={{ margin: '6px 0', color: 'white' }}>
-                        {item.text}
-                      </Title>
-                      <Button
-                        type="text"
-                        style={{ color: 'white', padding: 0, fontWeight: 700 }}
-                      >
-                        Browse now
-                      </Button>
-                    </div>
-                  ))}
-                </Space>
-              </Col>
-            </Row>
+            <Flex justify="space-between" align={screens.xs ? 'flex-start' : 'center'} vertical={screens.xs} gap={10} style={{ marginBottom: 18 }}>
+              <div>
+                <Title level={3} style={{ margin: 0, color: publicTheme.text }}>
+                  Flash sale picks
+                </Title>
+                <Paragraph style={{ margin: '6px 0 0', color: publicTheme.subtext }}>
+                  Live commercial catalog products currently available for order.
+                </Paragraph>
+              </div>
+              <Button
+                type="link"
+                onClick={() => navigate('/shop')}
+                style={{ color: shopTheme.primary, fontWeight: 700, padding: 0 }}
+              >
+                Go to full catalog <RightOutlined />
+              </Button>
+            </Flex>
+
+            {hotProducts.length > 0 ? (
+              <Row gutter={[16, 16]}>
+                {hotProducts.map((product) => (
+                  <Col xs={12} md={8} xl={6} key={product.id}>
+                    <MarketplaceTile product={product} compact />
+                  </Col>
+                ))}
+              </Row>
+            ) : (
+              <Empty description="No products found" />
+            )}
           </Card>
-        </Col>
-
-        <Col xs={24} lg={6}>
-          <Space direction="vertical" size={18} style={{ width: '100%' }}>
-            <Card
-              style={{
-                borderRadius: 28,
-                border: `1px solid ${shopTheme.border}`,
-                background: '#ffffff',
-                boxShadow: shopTheme.shadow,
-              }}
-              styles={{ body: { padding: 18 } }}
-            >
-              <Space direction="vertical" size={10} style={{ width: '100%' }}>
-                <Text strong style={{ color: shopTheme.primary }}>Hot rankings</Text>
-                {hotProducts.slice(0, 4).map((product, index) => (
-                  <Flex key={product.id} align="center" gap={12}>
-                    <div
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: '50%',
-                        background: index === 0 ? shopTheme.primary : shopTheme.soft,
-                        color: index === 0 ? 'white' : shopTheme.primary,
-                        display: 'grid',
-                        placeItems: 'center',
-                        fontWeight: 800,
-                      }}
-                    >
-                      {index + 1}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <Text strong style={{ display: 'block', color: publicTheme.text }}>
-                        {product.name}
-                      </Text>
-                      <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>
-                        {formatCurrency(product.price)}
-                      </Text>
-                    </div>
-                  </Flex>
-                ))}
-              </Space>
-            </Card>
-
-            <Card
-              style={{
-                borderRadius: 28,
-                border: `1px solid ${shopTheme.border}`,
-                background: 'linear-gradient(135deg, #fff3e8 0%, #fffaf5 100%)',
-                boxShadow: shopTheme.shadow,
-              }}
-              styles={{ body: { padding: 18 } }}
-            >
-              <Space direction="vertical" size={10} style={{ width: '100%' }}>
-                <Text strong style={{ color: shopTheme.primary }}>Seller spotlight</Text>
-                {sellers.slice(0, 3).map((seller) => (
-                  <Flex key={seller.id} justify="space-between" align="center">
-                    <div>
-                      <Text strong style={{ display: 'block', color: publicTheme.text }}>
-                        {seller.name}
-                      </Text>
-                      <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>
-                        {seller.branch}
-                      </Text>
-                    </div>
-                    <Space size={4}>
-                      <StarFilled style={{ color: '#ff9b44' }} />
-                      <Text strong style={{ color: shopTheme.primary }}>{seller.rating}</Text>
-                    </Space>
-                  </Flex>
-                ))}
-              </Space>
-            </Card>
-          </Space>
-        </Col>
-      </Row>
-
-      <Card
-        style={{
-          borderRadius: 30,
-          border: `1px solid ${shopTheme.border}`,
-          background: '#ffffff',
-          boxShadow: shopTheme.shadow,
-          marginBottom: 24,
-        }}
-        styles={{ body: { padding: screens.xs ? 18 : 24 } }}
-      >
-        <Flex justify="space-between" align={screens.xs ? 'flex-start' : 'center'} vertical={screens.xs} gap={10} style={{ marginBottom: 18 }}>
-          <div>
-            <Title level={3} style={{ margin: 0, color: publicTheme.text }}>
-              Flash sale picks
-            </Title>
-            <Paragraph style={{ margin: '6px 0 0', color: publicTheme.subtext }}>
-              Denser, promotion-led cards inspired by major marketplace homepages.
-            </Paragraph>
-          </div>
-          <Button
-            type="link"
-            onClick={() => navigate('/sourcing')}
-            style={{ color: shopTheme.primary, fontWeight: 700, padding: 0 }}
-          >
-            Go to sourcing <RightOutlined />
-          </Button>
-        </Flex>
-
-        <Row gutter={[16, 16]}>
-          {hotProducts.map((product) => (
-            <Col xs={12} md={8} xl={6} key={product.id}>
-              <MarketplaceTile product={product} compact />
-            </Col>
-          ))}
-        </Row>
-      </Card>
-
-      <Row gutter={[18, 18]} style={{ marginBottom: 24 }}>
-        {categoryShowcase.map((category) => (
-          <Col xs={24} md={12} xl={8} key={category.id}>
-            <Card
-              style={{
-                borderRadius: 28,
-                border: `1px solid ${shopTheme.border}`,
-                background: '#ffffff',
-                boxShadow: '0 10px 28px rgba(85, 33, 0, 0.06)',
-                height: '100%',
-              }}
-              styles={{ body: { padding: 22 } }}
-            >
-              <Space direction="vertical" size={14} style={{ width: '100%' }}>
-                <Flex justify="space-between" align="center">
-                  <Space size={12}>
-                    <Avatar
-                      size={42}
-                      style={{
-                        background: 'linear-gradient(135deg, #ff6a1a 0%, #ff9f5f 100%)',
-                        color: 'white',
-                        fontWeight: 800,
-                      }}
-                    >
-                      {category.icon}
-                    </Avatar>
-                    <div>
-                      <Title level={4} style={{ margin: 0, color: publicTheme.text }}>
-                        {category.name}
-                      </Title>
-                      <Text style={{ color: publicTheme.subtext }}>
-                        {category.subcategories.map((item) => item.name).join(' • ')}
-                      </Text>
-                    </div>
-                  </Space>
-                </Flex>
-
-                <Row gutter={[12, 12]}>
-                  {products
-                    .filter((product) => product.category === category.id)
-                    .slice(0, 2)
-                    .map((product) => (
-                      <Col span={12} key={product.id}>
-                        <div
-                          style={{
-                            borderRadius: 18,
-                            overflow: 'hidden',
-                            border: `1px solid ${shopTheme.border}`,
-                            background: shopTheme.pale,
-                          }}
-                        >
-                          <div style={{ aspectRatio: '1 / 1' }}>
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
-                          </div>
-                          <div style={{ padding: 10 }}>
-                            <Text strong style={{ display: 'block', color: publicTheme.text, fontSize: 13 }}>
-                              {product.name}
-                            </Text>
-                            <Text style={{ color: shopTheme.primary, fontWeight: 700 }}>
-                              {formatCurrency(product.price)}
-                            </Text>
-                          </div>
-                        </div>
-                      </Col>
-                    ))}
-                </Row>
-              </Space>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      <Card
-        style={{
-          borderRadius: 30,
-          border: `1px solid ${shopTheme.border}`,
-          background: '#ffffff',
-          boxShadow: shopTheme.shadow,
-        }}
-        styles={{ body: { padding: screens.xs ? 18 : 24 } }}
-      >
-        <Flex justify="space-between" align={screens.xs ? 'flex-start' : 'center'} vertical={screens.xs} gap={10} style={{ marginBottom: 18 }}>
-          <div>
-            <Title level={3} style={{ margin: 0, color: publicTheme.text }}>
-              Guess you like
-            </Title>
-            <Paragraph style={{ margin: '6px 0 0', color: publicTheme.subtext }}>
-              A larger recommendation grid for a more marketplace-style homepage finish.
-            </Paragraph>
-          </div>
-          <Tag
-            style={{
-              margin: 0,
-              borderRadius: 999,
-              border: 'none',
-              background: shopTheme.soft,
-              color: shopTheme.primary,
-              fontWeight: 700,
-              padding: '6px 12px',
-            }}
-          >
-            Responsive product wall
-          </Tag>
-        </Flex>
-
-        <Row gutter={[16, 16]}>
-          {trendProducts.map((product) => (
-            <Col xs={24} sm={12} lg={8} xl={6} key={product.id}>
-              <MarketplaceTile product={product} />
-            </Col>
-          ))}
-        </Row>
-      </Card>
+        </>
+      )}
     </div>
   );
-};
-
-export default ShopHome;
+}

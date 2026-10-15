@@ -207,7 +207,7 @@ export default function AdminFrontEndController({ embedded = false }) {
         price: Number(values.price),
         category: values.category || 'Specialty Coffee',
         details: values.details || '',
-        image: values.image || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80',
+        image: values.image || '/assets/uploads/no_image.png',
         status: values.status ? 'active' : 'inactive',
         is_featured: Boolean(values.is_featured),
       };
@@ -528,7 +528,7 @@ export default function AdminFrontEndController({ embedded = false }) {
           <Col xs={24} md={8}>
             <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', height: 160 }}>
               <img
-                src={currentStore.banner || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80'}
+                src={currentStore.banner || '/assets/uploads/no_image.png'}
                 alt={currentStore.name}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
@@ -544,7 +544,7 @@ export default function AdminFrontEndController({ embedded = false }) {
               >
                 <Flex align="center" gap={10}>
                   <img
-                    src={currentStore.logo || 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=300&q=80'}
+                    src={currentStore.logo || '/assets/uploads/no_image.png'}
                     alt="Logo"
                     style={{ width: 40, height: 40, borderRadius: 10, border: '2px solid white' }}
                   />

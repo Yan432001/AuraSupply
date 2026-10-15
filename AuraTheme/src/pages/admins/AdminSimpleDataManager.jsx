@@ -46,7 +46,20 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import AdminDataTable, { convertToCsv, downloadCsvFile } from '../../components/admins/AdminDataTable';
 import AdminQrCodeGenerator from '../../components/admins/AdminQrCodeGenerator';
-import { loadWebsiteData, saveWebsiteData } from '../../data/websiteDataManager';
+const STORAGE_KEY = 'aura_website_simple_data_v2';
+const loadWebsiteData = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : { users: [], posts: [], stories: [], media: [], categories: [], comments: [] };
+  } catch {
+    return { users: [], posts: [], stories: [], media: [], categories: [], comments: [] };
+  }
+};
+const saveWebsiteData = (d) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+  } catch (_) {}
+};
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 
 const { Title, Text, Paragraph } = Typography;
@@ -75,6 +88,37 @@ export default function AdminSimpleDataManager() {
   const [formModalType, setFormModalType] = useState(''); // 'user' | 'post' | 'story' | 'media' | 'category' | 'comment' | 'saved' | 'report'
   const [editingRecord, setEditingRecord] = useState(null);
   const [form] = Form.useForm();
+
+  // Load real database data for users, posts, categories
+  useEffect(() => {
+    Promise.allSettled([
+      fetch('/api/admin/users').then(r => r.json()),
+      fetch('/api/posts').then(r => r.json()),
+      fetch('/api/categories').then(r => r.json()),
+    ]).then(([uRes, pRes, cRes]) => {
+      setDataStore(prev => {
+        const next = { ...prev };
+        if (uRes.status === 'fulfilled' && uRes.value?.status && Array.isArray(uRes.value.data)) {
+          next.users = uRes.value.data.map(u => ({
+            id: u.id,
+            username: u.username,
+            name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username,
+            email: u.email,
+            role: u.group_id === 1 ? 'Owner / Super Admin' : 'Admin Staff',
+            status: Number(u.active) === 1 ? 'active' : 'inactive',
+            phone: u.phone || '',
+          }));
+        }
+        if (pRes.status === 'fulfilled' && pRes.value?.success && Array.isArray(pRes.value.data)) {
+          next.posts = pRes.value.data;
+        }
+        if (cRes.status === 'fulfilled' && cRes.value?.success && Array.isArray(cRes.value.data)) {
+          next.categories = cRes.value.data;
+        }
+        return next;
+      });
+    }).catch(err => console.warn('AdminSimpleDataManager load error:', err));
+  }, []);
 
   // Keep in sync with query parameter
   useEffect(() => {
@@ -1129,7 +1173,7 @@ export default function AdminSimpleDataManager() {
                 </Select>
               </Form.Item>
               <Form.Item label="Avatar Image URL" name="avatar">
-                <Input placeholder="https://images.unsplash.com/..." />
+                <Input placeholder="/assets/uploads/image.png or https://..." />
               </Form.Item>
             </>
           )}
@@ -1157,7 +1201,7 @@ export default function AdminSimpleDataManager() {
                 </Select>
               </Form.Item>
               <Form.Item label="Featured Image URL" name="image" rules={[{ required: true }]}>
-                <Input placeholder="https://images.unsplash.com/..." />
+                <Input placeholder="/assets/uploads/image.png or https://..." />
               </Form.Item>
               <Form.Item label="Excerpt / Short Summary" name="excerpt">
                 <TextArea rows={2} placeholder="Brief preview text..." />
@@ -1203,7 +1247,7 @@ export default function AdminSimpleDataManager() {
                 <Input placeholder="e.g. Signature Espresso Roasted Bag" />
               </Form.Item>
               <Form.Item label="Asset URL" name="url" rules={[{ required: true }]}>
-                <Input placeholder="https://images.unsplash.com/..." />
+                <Input placeholder="/assets/uploads/image.png or https://..." />
               </Form.Item>
               <Form.Item label="Category" name="category" initialValue="Products">
                 <Select>

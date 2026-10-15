@@ -5,8 +5,6 @@ import {
   HeartFilled,
   HeartOutlined,
   ShoppingCartOutlined,
-} from '@ant-design/icons';
-import { branches, sellers } from '../../../data/shopData';
 import { formatCurrency, publicTheme } from '../../../utils/webTheme';
 
 const { useBreakpoint } = Grid;
@@ -17,7 +15,7 @@ const readProductNumber = (productId) => Number(String(productId).replace(/[^0-9
 const getOrderMeta = (product) => {
   const seed = readProductNumber(product.id);
   return {
-    minOrder: product.price > 1200 ? 1 : product.price > 500 ? 2 : 4 + (seed % 4),
+    minOrder: product.moq || (product.price > 1200 ? 1 : product.price > 500 ? 2 : 4 + (seed % 4)),
     leadTime: product.inStock ? 2 + (seed % 4) : 7 + (seed % 5),
     responseRate: 91 + (seed % 7),
   };
@@ -34,8 +32,8 @@ const ProductCard = ({
   const isTablet = screens.sm && !screens.lg;
   const isCompact = !screens.lg;
 
-  const seller = sellers.find((item) => item.id === product.seller);
-  const branch = branches.find((item) => item.id === product.branch);
+  const sellerName = product.storeName || product.store_name || product.seller || 'Official Store';
+  const branchName = product.branchName || product.branch_name || product.warehouse_name || 'Main Warehouse';
   const orderMeta = getOrderMeta(product);
   const discountPercent = product.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
@@ -207,7 +205,7 @@ const ProductCard = ({
               Verified
             </Tag>
             <Text style={{ color: publicTheme.subtext, fontSize: isPhone ? 10 : 12 }}>
-              {branch?.name}
+              {branchName}
             </Text>
           </div>
 

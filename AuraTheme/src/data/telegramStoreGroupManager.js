@@ -1,244 +1,19 @@
 // Telegram Mini App: Multi-Store Group Management & Bot Permissions Store
-// Allows store owners to seamlessly configure dedicated Telegram groups & bots.
+// Stores synchronized directly from database (aura_companies)
 
 const STORAGE_KEY = 'aura_telegram_store_groups_v1';
 const ROUTING_LOGS_KEY = 'aura_telegram_routing_logs_v1';
 
-export const DEFAULT_TELEGRAM_STORE_CONFIGS = [
-  {
-    storeSlug: 'nexus-mobile',
-    storeName: 'Nexus Mobile & Gadgets',
-    storeEmoji: '📱',
-    ownerName: 'Alex Chen',
-    botUsername: '@nexus_mobile_order_bot',
-    botToken: '',
-    botTokenPreview: '8613686...1lCw',
-    botStatus: 'connected',
-    status: 'connected',
-    groupId: '-5004978007',
-    telegram_group_chat_id: '-5004978007',
-    groupTitle: 'Nexus Mobile - Dispatch & Orders Group',
-    groupInviteLink: 'https://t.me/+9YYwU2Lfz600YWY1',
-    telegram_enabled: true,
-    permissions: {
-      canSendOrders: true,
-      canUpdateStatus: true,
-      notifyInquiries: true,
-      dailySummary: true,
-      notifySoundAlert: true,
-    },
-    notificationTemplate: 'detailed',
-    stats: {
-      totalOrdersRouted: 60,
-      lastRoutedAt: 'Just now',
-    },
-  },
-  {
-    storeSlug: 'sbc-store',
-    storeName: 'Aura Specialty Coffee',
-    storeEmoji: '☕',
-    ownerName: 'Yin',
-    botUsername: '@aura_coffee_order_bot',
-    botToken: '',
-    botTokenPreview: '8613686...1lCw',
-    botStatus: 'connected',
-    status: 'connected',
-    groupId: '-1002489102938',
-    telegram_group_chat_id: '-1002489102938',
-    groupTitle: 'Aura Coffee - Baristas & Kitchen Orders',
-    groupInviteLink: 'https://t.me/+AuraCoffeeKitchen',
-    telegram_enabled: true,
-    permissions: {
-      canSendOrders: true,
-      canUpdateStatus: true,
-      notifyInquiries: true,
-      dailySummary: true,
-      notifySoundAlert: true,
-    },
-    notificationTemplate: 'compact',
-    stats: {
-      totalOrdersRouted: 142,
-      lastRoutedAt: 'Just now',
-    },
-  },
-  {
-    storeSlug: 'aura-bakery',
-    storeName: 'Aura Artisan Bakery',
-    storeEmoji: '🥐',
-    ownerName: 'Yin',
-    botUsername: '@aura_bakery_order_bot',
-    botToken: '',
-    botTokenPreview: '8613686...1lCw',
-    botStatus: 'connected',
-    status: 'connected',
-    groupId: '-1002598341029',
-    telegram_group_chat_id: '-1002598341029',
-    groupTitle: 'Aura Bakery - Morning Kitchen & Dispatch',
-    groupInviteLink: 'https://t.me/+AuraBakeryDispatch',
-    telegram_enabled: true,
-    permissions: {
-      canSendOrders: true,
-      canUpdateStatus: true,
-      notifyInquiries: true,
-      dailySummary: true,
-      notifySoundAlert: true,
-    },
-    notificationTemplate: 'detailed',
-    stats: {
-      totalOrdersRouted: 98,
-      lastRoutedAt: '12 min ago',
-    },
-  },
-  {
-    storeSlug: 'aura-bistro',
-    storeName: 'Aura French Bistro',
-    storeEmoji: '🍽️',
-    ownerName: 'Pierre Dubois',
-    botUsername: '@aura_bistro_order_bot',
-    botToken: '',
-    botTokenPreview: '8613686...1lCw',
-    botStatus: 'connected',
-    status: 'connected',
-    groupId: '-1002678129045',
-    telegram_group_chat_id: '-1002678129045',
-    groupTitle: 'Aura Bistro - Head Chef & Orders Group',
-    groupInviteLink: 'https://t.me/+AuraBistroKitchen',
-    telegram_enabled: true,
-    permissions: {
-      canSendOrders: true,
-      canUpdateStatus: true,
-      notifyInquiries: true,
-      dailySummary: true,
-      notifySoundAlert: true,
-    },
-    notificationTemplate: 'detailed',
-    stats: {
-      totalOrdersRouted: 67,
-      lastRoutedAt: '45 min ago',
-    },
-  },
-  {
-    storeSlug: 'aura-lounge',
-    storeName: 'Botanical Lounge & Matcha',
-    storeEmoji: '🍵',
-    ownerName: 'Kenji Sato',
-    botUsername: '@aura_lounge_order_bot',
-    botToken: '',
-    botTokenPreview: '8613686...1lCw',
-    botStatus: 'connected',
-    status: 'connected',
-    groupId: '-1002789456123',
-    telegram_group_chat_id: '-1002789456123',
-    groupTitle: 'Aura Lounge - Teahouse & Service Group',
-    groupInviteLink: 'https://t.me/+AuraLoungeService',
-    telegram_enabled: true,
-    permissions: {
-      canSendOrders: true,
-      canUpdateStatus: true,
-      notifyInquiries: true,
-      dailySummary: true,
-      notifySoundAlert: true,
-    },
-    notificationTemplate: 'compact',
-    stats: {
-      totalOrdersRouted: 41,
-      lastRoutedAt: '2 hours ago',
-    },
-  },
-  {
-    storeSlug: 'aura-tech',
-    storeName: 'Aura Automation Tech',
-    storeEmoji: '💻',
-    ownerName: 'David Kim',
-    botUsername: '@aura_tech_order_bot',
-    botToken: '',
-    botTokenPreview: '8613686...1lCw',
-    botStatus: 'connected',
-    status: 'connected',
-    groupId: '-1002890567234',
-    telegram_group_chat_id: '-1002890567234',
-    groupTitle: 'Aura Tech - Fulfillment & Shipping Group',
-    groupInviteLink: 'https://t.me/+AuraTechOrders',
-    telegram_enabled: true,
-    permissions: {
-      canSendOrders: true,
-      canUpdateStatus: true,
-      notifyInquiries: true,
-      dailySummary: true,
-      notifySoundAlert: true,
-    },
-    notificationTemplate: 'detailed',
-    stats: {
-      totalOrdersRouted: 24,
-      lastRoutedAt: 'Yesterday',
-    },
-  },
-  {
-    storeSlug: 'apex-pc',
-    storeName: 'Apex PC & Workstation Hub',
-    storeEmoji: '🖥️',
-    ownerName: 'Elena Rostova',
-    botUsername: '@apex_pc_order_bot',
-    botToken: '',
-    botTokenPreview: '8613686...1lCw',
-    botStatus: 'connected',
-    status: 'connected',
-    groupId: '-1002998765432',
-    telegram_group_chat_id: '-1002998765432',
-    groupTitle: 'Apex PC - Custom Builds & Orders',
-    groupInviteLink: 'https://t.me/+ApexPCOrders',
-    telegram_enabled: true,
-    permissions: {
-      canSendOrders: true,
-      canUpdateStatus: true,
-      notifyInquiries: true,
-      dailySummary: true,
-      notifySoundAlert: true,
-    },
-    notificationTemplate: 'detailed',
-    stats: {
-      totalOrdersRouted: 19,
-      lastRoutedAt: '2 days ago',
-    },
-  },
-  {
-    storeSlug: 'velour-apparel',
-    storeName: 'Velour Minimalist Apparel',
-    storeEmoji: '👔',
-    ownerName: 'Marcus Vance',
-    botUsername: '@velour_apparel_order_bot',
-    botToken: '',
-    botTokenPreview: '8613686...1lCw',
-    botStatus: 'connected',
-    status: 'connected',
-    groupId: '-1003109876543',
-    telegram_group_chat_id: '-1003109876543',
-    groupTitle: 'Velour Apparel - VIP Stylist & Dispatch',
-    groupInviteLink: 'https://t.me/+VelourApparelOrders',
-    telegram_enabled: true,
-    permissions: {
-      canSendOrders: true,
-      canUpdateStatus: true,
-      notifyInquiries: true,
-      dailySummary: true,
-      notifySoundAlert: true,
-    },
-    notificationTemplate: 'detailed',
-    stats: {
-      totalOrdersRouted: 35,
-      lastRoutedAt: '3 days ago',
-    },
-  },
-];
+export const DEFAULT_TELEGRAM_STORE_CONFIGS = [];
 
 // Read all store configs
 export const getAllStoreTelegramConfigs = () => {
-  if (typeof window === 'undefined') return DEFAULT_TELEGRAM_STORE_CONFIGS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_TELEGRAM_STORE_CONFIGS));
-      return DEFAULT_TELEGRAM_STORE_CONFIGS;
+      return [];
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
@@ -255,10 +30,10 @@ export const getAllStoreTelegramConfigs = () => {
       }
       return combined;
     }
-    return DEFAULT_TELEGRAM_STORE_CONFIGS;
+    return [];
   } catch (err) {
     console.warn('[telegramStoreGroupManager] Failed reading from localStorage:', err);
-    return DEFAULT_TELEGRAM_STORE_CONFIGS;
+    return [];
   }
 };
 
@@ -268,33 +43,7 @@ export const getStoreTelegramConfig = (storeSlug) => {
   const found = configs.find((c) => c.storeSlug === storeSlug);
   if (found) return found;
 
-  return {
-    storeSlug,
-    storeName: storeSlug.replace(/-/g, ' ').toUpperCase(),
-    storeEmoji: '🏬',
-    ownerName: 'Merchant',
-    botUsername: `@${storeSlug.replace(/-/g, '_')}_bot`,
-    botTokenPreview: '8613686...1lCw',
-    botStatus: 'connected',
-    status: 'connected',
-    groupId: `-100${Math.floor(2000000000 + Math.random() * 9000000000)}`,
-    telegram_group_chat_id: `-100${Math.floor(2000000000 + Math.random() * 9000000000)}`,
-    groupTitle: `${storeSlug.replace(/-/g, ' ')} Orders Group`,
-    groupInviteLink: '',
-    telegram_enabled: true,
-    permissions: {
-      canSendOrders: true,
-      canUpdateStatus: true,
-      notifyInquiries: true,
-      dailySummary: true,
-      notifySoundAlert: true,
-    },
-    notificationTemplate: 'detailed',
-    stats: {
-      totalOrdersRouted: 0,
-      lastRoutedAt: 'Never',
-    },
-  };
+  return null;
 };
 
 // Update and persist config for a store

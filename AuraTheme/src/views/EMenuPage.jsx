@@ -139,18 +139,6 @@ export default function EMenuPage() {
         raw = parts[2];
       }
     }
-    const SELLER_SLUG_MAP = {
-      'seller-1': 'sbc-store',
-      'seller-2': 'aura-bakery',
-      'seller-3': 'aura-lounge',
-      'seller-4': 'aura-bistro',
-      'seller-5': 'aura-tech',
-      'seller-6': 'nexus-mobile',
-      'nexus-mobile': 'nexus-mobile',
-    };
-    if (raw && SELLER_SLUG_MAP[raw]) {
-      return SELLER_SLUG_MAP[raw];
-    }
     return raw || 'sbc-store';
   }, [params.storeSlug, location.pathname]);
 
@@ -744,13 +732,13 @@ export default function EMenuPage() {
                 <img
                   src={
                     currentStore?.logo ||
-                    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=150&q=80'
+                    '/assets/uploads/no_image.png'
                   }
                   alt=""
                   onError={(e) => {
                     e.currentTarget.onerror = null;
                     e.currentTarget.src =
-                      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=150&q=80';
+                      '/assets/uploads/no_image.png';
                   }}
                   className="w-full h-full object-cover"
                 />
@@ -1003,7 +991,7 @@ export default function EMenuPage() {
                       onError={(e) => {
                         e.currentTarget.onerror = null;
                         e.currentTarget.src =
-                          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
+                          '/assets/uploads/no_image.png';
                       }}
                       className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                       loading="lazy"
@@ -1131,7 +1119,7 @@ export default function EMenuPage() {
                       onError={(e) => {
                         e.currentTarget.onerror = null;
                         e.currentTarget.src =
-                          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
+                          '/assets/uploads/no_image.png';
                       }}
                       className="w-full h-full object-cover"
                       loading="lazy"
@@ -1468,7 +1456,7 @@ export default function EMenuPage() {
                     onError={(e) => {
                       e.currentTarget.onerror = null;
                       e.currentTarget.src =
-                        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
+                        '/assets/uploads/no_image.png';
                     }}
                     className="w-12 h-12 rounded-lg object-cover shrink-0 bg-slate-100"
                   />
@@ -1691,7 +1679,7 @@ export default function EMenuPage() {
                           onError={(e) => {
                             e.currentTarget.onerror = null;
                             e.currentTarget.src =
-                              'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
+                              '/assets/uploads/no_image.png';
                           }}
                           className="w-11 h-11 rounded-lg object-cover shrink-0 bg-slate-200"
                         />

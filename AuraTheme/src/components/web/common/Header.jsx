@@ -177,9 +177,7 @@ const Header = ({ currentPage }) => {
         rawId: p.id,
         name: p.name,
         price: Number(p.price || 0),
-        image:
-          p.image ||
-          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80',
+        image: p.image || '/assets/uploads/no_image.png',
         category: p.category || 'Supplies',
         brand: storeName,
         storeName,
@@ -624,8 +622,7 @@ const Header = ({ currentPage }) => {
                         alt={prod.name}
                         onError={(e) => {
                           e.currentTarget.onerror = null;
-                          e.currentTarget.src =
-                            'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
+                          e.currentTarget.src = '/assets/uploads/no_image.png';
                         }}
                         style={{
                           width: 40,

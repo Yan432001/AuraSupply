@@ -52,14 +52,27 @@ import {
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import {
-  getLiveProducts,
-  saveLiveProducts,
-  resetLiveProducts,
-  shopCategories,
-  sellers,
-  branches,
-} from '../../data/shopData';
+
+const LIVE_PRODUCTS_KEY = 'aura_admin_live_products_v2';
+const getLiveProducts = () => {
+  try {
+    const raw = localStorage.getItem(LIVE_PRODUCTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+const saveLiveProducts = (prods) => {
+  try {
+    localStorage.setItem(LIVE_PRODUCTS_KEY, JSON.stringify(prods));
+    window.dispatchEvent(new CustomEvent('aura_live_products_updated', { detail: { products: prods } }));
+  } catch (_) {}
+};
+const resetLiveProducts = () => {
+  try {
+    localStorage.removeItem(LIVE_PRODUCTS_KEY);
+  } catch (_) {}
+};
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 
@@ -285,11 +298,8 @@ export default function AdminProductsManager() {
     setIsEditingMode(false);
     setCurrentEditId(null);
     setModalActiveTab('required');
-    setCoverImageUrl('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80');
-    setGalleryImages([
-      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop&q=80',
-    ]);
+    setCoverImageUrl('');
+    setGalleryImages([]);
     setHasVariants(false);
 
     // Initial biller & related project
@@ -641,8 +651,7 @@ export default function AdminProductsManager() {
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               onError={(e) => {
                 e.currentTarget.onerror = null;
-                e.currentTarget.src =
-                  'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&auto=format&fit=crop&q=80';
+                e.currentTarget.src = '/assets/uploads/no_image.png';
               }}
             />
           </div>

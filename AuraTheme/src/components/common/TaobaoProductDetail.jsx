@@ -53,57 +53,19 @@ export function normalizeTaobaoProduct(rawProduct) {
   const subcategory = (rawProduct.subcategory || '').toLowerCase();
   const rawDesc = rawProduct.description || rawProduct.details || 'Premium handcrafted item made with the finest sourced materials.';
 
-  // 1. Gallery Images & Demo Video
+  // 1. Gallery Images & Video
   let images = [];
   if (Array.isArray(rawProduct.images) && rawProduct.images.length > 0) {
-    images = [...rawProduct.images];
-  } else if (rawProduct.image) {
+    images = rawProduct.images.filter((img) => img && !img.includes('unsplash') && !img.includes('picsum'));
+  } else if (rawProduct.image && !rawProduct.image.includes('unsplash') && !rawProduct.image.includes('picsum')) {
     images = [rawProduct.image];
-  } else {
-    images = ['https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&fit=crop'];
   }
-
-  // Derive extra complementary gallery shots if single image
-  if (images.length === 1) {
-    const isCoffee = category.includes('coffee') || name.toLowerCase().includes('latte') || name.toLowerCase().includes('coffee');
-    const isBakery = category.includes('bakery') || name.toLowerCase().includes('croissant') || name.toLowerCase().includes('bread');
-    const isTech = category.includes('smartphone') || category.includes('computer') || name.toLowerCase().includes('iphone') || name.toLowerCase().includes('galaxy');
-    const isFashion = category.includes('fashion') || name.toLowerCase().includes('jacket') || name.toLowerCase().includes('denim');
-
-    if (isCoffee) {
-      images.push(
-        'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&fit=crop',
-        'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&fit=crop',
-        'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&fit=crop'
-      );
-    } else if (isBakery) {
-      images.push(
-        'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&fit=crop',
-        'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=800&fit=crop',
-        'https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=800&fit=crop'
-      );
-    } else if (isTech) {
-      images.push(
-        'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&fit=crop',
-        'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=800&fit=crop',
-        'https://images.unsplash.com/photo-1580910051074-3eb694886505?w=800&fit=crop'
-      );
-    } else if (isFashion) {
-      images.push(
-        'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&fit=crop',
-        'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&fit=crop',
-        'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800&fit=crop'
-      );
-    } else {
-      images.push(
-        'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800&fit=crop',
-        'https://images.unsplash.com/photo-1528207776546-365bb710ee93?w=800&fit=crop'
-      );
-    }
+  if (images.length === 0) {
+    images = ['/assets/uploads/no_image.png'];
   }
 
   // Optional video preview URL
-  const videoUrl = rawProduct.video || 'https://assets.mixkit.co/videos/preview/mixkit-barista-making-a-latte-art-coffee-41312-large.mp4';
+  const videoUrl = rawProduct.video || null;
 
   // 2. Product Category Specific Variants (SKU structure)
   const isFoodDrink = category.includes('coffee') || category.includes('bakery') || category.includes('dining') || rawProduct.biller_id || rawProduct.category_id;
@@ -210,7 +172,7 @@ export function normalizeTaobaoProduct(rawProduct) {
   const shopName = rawProduct.storeName || (rawProduct.seller ? rawProduct.seller.replace('-', ' ').toUpperCase() : 'Aura Flagship Store');
   const shop = {
     name: shopName,
-    logo: rawProduct.storeLogo || 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=150&q=80',
+    logo: rawProduct.storeLogo || null,
     rating: 4.96,
     followers: '28.4k',
     totalSales: '142k+ items',
@@ -218,41 +180,9 @@ export function normalizeTaobaoProduct(rawProduct) {
   };
 
   // 5. Authentic Reviews
-  const reviewsList = [
-    {
-      id: 'rev-1',
-      author: 'Sophia Chen',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&fit=crop',
-      rating: 5,
-      date: '2 days ago',
-      variant: variantGroups[0]?.options[0]?.name || 'Standard',
-      comment: 'Top quality! Exceeded my expectations. The taste and packaging are pristine, arrived warm and carefully sealed.',
-      photos: [images[0], images[1] || images[0]],
-      likes: 18,
-    },
-    {
-      id: 'rev-2',
-      author: 'David Vance',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&fit=crop',
-      rating: 5,
-      date: '1 week ago',
-      variant: variantGroups[0]?.options[1]?.name || 'Standard',
-      comment: 'Repeat purchase! Always authentic and reliable. Delivery driver was polite and punctual.',
-      photos: [],
-      likes: 7,
-    },
-    {
-      id: 'rev-3',
-      author: 'Elena Rostova',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&fit=crop',
-      rating: 4.8,
-      date: '2 weeks ago',
-      variant: variantGroups[0]?.options[0]?.name || 'Standard',
-      comment: 'Flawless craftsmanship. Highly recommended to anyone looking for genuine quality.',
-      photos: [images[images.length - 1]],
-      likes: 12,
-    },
-  ];
+  const reviewsList = Array.isArray(rawProduct.reviewsList) && rawProduct.reviewsList.length > 0
+    ? rawProduct.reviewsList
+    : [];
 
   return {
     ...rawProduct,
@@ -602,7 +532,7 @@ export default function TaobaoProductDetail({
                   alt={product.name}
                   onError={(e) => {
                     e.currentTarget.onerror = null;
-                    e.currentTarget.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&fit=crop';
+                    e.currentTarget.src = '/assets/uploads/no_image.png';
                   }}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
                 />

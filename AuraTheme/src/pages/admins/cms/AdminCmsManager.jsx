@@ -1076,7 +1076,7 @@ export default function AdminCmsManager() {
                 <TextArea rows={2} placeholder="ការពិពណ៌នា..." />
               </Form.Item>
               <Form.Item label="Background Image URL" name="image_url" rules={[{ required: true }]}>
-                <Input placeholder="https://images.unsplash.com/..." />
+                <Input placeholder="https://... or /assets/uploads/banner.jpg" />
               </Form.Item>
               <Row gutter={16}>
                 <Col span={12}>
@@ -1255,7 +1255,7 @@ export default function AdminCmsManager() {
                 <Input placeholder="e.g. cold-brew-banner.jpg" />
               </Form.Item>
               <Form.Item label="Image File URL" name="file_path" rules={[{ required: true }]}>
-                <Input placeholder="https://images.unsplash.com/..." />
+                <Input placeholder="https://... or /assets/uploads/image.png" />
               </Form.Item>
               <Form.Item label="Alt Text / Caption" name="alt_text">
                 <Input placeholder="e.g. Fresh iced cold brew" />
