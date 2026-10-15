@@ -125,6 +125,7 @@ async function logAuditTrail({
   newValues = null,
   ipAddress = null
 }) {
+  try {
     const eventVal = ['insert', 'update', 'delete'].includes(String(action || '').toLowerCase())
       ? String(action).toLowerCase()
       : (action === 'create' ? 'insert' : (action === 'delete' || action === 'remove' ? 'delete' : 'update'));
