@@ -15,7 +15,7 @@ import AuraLogo from '../../components/common/AuraLogo';
 const { Sider } = Layout;
 const { Text } = Typography;
 
-const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick }) => {
+const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
   const adminTheme = useAdminTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -98,30 +98,43 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick }) => {
       style={{
         background: adminTheme.sidebar,
         height: '100vh',
-        position: 'fixed',
+        maxHeight: '100vh',
+        position: isMobile ? 'relative' : 'fixed',
         left: 0,
         top: 0,
         bottom: 0,
-        display: 'flex',
-        flexDirection: 'column',
         borderRight: `1px solid ${adminTheme.sidebarBorder}`,
         boxShadow: '4px 0 24px rgba(0, 0, 0, 0.08)',
         zIndex: 1001,
         transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+        overflow: 'hidden',
       }}
     >
-      {/* Brand Header */}
+      {/* Inner Flex Wrapper for guaranteed scroll slidebar bounding */}
       <div
         style={{
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'space-between',
-          padding: collapsed ? '12px 10px' : '12px 14px',
-          borderBottom: `1px solid ${adminTheme.sidebarBorder}`,
-          minHeight: 58,
-          boxSizing: 'border-box',
+          flexDirection: 'column',
+          height: '100vh',
+          maxHeight: '100vh',
+          width: '100%',
+          overflow: 'hidden',
         }}
       >
+        {/* Brand Header */}
+        <div
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'space-between',
+            padding: collapsed ? '12px 10px' : '12px 14px',
+            borderBottom: `1px solid ${adminTheme.sidebarBorder}`,
+            minHeight: 58,
+            height: 58,
+            boxSizing: 'border-box',
+          }}
+        >
         <div
           style={{
             cursor: 'pointer',
@@ -237,10 +250,13 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick }) => {
       {/* Scrollable Modules Navigation */}
       <div
         style={{
-          flex: 1,
+          flex: '1 1 0%',
+          minHeight: 0,
+          height: 'calc(100vh - 118px)',
+          maxHeight: 'calc(100vh - 118px)',
           overflowY: 'auto',
           overflowX: 'hidden',
-          padding: collapsed ? '10px 8px' : '12px 10px',
+          padding: collapsed ? '10px 8px' : '12px 6px 12px 10px',
           scrollBehavior: 'smooth',
         }}
         className="erp-sidebar-scroll"
@@ -256,6 +272,8 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick }) => {
       {/* Bottom Dock / System Telemetry */}
       <div
         style={{
+          flexShrink: 0,
+          minHeight: 54,
           padding: collapsed ? '10px 8px 12px' : '10px 12px 12px',
           borderTop: `1px solid ${adminTheme.sidebarBorder}`,
           background: adminTheme.isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.02)',
@@ -342,6 +360,7 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick }) => {
             </Tooltip>
           </div>
         )}
+      </div>
       </div>
     </Sider>
   );

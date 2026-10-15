@@ -134,6 +134,7 @@ const AdminLayout = () => {
               onMenuClick={() => setMobileDrawerOpen(false)}
               moduleState={moduleState}
               onToggleModule={handleToggleModule}
+              isMobile={true}
             />
           </Drawer>
         )}
@@ -144,6 +145,7 @@ const AdminLayout = () => {
             setCollapsed={setCollapsed}
             moduleState={moduleState}
             onToggleModule={handleToggleModule}
+            isMobile={false}
           />
         )}
 
