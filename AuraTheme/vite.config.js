@@ -27,8 +27,6 @@ export default defineConfig({
   },
   resolve: {
     alias: [
-      { find: /.*\/data\/simpleData(\.js)?$/, replacement: path.resolve(__dirname, '../data/simpleData.esm.js') },
-      { find: 'data/simpleData', replacement: path.resolve(__dirname, '../data/simpleData.esm.js') },
       { find: '@', replacement: path.resolve(__dirname, './src') },
       { find: '@logos', replacement: path.resolve(__dirname, './public/logos') },
       { find: '@AdCat', replacement: path.resolve(__dirname, './src/assets/styles') },

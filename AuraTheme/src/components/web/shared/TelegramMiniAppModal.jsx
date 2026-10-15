@@ -20,7 +20,6 @@ import {
   StarFilled,
 } from '@ant-design/icons';
 import { formatCurrency } from '../../../utils/webTheme';
-import simpleData from '../../../../data/simpleData';
 import { sellers } from '../../../data/shopData';
 import AuraLogo from '../../common/AuraLogo';
 
@@ -63,71 +62,36 @@ export default function TelegramMiniAppModal({
 
   // Derive target shop if only product is provided
   const targetShop = useMemo(() => {
-    const SELLER_SLUG_MAP = {
-      'seller-1': 'sbc-store',
-      'seller-2': 'aura-bakery',
-      'seller-3': 'aura-lounge',
-      'seller-4': 'aura-bistro',
-      'seller-5': 'aura-tech',
-      'seller-6': 'sbc-store',
-    };
-
     if (shop) {
-      const resolvedSlug =
-        shop.slug ||
-        SELLER_SLUG_MAP[shop.id] ||
-        (simpleData.stores || []).find(
-          (s) =>
-            s.id === shop.id ||
-            s.slug === shop.id ||
-            s.name?.toLowerCase() === shop.name?.toLowerCase()
-        )?.slug ||
-        'sbc-store';
-
-      const matchedStore = (simpleData.stores || []).find((s) => s.slug === resolvedSlug);
-
+      const resolvedSlug = shop.slug || `store-${shop.id || 1}`;
       return {
         ...shop,
         id: shop.id || resolvedSlug,
         slug: resolvedSlug,
-        name: shop.name || matchedStore?.name || 'Aura Store',
-        rating: shop.rating || matchedStore?.rating || 4.9,
+        name: shop.name || 'Aura Store',
+        rating: shop.rating || 4.9,
         branch: shop.branch || 'phnom-penh',
-        heroImage: shop.heroImage || shop.banner || matchedStore?.banner,
-        logo: shop.logo || matchedStore?.logo,
-        logoText: shop.logoText || shop.name?.slice(0, 2) || matchedStore?.name?.slice(0, 2) || 'AS',
+        heroImage: shop.heroImage || shop.banner || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80',
+        logo: shop.logo,
+        logoText: shop.logoText || shop.name?.slice(0, 2) || 'AS',
       };
     }
     if (product) {
-      const prodStore =
-        (simpleData.stores || []).find(
-          (s) =>
-            s.id === product.biller_id ||
-            s.slug === product.shopSlug ||
-            s.id === product.shopId ||
-            s.name?.toLowerCase() === product.shopName?.toLowerCase()
-        ) ||
-        (sellers || []).find(
-          (s) =>
-            s.id === product.shopId ||
-            s.slug === product.shopSlug ||
-            s.name?.toLowerCase() === product.shopName?.toLowerCase()
-        );
-      const prodSlug = product.shopSlug || prodStore?.slug || product.shopId || 'nexus-mobile';
+      const prodSlug = product.storeSlug || product.shopSlug || `store-${product.biller_id || 1}`;
       return {
-        id: product.shopId || prodSlug,
+        id: product.biller_id || product.shopId || prodSlug,
         slug: prodSlug,
-        name: product.shopName || prodStore?.name || (product.category === 'Phones' || product.category === 'Electronics' ? 'Nexus Mobile & Gadgets' : 'Aura Specialty Store'),
-        rating: prodStore?.rating || 4.9,
-        branch: prodStore?.branch || 'phnom-penh',
-        heroImage: prodStore?.heroImage || prodStore?.banner || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=1200&h=800&fit=crop',
-        logoText: 'NM',
+        name: product.storeName || product.shopName || product.billerName || 'Aura Store',
+        rating: product.rating || 4.9,
+        branch: 'phnom-penh',
+        heroImage: product.sellerLogo || product.image || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80',
+        logoText: (product.storeName || product.shopName || 'AS').slice(0, 2).toUpperCase(),
       };
     }
     return {
-      id: 'sbc-store',
+      id: 1,
       slug: 'sbc-store',
-      name: 'Aura Specialty Coffee',
+      name: 'Aura Specialty Store',
       rating: 4.9,
       branch: 'phnom-penh',
       heroImage: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80',

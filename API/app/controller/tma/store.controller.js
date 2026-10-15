@@ -1,6 +1,4 @@
 const { db } = require('../../config/utill/helper');
-const rawSimpleData = require('../../../../data/simpleData');
-const simpleData = rawSimpleData.default || rawSimpleData;
 
 const StoreController = {
   /**
@@ -53,10 +51,10 @@ const StoreController = {
         return res.status(200).json({ status: true, data: stores, stores });
       }
 
-      return res.status(200).json({ status: true, data: simpleData.stores, stores: simpleData.stores });
+      return res.status(200).json({ status: true, data: [], stores: [] });
     } catch (err) {
-      console.warn('DB getStores fallback:', err.message);
-      return res.status(200).json({ status: true, data: simpleData.stores, stores: simpleData.stores });
+      console.warn('DB getStores error:', err.message);
+      return res.status(500).json({ status: false, error: err.message, data: [], stores: [] });
     }
   },
 
@@ -149,20 +147,7 @@ const StoreController = {
         });
       }
 
-      // Local fallback
-      const foundStore = (simpleData.stores || []).find((s) => s.slug === slug || String(s.id) === String(slug));
-      if (!foundStore) return res.status(404).json({ status: false, message: 'Store not found' });
-      const storeProducts = simpleData.products.filter((p) => Number(p.biller_id) === Number(foundStore.id));
-      const catIds = new Set(storeProducts.map((p) => p.category_id));
-      const storeCats = simpleData.categories.filter((c) => catIds.has(c.id));
-
-      return res.json({
-        status: true,
-        data: foundStore,
-        store: foundStore,
-        products: storeProducts,
-        categories: storeCats
-      });
+      return res.status(404).json({ status: false, message: 'Store not found' });
     } catch (err) {
       console.error('[StoreController.getStore]', err);
       return res.status(500).json({ status: false, error: err.message });
@@ -172,12 +157,10 @@ const StoreController = {
   async resolveBiller(req, res) {
     try {
       const { id } = req.params;
-      const [rows] = await db.query('SELECT slug, store_slug FROM aura_companies WHERE id = ? LIMIT 1', [id]);
+      const [rows] = await db.query('SELECT slug, store_slug FROM aura_companies WHERE id = ? AND group_name = \'biller\' LIMIT 1', [id]);
       if (rows.length > 0) {
         return res.json({ status: true, slug: rows[0].slug || rows[0].store_slug || `store-${id}` });
       }
-      const store = (simpleData.stores || []).find((s) => Number(s.id) === Number(id));
-      if (store) return res.json({ status: true, slug: store.slug });
       return res.status(404).json({ status: false, message: 'Biller not found' });
     } catch (err) {
       return res.status(500).json({ status: false, error: err.message });

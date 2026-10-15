@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTelegram } from '../hooks/useTelegram';
-import simpleData from '../../../data/simpleData';
 import AuraLogo from '../components/common/AuraLogo';
 
 const SELLER_SLUG_MAP = {
@@ -16,10 +15,7 @@ const SELLER_SLUG_MAP = {
 const resolveStoreSlug = (raw) => {
   if (!raw) return 'sbc-store';
   if (SELLER_SLUG_MAP[raw]) return SELLER_SLUG_MAP[raw];
-  const found = (simpleData.stores || []).find(
-    (s) => s.slug === raw || String(s.id) === String(raw) || s.name?.toLowerCase() === raw?.toLowerCase()
-  );
-  return found?.slug || raw;
+  return raw;
 };
 
 export default function TelegramEntry() {
@@ -56,14 +52,16 @@ export default function TelegramEntry() {
     // 1. Direct item link: item_<id>
     if (param.startsWith('item_')) {
       const productId = param.replace('item_', '');
-      const simpleProd = (simpleData.products || []).find((p) => String(p.id) === String(productId));
-      if (simpleProd) {
-        const store = (simpleData.stores || []).find((s) => s.id === simpleProd.biller_id);
-        const slug = store ? store.slug : 'sbc-store';
-        navigate(`/shop/${slug}?item=${productId}`, { replace: true });
-        return;
-      }
-      navigate(`/shop/sbc-store?item=${productId}`, { replace: true });
+      fetch(`/api/products/${productId}`)
+        .then((res) => res.json())
+        .then((res) => {
+          const prod = res.data;
+          const slug = prod?.store_slug || prod?.store?.slug || (prod?.biller_id ? `store-${prod.biller_id}` : 'sbc-store');
+          navigate(`/shop/${slug}?item=${productId}`, { replace: true });
+        })
+        .catch(() => {
+          navigate(`/shop/sbc-store?item=${productId}`, { replace: true });
+        });
       return;
     }
 
@@ -87,8 +85,15 @@ export default function TelegramEntry() {
     // 4. Biller deep links: biller_<id>
     if (param.startsWith('biller_')) {
       const billerId = param.replace('biller_', '');
-      const store = (simpleData.stores || []).find((s) => String(s.id) === String(billerId));
-      navigate(`/shop/${store?.slug || 'sbc-store'}`, { replace: true });
+      fetch(`/api/tma/store/${billerId}`)
+        .then((res) => res.json())
+        .then((res) => {
+          const slug = res.store?.slug || (res.store?.id ? `store-${res.store.id}` : 'sbc-store');
+          navigate(`/shop/${slug}`, { replace: true });
+        })
+        .catch(() => {
+          navigate(`/shop/sbc-store`, { replace: true });
+        });
       return;
     }
 

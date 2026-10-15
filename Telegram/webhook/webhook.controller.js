@@ -1,8 +1,5 @@
 const axios = require('axios');
 const telegramStoreConfigService = require('../stores/storeConfig.service');
-const rawSimpleData = require('../../data/simpleData');
-const simpleData = rawSimpleData.default || rawSimpleData;
-
 // Reference to order history from order controller
 let orderControllerRef = null;
 try {

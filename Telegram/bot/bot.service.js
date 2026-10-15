@@ -3,9 +3,6 @@ let EMenuModel = null;
 try {
   EMenuModel = require('../../API/app/models/emenu.model');
 } catch (_) {}
-const rawSimpleData = require('../../data/simpleData');
-const simpleData = rawSimpleData.default || rawSimpleData;
-
 const botToken = process.env.TELEGRAM_BOT_TOKEN || '8613686625:AAFe8-04LvQumEXZ8-MBjbNSDozba3E1lCw';
 // Base application URL for Telegram Mini Apps and Web Menus
 const webAppBaseUrl = (

@@ -483,17 +483,17 @@ class TelegramStoreConfigService {
 
     this._saveConfigs(this.configs);
 
-    // Sync in-memory stores data if present
+    // Sync to database if available
     try {
-      const simpleData = require('../../../data/simpleData');
-      const storeObj = simpleData.stores?.find((s) => s.slug === storeSlug);
-      if (storeObj) {
-        storeObj.telegram_group_id = updated.groupId;
-        storeObj.telegram_group_chat_id = updated.groupId;
-        storeObj.telegram_group_name = updated.groupTitle;
-        storeObj.telegram_bot_username = updated.botUsername;
-        storeObj.telegram_enabled = updated.telegram_enabled;
-      }
+      const { db } = require('../../API/app/config/utill/helper');
+      db.query(
+        'UPDATE aura_companies SET telegram_chat_id = ? WHERE slug = ? OR store_slug = ?',
+        [updated.groupId, storeSlug, storeSlug]
+      ).catch(() => {});
+      db.query(
+        'UPDATE aura_tma_stores SET telegram_chat_id = ?, telegram_bot_token = ? WHERE store_slug = ?',
+        [updated.groupId, updated.botToken || null, storeSlug]
+      ).catch(() => {});
     } catch (_) {}
 
     const decrypted = this.getDecryptedBotToken(storeSlug);

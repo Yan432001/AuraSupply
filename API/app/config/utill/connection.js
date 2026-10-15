@@ -1,13 +1,10 @@
 const mysql = require("mysql2/promise");
 const { config } = require("./config");
-const rawSimpleData = require("../../../../data/simpleData");
-const simpleData = rawSimpleData.default || rawSimpleData;
-
-// MOCKED / RESILIENT DATA LAYER — In-memory fallback using simpleData
+// RESILIENT DATA LAYER — In-memory fallback if MySQL is offline
 const mockStore = {
-  companies: simpleData.stores,
-  categories: simpleData.categories,
-  products: simpleData.products,
+  companies: [],
+  categories: [],
+  products: [],
   users: [
     {
       id: 1,

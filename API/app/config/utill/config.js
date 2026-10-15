@@ -1,7 +1,7 @@
 // config.js (updated to include db prefix)
 module.exports = {
     config: {
-        app_name: "AURAGROUP",
+        app_name: "AURASUPPLY",
         app_version: "1.0",
         image_path: "",
         db: {
@@ -13,7 +13,7 @@ module.exports = {
             PREFIX: "aura_" 
         },
         token: {
-            access_token_key: "ERTGGGEDSFDRE#5R###@",
+            access_token_key: "ERTGGGEDSFDRE#5R###@VCFDEFB",
         },
     },
 };

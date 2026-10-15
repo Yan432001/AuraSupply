@@ -25,7 +25,6 @@ import {
 } from '@ant-design/icons';
 import { message, Modal, Drawer, notification } from 'antd';
 import { fetchShops, fetchProducts, submitOrder } from '../utils/apiconfig';
-import simpleData from '../../../data/simpleData';
 import { useCart } from '../contexts/CartContext';
 import { publicTheme } from '../utils/webTheme';
 import MenuSearchBar, { HighlightMatch } from '../components/emenu/MenuSearchBar';
@@ -599,8 +598,8 @@ export default function WebEMenuPage() {
     const foundDbStore = dbStores.find((s) => s.slug === currentSlug || String(s.id) === String(currentSlug));
     if (foundDbStore) return foundDbStore;
     return (
-      (simpleData.stores || []).find((s) => s.slug === currentSlug) ||
       STORES_LIST.find((s) => s.slug === currentSlug) ||
+      dbStores[0] ||
       STORES_LIST[0]
     );
   }, [currentSlug, dbStores]);

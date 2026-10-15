@@ -1,11 +1,23 @@
 const EMenuModel = require('../models/emenu.model');
 const { sendOrderToShopGroup, getRecentDispatches } = require('../services/telegramNotification.service');
-const rawSimpleData = require('../../../data/simpleData');
-const simpleData = rawSimpleData.default || rawSimpleData;
+const pool = require('../config/utill/connection');
 
 exports.getStoreList = async (req, res) => {
   try {
-    return res.status(200).json({ status: true, data: simpleData.stores });
+    const [rows] = await pool.query(`
+      SELECT c.id, c.id AS storeId, c.id AS biller_id, c.code, c.name, c.company,
+             COALESCE(c.slug, c.store_slug, CONCAT('store-', c.id)) AS slug,
+             c.address, c.phone, c.email, c.city, c.logo, c.banner,
+             c.theme_color, c.currency_code, c.currency_symbol, c.tagline,
+             c.rating, c.reviews_count, c.operating_hours,
+             COUNT(DISTINCT p.id) AS products_count
+      FROM aura_companies c
+      LEFT JOIN aura_products p ON p.biller_id = c.id AND p.status = 1
+      WHERE c.group_name = 'biller' AND (c.group_id IS NULL OR c.group_id = 0) AND c.is_active = 1
+      GROUP BY c.id
+      ORDER BY c.id ASC
+    `);
+    return res.status(200).json({ status: true, data: rows });
   } catch (err) {
     return res.status(500).json({ status: false, message: err.message });
   }

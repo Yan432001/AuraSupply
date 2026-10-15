@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import simpleData from '../../../data/simpleData';
 
 export const BRANCHES_STORAGE_KEY = 'aura_admin_branches_data';
 export const BILLERS_STORAGE_KEY = 'aura_admin_billers_data';
@@ -548,42 +547,51 @@ export const useBranchesAndBillers = () => {
     [billers, persistBillers]
   );
 
-  // Auto-sync stores from simpleData if needed
-  const syncFromStores = useCallback(() => {
-    if (!simpleData?.stores?.length) return;
-    const existingSlugs = new Set(branches.map((b) => b.store_slug));
-    const newItems = [];
+  // Auto-sync stores from API if needed
+  const syncFromStores = useCallback(async () => {
+    try {
+      const res = await fetch('/api/shops');
+      if (!res.ok) return;
+      const data = await res.json();
+      const stores = data.data || [];
+      if (!stores.length) return;
+      const existingSlugs = new Set(branches.map((b) => b.store_slug));
+      const newItems = [];
 
-    simpleData.stores.forEach((store) => {
-      if (!existingSlugs.has(store.slug)) {
-        newItems.push({
-          id: branches.length + newItems.length + 1,
-          code: `BR-0${branches.length + newItems.length + 1}`,
-          name: store.name,
-          biller_id: store.biller_id || 1,
-          store_slug: store.slug,
-          shop_type: store.tagline || 'Cafe & Specialty',
-          manager_name: 'Store Manager',
-          phone: store.phone || '+855 12 345 678',
-          email: store.email || 'store@auraglobal.com',
-          city: 'Phnom Penh',
-          address: store.address || 'Phnom Penh, Cambodia',
-          operating_hours: store.operating_hours || '7:00 AM - 8:30 PM',
-          registers_count: 2,
-          warehouse_id: 1,
-          warehouse_name: 'Central Warehouse Phnom Penh',
-          is_active: store.is_active !== 0,
-          is_default: false,
-          today_sales: 850.00,
-          today_orders: 80,
-          rating: store.rating || 4.8,
-          logo: store.logo,
-        });
+      stores.forEach((store) => {
+        const slug = store.slug || store.store_slug || `store-${store.id}`;
+        if (!existingSlugs.has(slug)) {
+          newItems.push({
+            id: branches.length + newItems.length + 1,
+            code: `BR-0${branches.length + newItems.length + 1}`,
+            name: store.name,
+            biller_id: store.id,
+            store_slug: slug,
+            shop_type: store.tagline || 'Store & Supply',
+            manager_name: store.contact_person || 'Store Manager',
+            phone: store.phone || '+855 12 345 678',
+            email: store.email || 'store@auraglobal.com',
+            city: store.city || 'Phnom Penh',
+            address: store.address || 'Phnom Penh, Cambodia',
+            operating_hours: store.operating_hours || '7:00 AM - 8:30 PM',
+            registers_count: 2,
+            warehouse_id: 1,
+            warehouse_name: 'Central Warehouse Phnom Penh',
+            is_active: store.is_active !== 0,
+            is_default: false,
+            today_sales: 0.00,
+            today_orders: 0,
+            rating: 4.8,
+            logo: store.logo,
+          });
+        }
+      });
+
+      if (newItems.length) {
+        persistBranches([...branches, ...newItems]);
       }
-    });
-
-    if (newItems.length) {
-      persistBranches([...branches, ...newItems]);
+    } catch (e) {
+      console.warn('Failed to sync branches from API:', e);
     }
   }, [branches, persistBranches]);
 

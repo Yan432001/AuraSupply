@@ -2,8 +2,6 @@ const EMenuModel = require('../../models/emenu.model');
 const { sendOrderToShopGroup, retryOrderNotification } = require('../../services/telegramNotification.service');
 const telegramStoreConfigService = require('../../services/telegramStoreConfig.service');
 const { validateTelegramInitData } = require('../../services/crypto.service');
-const rawSimpleData = require('../../../../data/simpleData');
-const simpleData = rawSimpleData.default || rawSimpleData;
 const { db } = require('../../config/utill/helper');
 
 // In-memory sequential order counter starting at 123 so the first generated order is ORD-000123
@@ -318,11 +316,17 @@ const OrderController = {
 
       // 3. Resolve and validate store
       const storeSlug = slug || req.body.storeSlug || req.body.store_slug || 'sbc-store';
-      const store =
+      let store =
         (await EMenuModel.getStoreBySlug(storeSlug)) ||
-        (await EMenuModel.getStoreByIdentifier(storeSlug)) ||
-        simpleData.stores.find((s) => s.slug === storeSlug || String(s.id) === String(storeSlug)) ||
-        simpleData.stores[0];
+        (await EMenuModel.getStoreByIdentifier(storeSlug));
+
+      if (!store) {
+        const [rows] = await db.query(
+          "SELECT id, name, company, slug, phone, email, address, logo, telegram_chat_id FROM aura_companies WHERE (group_id IS NULL OR group_id = 0) AND group_name = 'biller' AND (slug = ? OR id = ? OR store_slug = ?) LIMIT 1",
+          [storeSlug, isNaN(storeSlug) ? 0 : Number(storeSlug), storeSlug]
+        );
+        store = rows[0] || null;
+      }
 
       if (!store) {
         return res.status(404).json({ status: false, message: 'Store not found' });
@@ -348,7 +352,11 @@ const OrderController = {
 
       for (const rawItem of incomingItems) {
         const productId = rawItem.id || rawItem.productId;
-        const catalogProduct = simpleData.products.find((p) => Number(p.id) === Number(productId));
+        const [pRows] = await db.query(
+          "SELECT id, code, name, price, biller_id FROM aura_products WHERE id = ? LIMIT 1",
+          [productId]
+        );
+        const catalogProduct = pRows[0] || null;
 
         if (!catalogProduct) {
           return res.status(400).json({
@@ -556,7 +564,14 @@ const OrderController = {
         return res.status(404).json({ status: false, message: 'Order not found' });
       }
 
-      const store = simpleData.stores.find((s) => Number(s.id) === Number(order.store_id) || s.slug === order.store_slug) || simpleData.stores[0];
+      let store = await EMenuModel.getStoreByIdentifier(order.store_id || order.store_slug);
+      if (!store) {
+        const [rows] = await db.query(
+          "SELECT id, name, company, slug, phone, email, address, logo, telegram_chat_id FROM aura_companies WHERE id = ? OR slug = ? LIMIT 1",
+          [order.store_id || 0, order.store_slug || '']
+        );
+        store = rows[0] || { id: order.store_id, name: order.store_name, slug: order.store_slug };
+      }
 
       const dispatchInfo = await retryOrderNotification(order, store);
       order.store_notification = dispatchInfo.notification_status === 'sent' || dispatchInfo.notification_status === 'simulated'

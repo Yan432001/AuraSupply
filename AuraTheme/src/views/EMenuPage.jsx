@@ -25,7 +25,6 @@ import {
 import { useTelegram } from '../hooks/useTelegram';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
-import simpleData from '../../../data/simpleData';
 import MenuSearchBar, { HighlightMatch } from '../components/emenu/MenuSearchBar';
 import OrderStatusMiniBanner from '../components/emenu/OrderStatusMiniBanner';
 import ProductDetailModal from '../components/emenu/ProductDetailModal';
@@ -151,12 +150,6 @@ export default function EMenuPage() {
     };
     if (raw && SELLER_SLUG_MAP[raw]) {
       return SELLER_SLUG_MAP[raw];
-    }
-    if (raw) {
-      const found = (simpleData.stores || []).find(
-        (s) => s.slug === raw || String(s.id) === String(raw) || s.name?.toLowerCase() === raw?.toLowerCase()
-      );
-      if (found) return found.slug;
     }
     return raw || 'sbc-store';
   }, [params.storeSlug, location.pathname]);
@@ -315,26 +308,11 @@ export default function EMenuPage() {
         setCategories(res.data.categories || []);
         setProducts(res.data.products || []);
       } else {
-        // Fallback to local catalog
-        const foundStore = (simpleData.stores || []).find((s) => s.slug === slug) || simpleData.stores[0];
-        const storeProducts = (simpleData.products || []).filter((p) => Number(p.biller_id) === Number(foundStore?.id || 1));
-        const catIds = new Set(storeProducts.map((p) => p.category_id));
-        const storeCats = (simpleData.categories || []).filter((c) => catIds.has(c.id));
-
-        setCurrentStore(foundStore);
-        setCategories(storeCats);
-        setProducts(storeProducts);
+        message.error(res.data?.message || 'Store not found');
       }
     } catch (err) {
-      console.warn(`Fallback to local catalog for ${slug}:`, err);
-      const foundStore = (simpleData.stores || []).find((s) => s.slug === slug) || simpleData.stores[0];
-      const storeProducts = (simpleData.products || []).filter((p) => Number(p.biller_id) === Number(foundStore?.id || 1));
-      const catIds = new Set(storeProducts.map((p) => p.category_id));
-      const storeCats = (simpleData.categories || []).filter((c) => catIds.has(c.id));
-
-      setCurrentStore(foundStore);
-      setCategories(storeCats);
-      setProducts(storeProducts);
+      console.warn(`Error loading store ${slug}:`, err);
+      message.error('Failed to load store menu from server');
     } finally {
       setLoading(false);
     }

@@ -37,7 +37,6 @@ import {
   WifiOutlined,
   MobileOutlined,
 } from '@ant-design/icons';
-import simpleData from '../../../../data/simpleData';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 
 const { Title, Text, Paragraph } = Typography;
@@ -50,9 +49,9 @@ export default function AdminQrCodeGenerator() {
   const qrRef = useRef(null);
   const standRef = useRef(null);
 
-  // Available Stores
-  const [stores, setStores] = useState(simpleData.stores || []);
-  const [selectedStoreSlug, setSelectedStoreSlug] = useState(stores[0]?.slug || 'sbc-store');
+  // Available Stores from real Database API
+  const [stores, setStores] = useState([]);
+  const [selectedStoreSlug, setSelectedStoreSlug] = useState('sbc-store');
 
   // Form State
   const [locationType, setLocationType] = useState('table'); // 'table' | 'counter' | 'room' | 'bar'
@@ -78,19 +77,20 @@ export default function AdminQrCodeGenerator() {
   const [batchLocationType, setBatchLocationType] = useState('table');
   const [batchList, setBatchList] = useState([]);
 
-  // Fetch live stores if available
+  // Fetch live stores from database API
   useEffect(() => {
-    fetch('/api/tma/stores')
+    fetch('/api/shops')
       .then((res) => res.json())
       .then((data) => {
-        const storeList = data.stores || data.data;
+        const storeList = data.data || data.stores;
         if (storeList && Array.isArray(storeList) && storeList.length > 0) {
           setStores(storeList);
+          if (!selectedStoreSlug || selectedStoreSlug === 'sbc-store') {
+            setSelectedStoreSlug(storeList[0].slug || `store-${storeList[0].id}`);
+          }
         }
       })
-      .catch(() => {
-        // simpleData fallback already initialized
-      });
+      .catch(() => {});
   }, []);
 
   // Currently active store object

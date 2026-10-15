@@ -45,7 +45,6 @@ import {
   FireFilled,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import simpleData from '../../../data/simpleData';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 
 const { Title, Text, Paragraph } = Typography;
@@ -65,7 +64,7 @@ export default function AdminFrontEndController({ embedded = false }) {
       const saved = localStorage.getItem(STORES_STORAGE_KEY);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return simpleData.stores || [];
+    return [];
   });
 
   // Products state with localStorage persistence
@@ -74,8 +73,30 @@ export default function AdminFrontEndController({ embedded = false }) {
       const saved = localStorage.getItem(PRODUCTS_STORAGE_KEY);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return simpleData.products || [];
+    return [];
   });
+
+  // Fetch live stores and products from API
+  useEffect(() => {
+    fetch('/api/shops')
+      .then(res => res.json())
+      .then(res => {
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setStores(prev => (prev.length === 0 ? res.data : prev));
+          setSelectedStoreId(curr => curr || res.data[0].id);
+        }
+      })
+      .catch(console.warn);
+
+    fetch('/api/products?limit=500')
+      .then(res => res.json())
+      .then(res => {
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setProducts(prev => (prev.length === 0 ? res.data : prev));
+        }
+      })
+      .catch(console.warn);
+  }, []);
 
   // Selected store for management
   const [selectedStoreId, setSelectedStoreId] = useState(() => stores[0]?.id || 1);
