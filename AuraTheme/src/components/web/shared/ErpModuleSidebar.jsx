@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Tooltip, Typography } from 'antd';
+import { Tooltip, Typography, Input, Badge } from 'antd';
 import {
   AppstoreOutlined,
   BankOutlined,
@@ -17,10 +17,14 @@ import {
   ShoppingCartOutlined,
   TeamOutlined,
   UsergroupAddOutlined,
+  SearchOutlined,
+  StarFilled,
+  StarOutlined,
 } from '@ant-design/icons';
 import { erpModules, getMenuLineage } from '../../../data/erpModules';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
 import { useAdminModules } from '../../../hooks/useAdminModules';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const { Text } = Typography;
 
@@ -40,6 +44,8 @@ const moduleIconMap = {
   reports: FileTextOutlined,
   settings: SettingOutlined,
   frontEnd: GlobalOutlined,
+  'front-end': GlobalOutlined,
+  cms: GlobalOutlined,
 };
 
 const getIconNode = (iconKey) => {
@@ -48,8 +54,10 @@ const getIconNode = (iconKey) => {
 };
 
 const sectionGroups = [
-  { label: 'Core Workspace', keys: ['clinic', 'inventory', 'asset', 'procurement', 'sales', 'pos', 'loans', 'property', 'accounting', 'hr', 'payroll'] },
-  { label: 'Platform & System', keys: ['reports', 'settings', 'front-end'] },
+  { label: 'Operations', keys: ['inventory', 'procurement', 'sales', 'pos', 'asset'] },
+  { label: 'People', keys: ['crm', 'hr', 'payroll', 'clinic'] },
+  { label: 'Finance', keys: ['accounting', 'loans', 'property'] },
+  { label: 'System', keys: ['cms', 'reports', 'settings', 'front-end'] },
 ];
 
 const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGroups, onToggleGroup, onNavigate, depth = 1, parentPath = [] }) => {
@@ -190,26 +198,40 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
 const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigate }) => {
   const adminTheme = useAdminTheme();
   const { isModuleOpen } = useAdminModules();
+  const { user } = useAuth();
   const activeLineage = useMemo(() => getMenuLineage(activeModuleKey, activeMenuKey), [activeMenuKey, activeModuleKey]);
 
-  // Sidebar state is always derived from the current URL: whenever the active
-  // module/menu changes (i.e. the user navigated), collapse whatever was
-  // previously open and expand only the group/menu/sub-menu for the new page.
+  const [searchTerm, setSearchTerm] = useState('');
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aura_erp_favorites');
+      return saved ? JSON.parse(saved) : ['inventory', 'sales', 'reports', 'settings'];
+    } catch (_) {
+      return ['inventory', 'sales', 'reports', 'settings'];
+    }
+  });
+
+  const toggleFavorite = (modKey, e) => {
+    e.stopPropagation();
+    setFavorites(prev => {
+      const next = prev.includes(modKey) ? prev.filter(k => k !== modKey) : [...prev, modKey];
+      localStorage.setItem('aura_erp_favorites', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const [openModuleKey, setOpenModuleKey] = useState(activeModuleKey);
   const [openGroups, setOpenGroups] = useState(() => new Set(activeLineage));
 
   useEffect(() => {
     setOpenModuleKey(activeModuleKey);
     setOpenGroups(new Set(activeLineage));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModuleKey, activeMenuKey]);
 
   const toggleModule = (moduleKey) => {
     setOpenModuleKey((previous) => (previous === moduleKey ? null : moduleKey));
   };
 
-  // Opening a group closes any sibling group/sub-menu that was open, and
-  // keeps only the clicked item's ancestor path expanded (accordion-style).
   const toggleGroup = (groupPath) => {
     const groupKey = groupPath[groupPath.length - 1];
     setOpenGroups((previous) => {
@@ -222,19 +244,33 @@ const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigat
 
   const modulesByKey = useMemo(() => Object.fromEntries(erpModules.map((module) => [module.key, module])), []);
 
-  // Filter out any closed/disabled modules
+  // Filter out any closed/disabled modules and apply role-based visibility
   const visibleModules = useMemo(() => {
-    return erpModules.filter((module) => isModuleOpen(module.key));
-  }, [isModuleOpen]);
+    return erpModules.filter((module) => {
+      if (!isModuleOpen(module.key)) return false;
+      // If role is buyer, restrict to buyer-relevant modules
+      if (user?.role === 'buyer' && !['sales', 'inventory', 'reports'].includes(module.key)) return false;
+      if (user?.role === 'supplier' && !['purchases', 'inventory', 'reports'].includes(module.key)) return false;
+      return true;
+    });
+  }, [isModuleOpen, user]);
 
   const visibleSectionGroups = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
     return sectionGroups
       .map((section) => ({
         ...section,
-        keys: section.keys.filter((moduleKey) => isModuleOpen(moduleKey)),
+        keys: section.keys.filter((moduleKey) => {
+          if (!isModuleOpen(moduleKey)) return false;
+          if (user?.role === 'buyer' && !['sales', 'inventory', 'reports'].includes(moduleKey)) return false;
+          if (user?.role === 'supplier' && !['purchases', 'inventory', 'reports'].includes(moduleKey)) return false;
+          if (!term) return true;
+          const mod = modulesByKey[moduleKey];
+          return mod?.label?.toLowerCase().includes(term) || moduleKey.toLowerCase().includes(term);
+        }),
       }))
       .filter((section) => section.keys.length > 0);
-  }, [isModuleOpen]);
+  }, [isModuleOpen, user, searchTerm, modulesByKey]);
 
   if (collapsed) {
     return (
@@ -317,7 +353,64 @@ const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigat
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* 1. Quick Search Filter */}
+      <div style={{ padding: '0 4px 4px' }}>
+        <Input
+          size="small"
+          placeholder="Search modules..."
+          prefix={<SearchOutlined style={{ color: adminTheme.subtext, fontSize: 12 }} />}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          allowClear
+          style={{
+            borderRadius: 8,
+            background: adminTheme.isDark ? 'rgba(255, 255, 255, 0.05)' : '#ffffff',
+            borderColor: adminTheme.sidebarBorder,
+            fontSize: 12,
+          }}
+        />
+      </div>
+
+      {/* 2. Pinned Favorites Quick Links */}
+      {!searchTerm && favorites.length > 0 && (
+        <div style={{ padding: '0 6px 4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <Text style={{ fontSize: 9.5, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1.2 }}>
+              ★ Pinned Favorites
+            </Text>
+          </div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {favorites.map(favKey => {
+              const favMod = modulesByKey[favKey];
+              if (!favMod) return null;
+              const isFavActive = activeModuleKey === favKey;
+              return (
+                <button
+                  key={favKey}
+                  type="button"
+                  onClick={() => onNavigate(favKey, null)}
+                  style={{
+                    border: isFavActive ? '1px solid #3b82f6' : `1px solid ${adminTheme.sidebarBorder}`,
+                    background: isFavActive ? 'rgba(59, 130, 246, 0.18)' : (adminTheme.isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)'),
+                    color: isFavActive ? '#60a5fa' : adminTheme.subtext,
+                    borderRadius: 6,
+                    padding: '3px 8px',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {favMod.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Grouped Sections */}
       {visibleSectionGroups.map((section, idx) => (
         <div key={section.label}>
           <div

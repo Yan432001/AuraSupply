@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Avatar,
   Button,
@@ -17,7 +17,13 @@ import {
   Tooltip,
   Row,
   Col,
-  Badge
+  Badge,
+  Checkbox,
+  Drawer,
+  Timeline,
+  Divider,
+  Alert,
+  Flex
 } from 'antd';
 import {
   PlusOutlined,
@@ -27,7 +33,17 @@ import {
   DeleteOutlined,
   SafetyCertificateOutlined,
   KeyOutlined,
-  SearchOutlined
+  SearchOutlined,
+  CheckSquareOutlined,
+  BorderOutlined,
+  HistoryOutlined,
+  PoweroffOutlined,
+  CrownOutlined,
+  TeamOutlined,
+  ShopOutlined,
+  AuditOutlined,
+  SettingOutlined,
+  FilterOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
@@ -35,29 +51,130 @@ import { useAdminTheme } from '../../hooks/useAdminTheme';
 const { Text, Title } = Typography;
 const { Option } = Select;
 
-const roleBadgeColor = {
-  owner: 'purple',
-  admin: 'blue',
-  branch: 'cyan',
-  salesman: 'green',
-  employee: 'default',
-  audit: 'orange',
-  cashier: 'gold',
-  stock: 'geekblue'
+// Standard ERP Module Registry for Permission Matrix
+const PERMISSION_MODULES = [
+  { key: 'inventory', label: 'Inventory & Catalog', description: 'Product listings, stock movements, and valuation' },
+  { key: 'purchases', label: 'Purchases & Sourcing', description: 'Purchase orders, receiving, and vendor invoices' },
+  { key: 'sales', label: 'Sales & Distribution', description: 'Wholesale sales orders, invoices, and deliveries' },
+  { key: 'crm', label: 'Buyers & Suppliers (CRM)', description: 'Customer & vendor relationships from users table' },
+  { key: 'accounts', label: 'General Accounting', description: 'Financial ledgers, payments, and account balances' },
+  { key: 'hr', label: 'Human Resources', description: 'Staff directory, departments, and designations' },
+  { key: 'attendance', label: 'Staff Attendance', description: 'Shift rosters, clock-in, and daily attendance' },
+  { key: 'payroll', label: 'Payroll & Payslips', description: 'Salary calculations, deductions, and payouts' },
+  { key: 'expenses', label: 'Operational Expenses', description: 'Operating expense vouchers and category logs' },
+  { key: 'reports', label: 'Analytics & Reports', description: 'Business intelligence and tax audit reports' },
+  { key: 'settings', label: 'System & Security Settings', description: 'Platform configurations, roles, and site info' },
+  { key: 'notifications', label: 'Alerts & Notifications', description: 'Broadcast notices and low stock alerts' },
+  { key: 'calendar', label: 'Events & Calendar', description: 'Corporate schedule and delivery reminders' }
+];
+
+const PERMISSION_ACTIONS = [
+  { key: 'view', label: 'View' },
+  { key: 'create', label: 'Create' },
+  { key: 'edit', label: 'Edit' },
+  { key: 'delete', label: 'Delete' },
+  { key: 'approve', label: 'Approve' },
+  { key: 'export', label: 'Export' }
+];
+
+const ROLE_PRESETS = [
+  { key: 'owner', label: 'Enterprise Owner', level: 1, color: 'purple', badge: 'LEVEL 1' },
+  { key: 'admin', label: 'Administrator', level: 2, color: 'blue', badge: 'LEVEL 2' },
+  { key: 'manager', label: 'Store Manager', level: 2, color: 'cyan', badge: 'LEVEL 2' },
+  { key: 'salesman', label: 'Commercial Agent', level: 3, color: 'green', badge: 'LEVEL 3' },
+  { key: 'staff', label: 'Operations Staff', level: 3, color: 'default', badge: 'LEVEL 3' },
+  { key: 'cashier', label: 'POS Cashier', level: 3, color: 'gold', badge: 'LEVEL 3' },
+  { key: 'stock', label: 'Warehouse Controller', level: 3, color: 'geekblue', badge: 'LEVEL 3' },
+  { key: 'account', label: 'Senior Accountant', level: 3, color: 'magenta', badge: 'LEVEL 3' },
+  { key: 'audit', label: 'Tax Auditor', level: 3, color: 'orange', badge: 'LEVEL 3' },
+  { key: 'supplier', label: 'Verified Supplier', level: 4, color: 'volcano', badge: 'LEVEL 4' },
+  { key: 'buyer', label: 'Commercial Buyer', level: 5, color: 'lime', badge: 'LEVEL 5' }
+];
+
+const getDefaultPermissionsForRole = (roleKey) => {
+  const perms = {};
+  PERMISSION_MODULES.forEach((mod) => {
+    perms[mod.key] = { view: false, create: false, edit: false, delete: false, approve: false, export: false };
+  });
+
+  if (roleKey === 'owner') {
+    PERMISSION_MODULES.forEach((mod) => {
+      perms[mod.key] = { view: true, create: true, edit: true, delete: true, approve: true, export: true };
+    });
+  } else if (roleKey === 'admin') {
+    PERMISSION_MODULES.forEach((mod) => {
+      perms[mod.key] = {
+        view: true,
+        create: true,
+        edit: true,
+        delete: mod.key !== 'settings',
+        approve: true,
+        export: true
+      };
+    });
+  } else if (roleKey === 'manager') {
+    ['inventory', 'purchases', 'sales', 'crm', 'attendance', 'reports'].forEach((m) => {
+      perms[m] = { view: true, create: true, edit: true, delete: false, approve: true, export: true };
+    });
+  } else if (roleKey === 'salesman') {
+    perms['sales'] = { view: true, create: true, edit: true, delete: false, approve: false, export: true };
+    perms['crm'] = { view: true, create: true, edit: false, delete: false, approve: false, export: false };
+    perms['inventory'] = { view: true, create: false, edit: false, delete: false, approve: false, export: false };
+    perms['calendar'] = { view: true, create: true, edit: false, delete: false, approve: false, export: false };
+  } else if (roleKey === 'cashier') {
+    perms['sales'] = { view: true, create: true, edit: false, delete: false, approve: false, export: false };
+    perms['attendance'] = { view: true, create: false, edit: false, delete: false, approve: false, export: false };
+  } else if (roleKey === 'stock') {
+    perms['inventory'] = { view: true, create: true, edit: true, delete: false, approve: true, export: true };
+    perms['purchases'] = { view: true, create: true, edit: false, delete: false, approve: false, export: false };
+  } else if (roleKey === 'account') {
+    ['accounts', 'payroll', 'expenses', 'reports'].forEach((m) => {
+      perms[m] = { view: true, create: true, edit: true, delete: false, approve: true, export: true };
+    });
+  } else if (roleKey === 'audit') {
+    ['accounts', 'expenses', 'reports', 'inventory', 'sales'].forEach((m) => {
+      perms[m] = { view: true, create: false, edit: false, delete: false, approve: false, export: true };
+    });
+  } else if (roleKey === 'supplier') {
+    perms['purchases'] = { view: true, create: false, edit: true, delete: false, approve: false, export: false };
+    perms['inventory'] = { view: true, create: false, edit: false, delete: false, approve: false, export: false };
+  } else if (roleKey === 'buyer') {
+    perms['sales'] = { view: true, create: true, edit: false, delete: false, approve: false, export: false };
+    perms['inventory'] = { view: true, create: false, edit: false, delete: false, approve: false, export: false };
+  } else {
+    // staff
+    perms['inventory'] = { view: true, create: false, edit: false, delete: false, approve: false, export: false };
+    perms['sales'] = { view: true, create: true, edit: false, delete: false, approve: false, export: false };
+    perms['attendance'] = { view: true, create: true, edit: false, delete: false, approve: false, export: false };
+  }
+
+  return perms;
 };
 
 const UserManagement = () => {
   const adminTheme = useAdminTheme();
   const [users, setUsers] = useState([]);
-  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
 
-  // Modal State
+  // Create / Edit User Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form] = Form.useForm();
+
+  // Permission Matrix Modal
+  const [isMatrixOpen, setIsMatrixOpen] = useState(false);
+  const [matrixUser, setMatrixUser] = useState(null);
+  const [matrixPermissions, setMatrixPermissions] = useState({});
+  const [savingMatrix, setSavingMatrix] = useState(false);
+
+  // User Activity Drawer
+  const [isActivityOpen, setIsActivityOpen] = useState(false);
+  const [activityUser, setActivityUser] = useState(null);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [loadingActivity, setLoadingActivity] = useState(false);
 
   const getAuthHeader = () => {
     const token = localStorage.getItem('token');
@@ -69,40 +186,30 @@ const UserManagement = () => {
     try {
       const res = await axios.get('/api/admin/users', {
         headers: getAuthHeader(),
-        params: { search: searchText, limit: 100 }
+        params: { search: searchText, role: selectedRole, status: selectedStatus, limit: 100 }
       });
-      if (res.data?.success || res.data?.data) {
+      if (res.data?.success && res.data?.data) {
         setUsers(res.data.data || []);
       }
     } catch (err) {
-      console.warn('Failed to load users with auth, trying public/fallback:', err.message);
+      console.warn('Failed to load users from API:', err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchRoles = async () => {
-    try {
-      const res = await axios.get('/api/admin/roles', {
-        headers: getAuthHeader()
-      });
-      if (res.data?.success && res.data?.data) {
-        setRoles(res.data.data);
-      }
-    } catch (err) {
-      console.warn('Failed to load roles:', err.message);
-    }
-  };
-
   useEffect(() => {
     fetchUsers();
-    fetchRoles();
-  }, [searchText]);
+  }, [searchText, selectedRole, selectedStatus]);
 
+  // Modal Open Handlers
   const handleOpenCreate = () => {
     setEditingUser(null);
     form.resetFields();
-    form.setFieldsValue({ group_id: 2, active: 1 });
+    form.setFieldsValue({
+      role: 'staff',
+      status: 'active'
+    });
     setIsModalOpen(true);
   };
 
@@ -114,20 +221,20 @@ const UserManagement = () => {
       last_name: user.last_name,
       email: user.email,
       phone: user.phone,
-      group_id: user.group_id,
-      active: user.active
+      role: user.role || 'staff',
+      status: user.status || (user.active ? 'active' : 'inactive')
     });
     setIsModalOpen(true);
   };
 
-  const handleSave = async () => {
+  const handleSaveUser = async () => {
     try {
       const values = await form.validateFields();
       if (editingUser) {
         await axios.put(`/api/admin/users/${editingUser.id}`, values, {
           headers: getAuthHeader()
         });
-        message.success(`User @${values.username || editingUser.username} updated successfully!`);
+        message.success(`User @${editingUser.username} updated successfully!`);
       } else {
         await axios.post('/api/admin/users', values, {
           headers: getAuthHeader()
@@ -143,55 +250,173 @@ const UserManagement = () => {
   };
 
   const handleToggleStatus = async (user, checked) => {
+    const targetStatus = checked ? 'active' : 'inactive';
     try {
       await axios.put(
         `/api/admin/users/${user.id}/status`,
-        { active: checked ? 1 : 0 },
+        { status: targetStatus },
         { headers: getAuthHeader() }
       );
-      message.success(`Account for @${user.username} is now ${checked ? 'Active' : 'Deactivated'}`);
+      message.success(`User @${user.username} status updated to ${targetStatus}`);
       setUsers((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, active: checked ? 1 : 0 } : u))
+        prev.map((u) => (u.id === user.id ? { ...u, status: targetStatus, active: checked ? 1 : 0 } : u))
       );
     } catch (err) {
       message.error(err.response?.data?.message || 'Failed to change status');
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteUser = async (id, username) => {
     try {
       await axios.delete(`/api/admin/users/${id}`, {
         headers: getAuthHeader()
       });
-      message.success('User account removed permanently');
+      message.success(`User @${username} removed`);
       fetchUsers();
     } catch (err) {
       message.error(err.response?.data?.message || 'Failed to delete user');
     }
   };
 
-  const filteredUsers = users.filter((u) => {
-    if (selectedRole !== 'all' && String(u.group_id) !== String(selectedRole)) {
-      return false;
+  // Permission Matrix Handlers
+  const handleOpenMatrix = (user) => {
+    setMatrixUser(user);
+    const existing = user.permissions || {};
+    // Ensure all modules exist in structure
+    const full = {};
+    PERMISSION_MODULES.forEach((mod) => {
+      full[mod.key] = {
+        view: Boolean(existing[mod.key]?.view),
+        create: Boolean(existing[mod.key]?.create),
+        edit: Boolean(existing[mod.key]?.edit),
+        delete: Boolean(existing[mod.key]?.delete),
+        approve: Boolean(existing[mod.key]?.approve),
+        export: Boolean(existing[mod.key]?.export)
+      };
+    });
+    setMatrixPermissions(full);
+    setIsMatrixOpen(true);
+  };
+
+  const handleTogglePermission = (moduleKey, actionKey, checked) => {
+    setMatrixPermissions((prev) => ({
+      ...prev,
+      [moduleKey]: {
+        ...(prev[moduleKey] || {}),
+        [actionKey]: checked
+      }
+    }));
+  };
+
+  const handleApplyPreset = (presetKey) => {
+    const preset = getDefaultPermissionsForRole(presetKey);
+    setMatrixPermissions(preset);
+    message.info(`Loaded default permission template for '${presetKey}'`);
+  };
+
+  const handleSelectAllPermissions = (enableAll) => {
+    const next = {};
+    PERMISSION_MODULES.forEach((mod) => {
+      next[mod.key] = {
+        view: enableAll,
+        create: enableAll,
+        edit: enableAll,
+        delete: enableAll,
+        approve: enableAll,
+        export: enableAll
+      };
+    });
+    setMatrixPermissions(next);
+  };
+
+  const handleSaveMatrix = async () => {
+    if (!matrixUser) return;
+    setSavingMatrix(true);
+    try {
+      await axios.put(
+        `/api/admin/users/${matrixUser.id}`,
+        { permissions: matrixPermissions },
+        { headers: getAuthHeader() }
+      );
+      message.success(`Permission matrix saved for @${matrixUser.username}`);
+      setIsMatrixOpen(false);
+      fetchUsers();
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Failed to save permissions');
+    } finally {
+      setSavingMatrix(false);
     }
-    return true;
-  });
+  };
+
+  // Activity Log Handlers
+  const handleOpenActivity = async (user) => {
+    setActivityUser(user);
+    setIsActivityOpen(true);
+    setLoadingActivity(true);
+    try {
+      const res = await axios.get(`/api/admin/users/${user.id}/activity`, {
+        headers: getAuthHeader()
+      });
+      if (res.data?.success && res.data?.data) {
+        setActivityLogs(res.data.data);
+      } else {
+        setActivityLogs([]);
+      }
+    } catch (err) {
+      setActivityLogs([]);
+    } finally {
+      setLoadingActivity(false);
+    }
+  };
+
+  // Force Session Logout
+  const handleForceLogout = async (user) => {
+    try {
+      await axios.put(
+        `/api/admin/users/${user.id}/status`,
+        { status: 'inactive' },
+        { headers: getAuthHeader() }
+      );
+      message.success(`Revoked all active sessions for @${user.username}`);
+      fetchUsers();
+    } catch (err) {
+      message.error('Failed to revoke session');
+    }
+  };
+
+  const roleMetaMap = useMemo(() => {
+    const map = {};
+    ROLE_PRESETS.forEach((r) => {
+      map[r.key] = r;
+    });
+    return map;
+  }, []);
 
   const columns = [
     {
-      title: 'Operator Account',
+      title: 'User / Account',
       key: 'account',
       render: (_, record) => {
         const fullName = [record.first_name, record.last_name].filter(Boolean).join(' ');
         const seed = (record.id % 70) + 1;
+        const isSuper = record.role === 'owner' || record.level === 1;
+
         return (
-          <Space size={12}>
-            <Avatar size={38} src={record.avatar || `https://i.pravatar.cc/80?img=${seed}`} icon={<UserOutlined />} />
+          <Space orientation="horizontal" size={12}>
+            <Avatar
+              size={40}
+              src={record.avatar || `https://i.pravatar.cc/80?img=${seed}`}
+              icon={<UserOutlined />}
+              style={{ border: isSuper ? '2px solid #7c3aed' : '1px solid #e2e8f0' }}
+            />
             <div>
-              <Text strong style={{ display: 'block', color: adminTheme.text }}>
-                {fullName || record.username}
-              </Text>
-              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>
+              <Flex orientation="horizontal" align="center" gap={6}>
+                <Text strong style={{ color: adminTheme.text, fontSize: 13.5 }}>
+                  {fullName || record.username}
+                </Text>
+                {isSuper && <CrownOutlined style={{ color: '#7c3aed' }} />}
+              </Flex>
+              <Text style={{ color: adminTheme.subtext, fontSize: 12, display: 'block' }}>
                 @{record.username} &bull; {record.email}
               </Text>
             </div>
@@ -203,18 +428,23 @@ const UserManagement = () => {
       title: 'Role & Privilege Level',
       dataIndex: 'role',
       key: 'role',
-      render: (roleName, record) => {
-        const color = roleBadgeColor[roleName?.toLowerCase()] || 'blue';
+      render: (roleKey, record) => {
+        const meta = roleMetaMap[roleKey?.toLowerCase()] || { label: roleKey, color: 'blue', badge: `L${record.level || 3}` };
         return (
-          <Tag color={color} style={{ borderRadius: 6, fontWeight: 700, textTransform: 'uppercase', fontSize: 11 }}>
-            <SafetyCertificateOutlined style={{ marginRight: 4 }} />
-            {roleName || 'Operator'}
-          </Tag>
+          <Space orientation="horizontal" size={6} wrap>
+            <Tag color={meta.color} style={{ borderRadius: 6, fontWeight: 700, textTransform: 'uppercase', fontSize: 11 }}>
+              <SafetyCertificateOutlined style={{ marginRight: 4 }} />
+              {meta.label || roleKey}
+            </Tag>
+            <Tag style={{ borderRadius: 6, fontSize: 10, fontWeight: 700, background: adminTheme.cardMuted }}>
+              {meta.badge}
+            </Tag>
+          </Space>
         );
       }
     },
     {
-      title: 'Phone / Contact',
+      title: 'Contact / Phone',
       dataIndex: 'phone',
       key: 'phone',
       render: (phone) => (
@@ -225,29 +455,52 @@ const UserManagement = () => {
     },
     {
       title: 'Status',
-      dataIndex: 'active',
-      key: 'active',
-      width: 120,
-      render: (active, record) => (
-        <Space size={8}>
-          <Switch
-            checked={Boolean(active)}
-            onChange={(checked) => handleToggleStatus(record, checked)}
-            size="small"
-          />
-          <Text style={{ fontSize: 12, color: active ? '#16a34a' : '#94a3b8' }}>
-            {active ? 'Active' : 'Suspended'}
-          </Text>
-        </Space>
-      )
+      key: 'status',
+      width: 140,
+      render: (_, record) => {
+        const isActive = record.status === 'active' || record.active === 1;
+        return (
+          <Space orientation="horizontal" size={8}>
+            <Switch
+              checked={isActive}
+              onChange={(checked) => handleToggleStatus(record, checked)}
+              size="small"
+              style={{ background: isActive ? '#16a34a' : '#94a3b8' }}
+            />
+            <Text style={{ fontSize: 12, fontWeight: 600, color: isActive ? '#16a34a' : '#94a3b8' }}>
+              {isActive ? 'ACTIVE' : 'SUSPENDED'}
+            </Text>
+          </Space>
+        );
+      }
     },
     {
-      title: 'Actions',
+      title: 'Actions & Permissions',
       key: 'actions',
-      width: 110,
+      width: 220,
       render: (_, record) => (
-        <Space size={6}>
-          <Tooltip title="Edit Role & Details">
+        <Space orientation="horizontal" size={4}>
+          <Tooltip title="Configure Permission Matrix">
+            <Button
+              type="text"
+              size="small"
+              icon={<SafetyCertificateOutlined style={{ color: '#7c3aed' }} />}
+              onClick={() => handleOpenMatrix(record)}
+            >
+              Matrix
+            </Button>
+          </Tooltip>
+
+          <Tooltip title="View User Activity Audit">
+            <Button
+              type="text"
+              size="small"
+              icon={<HistoryOutlined style={{ color: '#0284c7' }} />}
+              onClick={() => handleOpenActivity(record)}
+            />
+          </Tooltip>
+
+          <Tooltip title="Edit Details & Password">
             <Button
               type="text"
               size="small"
@@ -255,10 +508,23 @@ const UserManagement = () => {
               onClick={() => handleOpenEdit(record)}
             />
           </Tooltip>
+
+          <Tooltip title="Force Terminate Session">
+            <Popconfirm
+              title="Force Logout"
+              description={`Revoke active token and force @${record.username} to log in again?`}
+              onConfirm={() => handleForceLogout(record)}
+              okText="Force Logout"
+              cancelText="Cancel"
+            >
+              <Button type="text" size="small" icon={<PoweroffOutlined style={{ color: '#ea580c' }} />} />
+            </Popconfirm>
+          </Tooltip>
+
           <Popconfirm
-            title="Delete User"
-            description={`Are you sure you want to permanently delete @${record.username}?`}
-            onConfirm={() => handleDelete(record.id)}
+            title="Delete User Account"
+            description={`Permanently delete @${record.username}? Soft-delete will mark as deleted_at.`}
+            onConfirm={() => handleDeleteUser(record.id, record.username)}
             okText="Delete"
             cancelText="Cancel"
             okButtonProps={{ danger: true }}
@@ -273,81 +539,112 @@ const UserManagement = () => {
   ];
 
   return (
-    <Space direction="vertical" size={18} style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+    <Space direction="vertical" size={20} style={{ width: '100%' }}>
+      {/* 1. Header Banner */}
+      <Flex orientation="horizontal" justify="space-between" align="flex-start" wrap="wrap" gap={12}>
         <div>
-          <Title level={4} style={{ margin: 0, color: adminTheme.text }}>
-            User Management &amp; Access Control
+          <Title level={3} style={{ margin: 0, color: adminTheme.text, fontWeight: 700 }}>
+            User Accounts &amp; Access Control
           </Title>
-          <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
-            Sole source of truth: <code>aura_users</code> &amp; <code>aura_groups</code>. All privileges derive strictly from the users database.
+          <Text style={{ color: adminTheme.subtext, fontSize: 13, marginTop: 4, display: 'block' }}>
+            Single Source of Truth: <code>aura_users</code> table. All role levels, authentication sessions, and granular module permissions are governed exclusively through this directory.
           </Text>
         </div>
-        <Space size={8}>
-          <Button icon={<ReloadOutlined />} onClick={fetchUsers} loading={loading}>
+
+        <Space orientation="horizontal" size={10} wrap>
+          <Button icon={<ReloadOutlined />} onClick={fetchUsers} loading={loading} style={{ borderRadius: 10 }}>
             Refresh
           </Button>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleOpenCreate}
-            style={{ borderRadius: 10, background: '#2563eb', borderColor: '#2563eb' }}
+            style={{ borderRadius: 10, background: '#2563eb', borderColor: '#2563eb', fontWeight: 600 }}
           >
-            Invite Operator
+            Invite User
           </Button>
         </Space>
-      </div>
+      </Flex>
 
-      <Card style={{ borderRadius: 16, border: `1px solid ${adminTheme.border}`, background: adminTheme.card }} styles={{ body: { padding: 20 } }}>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-          <Space size={10} wrap>
+      {/* 2. Filter & Stats Bar */}
+      <Card style={{ borderRadius: 16, border: `1px solid ${adminTheme.border}`, background: adminTheme.card }} styles={{ body: { padding: '16px 20px' } }}>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} md={10}>
             <Input
-              placeholder="Search by username, name, email, or phone..."
+              placeholder="Search by username, full name, email, or phone..."
               prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
               allowClear
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              style={{ width: 300, borderRadius: 10 }}
+              style={{ borderRadius: 10 }}
             />
-            <Select
-              value={selectedRole}
-              onChange={setSelectedRole}
-              style={{ width: 180 }}
-            >
-              <Option value="all">All Roles ({roles.length})</Option>
-              {roles.map((r) => (
-                <Option key={r.id} value={r.id}>
-                  {r.description || r.name}
-                </Option>
-              ))}
-            </Select>
-          </Space>
-          <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>
-            {filteredUsers.length} operator accounts registered
-          </Text>
-        </div>
+          </Col>
 
+          <Col xs={24} md={8}>
+            <Space orientation="horizontal" size={8} wrap>
+              <Select
+                value={selectedRole}
+                onChange={setSelectedRole}
+                style={{ width: 170 }}
+                placeholder="Filter Role"
+              >
+                <Option value="all">All Roles ({ROLE_PRESETS.length})</Option>
+                {ROLE_PRESETS.map((r) => (
+                  <Option key={r.key} value={r.key}>
+                    {r.label} ({r.badge})
+                  </Option>
+                ))}
+              </Select>
+
+              <Select
+                value={selectedStatus}
+                onChange={setSelectedStatus}
+                style={{ width: 130 }}
+                placeholder="Status"
+              >
+                <Option value="all">All Status</Option>
+                <Option value="active">Active</Option>
+                <Option value="inactive">Suspended</Option>
+              </Select>
+            </Space>
+          </Col>
+
+          <Col xs={24} md={6} style={{ textAlign: 'right' }}>
+            <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
+              <strong>{users.length}</strong> operator accounts found
+            </Text>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* 3. Main Users Data Table */}
+      <Card style={{ borderRadius: 16, border: `1px solid ${adminTheme.border}`, background: adminTheme.card }} styles={{ body: { padding: 0 } }}>
         <Table
           columns={columns}
-          dataSource={filteredUsers}
+          dataSource={users}
           rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 10 }}
+          pagination={{ pageSize: 12, showSizeChanger: true }}
           size="middle"
-          scroll={{ x: 680 }}
+          scroll={{ x: 800 }}
         />
       </Card>
 
-      {/* User Form Modal */}
+      {/* 4. User Create / Edit Modal */}
       <Modal
-        title={editingUser ? `Edit Operator @${editingUser.username}` : 'Invite New Operator'}
+        title={
+          <Flex orientation="horizontal" align="center" gap={8}>
+            <UserOutlined style={{ color: '#2563eb' }} />
+            <span>{editingUser ? `Edit Account: @${editingUser.username}` : 'Invite New Operator Account'}</span>
+          </Flex>
+        }
         open={isModalOpen}
-        onOk={handleSave}
+        onOk={handleSaveUser}
         onCancel={() => setIsModalOpen(false)}
-        okText={editingUser ? 'Save Changes' : 'Create Account'}
+        okText={editingUser ? 'Save Changes' : 'Create User'}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={form} layout="vertical" style={{ marginTop: 14 }}>
           <Row gutter={12}>
             <Col span={12}>
               <Form.Item
@@ -367,7 +664,7 @@ const UserManagement = () => {
                   { type: 'email', message: 'Valid email required' }
                 ]}
               >
-                <Input placeholder="john@aurasupply.com" />
+                <Input placeholder="john@aurasupply.biz" />
               </Form.Item>
             </Col>
           </Row>
@@ -388,14 +685,14 @@ const UserManagement = () => {
           <Row gutter={12}>
             <Col span={12}>
               <Form.Item
-                name="group_id"
-                label="Assigned Role (aura_groups)"
+                name="role"
+                label="Role & Privilege Preset"
                 rules={[{ required: true, message: 'Please select role' }]}
               >
-                <Select placeholder="Select role">
-                  {roles.map((r) => (
-                    <Option key={r.id} value={r.id}>
-                      {r.description || r.name} ({r.name})
+                <Select placeholder="Select role preset">
+                  {ROLE_PRESETS.map((r) => (
+                    <Option key={r.key} value={r.key}>
+                      {r.label} ({r.badge})
                     </Option>
                   ))}
                 </Select>
@@ -403,20 +700,185 @@ const UserManagement = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="phone" label="Phone Number">
-                <Input placeholder="e.g. 012 888 999" />
+                <Input placeholder="e.g. 012 345 678" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item
-            name="password"
-            label={editingUser ? 'Reset Password (leave empty to keep current)' : 'Account Password'}
-            rules={editingUser ? [] : [{ required: true, message: 'Password is required' }]}
-          >
-            <Input.Password placeholder="At least 6 characters" prefix={<KeyOutlined />} />
-          </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item
+                name="status"
+                label="Account Status"
+                rules={[{ required: true }]}
+              >
+                <Select>
+                  <Option value="active">Active</Option>
+                  <Option value="inactive">Suspended</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="password"
+                label={editingUser ? 'Reset Password (optional)' : 'Account Password'}
+                rules={editingUser ? [] : [{ required: true, message: 'Password is required' }]}
+              >
+                <Input.Password placeholder="At least 6 characters" prefix={<KeyOutlined />} />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
+
+      {/* 5. Permission Matrix Modal (Module x View/Create/Edit/Delete/Approve/Export) */}
+      <Modal
+        title={
+          <Flex orientation="horizontal" justify="space-between" align="center" style={{ width: '100%', paddingRight: 24 }}>
+            <Flex orientation="horizontal" align="center" gap={8}>
+              <SafetyCertificateOutlined style={{ color: '#7c3aed', fontSize: 18 }} />
+              <span>Permission Matrix: @{matrixUser?.username} ({matrixUser?.role})</span>
+            </Flex>
+            <Tag color="purple" style={{ borderRadius: 6, fontWeight: 700 }}>
+              LEVEL {matrixUser?.level || 3}
+            </Tag>
+          </Flex>
+        }
+        open={isMatrixOpen}
+        onOk={handleSaveMatrix}
+        confirmLoading={savingMatrix}
+        onCancel={() => setIsMatrixOpen(false)}
+        width={860}
+        okText="Save Permissions"
+        destroyOnClose
+      >
+        <Space direction="vertical" size={14} style={{ width: '100%', marginTop: 12 }}>
+          {/* Preset Buttons Bar */}
+          <Flex orientation="horizontal" justify="space-between" align="center" wrap="wrap" gap={8} style={{ background: adminTheme.cardMuted, padding: '10px 14px', borderRadius: 10 }}>
+            <div>
+              <Text strong style={{ fontSize: 12, marginRight: 8, color: adminTheme.text }}>
+                Quick Presets:
+              </Text>
+              {['admin', 'manager', 'salesman', 'stock', 'account', 'buyer', 'supplier'].map((role) => (
+                <Button
+                  key={role}
+                  size="small"
+                  onClick={() => handleApplyPreset(role)}
+                  style={{ marginRight: 4, borderRadius: 6, fontSize: 11.5 }}
+                >
+                  {role}
+                </Button>
+              ))}
+            </div>
+
+            <Space orientation="horizontal" size={6}>
+              <Button size="small" icon={<CheckSquareOutlined />} onClick={() => handleSelectAllPermissions(true)}>
+                Check All
+              </Button>
+              <Button size="small" icon={<BorderOutlined />} onClick={() => handleSelectAllPermissions(false)}>
+                Clear All
+              </Button>
+            </Space>
+          </Flex>
+
+          {/* Matrix Grid */}
+          <div style={{ maxHeight: 420, overflowY: 'auto', border: `1px solid ${adminTheme.border}`, borderRadius: 10 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 12.5 }}>
+              <thead>
+                <tr style={{ background: adminTheme.cardMuted, borderBottom: `1px solid ${adminTheme.border}` }}>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>ERP Module</th>
+                  {PERMISSION_ACTIONS.map((act) => (
+                    <th key={act.key} style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 600 }}>
+                      {act.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {PERMISSION_MODULES.map((mod, idx) => {
+                  const modPerms = matrixPermissions[mod.key] || {};
+                  return (
+                    <tr
+                      key={mod.key}
+                      style={{
+                        borderBottom: `1px solid ${adminTheme.border}`,
+                        background: idx % 2 === 0 ? 'transparent' : adminTheme.cardMuted
+                      }}
+                    >
+                      <td style={{ padding: '8px 14px' }}>
+                        <Text strong style={{ color: adminTheme.text, display: 'block', fontSize: 12.5 }}>
+                          {mod.label}
+                        </Text>
+                        <Text style={{ color: adminTheme.subtext, fontSize: 11 }}>
+                          {mod.description}
+                        </Text>
+                      </td>
+                      {PERMISSION_ACTIONS.map((act) => (
+                        <td key={act.key} style={{ padding: '8px', textAlign: 'center' }}>
+                          <Checkbox
+                            checked={Boolean(modPerms[act.key])}
+                            onChange={(e) => handleTogglePermission(mod.key, act.key, e.target.checked)}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <Alert
+            type="info"
+            showIcon
+            message="Granular Access Enforcement"
+            description="Permissions are saved directly into the user record in JSON format and verified on every server API request via the permission middleware."
+          />
+        </Space>
+      </Modal>
+
+      {/* 6. User Activity History Drawer */}
+      <Drawer
+        title={
+          <Flex orientation="horizontal" align="center" gap={8}>
+            <HistoryOutlined style={{ color: '#0284c7' }} />
+            <span>Activity Log: @{activityUser?.username}</span>
+          </Flex>
+        }
+        open={isActivityOpen}
+        onClose={() => setIsActivityOpen(false)}
+        width={480}
+      >
+        {loadingActivity ? (
+          <Text>Loading audit history...</Text>
+        ) : activityLogs.length === 0 ? (
+          <Alert message="No recorded activity yet for this account." type="info" />
+        ) : (
+          <Timeline
+            items={activityLogs.map((log) => ({
+              color: log.action.includes('delete') ? 'red' : log.action.includes('login') ? 'green' : 'blue',
+              children: (
+                <div>
+                  <Flex orientation="horizontal" justify="space-between" align="center">
+                    <Tag color="blue" style={{ borderRadius: 6, fontWeight: 700, fontSize: 10 }}>
+                      {log.action.toUpperCase()}
+                    </Tag>
+                    <Text style={{ fontSize: 11, color: adminTheme.subtext }}>
+                      {new Date(log.created_at).toLocaleString()}
+                    </Text>
+                  </Flex>
+                  <Text style={{ fontSize: 12, color: adminTheme.text, display: 'block', marginTop: 4 }}>
+                    Table: <code>{log.table_name}</code> (Record: {log.record_id || 'N/A'})
+                  </Text>
+                  <Text style={{ fontSize: 11, color: adminTheme.subtext }}>
+                    IP: {log.ip_address || '127.0.0.1'}
+                  </Text>
+                </div>
+              )
+            }))}
+          />
+        )}
+      </Drawer>
     </Space>
   );
 };

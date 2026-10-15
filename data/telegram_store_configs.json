@@ -19,14 +19,14 @@
     },
     "notificationTemplate": "detailed",
     "stats": {
-      "totalOrdersRouted": 69,
+      "totalOrdersRouted": 70,
       "lastRoutedAt": "Just now"
     },
     "status": "connected",
     "telegram_bot_username": "@auraglobalsource_bot",
     "last_test_result": {
       "success": true,
-      "timestamp": "2026-10-15T07:17:27.861Z",
+      "timestamp": "2026-10-15T09:10:27.919Z",
       "error": null
     }
   },
@@ -195,7 +195,7 @@
     "botUsername": "@aura_emenu_order_bot",
     "botToken": "",
     "botTokenPreview": "8613686...1lCw",
-    "botStatus": "connected",
+    "botStatus": "error",
     "groupId": "-1003109876543",
     "groupTitle": "Velour Apparel - VIP Stylist & Dispatch",
     "groupInviteLink": "https://t.me/+VelourApparelOrders",
@@ -208,8 +208,14 @@
     },
     "notificationTemplate": "detailed",
     "stats": {
-      "totalOrdersRouted": 35,
-      "lastRoutedAt": "3 days ago"
+      "totalOrdersRouted": 36,
+      "lastRoutedAt": "Just now"
+    },
+    "status": "error",
+    "last_test_result": {
+      "success": false,
+      "timestamp": "2026-10-15T09:10:46.576Z",
+      "error": "Unauthorized"
     }
   }
 ]

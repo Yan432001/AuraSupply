@@ -54,23 +54,15 @@ async function startServer() {
     console.warn('[Route] Warning mounting /api/cms:', err.message);
   }
 
-  // Telegram Multi-Store & Group Configuration & Test Ping Routes
+  // Telegram Concept: Multi-Store Configuration, Webhooks & Bot Services
   try {
-    const telegramStoresRoute = require('./API/app/config/route/admin/telegramStores.route');
-    app.use('/api/admin/telegram-stores', telegramStoresRoute);
-    app.use('/api/tma/telegram-stores', telegramStoresRoute);
-    console.log('[Route] Mounted /api/admin/telegram-stores & /api/tma/telegram-stores');
+    const Telegram = require('./Telegram');
+    app.use('/api/admin/telegram-stores', Telegram.storesRoute);
+    app.use('/api/tma/telegram-stores', Telegram.storesRoute);
+    app.use('/api/telegram', Telegram.webhookRoute);
+    console.log('[Telegram Controller] Mounted /api/admin/telegram-stores and /api/telegram webhooks');
   } catch (err) {
-    console.warn('[Route] Warning mounting telegram-stores routes:', err.message);
-  }
-
-  // Telegram Multi-Store Dedicated Webhook Routes
-  try {
-    const telegramWebhookRoute = require('./API/app/config/route/telegramWebhook.route');
-    app.use('/api/telegram', telegramWebhookRoute);
-    console.log('[Route] Mounted /api/telegram webhooks');
-  } catch (err) {
-    console.warn('[Route] Warning mounting telegram webhook route:', err.message);
+    console.warn('[Telegram Controller] Warning mounting Telegram routes:', err.message);
   }
 
   // Mount Admin & ERP Module Routes
@@ -125,19 +117,12 @@ async function startServer() {
   }
 
   // Telegram Bot Polling (Non-blocking & conflict resilient)
+  // Telegram Bot Daemon (Non-blocking & conflict resilient)
   try {
-    const bot = require('./API/app/services/telegramBot.service');
-    if (bot) {
-      bot.start({
-        onStart: (botInfo) => {
-          console.log(`[Telegram Bot] Started polling as @${botInfo.username}`);
-        }
-      }).catch((err) => {
-        console.log('[Telegram Bot] Notice: Bot polling conflict or disabled:', err.message);
-      });
-    }
+    const Telegram = require('./Telegram');
+    Telegram.startBot();
   } catch (err) {
-    console.log('[Telegram Bot] Running in local simulation mode:', err.message);
+    console.log('[Telegram Controller] Running in local simulation mode:', err.message);
   }
 
   // ---------------------------------------------------------------------------
