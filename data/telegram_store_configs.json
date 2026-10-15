@@ -26,7 +26,7 @@
     "telegram_bot_username": "@auraglobalsource_bot",
     "last_test_result": {
       "success": true,
-      "timestamp": "2026-10-15T09:44:57.796Z",
+      "timestamp": "2026-10-15T11:01:36.581Z",
       "error": null
     }
   },
@@ -38,10 +38,10 @@
     "botUsername": "@aura_emenu_order_bot",
     "botToken": "",
     "botTokenPreview": "8613686...1lCw",
-    "botStatus": "error",
-    "groupId": "-1002489102938",
+    "botStatus": "connected",
+    "groupId": "-5004978007",
     "groupTitle": "Aura Coffee - Baristas & Kitchen Orders",
-    "groupInviteLink": "https://t.me/+AuraCoffeeKitchen",
+    "groupInviteLink": "https://t.me/+9YYwU2Lfz600YWY1",
     "permissions": {
       "canSendOrders": true,
       "canUpdateStatus": true,
@@ -54,12 +54,12 @@
       "totalOrdersRouted": 144,
       "lastRoutedAt": "Just now"
     },
-    "status": "error",
+    "status": "connected",
     "telegram_bot_username": "@aura_emenu_order_bot",
     "last_test_result": {
-      "success": false,
-      "timestamp": "2026-10-15T09:44:53.807Z",
-      "error": "Unauthorized"
+      "success": true,
+      "timestamp": "2026-10-15T11:02:12.534Z",
+      "error": null
     }
   },
   {

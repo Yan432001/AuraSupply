@@ -127,10 +127,10 @@ exports.handleStoreWebhook = async (req, res) => {
       }
 
       const baseUrl = (
-        process.env.APP_URL ||
         process.env.PUBLIC_APP_URL ||
+        process.env.APP_URL ||
         process.env.WEBAPP_URL ||
-        'https://ais-dev-wgkyihjcdgsbsiwlny42zb-616191327265.asia-east1.run.app'
+        'http://localhost:3000'
       ).replace(/\/$/, '');
       const webAppUrl = `${baseUrl}/shop/${storeSlug}`;
       const digitalMenuUrl = `${baseUrl}/shop/menu/${storeSlug}`;

@@ -1,2 +1,2 @@
 // Re-export from unified Telegram module for backwards compatibility
-module.exports = require('../../../Telegram').bot;
+module.exports = require('../../../Telegram/bot/bot.service');

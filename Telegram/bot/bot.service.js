@@ -7,12 +7,12 @@ const rawSimpleData = require('../../data/simpleData');
 const simpleData = rawSimpleData.default || rawSimpleData;
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN || '8613686625:AAFe8-04LvQumEXZ8-MBjbNSDozba3E1lCw';
-// Telegram Mini Apps strictly require HTTPS URLs
+// Base application URL for Telegram Mini Apps and Web Menus
 const webAppBaseUrl = (
-  process.env.APP_URL ||
   process.env.PUBLIC_APP_URL ||
+  process.env.APP_URL ||
   process.env.WEBAPP_URL ||
-  'https://ais-dev-wgkyihjcdgsbsiwlny42zb-616191327265.asia-east1.run.app'
+  'http://localhost:3000'
 ).replace(/\/$/, '');
 
 let bot = null;
