@@ -442,8 +442,7 @@ const ThemePublicController = {
       // Strictly stores from companies table where group_name = 'biller' and group_id IS NULL
       let whereConditions = [
         "c.group_name = 'biller'",
-        "(c.group_id IS NULL OR c.group_id = 0)",
-        "c.is_active = 1"
+        "c.group_id IS NULL"
       ];
       const params = [];
 
@@ -534,7 +533,7 @@ const ThemePublicController = {
           COUNT(DISTINCT p.id) AS products_count
         FROM aura_companies c
         LEFT JOIN aura_products p ON p.biller_id = c.id AND p.status = 1
-        WHERE c.group_name = 'biller' AND (c.group_id IS NULL OR c.group_id = 0)
+        WHERE c.group_name = 'biller' AND c.group_id IS NULL
           AND (${isNumeric ? 'c.id = ? OR c.slug = ? OR c.store_slug = ?' : 'c.slug = ? OR c.store_slug = ? OR c.id = ?'})
         GROUP BY c.id
         LIMIT 1
@@ -1217,7 +1216,7 @@ const ThemePublicController = {
         FROM aura_companies c
         LEFT JOIN aura_projects pr ON pr.biller_id = c.id
         LEFT JOIN aura_products p ON p.biller_id = c.id
-        WHERE c.group_name = 'biller' AND (c.group_id IS NULL OR c.group_id = 0)
+        WHERE c.group_name = 'biller' AND c.group_id IS NULL
         GROUP BY c.id
         ORDER BY c.id ASC
       `);

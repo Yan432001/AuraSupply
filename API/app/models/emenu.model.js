@@ -5,7 +5,7 @@ const EMenuModel = {
     const sql = `
       SELECT id, name, company, address, phone, email, logo, banner, theme_color, currency_code, currency_symbol, is_active
       FROM aura_companies
-      WHERE slug = ? AND (group_name = 'biller' OR group_name IS NULL)
+      WHERE slug = ? AND group_name = 'biller' AND group_id IS NULL
       LIMIT 1
     `;
     const [rows] = await pool.query(sql, [slug]);
@@ -16,7 +16,7 @@ const EMenuModel = {
     const sql = `
       SELECT id, name, company, slug, logo, banner, theme_color, currency_code, currency_symbol, is_active
       FROM aura_companies
-      WHERE id = ? AND (group_name = 'biller' OR group_name IS NULL)
+      WHERE id = ? AND group_name = 'biller' AND group_id IS NULL
       LIMIT 1
     `;
     const [rows] = await pool.query(sql, [billerId]);
@@ -50,16 +50,16 @@ const EMenuModel = {
       SELECT DISTINCT c.id, c.code, c.name, c.image
       FROM aura_categories c
       INNER JOIN aura_products p ON p.category_id = c.id
-      WHERE (p.biller_id = ? OR p.biller_id IS NULL OR ? = 0)
+      WHERE p.biller_id = ?
       ORDER BY c.name ASC
     `;
-    const [rows] = await pool.query(sql, [billerId, billerId]);
+    const [rows] = await pool.query(sql, [billerId]);
     return rows;
   },
 
   async getProductsByStore(billerId, { categoryId, query, offset, limit }) {
-    let whereConditions = ['(p.biller_id = ? OR p.biller_id IS NULL OR ? = 0)'];
-    let params = [billerId, billerId];
+    let whereConditions = ['p.biller_id = ?'];
+    let params = [billerId];
 
     if (categoryId) {
       whereConditions.push('p.category_id = ?');

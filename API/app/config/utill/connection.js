@@ -31,7 +31,7 @@ try {
   realPool = mysql.createPool({
     host,
     user: process.env.DB_USER || config.db?.USER || 'root',
-    password: process.env.DB_PASSWORD || config.db?.PASSWORD || '43200111',
+    password: process.env.DB_PASSWORD || process.env.DB_PASS || config.db?.PASSWORD || '',
     database: dbName,
     port: Number(process.env.DB_PORT || config.db?.PORT || 3306),
     waitForConnections: true,

@@ -16,7 +16,7 @@ const StoreController = {
           COUNT(DISTINCT p.id) AS productsCount
         FROM aura_companies c
         LEFT JOIN aura_products p ON p.biller_id = c.id AND p.status = 1
-        WHERE c.group_name = 'biller' AND (c.group_id IS NULL OR c.group_id = 0)
+        WHERE c.group_name = 'biller' AND c.group_id IS NULL
         GROUP BY c.id
         ORDER BY c.id ASC
       `);
@@ -71,7 +71,7 @@ const StoreController = {
           c.operating_hours
         FROM aura_companies c
         WHERE (${isNumeric ? 'c.id = ? OR c.slug = ? OR c.store_slug = ?' : 'c.slug = ? OR c.store_slug = ? OR c.id = ?'})
-          AND c.group_name = 'biller' AND (c.group_id IS NULL OR c.group_id = 0)
+          AND c.group_name = 'biller' AND c.group_id IS NULL
         LIMIT 1
       `, [slug, slug, slug]);
 
@@ -176,7 +176,7 @@ const StoreController = {
         JOIN aura_products p ON p.category_id = c.id
         JOIN aura_companies co ON p.biller_id = co.id
         WHERE (co.slug = ? OR co.store_slug = ? OR co.id = ?)
-          AND co.group_name = 'biller' AND (co.group_id IS NULL OR co.group_id = 0)
+          AND co.group_name = 'biller' AND co.group_id IS NULL
           AND p.status = 1
       `, [slug, slug, slug]);
       return res.json({ status: true, data: catRows });
@@ -198,7 +198,7 @@ const StoreController = {
         LEFT JOIN aura_categories c ON p.category_id = c.id
         JOIN aura_companies co ON p.biller_id = co.id
         WHERE (co.slug = ? OR co.store_slug = ? OR co.id = ?)
-          AND co.group_name = 'biller' AND (co.group_id IS NULL OR co.group_id = 0)
+          AND co.group_name = 'biller' AND co.group_id IS NULL
           AND p.status = 1
       `;
       const params = [slug, slug, slug];

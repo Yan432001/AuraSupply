@@ -283,18 +283,17 @@ export default function WebEMenuPage() {
 
   // Total foods count for active store
   const storeTotalFoodsCount = useMemo(() => {
-    const list = activeFoods.filter((f) => f.storeSlug === currentSlug);
-    return list.length || activeFoods.length;
-  }, [currentSlug, activeFoods]);
+    const list = activeFoods.filter((f) => 
+      f.storeSlug === currentSlug || (currentStore && Number(f.biller_id) === Number(currentStore.id))
+    );
+    return list.length;
+  }, [currentSlug, currentStore, activeFoods]);
 
   // Filter foods based on store, category, favorites, and real-time search query
   const displayedFoods = useMemo(() => {
-    let list = activeFoods.filter((f) => f.storeSlug === currentSlug);
-
-    // If store has no items for this slug, show all
-    if (list.length === 0) {
-      list = activeFoods;
-    }
+    let list = activeFoods.filter((f) => 
+      f.storeSlug === currentSlug || (currentStore && Number(f.biller_id) === Number(currentStore.id))
+    );
 
     if (showFavoritesOnly) {
       list = list.filter((f) => isFavorite(f.id));

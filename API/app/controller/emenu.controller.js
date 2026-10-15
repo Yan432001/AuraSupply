@@ -13,7 +13,7 @@ exports.getStoreList = async (req, res) => {
              COUNT(DISTINCT p.id) AS products_count
       FROM aura_companies c
       LEFT JOIN aura_products p ON p.biller_id = c.id AND p.status = 1
-      WHERE c.group_name = 'biller' AND (c.group_id IS NULL OR c.group_id = 0) AND c.is_active = 1
+      WHERE c.group_name = 'biller' AND c.group_id IS NULL
       GROUP BY c.id
       ORDER BY c.id ASC
     `);
