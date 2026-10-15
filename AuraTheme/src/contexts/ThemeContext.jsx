@@ -721,6 +721,35 @@ export const ThemeProvider = ({ children }) => {
       .admin-layout h1.ant-typography, .admin-layout h2.ant-typography, .admin-layout h3.ant-typography, .admin-layout h4.ant-typography, .admin-layout h5.ant-typography {
         color: ${textVal} !important;
       }
+
+      /* Dynamic Theme Preset Overrides for Ant Controls */
+      .admin-layout .ant-tabs-ink-bar {
+        background: ${primary} !important;
+      }
+
+      .admin-layout .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+        color: ${primary} !important;
+        font-weight: 700 !important;
+      }
+
+      .admin-layout .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+        color: ${primary} !important;
+        border-color: ${primary} !important;
+      }
+
+      .admin-layout .ant-tag-blue, .admin-layout .ant-tag-processing {
+        color: ${primary} !important;
+        background: ${primary}18 !important;
+        border-color: ${primary}33 !important;
+      }
+
+      .admin-layout .ant-btn-link {
+        color: ${primary} !important;
+      }
+
+      .admin-layout .ant-badge .ant-badge-count {
+        background: ${primary} !important;
+      }
     `;
 
     return () => {

@@ -90,10 +90,10 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
       const isSelected = activeBranch?.id === b.id;
       return {
         key: `branch-${b.id}`,
-        icon: isSelected ? <CheckOutlined style={{ color: '#16a34a' }} /> : <ShopOutlined style={{ color: '#2563eb' }} />,
+        icon: isSelected ? <CheckOutlined style={{ color: '#16a34a' }} /> : <ShopOutlined style={{ color: adminTheme.primary }} />,
         label: (
           <div style={{ padding: '2px 0' }}>
-            <div style={{ fontWeight: isSelected ? 700 : 500, color: isSelected ? '#2563eb' : undefined }}>
+            <div style={{ fontWeight: isSelected ? 700 : 500, color: isSelected ? adminTheme.primary : undefined }}>
               {b.name}
             </div>
             <div style={{ fontSize: 11, color: adminTheme.subtext }}>
@@ -209,9 +209,9 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                   style={{
                     fontSize: 10,
                     fontWeight: 600,
-                    color: '#60a5fa',
-                    background: 'rgba(59, 130, 246, 0.12)',
-                    border: '1px solid rgba(59, 130, 246, 0.25)',
+                    color: adminTheme.primary,
+                    background: `${adminTheme.primary}18`,
+                    border: `1px solid ${adminTheme.primary}33`,
                     padding: '1.5px 7px',
                     borderRadius: 999,
                     letterSpacing: '0.04em',

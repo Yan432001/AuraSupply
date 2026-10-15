@@ -353,7 +353,7 @@ const AdminModulesManager = () => {
             <Title level={3} style={{ margin: 0, color: adminTheme.text, fontWeight: 700 }}>
               ERP Modules &amp; Feature Switchboard
             </Title>
-            <Tag color="blue" style={{ borderRadius: 8, fontWeight: 700, padding: '2px 10px' }}>
+            <Tag style={{ borderRadius: 8, fontWeight: 700, padding: '2px 10px', color: adminTheme.primary, background: `${adminTheme.primary}18`, borderColor: `${adminTheme.primary}33` }}>
               Single Users Database &bull; Real-time Sync
             </Tag>
           </Flex>
@@ -404,9 +404,11 @@ const AdminModulesManager = () => {
       <Card
         style={{
           borderRadius: 16,
-          border: '1px solid #bfdbfe',
-          background: 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)',
-          boxShadow: '0 4px 12px rgba(37, 99, 235, 0.05)'
+          border: `1px solid ${adminTheme.primary}33`,
+          background: adminTheme.isDark
+            ? 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)'
+            : `linear-gradient(135deg, ${adminTheme.primary}12 0%, #f0fdf4 100%)`,
+          boxShadow: `0 4px 14px ${adminTheme.primary}15`
         }}
         styles={{ body: { padding: '20px 24px' } }}
       >
@@ -418,29 +420,29 @@ const AdminModulesManager = () => {
                   width: 52,
                   height: 52,
                   borderRadius: 14,
-                  background: '#2563eb',
+                  background: adminTheme.primary,
                   color: '#fff',
                   display: 'grid',
                   placeItems: 'center',
                   fontSize: 26,
-                  boxShadow: '0 6px 16px rgba(37, 99, 235, 0.25)'
+                  boxShadow: `0 6px 16px ${adminTheme.primary}44`
                 }}
               >
                 <SafetyCertificateOutlined />
               </div>
               <div>
                 <Flex align="center" gap={8} wrap="wrap">
-                  <Text strong style={{ fontSize: 16, color: '#1e3a8a' }}>
+                  <Text strong style={{ fontSize: 16, color: adminTheme.isDark ? '#f8fafc' : '#0f172a' }}>
                     {licenseData?.license_name || 'Aura Enterprise Supply B2B'}
                   </Text>
                   <Tag color="success" style={{ borderRadius: 8, fontWeight: 700, padding: '2px 8px' }}>
                     ACTIVE ENTERPRISE
                   </Tag>
-                  <Tag color="blue" style={{ borderRadius: 8, fontWeight: 600 }}>
+                  <Tag style={{ borderRadius: 8, fontWeight: 600, color: adminTheme.primary, background: `${adminTheme.primary}18`, borderColor: `${adminTheme.primary}33` }}>
                     {licenseData?.domain || 'aurasupply.biz'}
                   </Tag>
                 </Flex>
-                <Text style={{ color: '#475569', fontSize: 12.5, display: 'block', marginTop: 3 }}>
+                <Text style={{ color: adminTheme.subtext, fontSize: 12.5, display: 'block', marginTop: 3 }}>
                   License Key: <code>{licenseData?.license_key || 'AURA-ENT-2026-X892-PRO'}</code> &bull; Unlimited Users &amp; Unlimited Multi-warehouses
                 </Text>
               </div>
@@ -450,8 +452,8 @@ const AdminModulesManager = () => {
           <Col xs={24} md={10} style={{ textAlign: 'right' }}>
             <Flex justify="flex-end" align="center" gap={16} wrap="wrap">
               <div style={{ textAlign: 'right' }}>
-                <Text style={{ fontSize: 11, color: '#64748b', display: 'block' }}>VALIDITY PERIOD</Text>
-                <Text strong style={{ fontSize: 14, color: '#0f172a' }}>
+                <Text style={{ fontSize: 11, color: adminTheme.subtext, display: 'block' }}>VALIDITY PERIOD</Text>
+                <Text strong style={{ fontSize: 14, color: adminTheme.text }}>
                   Until Dec 31, 2030 ({licenseData?.days_remaining || 1700} days left)
                 </Text>
               </div>
@@ -467,8 +469,8 @@ const AdminModulesManager = () => {
                 style={{
                   borderRadius: 10,
                   fontWeight: 600,
-                  borderColor: '#2563eb',
-                  color: '#2563eb'
+                  borderColor: adminTheme.primary,
+                  color: adminTheme.primary
                 }}
               >
                 Update License
@@ -604,27 +606,31 @@ const AdminModulesManager = () => {
         const catModules = groupedModules[catName] || [];
         if (catModules.length === 0) return null;
 
-        const catTheme = categoryColors[catName] || { bg: '#f8fafc', border: '#e2e8f0', text: '#334155' };
+        const isDark = adminTheme.isDark;
+        const primary = adminTheme.primary;
+        const catHeaderBg = isDark ? 'rgba(255, 255, 255, 0.04)' : `${primary}08`;
+        const catHeaderBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : `${primary}22`;
+        const catHeaderColor = isDark ? '#f8fafc' : adminTheme.text;
 
         return (
-          <div key={catName} style={{ marginBottom: 12 }}>
+          <div key={catName} style={{ marginBottom: 16 }}>
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
-                padding: '8px 14px',
-                background: catTheme.bg,
-                border: `1px solid ${catTheme.border}`,
+                padding: '9px 16px',
+                background: catHeaderBg,
+                border: `1px solid ${catHeaderBorder}`,
                 borderRadius: 12,
                 marginBottom: 16
               }}
             >
-              <ApartmentOutlined style={{ color: catTheme.text, fontSize: 16 }} />
-              <Text strong style={{ color: catTheme.text, fontSize: 14 }}>
+              <ApartmentOutlined style={{ color: primary, fontSize: 16 }} />
+              <Text strong style={{ color: catHeaderColor, fontSize: 14 }}>
                 {catName}
               </Text>
-              <Tag style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>
+              <Tag style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11, background: `${primary}18`, color: primary, border: `1px solid ${primary}33` }}>
                 {catModules.length} module{catModules.length > 1 ? 's' : ''}
               </Tag>
             </div>
@@ -639,7 +645,7 @@ const AdminModulesManager = () => {
                     <Card
                       style={{
                         ...cardStyle,
-                        borderColor: isOpen ? adminTheme.border : '#fed7aa',
+                        borderColor: isOpen ? `${primary}44` : (isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0'),
                         opacity: isOpen ? 1 : 0.85,
                         position: 'relative',
                         overflow: 'hidden'
@@ -654,7 +660,7 @@ const AdminModulesManager = () => {
                           left: 0,
                           right: 0,
                           height: 4,
-                          background: isOpen ? (m.accent || '#2563eb') : '#cbd5e1'
+                          background: isOpen ? (m.accent || primary) : (isDark ? 'rgba(255,255,255,0.1)' : '#cbd5e1')
                         }}
                       />
 
@@ -666,8 +672,8 @@ const AdminModulesManager = () => {
                               width: 44,
                               height: 44,
                               borderRadius: 12,
-                              background: isOpen ? `${m.accent || '#2563eb'}18` : adminTheme.cardMuted,
-                              color: isOpen ? (m.accent || '#2563eb') : adminTheme.subtext,
+                              background: isOpen ? `${m.accent || primary}18` : adminTheme.cardMuted,
+                              color: isOpen ? (m.accent || primary) : adminTheme.subtext,
                               display: 'grid',
                               placeItems: 'center',
                               fontSize: 22,
@@ -737,7 +743,7 @@ const AdminModulesManager = () => {
                                   <Text style={{ fontSize: 12, color: adminTheme.text, fontWeight: 600 }}>
                                     Sub-modules &amp; Capabilities ({m.submodules.length})
                                   </Text>
-                                  <Badge count={m.submodules.filter((s) => submoduleStates[s.key] !== false).length} style={{ backgroundColor: '#2563eb' }} />
+                                  <Badge count={m.submodules.filter((s) => submoduleStates[s.key] !== false).length} style={{ backgroundColor: primary }} />
                                 </Flex>
                               ),
                               children: (
@@ -784,7 +790,7 @@ const AdminModulesManager = () => {
                             size="small"
                             icon={<EyeOutlined />}
                             onClick={() => navigate(`/admins?module=${m.key}`)}
-                            style={{ padding: 0, fontWeight: 600, color: m.accent || '#2563eb' }}
+                            style={{ padding: 0, fontWeight: 600, color: primary }}
                           >
                             Explore Module
                           </Button>

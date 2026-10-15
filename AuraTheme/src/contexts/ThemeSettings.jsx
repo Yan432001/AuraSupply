@@ -397,24 +397,26 @@ const ThemeSettings = ({ buttonStyle }) => {
                       const isSelected = themePreset === preset.key;
                       return (
                         <Col span={12} key={preset.key}>
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => {
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               changePreset(preset.key);
-                              message.success(`Switched to ${preset.name} Theme Concept!`);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                changePreset(preset.key);
+                              try {
+                                message.destroy();
                                 message.success(`Switched to ${preset.name} Theme Concept!`);
-                              }
+                              } catch (_) {}
                             }}
                             style={{
+                              display: 'block',
+                              width: '100%',
+                              textAlign: 'left',
                               padding: '12px 14px',
                               borderRadius: 14,
-                              background: isSelected ? (themeMode === 'dark' ? 'rgba(255,255,255,0.06)' : '#ffffff') : adminTheme.card,
+                              background: isSelected
+                                ? (themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : '#ffffff')
+                                : (themeMode === 'dark' ? 'rgba(255,255,255,0.02)' : adminTheme.card),
                               border: isSelected
                                 ? `2px solid ${preset.primary}`
                                 : `1px solid ${adminTheme.border}`,
@@ -422,9 +424,12 @@ const ThemeSettings = ({ buttonStyle }) => {
                               position: 'relative',
                               transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
                               boxShadow: isSelected
-                                ? `0 8px 24px -4px ${preset.primary}44, 0 0 0 2px ${preset.primary}22`
+                                ? `0 8px 24px -4px ${preset.primary}55, 0 0 0 2px ${preset.primary}25`
                                 : '0 2px 6px rgba(0,0,0,0.02)',
                               transform: isSelected ? 'scale(1.02)' : 'none',
+                              outline: 'none',
+                              userSelect: 'none',
+                              WebkitTapHighlightColor: 'transparent',
                             }}
                           >
                             {isSelected && (
@@ -442,6 +447,7 @@ const ThemeSettings = ({ buttonStyle }) => {
                                   alignItems: 'center',
                                   justifyContent: 'center',
                                   boxShadow: `0 2px 8px ${preset.primary}88`,
+                                  zIndex: 2,
                                 }}
                               >
                                 <CheckOutlined style={{ fontSize: 11 }} />
@@ -465,7 +471,7 @@ const ThemeSettings = ({ buttonStyle }) => {
                                 <div key={idx} style={{ flex: 1, background: color }} />
                               ))}
                             </div>
-                          </div>
+                          </button>
                         </Col>
                       );
                     })}

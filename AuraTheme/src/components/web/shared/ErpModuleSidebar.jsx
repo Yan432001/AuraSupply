@@ -499,10 +499,10 @@ const hasUserPermission = (user, moduleKey) => {
                     }}
                     style={{
                       width: '100%',
-                      border: isActive && !activeMenuKey
+                      border: isActive
                         ? `1px solid ${adminTheme.primary}55`
                         : '1px solid transparent',
-                      background: isActive && !activeMenuKey
+                      background: isActive
                         ? adminTheme.sidebarActiveBg
                         : 'transparent',
                       color: isActive ? adminTheme.sidebarActiveText : adminTheme.text,
