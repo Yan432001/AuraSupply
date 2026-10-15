@@ -16,10 +16,6 @@ export function normalizeImageUrl(img) {
     return DEFAULT_NO_IMAGE;
   }
   const clean = img.trim();
-  // Discard any legacy unsplash / picsum placeholder URLs
-  if (clean.includes('unsplash.com') || clean.includes('picsum.photos')) {
-    return DEFAULT_NO_IMAGE;
-  }
   if (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('/') || clean.startsWith('data:')) {
     return clean;
   }
@@ -128,6 +124,9 @@ export function mapShop(s) {
     logoUrl: logo,
     banner,
     heroImage: banner,
+    logoText: s.name ? (s.name.length > 20 ? s.name.split(' ').slice(0, 2).join(' ') : s.name) : 'STORE',
+    summary: s.summary || s.cf1 || s.tagline || s.company || 'Artisan Direct Supplier',
+    branch: s.city || 'Phnom Penh',
     phone: s.phone || '',
     email: s.email || '',
     address: s.address || '',

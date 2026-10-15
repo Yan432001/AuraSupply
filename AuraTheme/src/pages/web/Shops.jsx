@@ -33,6 +33,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchShops, fetchBranches, fetchProducts } from '../../utils/apiconfig';
+import { mapShop, mapProduct } from '../../utils/dataMappers';
 import { publicTheme } from '../../utils/webTheme';
 import TelegramMiniAppModal from '../../components/web/shared/TelegramMiniAppModal';
 import RetailShopCard from '../../components/web/shared/RetailShopCard';
@@ -67,14 +68,17 @@ export default function Shops() {
     ])
       .then(([shopsRes, branchesRes, productsRes]) => {
         if (!isMounted) return;
-        if (shopsRes?.success && Array.isArray(shopsRes.data)) {
-          setShops(shopsRes.data);
+        const rawShops = shopsRes?.data || shopsRes?.shops || shopsRes?.stores || (Array.isArray(shopsRes) ? shopsRes : []);
+        if (Array.isArray(rawShops)) {
+          setShops(rawShops.map(mapShop).filter(Boolean));
         }
-        if (branchesRes?.success && Array.isArray(branchesRes.data)) {
-          setBranches(branchesRes.data);
+        const rawBranches = branchesRes?.data || branchesRes?.branches || (Array.isArray(branchesRes) ? branchesRes : []);
+        if (Array.isArray(rawBranches)) {
+          setBranches(rawBranches);
         }
-        if (productsRes?.success && Array.isArray(productsRes.data)) {
-          setProducts(productsRes.data);
+        const rawProducts = productsRes?.data || productsRes?.products || (Array.isArray(productsRes) ? productsRes : []);
+        if (Array.isArray(rawProducts)) {
+          setProducts(rawProducts.map(mapProduct).filter(Boolean));
         }
         setLoading(false);
       })
@@ -158,11 +162,12 @@ export default function Shops() {
     const query = search.toLowerCase().trim();
 
     return shops.filter((shop) => {
-      if (shop.activeOnWebsite === false) return false;
+      if (shop.activeOnWebsite === false || shop.is_active === false) return false;
 
       const matchesSearch =
         !query ||
         shop.name?.toLowerCase().includes(query) ||
+        shop.company?.toLowerCase().includes(query) ||
         shop.summary?.toLowerCase().includes(query) ||
         shop.tagline?.toLowerCase().includes(query) ||
         shop.city?.toLowerCase().includes(query) ||

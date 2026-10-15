@@ -33,6 +33,7 @@ import ProductQuickViewModal from '../../components/web/shared/ProductQuickViewM
 import RetailProductCard from '../../components/web/shared/RetailProductCard';
 import TelegramMiniAppModal from '../../components/web/shared/TelegramMiniAppModal';
 import { fetchShopById, fetchProducts } from '../../utils/apiconfig';
+import { mapShop, mapProduct } from '../../utils/dataMappers';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { animateAddToCart } from '../../utils/helpers';
@@ -62,17 +63,20 @@ export default function ShopDetail() {
     fetchShopById(shopId)
       .then((res) => {
         if (!isMounted) return;
-        if (res?.success && res.data) {
-          setShop(res.data);
-          const storeBillerId = res.data.biller_id || res.data.id;
+        const rawShop = res?.data || res?.shop || res?.store || (res?.id ? res : null);
+        if (rawShop && typeof rawShop === 'object') {
+          const mapped = mapShop(rawShop);
+          setShop(mapped);
+          const storeBillerId = mapped.biller_id || mapped.id;
           return fetchProducts({ biller_id: storeBillerId, limit: 100 });
         }
         return null;
       })
       .then((pRes) => {
         if (!isMounted) return;
-        if (pRes?.success && Array.isArray(pRes.data)) {
-          setShopProducts(pRes.data);
+        const rawProds = pRes?.data || pRes?.products || (Array.isArray(pRes) ? pRes : []);
+        if (Array.isArray(rawProds)) {
+          setShopProducts(rawProds.map(mapProduct).filter(Boolean));
         }
         setLoading(false);
       })

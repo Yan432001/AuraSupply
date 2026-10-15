@@ -48,10 +48,10 @@ const StoreController = {
           is_active: 1,
           is_open: true
         }));
-        return res.status(200).json({ status: true, data: stores, stores });
+        return res.status(200).json({ success: true, status: true, data: stores, stores, shops: stores });
       }
 
-      return res.status(200).json({ status: true, data: [], stores: [] });
+      return res.status(200).json({ success: true, status: true, data: [], stores: [], shops: [] });
     } catch (err) {
       console.warn('DB getStores error:', err.message);
       return res.status(500).json({ status: false, error: err.message, data: [], stores: [] });
@@ -139,6 +139,7 @@ const StoreController = {
         `, [s.id]);
 
         return res.json({
+          success: true,
           status: true,
           data: store,
           store,

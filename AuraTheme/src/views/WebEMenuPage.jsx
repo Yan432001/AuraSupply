@@ -59,13 +59,14 @@ export default function WebEMenuPage() {
     setLoading(true);
     Promise.all([fetchShops(), fetchProducts({ limit: 150 })])
       .then(([sRes, pRes]) => {
-        if (!isMounted) return;
-        if (sRes?.success && Array.isArray(sRes.data)) {
-          setDbStores(sRes.data);
+        const rawStores = sRes?.data || sRes?.shops || sRes?.stores || (Array.isArray(sRes) ? sRes : []);
+        if (Array.isArray(rawStores)) {
+          setDbStores(rawStores);
         }
-        if (pRes?.success && Array.isArray(pRes.data) && pRes.data.length > 0) {
-          const mapped = pRes.data.map((p) => {
-            const foundStore = sRes?.data?.find((s) => Number(s.id) === Number(p.shop_id || p.biller_id));
+        const rawProds = pRes?.data || pRes?.products || (Array.isArray(pRes) ? pRes : []);
+        if (Array.isArray(rawProds) && rawProds.length > 0) {
+          const mapped = rawProds.map((p) => {
+            const foundStore = rawStores.find((s) => Number(s.id) === Number(p.shop_id || p.biller_id));
             return {
               id: String(p.id),
               rawId: p.id,

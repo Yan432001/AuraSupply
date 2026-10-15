@@ -39,6 +39,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { fetchProducts, fetchCategories, fetchShops, fetchShopSettings } from '../../utils/apiconfig';
+import { mapShop, mapProduct, mapCategory, mapShopSettings } from '../../utils/dataMappers';
 import { useCart } from '../../contexts/CartContext';
 
 import { useWishlist } from '../../contexts/WishlistContext';
@@ -101,17 +102,21 @@ export default function Home() {
       fetchShopSettings()
     ]).then(([shopsRes, prodsRes, catsRes, settingsRes]) => {
       if (!isMounted) return;
-      if (shopsRes?.success && Array.isArray(shopsRes.data)) {
-        setShops(shopsRes.data);
+      const rawShops = shopsRes?.data || shopsRes?.shops || shopsRes?.stores || (Array.isArray(shopsRes) ? shopsRes : []);
+      if (Array.isArray(rawShops)) {
+        setShops(rawShops.map(mapShop).filter(Boolean));
       }
-      if (prodsRes?.success && Array.isArray(prodsRes.data)) {
-        setRetailProducts(prodsRes.data);
+      const rawProds = prodsRes?.data || prodsRes?.products || (Array.isArray(prodsRes) ? prodsRes : []);
+      if (Array.isArray(rawProds)) {
+        setRetailProducts(rawProds.map(mapProduct).filter(Boolean));
       }
-      if (catsRes?.success && Array.isArray(catsRes.data)) {
-        setCategories(catsRes.data);
+      const rawCats = catsRes?.data || catsRes?.categories || (Array.isArray(catsRes) ? catsRes : []);
+      if (Array.isArray(rawCats)) {
+        setCategories(rawCats.map(mapCategory).filter(Boolean));
       }
-      if (settingsRes?.success && settingsRes.data) {
-        setStorefrontSettings(settingsRes.data);
+      const rawSettings = settingsRes?.data || settingsRes;
+      if (rawSettings && typeof rawSettings === 'object') {
+        setStorefrontSettings(mapShopSettings(rawSettings));
       }
       setLoading(false);
     }).catch((err) => {

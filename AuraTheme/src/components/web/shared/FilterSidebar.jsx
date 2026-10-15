@@ -53,14 +53,23 @@ const FilterSidebar = ({
       Promise.allSettled([fetchCategories(), fetchShops(), fetchBranches()])
         .then(([catRes, shopRes, brRes]) => {
           if (!isMounted) return;
-          if (catRes.status === 'fulfilled' && catRes.value?.success && Array.isArray(catRes.value.data)) {
-            setCategories(catRes.value.data.map(mapCategory));
+          if (catRes.status === 'fulfilled') {
+            const rawCats = catRes.value?.data || catRes.value?.categories || (Array.isArray(catRes.value) ? catRes.value : []);
+            if (Array.isArray(rawCats)) {
+              setCategories(rawCats.map(mapCategory).filter(Boolean));
+            }
           }
-          if (shopRes.status === 'fulfilled' && shopRes.value?.success && Array.isArray(shopRes.value.data)) {
-            setSellers(shopRes.value.data.map(mapShop));
+          if (shopRes.status === 'fulfilled') {
+            const rawShops = shopRes.value?.data || shopRes.value?.shops || shopRes.value?.stores || (Array.isArray(shopRes.value) ? shopRes.value : []);
+            if (Array.isArray(rawShops)) {
+              setSellers(rawShops.map(mapShop).filter(Boolean));
+            }
           }
-          if (brRes.status === 'fulfilled' && brRes.value?.success && Array.isArray(brRes.value.data)) {
-            setBranches([{ id: 'all', name: 'All Branches' }, ...brRes.value.data]);
+          if (brRes.status === 'fulfilled') {
+            const rawBranches = brRes.value?.data || brRes.value?.branches || (Array.isArray(brRes.value) ? brRes.value : []);
+            if (Array.isArray(rawBranches)) {
+              setBranches([{ id: 'all', name: 'All Branches' }, ...rawBranches]);
+            }
           }
         })
         .finally(() => {

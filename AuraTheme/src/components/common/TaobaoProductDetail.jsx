@@ -56,8 +56,8 @@ export function normalizeTaobaoProduct(rawProduct) {
   // 1. Gallery Images & Video
   let images = [];
   if (Array.isArray(rawProduct.images) && rawProduct.images.length > 0) {
-    images = rawProduct.images.filter((img) => img && !img.includes('unsplash') && !img.includes('picsum'));
-  } else if (rawProduct.image && !rawProduct.image.includes('unsplash') && !rawProduct.image.includes('picsum')) {
+    images = rawProduct.images.filter(Boolean);
+  } else if (rawProduct.image) {
     images = [rawProduct.image];
   }
   if (images.length === 0) {

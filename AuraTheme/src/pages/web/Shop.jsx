@@ -92,23 +92,26 @@ const Shop = () => {
         let hasError = false;
 
         // Products
-        if (prodRes.status === 'fulfilled' && prodRes.value?.success && Array.isArray(prodRes.value.data)) {
-          setProductsList(prodRes.value.data.map(mapProduct));
+        const rawProds = prodRes.status === 'fulfilled' ? (prodRes.value?.data || prodRes.value?.products || (Array.isArray(prodRes.value) ? prodRes.value : [])) : [];
+        if (Array.isArray(rawProds) && rawProds.length > 0) {
+          setProductsList(rawProds.map(mapProduct).filter(Boolean));
         } else if (prodRes.status === 'fulfilled' && prodRes.value?.data?.products && Array.isArray(prodRes.value.data.products)) {
-          setProductsList(prodRes.value.data.products.map(mapProduct));
+          setProductsList(prodRes.value.data.products.map(mapProduct).filter(Boolean));
         } else {
           hasError = true;
           setFetchError(prodRes.value?.error || 'Failed to load products from database');
         }
 
         // Categories
-        if (catRes.status === 'fulfilled' && catRes.value?.success && Array.isArray(catRes.value.data)) {
-          setCategoriesList(catRes.value.data.map(mapCategory));
+        const rawCats = catRes.status === 'fulfilled' ? (catRes.value?.data || catRes.value?.categories || (Array.isArray(catRes.value) ? catRes.value : [])) : [];
+        if (Array.isArray(rawCats)) {
+          setCategoriesList(rawCats.map(mapCategory).filter(Boolean));
         }
 
         // Shops
-        if (shopRes.status === 'fulfilled' && shopRes.value?.success && Array.isArray(shopRes.value.data)) {
-          setShopsList(shopRes.value.data.map(mapShop));
+        const rawShops = shopRes.status === 'fulfilled' ? (shopRes.value?.data || shopRes.value?.shops || shopRes.value?.stores || (Array.isArray(shopRes.value) ? shopRes.value : [])) : [];
+        if (Array.isArray(rawShops)) {
+          setShopsList(rawShops.map(mapShop).filter(Boolean));
         }
       })
       .catch((err) => {
