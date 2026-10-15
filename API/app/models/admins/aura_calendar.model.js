@@ -1,0 +1,31 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_calendar",
+  primaryKey: ["id"],
+  hidden: [],
+  columns: [
+    {"name":"id","type":"int","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"date","type":"datetime","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"biller_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"title","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"description","type":"text","auto":false,"nullable":true,"hasDefault":false},
+    {"name":"start","type":"datetime","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"end","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"color","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"user_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"customer","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"assign_to","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"activity","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"type","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"status","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"holiday","type":"tinyint","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"event_type","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"location_name","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"coordinates","type":"text","auto":false,"nullable":true,"hasDefault":false},
+    {"name":"created_by","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"updated_by","type":"int","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"photo","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"schedule_id","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+  ],
+});

@@ -1,0 +1,30 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_addresses",
+  primaryKey: ["id"],
+  hidden: [],
+  columns: [
+    {"name":"id","type":"int","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"company_id","type":"int","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"address","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"name","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"line1","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"line2","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"city","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"postal_code","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"state","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"country","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"contact_person","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"phone","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"noted","type":"text","auto":false,"nullable":true,"hasDefault":false},
+    {"name":"created_by","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"updated_at","type":"timestamp","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"next_followup","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"kilometer","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"latitude","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"longitude","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"color_marker","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"status","type":"tinyint","auto":false,"nullable":false,"hasDefault":true},
+  ],
+});

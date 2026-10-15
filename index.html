@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='m4.93 4.93 4.24 4.24'/><path d='m14.83 9.17 4.24-4.24'/><path d='m14.83 14.83 4.24 4.24'/><path d='m9.17 14.83-4.24 4.24'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aura Global</title>
+    <meta name="description" content="Aura Global multi-store E-Menu, Telegram Mini App ordering system, and hospitality portal." />
+    <meta property="og:title" content="Aura Global" />
+    <meta property="og:description" content="Aura Global multi-store E-Menu, Telegram Mini App ordering system, and hospitality portal." />
+    <script>
+      (function() {
+        try {
+          var mode = localStorage.getItem('admin-theme') || localStorage.getItem('admin-theme-mode') || localStorage.getItem('theme-mode') || 'light';
+          var preset = localStorage.getItem('admin-theme-preset') || 'default';
+          var doc = document.documentElement;
+          doc.setAttribute('data-mode', mode);
+          doc.setAttribute('data-theme', preset);
+          doc.classList.remove('light', 'dark', 'theme-light', 'theme-dark');
+          doc.classList.add(mode, 'theme-' + mode);
+          doc.style.colorScheme = mode;
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="antialiased selection:bg-indigo-500 selection:text-white transition-colors duration-200">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

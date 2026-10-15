@@ -1,0 +1,215 @@
+[
+  {
+    "storeSlug": "nexus-mobile",
+    "storeName": "Nexus Mobile & Gadgets",
+    "storeEmoji": "📱",
+    "ownerName": "Yin",
+    "botUsername": "@auraglobalsource_bot",
+    "botToken": "8882478979:AAEK-rPXvNt4fL7R7dZty1qrtZvP_70dSaY",
+    "botTokenPreview": "8882478...dSaY",
+    "botStatus": "connected",
+    "groupId": "-5004978007",
+    "groupTitle": "Nexus Mobile - Dispatch & Orders Group",
+    "groupInviteLink": "https://t.me/+9YYwU2Lfz600YWY1",
+    "permissions": {
+      "canSendOrders": true,
+      "canUpdateStatus": true,
+      "notifySoundAlert": true,
+      "dailySummary": true
+    },
+    "notificationTemplate": "detailed",
+    "stats": {
+      "totalOrdersRouted": 69,
+      "lastRoutedAt": "Just now"
+    },
+    "status": "connected",
+    "telegram_bot_username": "@auraglobalsource_bot",
+    "last_test_result": {
+      "success": true,
+      "timestamp": "2026-10-15T07:17:27.861Z",
+      "error": null
+    }
+  },
+  {
+    "storeSlug": "sbc-store",
+    "storeName": "Aura Specialty Coffee",
+    "storeEmoji": "☕",
+    "ownerName": "Yin",
+    "botUsername": "@aura_emenu_order_bot",
+    "botToken": "",
+    "botTokenPreview": "8613686...1lCw",
+    "botStatus": "error",
+    "groupId": "-1002489102938",
+    "groupTitle": "Aura Coffee - Baristas & Kitchen Orders",
+    "groupInviteLink": "https://t.me/+AuraCoffeeKitchen",
+    "permissions": {
+      "canSendOrders": true,
+      "canUpdateStatus": true,
+      "notifyInquiries": true,
+      "dailySummary": true,
+      "notifySoundAlert": true
+    },
+    "notificationTemplate": "compact",
+    "stats": {
+      "totalOrdersRouted": 143,
+      "lastRoutedAt": "Just now"
+    },
+    "status": "error",
+    "telegram_bot_username": "@aura_emenu_order_bot",
+    "last_test_result": {
+      "success": false,
+      "timestamp": "2026-10-11T15:10:49.494Z",
+      "error": "Bad Request: chat not found"
+    }
+  },
+  {
+    "storeSlug": "aura-bakery",
+    "storeName": "Aura Artisan Bakery",
+    "storeEmoji": "🥐",
+    "ownerName": "Yin",
+    "botUsername": "@aura_emenu_order_bot",
+    "botToken": "",
+    "botTokenPreview": "8613686...1lCw",
+    "botStatus": "connected",
+    "groupId": "-1002598341029",
+    "groupTitle": "Aura Bakery - Morning Kitchen & Dispatch",
+    "groupInviteLink": "https://t.me/+AuraBakeryDispatch",
+    "permissions": {
+      "canSendOrders": true,
+      "canUpdateStatus": true,
+      "notifyInquiries": true,
+      "dailySummary": true,
+      "notifySoundAlert": true
+    },
+    "notificationTemplate": "detailed",
+    "stats": {
+      "totalOrdersRouted": 99,
+      "lastRoutedAt": "Just now"
+    }
+  },
+  {
+    "storeSlug": "aura-bistro",
+    "storeName": "Aura French Bistro",
+    "storeEmoji": "🍽️",
+    "ownerName": "Pierre Dubois",
+    "botUsername": "@aura_emenu_order_bot",
+    "botToken": "",
+    "botTokenPreview": "8613686...1lCw",
+    "botStatus": "connected",
+    "groupId": "-1002678129045",
+    "groupTitle": "Aura Bistro - Head Chef & Orders Group",
+    "groupInviteLink": "https://t.me/+AuraBistroKitchen",
+    "permissions": {
+      "canSendOrders": true,
+      "canUpdateStatus": true,
+      "notifyInquiries": true,
+      "dailySummary": true,
+      "notifySoundAlert": true
+    },
+    "notificationTemplate": "detailed",
+    "stats": {
+      "totalOrdersRouted": 67,
+      "lastRoutedAt": "45 min ago"
+    }
+  },
+  {
+    "storeSlug": "aura-lounge",
+    "storeName": "Botanical Lounge & Matcha",
+    "storeEmoji": "🍵",
+    "ownerName": "Kenji Sato",
+    "botUsername": "@aura_emenu_order_bot",
+    "botToken": "",
+    "botTokenPreview": "8613686...1lCw",
+    "botStatus": "connected",
+    "groupId": "-1002789456123",
+    "groupTitle": "Aura Lounge - Teahouse & Service Group",
+    "groupInviteLink": "https://t.me/+AuraLoungeService",
+    "permissions": {
+      "canSendOrders": true,
+      "canUpdateStatus": true,
+      "notifyInquiries": true,
+      "dailySummary": true,
+      "notifySoundAlert": true
+    },
+    "notificationTemplate": "compact",
+    "stats": {
+      "totalOrdersRouted": 41,
+      "lastRoutedAt": "2 hours ago"
+    }
+  },
+  {
+    "storeSlug": "aura-tech",
+    "storeName": "Aura Automation Tech",
+    "storeEmoji": "💻",
+    "ownerName": "David Kim",
+    "botUsername": "@aura_emenu_order_bot",
+    "botToken": "",
+    "botTokenPreview": "8613686...1lCw",
+    "botStatus": "connected",
+    "groupId": "-1002890567234",
+    "groupTitle": "Aura Tech - Fulfillment & Shipping Group",
+    "groupInviteLink": "https://t.me/+AuraTechOrders",
+    "permissions": {
+      "canSendOrders": true,
+      "canUpdateStatus": true,
+      "notifyInquiries": true,
+      "dailySummary": true,
+      "notifySoundAlert": true
+    },
+    "notificationTemplate": "detailed",
+    "stats": {
+      "totalOrdersRouted": 24,
+      "lastRoutedAt": "Yesterday"
+    }
+  },
+  {
+    "storeSlug": "apex-pc",
+    "storeName": "Apex PC & Workstation Hub",
+    "storeEmoji": "🖥️",
+    "ownerName": "Elena Rostova",
+    "botUsername": "@aura_emenu_order_bot",
+    "botToken": "",
+    "botTokenPreview": "8613686...1lCw",
+    "botStatus": "connected",
+    "groupId": "-1002998765432",
+    "groupTitle": "Apex PC - Custom Builds & Orders",
+    "groupInviteLink": "https://t.me/+ApexPCOrders",
+    "permissions": {
+      "canSendOrders": true,
+      "canUpdateStatus": true,
+      "notifyInquiries": true,
+      "dailySummary": true,
+      "notifySoundAlert": true
+    },
+    "notificationTemplate": "detailed",
+    "stats": {
+      "totalOrdersRouted": 20,
+      "lastRoutedAt": "Just now"
+    }
+  },
+  {
+    "storeSlug": "velour-apparel",
+    "storeName": "Velour Minimalist Apparel",
+    "storeEmoji": "👔",
+    "ownerName": "Marcus Vance",
+    "botUsername": "@aura_emenu_order_bot",
+    "botToken": "",
+    "botTokenPreview": "8613686...1lCw",
+    "botStatus": "connected",
+    "groupId": "-1003109876543",
+    "groupTitle": "Velour Apparel - VIP Stylist & Dispatch",
+    "groupInviteLink": "https://t.me/+VelourApparelOrders",
+    "permissions": {
+      "canSendOrders": true,
+      "canUpdateStatus": true,
+      "notifyInquiries": true,
+      "dailySummary": true,
+      "notifySoundAlert": true
+    },
+    "notificationTemplate": "detailed",
+    "stats": {
+      "totalOrdersRouted": 35,
+      "lastRoutedAt": "3 days ago"
+    }
+  }
+]

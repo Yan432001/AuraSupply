@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --admin-bg-base: #090d16;
+  --admin-bg-card: #0f172a;
+  --admin-border: #1e293b;
+  --admin-text-main: #f8fafc;
+  --admin-text-muted: #94a3b8;
+  color-scheme: dark;
+}
+
+html.light,
+html[data-mode="light"],
+body.light,
+body[data-mode="light"],
+body.theme-light {
+  --admin-bg-base: #f8fafc;
+  --admin-bg-card: #ffffff;
+  --admin-border: #e2e8f0;
+  --admin-text-main: #0f172a;
+  --admin-text-muted: #64748b;
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: var(--admin-bg-base);
+  color: var(--admin-text-main);
+  min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ==========================================================================
+   LIGHT MODE UNIVERSAL OVERRIDES FOR ADMIN UI (TAILWIND & ANT-DESIGN)
+   ========================================================================== */
+
+html[data-mode="light"] body,
+html.light body,
+body.light,
+body.theme-light {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Hardcoded Dark Containers to Light Mode */
+html.light .bg-slate-950,
+html.light .bg-slate-900,
+html.light .bg-\[\#090d16\],
+html.light .bg-\[\#0c121e\],
+html.light .bg-\[\#0f172a\],
+html.light .bg-\[\#0b0f19\],
+html.light .bg-\[\#161f30\],
+html[data-mode="light"] .bg-slate-950,
+html[data-mode="light"] .bg-slate-900,
+html[data-mode="light"] .bg-\[\#090d16\],
+html[data-mode="light"] .bg-\[\#0c121e\],
+html[data-mode="light"] .bg-\[\#0f172a\],
+html[data-mode="light"] .bg-\[\#0b0f19\],
+html[data-mode="light"] .bg-\[\#161f30\] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(226, 232, 240, 0.9) !important;
+}
+
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/90,
+html.light .bg-slate-950\/60,
+html.light .bg-slate-950\/80,
+html[data-mode="light"] .bg-slate-900\/80,
+html[data-mode="light"] .bg-slate-900\/90,
+html[data-mode="light"] .bg-slate-950\/60,
+html[data-mode="light"] .bg-slate-950\/80 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #0f172a !important;
+  border-color: rgba(226, 232, 240, 0.9) !important;
+}
+
+html.light .bg-slate-800,
+html.light .bg-slate-800\/90,
+html[data-mode="light"] .bg-slate-800,
+html[data-mode="light"] .bg-slate-800\/90 {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  border-color: rgba(226, 232, 240, 0.9) !important;
+}
+
+html.light .border-slate-800,
+html.light .border-slate-700,
+html[data-mode="light"] .border-slate-800,
+html[data-mode="light"] .border-slate-700 {
+  border-color: rgba(226, 232, 240, 0.9) !important;
+}
+
+html.light .text-slate-400,
+html.light .text-slate-500,
+html[data-mode="light"] .text-slate-400,
+html[data-mode="light"] .text-slate-500 {
+  color: #64748b !important;
+}
+
+html.light .text-slate-300,
+html.light .text-slate-200,
+html.light .text-slate-100,
+html.light .text-white,
+html[data-mode="light"] .text-slate-300,
+html[data-mode="light"] .text-slate-200,
+html[data-mode="light"] .text-slate-100,
+html[data-mode="light"] .text-white {
+  color: #0f172a !important;
+}
+
+/* Light mode specific UI elements */
+html.light input,
+html.light select,
+html.light textarea,
+html[data-mode="light"] input,
+html[data-mode="light"] select,
+html[data-mode="light"] textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light input::placeholder,
+html[data-mode="light"] input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--admin-bg-base);
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}

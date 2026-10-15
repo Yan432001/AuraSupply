@@ -1,0 +1,30 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_pay_severance_items",
+  primaryKey: ["id"],
+  hidden: [],
+  columns: [
+    {"name":"id","type":"int","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"severance_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"employee_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"first_salary","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"second_salary","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"third_salary","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"total_salary","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"severance","type":"char","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"total_usd","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"total_khr","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"usd_100","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"usd_50","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"usd_20","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"usd_10","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"khr_20000","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"khr_10000","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"khr_5000","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"khr_2000","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"khr_1000","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"khr_500","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"khr_100","type":"double","auto":false,"nullable":true,"hasDefault":true},
+  ],
+});

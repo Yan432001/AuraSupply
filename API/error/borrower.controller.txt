@@ -1,0 +1,2 @@
+Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'SEdLECT * FROM gloo_loan_borrowers' at line 1
+Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'SEdLECT * FROM gloo_loan_borrowers' at line 1

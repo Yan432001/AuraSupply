@@ -1,0 +1,31 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_inventory_valuation_details",
+  primaryKey: ["id"],
+  hidden: [],
+  columns: [
+    {"name":"id","type":"bigint","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"biller_id","type":"int","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"product_id","type":"int","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"product_code","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"product_name","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"category_id","type":"int","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"sub_category_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"warehouse_id","type":"int","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"reference_no","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"type","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"date","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"name","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"quantity","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"expiry","type":"date","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"cost","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"qty_on_hand","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"avg_cost","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"created_by","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"updated_by","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"updated_at","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"plan_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"field_id","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+  ],
+});

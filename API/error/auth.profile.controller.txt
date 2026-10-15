@@ -1,0 +1,30 @@
+Error: Named query contains placeholders, but parameters object is undefined
+Error: Named query contains placeholders, but parameters object is undefined
+Error: Named query contains placeholders, but parameters object is undefined
+Error: Named query contains placeholders, but parameters object is undefined
+Error: Named query contains placeholders, but parameters object is undefined
+TypeError: Cannot read properties of undefined (reading 'id')
+ReferenceError: id is not defined
+TypeError: Cannot destructure property 'id' of 'req.body' as it is undefined.
+TypeError: Cannot read properties of undefined (reading 'id')
+TypeError: Cannot read properties of undefined (reading 'id')
+TypeError: Cannot read properties of undefined (reading 'id')
+TypeError: Cannot read properties of undefined (reading 'id')
+TypeError: Cannot read properties of undefined (reading 'id')
+TypeError: Cannot read properties of undefined (reading 'id')
+TypeError: Cannot read properties of undefined (reading 'id')
+TypeError: Cannot read properties of undefined (reading 'id')
+TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 17:05:47]TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 17:05:53]TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 17:06:10]TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 17:57:10]TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 17:57:28]TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 17:57:48]TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 17:58:11]TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 17:58:13]TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 17:58:22]TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 17:58:24]TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 22:28:26]TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 22:28:31]TypeError: Cannot read properties of undefined (reading 'id')
+[28/12/2025 22:38:05]TypeError: Cannot read properties of undefined (reading 'id')

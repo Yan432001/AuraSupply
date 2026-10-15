@@ -1,0 +1,19 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      // eslint-disable-next-line no-undef
+      '@': path.resolve(__dirname, './src'),
+      '@logos': path.resolve(__dirname, './public/logos'),
+      '@AdCat': path.resolve(__dirname, './src/assets/styles'),
+    },
+  },
+  server: {
+    host: true,
+    allowedHosts: true, // This enables all tunnel domains like .trycloudflare.com
+  },
+});

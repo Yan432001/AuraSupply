@@ -1,0 +1,8 @@
+{
+  "name": "Aura Global",
+  "description": "Aura Global multi-store E-Menu, Telegram Mini App ordering system, and hospitality portal.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

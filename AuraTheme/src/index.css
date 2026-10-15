@@ -1,0 +1,567 @@
+@import "tailwindcss";
+
+:root {
+  --admin-font-family: 'Aptos', 'Segoe UI', 'Trebuchet MS', sans-serif;
+  --admin-font-size: 13px;
+  --admin-border-radius: 8px;
+  --admin-line-height: 1.5715;
+  --admin-control-height: 32px;
+  --admin-padding: 16px;
+  --admin-margin: 16px;
+
+  /* Universal Font Size System: Matching Header Base Font Size (13px) */
+  --font-base: 13px;
+  --font-small: calc(var(--font-base) - 2px); /* 11px: descriptions, labels, captions */
+  --font-title: calc(var(--font-base) + 2px); /* 15px: section titles and product names */
+  --font-price: calc(var(--font-base) + 2px); /* 15px bold: product prices */
+  --font-heading: calc(var(--font-base) + 4px); /* 17px: page & main titles */
+
+  color: #1f2d38;
+  font-family: 'Aptos', 'Segoe UI', 'Trebuchet MS', sans-serif;
+  font-size: var(--font-base);
+  line-height: 1.5;
+  font-weight: 400;
+  background: #f4f7f4;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Telegram Theme Default Variables (Light mode fallback) */
+  --tg-theme-bg-color: #ffffff;
+  --tg-theme-text-color: #0f172a;
+  --tg-theme-hint-color: #64748b;
+  --tg-theme-link-color: #2F6FED;
+  --tg-theme-button-color: #2F6FED;
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: #f8fafc;
+  --tg-theme-header-bg-color: #ffffff;
+  --tg-theme-section-bg-color: #ffffff;
+  --tg-theme-section-header-text-color: #64748b;
+  --tg-theme-subtitle-text-color: #94a3b8;
+  --tg-theme-destructive-text-color: #ef4444;
+
+  /* Universal Sticky Header & Layering System (Z-Index Hierarchy) */
+  --header-height: 52px;
+  --header-z-index: 1000;
+  --tabs-z-index: 900;
+  --bottom-bar-z-index: 1000;
+  --modal-z-index: 1100;
+}
+
+/* Telegram Dark Mode fallback */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --tg-theme-bg-color: #17212b;
+    --tg-theme-text-color: #f8fafc;
+    --tg-theme-hint-color: #94a3b8;
+    --tg-theme-link-color: #5288c1;
+    --tg-theme-button-color: #2F6FED;
+    --tg-theme-button-text-color: #ffffff;
+    --tg-theme-secondary-bg-color: #232e3c;
+    --tg-theme-header-bg-color: #17212b;
+    --tg-theme-section-bg-color: #1f2937;
+    --tg-theme-section-header-text-color: #94a3b8;
+    --tg-theme-subtitle-text-color: #64748b;
+    --tg-theme-destructive-text-color: #f87171;
+  }
+}
+
+.admin-layout[data-theme="dark"],
+.admin-active.theme-dark,
+.admin-active.dark {
+  --tg-theme-bg-color: #17212b;
+  --tg-theme-text-color: #f8fafc;
+  --tg-theme-hint-color: #94a3b8;
+  --tg-theme-link-color: #5288c1;
+  --tg-theme-button-color: #2F6FED;
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: #232e3c;
+  --tg-theme-header-bg-color: #17212b;
+  --tg-theme-section-bg-color: #1f2937;
+  --tg-theme-section-header-text-color: #94a3b8;
+  --tg-theme-subtitle-text-color: #64748b;
+  --tg-theme-destructive-text-color: #f87171;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #f4f7f4;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --font-base: 13.5px;
+  }
+}
+
+/* Universal Typography Utility Classes */
+.text-font-base,
+.font-size-base {
+  font-size: var(--font-base) !important;
+}
+
+.text-font-small,
+.font-size-small {
+  font-size: var(--font-small) !important;
+}
+
+.text-font-title,
+.font-size-title {
+  font-size: var(--font-title) !important;
+}
+
+.text-font-price,
+.font-size-price {
+  font-size: var(--font-price) !important;
+  font-weight: 700 !important;
+}
+
+.text-font-heading,
+.font-size-heading {
+  font-size: var(--font-heading) !important;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: 'Aptos', 'Segoe UI', 'Trebuchet MS', sans-serif;
+  font-size: var(--font-base);
+}
+
+.ant-btn {
+  font-size: var(--font-base);
+}
+
+.ant-input,
+.ant-select,
+.ant-picker {
+  font-size: var(--font-base);
+}
+
+.ant-tabs .ant-tabs-tab {
+  font-size: var(--font-base);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+body.theme-light {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+body.admin-active.theme-dark {
+  background-color: var(--admin-page-bg, #080c14);
+  color: var(--admin-text-color, #f8fafc);
+}
+
+.frosted-panel {
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.soft-float {
+  animation: soft-float 6s ease-in-out infinite;
+}
+
+.stagger-rise {
+  animation: stagger-rise 0.8s ease both;
+}
+
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(47, 111, 237, 0.12), rgba(255, 122, 61, 0.12));
+  color: #2f6fed;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.responsive-scroll-row {
+  padding-bottom: 4px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
+}
+
+.home-concept-dots li button {
+  background: rgba(47, 111, 237, 0.28) !important;
+}
+
+.home-concept-dots li.slick-active button {
+  background: #2f6fed !important;
+}
+
+@keyframes soft-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes stagger-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  .soft-float {
+    animation: none;
+  }
+
+  /* Compact app-style cards for phone & tablet */
+  .app-product-card {
+    border-radius: 16px !important;
+  }
+
+  .app-product-card .ant-card-body {
+    padding: 10px !important;
+  }
+
+  .app-product-card .ant-btn {
+    font-size: 11px !important;
+  }
+}
+
+@media (min-width: 576px) and (max-width: 991px) {
+  /* Tablet-specific app layout */
+  .app-product-card .ant-card-body {
+    padding: 12px !important;
+  }
+}
+
+/* App product card styling */
+.retail-product-card-wrapper {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.retail-product-card-wrapper:active {
+  transform: scale(0.985);
+}
+
+/* App-style responsive header */
+.app-header-nav-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 2px 0;
+}
+
+.app-header-nav-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.app-header-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.app-header-pill:active {
+  transform: scale(0.96);
+}
+
+/* Mobile shop scroll track */
+.shop-cards-mobile-scroll {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.shop-cards-mobile-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ensure no horizontal overflow on mobile screens without breaking vertical sticky */
+@media (max-width: 576px) {
+  html,
+  body {
+    overflow-x: clip !important;
+    max-width: 100vw;
+  }
+}
+
+/* ========================================================================== */
+/* Universal Shared Sticky Header & Layering Order                            */
+/* ========================================================================== */
+
+/* 1. Header: sticky, top 0, solid background, z-index 1000 */
+.header,
+.app-sticky-header,
+.sticky-header,
+.header-sticky {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1000 !important;
+  background: var(--tg-theme-bg-color, #ffffff) !important;
+  width: 100% !important;
+  padding-top: env(safe-area-inset-top, 0px) !important;
+  border-bottom: 1px solid var(--tg-theme-secondary-bg-color, #e2e8f0);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+
+.admin-header,
+.header.admin-header,
+.app-sticky-header.admin-header {
+  background: var(--admin-header-bg, rgba(255, 255, 255, 0.96)) !important;
+  color: var(--admin-header-color, #0f172a) !important;
+  border-bottom: 1px solid var(--admin-header-border, rgba(226, 232, 240, 0.85)) !important;
+}
+
+[data-mode="dark"] .admin-header,
+.theme-dark .admin-header,
+.dark .admin-header {
+  background: var(--admin-header-bg, rgba(15, 23, 42, 0.96)) !important;
+  color: var(--admin-header-color, #f8fafc) !important;
+  border-bottom: 1px solid var(--admin-header-border, rgba(255, 255, 255, 0.08)) !important;
+}
+
+/* 2. Sticky Category Tabs & Filters: sticky under header, z-index 900 */
+.app-sticky-tabs,
+.sticky-category-tabs,
+.sticky-tabs {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  top: var(--header-height, 52px) !important;
+  z-index: 900 !important;
+  background: var(--tg-theme-bg-color, #ffffff) !important;
+  border-bottom: 1px solid var(--tg-theme-secondary-bg-color, #e2e8f0);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+}
+
+/* 3. Sticky Bottom Action Bar / Cart Bar: z-index 1000 */
+.app-sticky-bottom-bar,
+.sticky-bottom-bar {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 1000 !important;
+  background: var(--tg-theme-bg-color, #ffffff) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid var(--tg-theme-secondary-bg-color, #e2e8f0);
+  box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.06);
+}
+
+/* 4. Dropdowns, Drawers, Bottom Sheets & Modals: z-index 1100+ */
+.ant-modal-wrap,
+.ant-modal-mask,
+.ant-drawer,
+.ant-drawer-mask,
+.ant-dropdown {
+  z-index: 1100 !important;
+}
+
+.ant-notification,
+.ant-message {
+  z-index: 1200 !important;
+}
+
+/* 5. ERP Sidebar Ergonomics & Ultra-thin Scrollbar */
+.erp-sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.erp-sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.erp-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+.erp-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ========================================================================== */
+/* Premium B2B Supply Platform UI Components                                  */
+/* ========================================================================== */
+
+/* Subtle grid backdrop for hero and discovery headers */
+.b2b-grid-backdrop {
+  background-size: 24px 24px;
+  background-image: 
+    linear-gradient(to right, rgba(47, 111, 237, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(47, 111, 237, 0.04) 1px, transparent 1px);
+}
+
+/* Smooth micro-interactions */
+.b2b-card {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease;
+}
+
+.b2b-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 40px -10px rgba(47, 111, 237, 0.12), 0 8px 16px -4px rgba(15, 23, 42, 0.04);
+  border-color: rgba(47, 111, 237, 0.35) !important;
+}
+
+/* B2B MOQ & Verified Badges */
+.moq-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  font-size: 10.5px;
+  font-weight: 750;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.verified-supplier-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(47, 111, 237, 0.08);
+  color: #2f6fed;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(47, 111, 237, 0.2);
+}
+
+/* Spec Table for B2B Product Details */
+.b2b-spec-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.b2b-spec-table tr:nth-child(odd) {
+  background: #f8fafc;
+}
+
+.b2b-spec-table tr:nth-child(even) {
+  background: #ffffff;
+}
+
+.b2b-spec-table td {
+  padding: 10px 14px;
+  font-size: 12.5px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.b2b-spec-table td.spec-label {
+  font-weight: 600;
+  color: #64748b;
+  width: 38%;
+  border-right: 1px solid #e2e8f0;
+}
+
+.b2b-spec-table td.spec-val {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Modern Pill Button */
+.b2b-btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 999px;
+  font-weight: 700;
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+
+.b2b-btn-pill:active {
+  transform: scale(0.97);
+}
+
+/* Smooth Tab Underline */
+.b2b-tab-active {
+  color: #2f6fed !important;
+  font-weight: 700 !important;
+  position: relative;
+}
+
+.b2b-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: #2f6fed;
+  border-radius: 99px;
+}
+
+

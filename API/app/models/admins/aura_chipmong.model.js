@@ -1,0 +1,30 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_chipmong",
+  primaryKey: ["id"],
+  hidden: [],
+  columns: [
+    {"name":"id","type":"int","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"date","type":"date","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"biller_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"mallName","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"tenantName","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"grossSale","type":"decimal","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"taxAmount","type":"decimal","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"netSale","type":"decimal","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"cashAmountUsd","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"cashAmountRiel","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"creditCardAmount","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"otherAmount","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"totalCreditCardTransaction","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"totalTransaction","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"depositAmountUsd","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"depositAmountRiel","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"exchangeRate","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"posId","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"sale_id","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"created_date","type":"datetime","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"push","type":"tinyint","auto":false,"nullable":false,"hasDefault":true},
+  ],
+});

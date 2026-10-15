@@ -1,0 +1,33 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_consignment_items",
+  primaryKey: ["id"],
+  hidden: [],
+  columns: [
+    {"name":"id","type":"int","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"consignment_id","type":"int","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"consignment_item_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"product_id","type":"int","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"product_code","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"product_name","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"product_type","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"real_unit_price","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"net_unit_price","type":"double","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"unit_price","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"quantity","type":"double","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"unit_quantity","type":"double","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"warehouse_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"option_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"subtotal","type":"double","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"product_unit_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"product_unit_code","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"comment","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"expiry","type":"date","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"serial_no","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"return_qty","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"sale_qty","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"item_tax","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"item_discount","type":"double","auto":false,"nullable":true,"hasDefault":true},
+  ],
+});

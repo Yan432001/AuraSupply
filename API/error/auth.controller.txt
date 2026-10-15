@@ -1,0 +1,30 @@
+Error: Column 'description' cannot be null
+Error: Column 'description' cannot be null
+TypeError: Cannot read properties of undefined (reading 'users-index')
+TypeError: Cannot read properties of undefined (reading 'users-index')
+TypeError: Cannot read properties of undefined (reading 'users-index')
+TypeError: Cannot read properties of undefined (reading 'users-index')
+TypeError: Cannot read properties of undefined (reading 'users-index')
+TypeError: Cannot read properties of undefined (reading 'users-index')
+TypeError: Cannot read properties of undefined (reading 'users-index')
+[18/02/2026 21:35:38]ReferenceError: db is not defined
+[18/02/2026 21:35:41]ReferenceError: db is not defined
+[18/02/2026 21:37:07]ReferenceError: db is not defined
+[18/02/2026 21:37:23]ReferenceError: db is not defined
+[18/02/2026 21:37:24]ReferenceError: db is not defined
+[18/02/2026 21:39:26]ReferenceError: db is not defined
+[18/02/2026 21:39:27]ReferenceError: db is not defined
+[18/02/2026 21:40:44]ReferenceError: db is not defined
+[18/02/2026 21:41:18]ReferenceError: db is not defined
+[18/02/2026 21:41:50]ReferenceError: db is not defined
+[18/02/2026 21:42:06]ReferenceError: db is not defined
+[18/02/2026 21:43:52]ReferenceError: db is not defined
+[18/02/2026 21:44:05]ReferenceError: db is not defined
+[18/02/2026 21:45:04]ReferenceError: db is not defined
+[18/02/2026 21:45:28]ReferenceError: db is not defined
+[18/02/2026 21:46:14]ReferenceError: db is not defined
+[15/03/2026 17:28:07]TypeError: Cannot read properties of undefined (reading 'query')
+[15/03/2026 17:28:13]TypeError: Cannot read properties of undefined (reading 'query')
+[15/03/2026 17:30:40]TypeError: Cannot read properties of undefined (reading 'query')
+[15/03/2026 17:30:44]TypeError: Cannot read properties of undefined (reading 'query')
+[15/03/2026 17:33:59]TypeError: Cannot read properties of undefined (reading 'query')

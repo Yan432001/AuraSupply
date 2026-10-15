@@ -1,0 +1,32 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_loan_payment",
+  primaryKey: ["loan_id"],
+  hidden: [],
+  columns: [
+    {"name":"loan_id","type":"int","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"sale_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"user_id","type":"tinyint","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"customer_id","type":"tinyint","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"payment_id","type":"tinyint","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"reference","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"no","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"day","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"pay_date","type":"date","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"monthly_payment","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"principal","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"interest_rate","type":"decimal","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"interest","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"balance","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"status","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"paid","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"register_date","type":"timestamp","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"warehouse_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"percent","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"payment_term","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"reschedule_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"created_by","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"created_at","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+  ],
+});

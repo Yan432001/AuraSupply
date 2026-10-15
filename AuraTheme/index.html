@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Aura Global</title>
+    <meta name="description" content="Aura Global multi-store E-Menu, Telegram Mini App ordering system, and hospitality portal." />
+    <meta property="og:title" content="Aura Global" />
+    <meta property="og:description" content="Aura Global multi-store E-Menu, Telegram Mini App ordering system, and hospitality portal." />
+    <!-- Telegram Mini App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+      // Mock Vite HMR WebSocket in cloud sandbox / preview environment where HMR WebSocket is not supported
+      (function() {
+        var OriginalWebSocket = window.WebSocket;
+        if (OriginalWebSocket) {
+          function MockViteWebSocket(url, protocols) {
+            var isVite = (protocols === 'vite-hmr') ||
+                         (Array.isArray(protocols) && protocols.indexOf('vite-hmr') !== -1) ||
+                         (typeof url === 'string' && (url.indexOf('token=') !== -1 || url.indexOf('vite-hmr') !== -1));
+            if (isVite) {
+              this.url = url;
+              this.readyState = 0; // CONNECTING
+              this.listeners = { open: [], message: [], close: [], error: [] };
+              var self = this;
+              setTimeout(function() {
+                self.readyState = 1; // OPEN
+                if (typeof self.onopen === 'function') {
+                  try { self.onopen({ type: 'open' }); } catch (e) {}
+                }
+                (self.listeners.open || []).forEach(function(fn) {
+                  try { fn({ type: 'open' }); } catch (e) {}
+                });
+              }, 20);
+            } else {
+              return new OriginalWebSocket(url, protocols);
+            }
+          }
+
+          MockViteWebSocket.prototype.addEventListener = function(type, fn) {
+            if (!this.listeners) this.listeners = {};
+            if (!this.listeners[type]) this.listeners[type] = [];
+            this.listeners[type].push(fn);
+          };
+
+          MockViteWebSocket.prototype.removeEventListener = function(type, fn) {
+            if (!this.listeners || !this.listeners[type]) return;
+            this.listeners[type] = this.listeners[type].filter(function(h) { return h !== fn; });
+          };
+
+          MockViteWebSocket.prototype.send = function() {};
+          MockViteWebSocket.prototype.close = function() {
+            this.readyState = 3; // CLOSED
+          };
+
+          MockViteWebSocket.CONNECTING = 0;
+          MockViteWebSocket.OPEN = 1;
+          MockViteWebSocket.CLOSING = 2;
+          MockViteWebSocket.CLOSED = 3;
+
+          window.WebSocket = MockViteWebSocket;
+        }
+
+        // Suppress Vite HMR console errors & Telegram WebApp version warning logs
+        var origError = console.error;
+        console.error = function() {
+          var str = Array.prototype.join.call(arguments, ' ');
+          if (str.indexOf('WebSocket') !== -1 || str.indexOf('closed without opened') !== -1 || str.indexOf('failed to connect to websocket') !== -1 || str.indexOf('[vite]') !== -1 || str.indexOf('[Telegram.WebApp]') !== -1) {
+            return;
+          }
+          return origError.apply(console, arguments);
+        };
+
+        // Polyfill Telegram WebApp for version < 6.2 compatibility
+        function patchTelegram() {
+          if (window.Telegram && window.Telegram.WebApp && !window.Telegram.WebApp.__patched) {
+            var twa = window.Telegram.WebApp;
+            twa.__patched = true;
+            var isAtLeast = function(ver) {
+              try {
+                if (typeof twa.isVersionAtLeast === 'function') return Boolean(twa.isVersionAtLeast(ver));
+                return parseFloat(twa.version || '6.0') >= parseFloat(ver);
+              } catch (e) { return false; }
+            };
+            var origShowPopup = twa.showPopup;
+            twa.showPopup = function(params, callback) {
+              if (isAtLeast('6.2') && typeof origShowPopup === 'function') {
+                try { return origShowPopup.call(twa, params, callback); } catch (e) {}
+              }
+              if (typeof callback === 'function') {
+                var btnId = (params && params.buttons && params.buttons[0] && (params.buttons[0].id || params.buttons[0].type)) || 'ok';
+                setTimeout(function() { try { callback(btnId); } catch (e) {} }, 50);
+              }
+            };
+            var origShowAlert = twa.showAlert;
+            twa.showAlert = function(msg, callback) {
+              if (isAtLeast('6.2') && typeof origShowAlert === 'function') {
+                try { return origShowAlert.call(twa, msg, callback); } catch (e) {}
+              }
+              if (typeof callback === 'function') {
+                setTimeout(function() { try { callback(); } catch (e) {} }, 50);
+              }
+            };
+            var origShowConfirm = twa.showConfirm;
+            twa.showConfirm = function(msg, callback) {
+              if (isAtLeast('6.2') && typeof origShowConfirm === 'function') {
+                try { return origShowConfirm.call(twa, msg, callback); } catch (e) {}
+              }
+              if (typeof callback === 'function') {
+                setTimeout(function() { try { callback(true); } catch (e) {} }, 50);
+              }
+            };
+            var origEnableClosing = twa.enableClosingConfirmation;
+            twa.enableClosingConfirmation = function() {
+              if (isAtLeast('6.2') && typeof origEnableClosing === 'function') {
+                try { return origEnableClosing.call(twa); } catch (e) {}
+              }
+            };
+            var origDisableClosing = twa.disableClosingConfirmation;
+            twa.disableClosingConfirmation = function() {
+              if (isAtLeast('6.2') && typeof origDisableClosing === 'function') {
+                try { return origDisableClosing.call(twa); } catch (e) {}
+              }
+            };
+          }
+        }
+        patchTelegram();
+        var twaPoll = setInterval(patchTelegram, 50);
+        setTimeout(function() { clearInterval(twaPoll); }, 5000);
+
+        window.addEventListener('unhandledrejection', function(event) {
+          var reason = event && event.reason;
+          var msg = (reason && (reason.message || String(reason))) || '';
+          if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('closed without opened') !== -1 || msg.indexOf('[vite]') !== -1 || msg.indexOf('[Telegram.WebApp]') !== -1 || msg.indexOf('showPopup') !== -1) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+        });
+        window.addEventListener('error', function(event) {
+          var msg = (event && event.message) || '';
+          if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('closed without opened') !== -1 || msg.indexOf('[vite]') !== -1 || msg.indexOf('[Telegram.WebApp]') !== -1 || msg.indexOf('showPopup') !== -1) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+        });
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-C012gRlU.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-nO1vH0Bi.css">
+    <style id="admin-global-theme-system">
+      /* 1. Admin CSS Variables - strictly scoped to .admin-layout or html.admin-active */
+      html.admin-active[data-mode="light"], html.admin-active.light, body.admin-active.light, .admin-layout {
+        color-scheme: light;
+        --admin-bg-base: #f8fafc;
+        --admin-bg-page: #f8fafc;
+        --admin-bg-surface: #ffffff;
+        --admin-bg-subtle: #f1f5f9;
+        --admin-card-bg: #ffffff;
+        --admin-sidebar-bg: #ffffff;
+        --admin-header-bg: rgba(255, 255, 255, 0.95);
+        --admin-text-base: #0f172a;
+        --admin-subtext-base: #64748b;
+        --admin-border-base: rgba(226, 232, 240, 0.9);
+      }
+      html.admin-active[data-mode="dark"], html.admin-active.dark, body.admin-active.dark, .admin-layout.dark, .admin-layout[data-mode="dark"] {
+        color-scheme: dark;
+        --admin-bg-base: #0b0f19;
+        --admin-bg-page: #0b0f19;
+        --admin-bg-surface: #161f30;
+        --admin-bg-subtle: #0f172a;
+        --admin-card-bg: #161f30;
+        --admin-sidebar-bg: #0f172a;
+        --admin-header-bg: rgba(11, 17, 30, 0.92);
+        --admin-text-base: #f8fafc;
+        --admin-subtext-base: #94a3b8;
+        --admin-border-base: rgba(255, 255, 255, 0.08);
+      }
+      /* 2. Base Page Backgrounds (Only applied when html.admin-active is active) */
+      html.admin-active[data-mode="light"] body, html.admin-active.light body, body.admin-active.light {
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
+      }
+      html.admin-active[data-mode="dark"] body, html.admin-active.dark body, body.admin-active.dark {
+        background-color: #0b0f19 !important;
+        color: #f8fafc !important;
+      }
+      /* 3. Admin Header & Sidebar */
+      html.admin-active[data-mode="light"] .admin-header, html.admin-active[data-mode="light"] .app-sticky-header, html.admin-active[data-mode="light"] header.ant-layout-header,
+      html.admin-active.light .admin-header, html.admin-active.light .app-sticky-header, html.admin-active.light header.ant-layout-header,
+      .admin-layout .admin-header {
+        background: rgba(255, 255, 255, 0.95) !important;
+        color: #0f172a !important;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.9) !important;
+        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04) !important;
+      }
+      html.admin-active[data-mode="light"] .ant-layout-sider, html.admin-active[data-mode="light"] aside.ant-layout-sider,
+      html.admin-active.light .ant-layout-sider, html.admin-active.light aside.ant-layout-sider,
+      .admin-layout .ant-layout-sider {
+        background: #ffffff !important;
+        border-right: 1px solid rgba(226, 232, 240, 0.9) !important;
+        box-shadow: 2px 0 16px rgba(15, 23, 42, 0.04) !important;
+      }
+      html.admin-active[data-mode="light"] .admin-layout, html.admin-active[data-mode="light"] .admin-layout .ant-layout-content,
+      html.admin-active.light .admin-layout, html.admin-active.light .admin-layout .ant-layout-content {
+        background: #f8fafc !important;
+        color: #0f172a !important;
+      }
+      html.admin-active[data-mode="dark"] .admin-header, html.admin-active[data-mode="dark"] .app-sticky-header, html.admin-active[data-mode="dark"] header.ant-layout-header,
+      html.admin-active.dark .admin-header, html.admin-active.dark .app-sticky-header, html.admin-active.dark header.ant-layout-header {
+        background: rgba(11, 17, 30, 0.92) !important;
+        color: #f8fafc !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+      }
+      html.admin-active[data-mode="dark"] .ant-layout-sider, html.admin-active[data-mode="dark"] aside.ant-layout-sider,
+      html.admin-active.dark .ant-layout-sider, html.admin-active.dark aside.ant-layout-sider {
+        background: #0f172a !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+      }
+      html.admin-active[data-mode="dark"] .admin-layout, html.admin-active[data-mode="dark"] .admin-layout .ant-layout-content,
+      html.admin-active.dark .admin-layout, html.admin-active.dark .admin-layout .ant-layout-content {
+        background: #0b0f19 !important;
+        color: #f8fafc !important;
+      }
+      /* 4. Cards & Content Panels inside Admin */
+      html.admin-active[data-mode="light"] .ant-card, html.admin-active.light .ant-card, .admin-layout .ant-card {
+        background: #ffffff !important;
+        border-color: rgba(226, 232, 240, 0.9) !important;
+        color: #0f172a !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 16px -4px rgba(15, 23, 42, 0.03) !important;
+      }
+      html.admin-active[data-mode="light"] .ant-card-head, html.admin-active.light .ant-card-head, .admin-layout .ant-card-head {
+        background: #ffffff !important;
+        border-bottom-color: rgba(226, 232, 240, 0.9) !important;
+        color: #0f172a !important;
+      }
+      html.admin-active[data-mode="light"] .ant-card-head-title, html.admin-active.light .ant-card-head-title, .admin-layout .ant-card-head-title {
+        color: #0f172a !important;
+      }
+      html.admin-active[data-mode="dark"] .ant-card, html.admin-active.dark .ant-card {
+        background: #161f30 !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        color: #f8fafc !important;
+      }
+      html.admin-active[data-mode="dark"] .ant-card-head, html.admin-active.dark .ant-card-head {
+        background: #161f30 !important;
+        border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        color: #f8fafc !important;
+      }
+      html.admin-active[data-mode="dark"] .ant-card-head-title, html.admin-active.dark .ant-card-head-title {
+        color: #f8fafc !important;
+      }
+      /* 5. Tables inside Admin */
+      html.admin-active[data-mode="light"] .ant-table-wrapper .ant-table, html.admin-active.light .ant-table-wrapper .ant-table {
+        background: #ffffff !important;
+        color: #0f172a !important;
+      }
+      html.admin-active[data-mode="light"] .ant-table-thead > tr > th, html.admin-active.light .ant-table-thead > tr > th {
+        background: #f8fafc !important;
+        color: #475569 !important;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.9) !important;
+        font-weight: 600 !important;
+      }
+      html.admin-active[data-mode="light"] .ant-table-tbody > tr > td, html.admin-active.light .ant-table-tbody > tr > td {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
+      }
+      html.admin-active[data-mode="light"] .ant-table-tbody > tr:hover > td, html.admin-active.light .ant-table-tbody > tr:hover > td {
+        background: #f1f5f9 !important;
+      }
+      html.admin-active[data-mode="dark"] .ant-table-wrapper .ant-table, html.admin-active.dark .ant-table-wrapper .ant-table {
+        background: #161f30 !important;
+        color: #f8fafc !important;
+      }
+      html.admin-active[data-mode="dark"] .ant-table-thead > tr > th, html.admin-active.dark .ant-table-thead > tr > th {
+        background: #0f172a !important;
+        color: #94a3b8 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+      }
+      html.admin-active[data-mode="dark"] .ant-table-tbody > tr > td, html.admin-active.dark .ant-table-tbody > tr > td {
+        background: #161f30 !important;
+        color: #e2e8f0 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+      }
+      html.admin-active[data-mode="dark"] .ant-table-tbody > tr:hover > td, html.admin-active.dark .ant-table-tbody > tr:hover > td {
+        background: rgba(255, 255, 255, 0.04) !important;
+      }
+      /* 6. Form Controls & Inputs inside Admin */
+      html.admin-active[data-mode="light"] .admin-layout .ant-input, html.admin-active[data-mode="light"] .admin-layout .ant-input-affix-wrapper, html.admin-active[data-mode="light"] .admin-layout .ant-input-number,
+      html.admin-active.light .admin-layout .ant-input, html.admin-active.light .admin-layout .ant-input-affix-wrapper, html.admin-active.light .admin-layout .ant-input-number {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border-color: #cbd5e1 !important;
+      }
+      html.admin-active[data-mode="light"] .admin-layout .ant-select-selector, html.admin-active.light .admin-layout .ant-select-selector {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border-color: #cbd5e1 !important;
+      }
+      html.admin-active[data-mode="light"] .admin-layout .ant-select-dropdown, html.admin-active.light .admin-layout .ant-select-dropdown {
+        background-color: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1) !important;
+      }
+      html.admin-active[data-mode="dark"] .admin-layout .ant-input, html.admin-active[data-mode="dark"] .admin-layout .ant-input-affix-wrapper, html.admin-active[data-mode="dark"] .admin-layout .ant-input-number,
+      html.admin-active.dark .admin-layout .ant-input, html.admin-active.dark .admin-layout .ant-input-affix-wrapper, html.admin-active.dark .admin-layout .ant-input-number {
+        background-color: #0f172a !important;
+        color: #f8fafc !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+      }
+      html.admin-active[data-mode="dark"] .admin-layout .ant-select-selector, html.admin-active.dark .admin-layout .ant-select-selector {
+        background-color: #0f172a !important;
+        color: #f8fafc !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+      }
+      html.admin-active[data-mode="dark"] .admin-layout .ant-select-dropdown, html.admin-active.dark .admin-layout .ant-select-dropdown {
+        background-color: #1e293b !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      }
+      /* 7. Modals & Drawers inside Admin */
+      html.admin-active[data-mode="light"] .ant-modal-content, html.admin-active[data-mode="light"] .ant-drawer-content,
+      html.admin-active.light .ant-modal-content, html.admin-active.light .ant-drawer-content {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 20px 35px -5px rgba(15, 23, 42, 0.15) !important;
+      }
+      html.admin-active[data-mode="light"] .ant-modal-header, html.admin-active[data-mode="light"] .ant-drawer-header,
+      html.admin-active.light .ant-modal-header, html.admin-active.light .ant-drawer-header {
+        background-color: #ffffff !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+      }
+      html.admin-active[data-mode="dark"] .ant-modal-content, html.admin-active[data-mode="dark"] .ant-drawer-content,
+      html.admin-active.dark .ant-modal-content, html.admin-active.dark .ant-drawer-content {
+        background-color: #161f30 !important;
+        color: #f8fafc !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      }
+      html.admin-active[data-mode="dark"] .ant-modal-header, html.admin-active[data-mode="dark"] .ant-drawer-header,
+      html.admin-active.dark .ant-modal-header, html.admin-active.dark .ant-drawer-header {
+        background-color: #161f30 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+      }
+      /* 8. Typography inside Admin */
+      html.admin-active[data-mode="light"] .admin-layout .ant-typography, html.admin-active[data-mode="light"] .admin-layout .ant-statistic-content,
+      html.admin-active.light .admin-layout .ant-typography, html.admin-active.light .admin-layout .ant-statistic-content {
+        color: #0f172a !important;
+      }
+      html.admin-active[data-mode="light"] .admin-layout .ant-statistic-title, html.admin-active[data-mode="light"] .admin-layout .ant-descriptions-item-label,
+      html.admin-active.light .admin-layout .ant-statistic-title, html.admin-active.light .admin-layout .ant-descriptions-item-label {
+        color: #64748b !important;
+      }
+      html.admin-active[data-mode="dark"] .admin-layout .ant-typography, html.admin-active[data-mode="dark"] .admin-layout .ant-statistic-content,
+      html.admin-active.dark .admin-layout .ant-typography, html.admin-active.dark .admin-layout .ant-statistic-content {
+        color: #f8fafc !important;
+      }
+      html.admin-active[data-mode="dark"] .admin-layout .ant-statistic-title, html.admin-active[data-mode="dark"] .admin-layout .ant-descriptions-item-label,
+      html.admin-active.dark .admin-layout .ant-statistic-title, html.admin-active.dark .admin-layout .ant-descriptions-item-label {
+        color: #94a3b8 !important;
+      }
+      /* 9. Universal Tailwind Utility Class Overrides strictly for Admin Views */
+      html.admin-active[data-mode="light"] .admin-layout .bg-slate-950, html.admin-active[data-mode="light"] .admin-layout .bg-slate-900,
+      html.admin-active[data-mode="light"] .admin-layout .bg-\[\#090d16\], html.admin-active[data-mode="light"] .admin-layout .bg-\[\#0c121e\],
+      html.admin-active.light .admin-layout .bg-slate-950, html.admin-active.light .admin-layout .bg-slate-900 {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border-color: rgba(226, 232, 240, 0.9) !important;
+      }
+    </style>
+    <script>
+      (function() {
+        try {
+          var isAdmin = window.location.pathname.startsWith('/admins');
+          var doc = document.documentElement;
+          if (isAdmin) {
+            var mode = localStorage.getItem('admin-theme') || localStorage.getItem('admin-theme-mode') || 'light';
+            var preset = localStorage.getItem('admin-theme-preset') || 'default';
+            doc.classList.add('admin-active');
+            doc.setAttribute('data-mode', mode);
+            doc.setAttribute('data-theme', preset);
+            doc.classList.remove('light', 'dark', 'theme-light', 'theme-dark');
+            doc.classList.add(mode, 'theme-' + mode);
+            doc.style.colorScheme = mode;
+          } else {
+            // Strictly enforce clean default light mode on all public customer-facing website routes
+            doc.classList.remove('admin-active', 'dark', 'theme-dark');
+            doc.classList.add('light', 'theme-light');
+            doc.setAttribute('data-mode', 'light');
+            doc.style.colorScheme = 'light';
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,30 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="auraOrangeGrad" x1="15%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%" stop-color="#ff7a00" />
+      <stop offset="45%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+    <linearGradient id="auraBlueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="auraBlendGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e40af" />
+      <stop offset="55%" stop-color="#c2410c" />
+      <stop offset="100%" stop-color="#fb923c" />
+    </linearGradient>
+    <radialGradient id="auraAuraGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f97316" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <circle cx="60" cy="60" r="54" fill="url(#auraAuraGlow)" />
+  <path d="M22 96 L48 28 C51 20 57 16 64 16 L70 16 L56 46 L44 72 L70 72 L64 85 L32 85 L22 96 Z" fill="url(#auraBlueGrad)" />
+  <path d="M58 20 C61 15 67 15 70 20 L96 74 C98 78 96 84 91 86 L80 90 L60 42 L58 20 Z" fill="url(#auraOrangeGrad)" />
+  <path d="M62 36 C74 26 90 28 98 38 C105 47 104 58 95 65 C88 70 78 72 68 74 C75 68 85 66 90 60 C94 54 93 46 87 41 C80 35 70 35 64 42 L62 36 Z" fill="url(#auraOrangeGrad)" />
+  <path d="M68 74 C56 76 46 83 47 94 C48 104 59 110 74 110 C88 110 99 103 102 91 L90 85 C87 93 80 97 73 97 C66 97 61 94 61 88 C61 83 67 79 76 76 L68 74 Z" fill="url(#auraBlendGrad)" />
+  <circle cx="98" cy="94" r="3.5" fill="#f97316" />
+  <circle cx="98" cy="94" r="1.5" fill="#ffffff" />
+</svg>

@@ -1,0 +1,17 @@
+ReferenceError: saleman_commission is not defined
+ReferenceError: saleman_commission is not defined
+ReferenceError: saleman_commission is not defined
+ReferenceError: saleman_commission is not defined
+Error: Column 'group_id' cannot be null
+TypeError: Assignment to constant variable.
+TypeError: Assignment to constant variable.
+TypeError: Assignment to constant variable.
+Error: Column 'group_id' cannot be null
+Error: Column 'group_id' cannot be null
+Error: Column 'emp_id' cannot be null
+Error: Column 'emp_id' cannot be null
+Error: Column 'emp_id' cannot be null
+Error: Column 'warehouse_id' cannot be null
+Error: Column 'ip_address' cannot be null
+Error: Column 'ip_address' cannot be null
+Error: Column 'ip_address' cannot be null

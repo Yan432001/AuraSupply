@@ -1,0 +1,34 @@
+Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 1
+Error: Table 'aura_developing_db.aura_categoreies' doesn't exist
+Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 1
+Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 1
+Error: Unknown column 'order_no' in 'field list'
+Error: Unknown column 'order_no' in 'field list'
+Error: Unknown column 'order_no' in 'field list'
+Error: Unknown column 'order_no' in 'field list'
+Error: Column 'name' cannot be null
+TypeError: Cannot read properties of undefined (reading 'name')
+TypeError: Cannot read properties of undefined (reading 'name')
+Error
+Error
+Error
+Error
+Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'DESC' at line 1
+Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'DESC' at line 1
+Error
+Error
+Error
+Error
+[11/01/2026 17:14:09]TypeError: CategoryModel.remove is not a function
+[11/01/2026 17:14:12]TypeError: CategoryModel.remove is not a function
+[11/01/2026 17:14:21]TypeError: CategoryModel.remove is not a function
+[11/01/2026 17:14:34]TypeError: CategoryModel.remove is not a function
+[18/02/2026 19:39:00]Error: Access denied for user 'root'@'localhost' (using password: YES)
+[18/02/2026 19:39:00]Error: Access denied for user 'root'@'localhost' (using password: YES)
+[18/02/2026 19:39:04]Error: Access denied for user 'root'@'localhost' (using password: YES)
+[18/02/2026 19:39:04]Error: Access denied for user 'root'@'localhost' (using password: YES)
+[18/02/2026 19:39:05]Error: Access denied for user 'root'@'localhost' (using password: YES)
+[18/02/2026 19:39:05]Error: Access denied for user 'root'@'localhost' (using password: YES)
+[18/02/2026 19:40:10]Error: Table 'aura_v1_db.aura_categories' doesn't exist
+[18/02/2026 19:40:10]Error: Table 'aura_v1_db.aura_categories' doesn't exist
+[18/02/2026 19:54:30]TypeError: CategoryModel.remove is not a function

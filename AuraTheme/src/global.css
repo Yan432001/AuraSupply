@@ -1,0 +1,42 @@
+/* Apply theme variables globally */
+:root {
+  --admin-font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --admin-font-size: 14px;
+  --admin-border-radius: 6px;
+  --admin-line-height: 1.5715;
+  --admin-control-height: 32px;
+  --admin-padding: 16px;
+  --admin-margin: 16px;
+}
+
+/* Theme mode classes */
+body.theme-light {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+body.admin-active.theme-dark {
+  background-color: #141414;
+  color: rgba(255,255,255,0.85);
+}
+
+/* Preset color schemes */
+body.preset-default .ant-btn-primary {
+  background-color: #1890ff;
+}
+
+body.preset-modernBlue .ant-btn-primary {
+  background-color: #1677ff;
+}
+
+body.preset-purple .ant-btn-primary {
+  background-color: #722ed1;
+}
+
+body.preset-green .ant-btn-primary {
+  background-color: #00a854;
+}
+
+body.preset-darkOnly .ant-btn-primary {
+  background-color: #177ddc;
+}

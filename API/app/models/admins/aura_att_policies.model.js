@@ -1,0 +1,32 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_att_policies",
+  primaryKey: ["id"],
+  hidden: [],
+  columns: [
+    {"name":"id","type":"int","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"code","type":"char","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"policy","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"time_in_one","type":"time","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"time_out_one","type":"time","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"start_in_one","type":"time","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"end_in_one","type":"time","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"start_out_one","type":"time","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"end_out_one","type":"time","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"time_in_two","type":"time","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"time_out_two","type":"time","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"start_in_two","type":"time","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"end_in_two","type":"time","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"start_out_two","type":"time","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"end_out_two","type":"time","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"minimum_min","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"round_min","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"note","type":"text","auto":false,"nullable":true,"hasDefault":false},
+    {"name":"type","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"monthly_working_day","type":"tinyint","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"yearly_annual_leave","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"working_year_annual_leave","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"monthly_annual_leave","type":"double","auto":false,"nullable":true,"hasDefault":true},
+  ],
+});
