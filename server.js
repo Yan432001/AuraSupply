@@ -75,6 +75,7 @@ async function startServer() {
 
   // Mount Admin & ERP Module Routes
   const adminRoutes = [
+    'erpMaster',
     'auth',
     'users',
     'products',

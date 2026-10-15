@@ -40,6 +40,7 @@ import AdminQrCodeGeneratorPage from './pages/admins/AdminQrCodeGeneratorPage';
 import AdminModulesManager from './pages/admins/AdminModulesManager';
 import AdminBranchesManager from './pages/admins/AdminBranchesManager';
 import AdminFrontEndManager from './pages/admins/AdminFrontEndManager';
+import ModernAuraLogin from './pages/admins/auth/ModernAuraLogin';
 import { AdminModulesProvider } from './contexts/AdminModulesContext';
 
 // E-Menu Telegram Mini App Layout & Views
@@ -121,6 +122,7 @@ const AppContent = () => {
       {/* 4. Admin Management Routes */}
       <Route path="/admins" element={<ThemedAdminLayout />}>
         <Route index element={<AdminDashboardRouter />} />
+        <Route path="login" element={<ModernAuraLogin />} />
         <Route path="dashboard" element={<AdminDashboardRouter />} />
         <Route path="products" element={<AdminProducts />} />
         <Route path="users" element={<AdminUsers />} />
