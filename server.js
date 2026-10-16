@@ -96,7 +96,8 @@ async function startServer() {
     'product.rack',
     'product.serials',
     'product.units',
-    'product.variants'
+    'product.variants',
+    'bpasErpData'
   ];
 
   for (const routeName of adminRoutes) {

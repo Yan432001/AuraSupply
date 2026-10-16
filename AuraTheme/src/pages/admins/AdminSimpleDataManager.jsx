@@ -110,10 +110,23 @@ export default function AdminSimpleDataManager() {
           }));
         }
         if (pRes.status === 'fulfilled' && pRes.value?.success && Array.isArray(pRes.value.data)) {
-          next.posts = pRes.value.data;
+          next.posts = pRes.value.data.map(p => ({
+            ...p,
+            status: p.status || (p.published_at ? 'published' : 'published'),
+            author: p.author || 'Aura Staff',
+            category: p.category || 'General',
+            created_at: p.created_at || (p.published_at ? new Date(p.published_at).toLocaleDateString() : 'Recent'),
+            image: p.image || 'https://images.unsplash.com/photo-1542744094-3a31f272c490?auto=format&fit=crop&w=120&q=80',
+            views: p.views ?? 0,
+          }));
         }
         if (cRes.status === 'fulfilled' && cRes.value?.success && Array.isArray(cRes.value.data)) {
-          next.categories = cRes.value.data;
+          next.categories = cRes.value.data.map(c => ({
+            ...c,
+            status: c.status || 'active',
+            item_count: c.item_count ?? 0,
+            created_at: c.created_at || 'Recent',
+          }));
         }
         return next;
       });
@@ -175,7 +188,7 @@ export default function AdminSimpleDataManager() {
           };
           const newStore = { ...dataStore, [collectionKey]: currentList };
           persistChanges(newStore);
-          message.success(`${formModalType.toUpperCase()} updated successfully!`);
+          message.success(`${(formModalType || 'record').toUpperCase()} updated successfully!`);
         }
       } else {
         // CREATE new record
@@ -438,8 +451,8 @@ export default function AdminSimpleDataManager() {
                         </div>
                       </div>
                     </div>
-                    <Tag color={post.status === 'published' ? 'green' : 'orange'}>
-                      {post.status.toUpperCase()}
+                    <Tag color={(post.status || 'published') === 'published' ? 'green' : 'orange'}>
+                      {(post.status || 'published').toUpperCase()}
                     </Tag>
                   </div>
                 ))}
@@ -1133,7 +1146,7 @@ export default function AdminSimpleDataManager() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {editingRecord ? <SettingOutlined style={{ color: '#d97706' }} /> : <PlusOutlined style={{ color: '#2563eb' }} />}
             <span>
-              {editingRecord ? `Edit ${formModalType.toUpperCase()} Record` : `Add New ${formModalType.toUpperCase()}`}
+              {editingRecord ? `Edit ${(formModalType || 'record').toUpperCase()} Record` : `Add New ${(formModalType || 'record').toUpperCase()}`}
             </span>
           </div>
         }

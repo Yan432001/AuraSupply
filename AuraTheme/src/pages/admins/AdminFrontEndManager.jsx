@@ -133,14 +133,20 @@ const savePublicPages = (p) => {
 const getLiveProducts = () => {
   try {
     const raw = localStorage.getItem(LIVE_PRODUCTS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed?.products)) return parsed.products;
+    return [];
   } catch {
     return [];
   }
 };
 const saveLiveProducts = (p) => {
   try {
-    localStorage.setItem(LIVE_PRODUCTS_KEY, JSON.stringify(p));
+    const list = Array.isArray(p) ? p : Array.isArray(p?.products) ? p.products : [];
+    localStorage.setItem(LIVE_PRODUCTS_KEY, JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent('aura_live_products_updated', { detail: list }));
   } catch (_) {}
 };
 import { useAdminTheme } from '../../hooks/useAdminTheme';
@@ -239,11 +245,23 @@ export default function AdminFrontEndManager({ initialTab }) {
       }
     });
 
-    const handleStoresUpdated = (e) => setStores(e.detail);
-    const handleProductsUpdated = (e) => setProducts(e.detail);
-    const handleSettingsUpdated = (e) => setSettings(e.detail);
-    const handleSlidesUpdated = (e) => setSlides(e.detail);
-    const handlePagesUpdated = (e) => setPages(e.detail);
+    const handleStoresUpdated = (e) => {
+      const data = Array.isArray(e?.detail) ? e.detail : Array.isArray(e?.detail?.stores) ? e.detail.stores : getLiveStores();
+      setStores(Array.isArray(data) ? data : []);
+    };
+    const handleProductsUpdated = (e) => {
+      const data = Array.isArray(e?.detail) ? e.detail : Array.isArray(e?.detail?.products) ? e.detail.products : getLiveProducts();
+      setProducts(Array.isArray(data) ? data : []);
+    };
+    const handleSettingsUpdated = (e) => setSettings(e?.detail || getStorefrontSettings());
+    const handleSlidesUpdated = (e) => {
+      const data = Array.isArray(e?.detail) ? e.detail : Array.isArray(e?.detail?.slides) ? e.detail.slides : getHeroSlides();
+      setSlides(Array.isArray(data) ? data : []);
+    };
+    const handlePagesUpdated = (e) => {
+      const data = Array.isArray(e?.detail) ? e.detail : Array.isArray(e?.detail?.pages) ? e.detail.pages : getPublicPages();
+      setPages(Array.isArray(data) ? data : []);
+    };
     const handleTelegramUpdated = (e) => {
       if (e.detail?.configs) {
         setTelegramConfigs(e.detail.configs);
@@ -596,7 +614,8 @@ export default function AdminFrontEndManager({ initialTab }) {
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
+    const list = Array.isArray(products) ? products : [];
+    return list.filter((p) => {
       const matchStore =
         selectedStoreFilter === 'all' ||
         p.seller === selectedStoreFilter ||
@@ -605,8 +624,8 @@ export default function AdminFrontEndManager({ initialTab }) {
         selectedCategoryFilter === 'all' || p.category === selectedCategoryFilter;
       const matchSearch =
         !productSearchText ||
-        p.name.toLowerCase().includes(productSearchText.toLowerCase()) ||
-        p.id.toLowerCase().includes(productSearchText.toLowerCase());
+        (p.name && p.name.toLowerCase().includes(productSearchText.toLowerCase())) ||
+        (p.id && String(p.id).toLowerCase().includes(productSearchText.toLowerCase()));
       const matchStock =
         stockStatusFilter === 'all' ||
         (stockStatusFilter === 'in_stock' && p.inStock !== false) ||
@@ -617,24 +636,25 @@ export default function AdminFrontEndManager({ initialTab }) {
 
   // Filtered Stores
   const filteredStores = useMemo(() => {
-    return stores.filter((s) => {
+    const list = Array.isArray(stores) ? stores : [];
+    return list.filter((s) => {
       if (!storeSearchText) return true;
       const q = storeSearchText.toLowerCase();
       return (
-        s.name.toLowerCase().includes(q) ||
-        s.id.toLowerCase().includes(q) ||
+        (s.name && s.name.toLowerCase().includes(q)) ||
+        (s.id && String(s.id).toLowerCase().includes(q)) ||
         (s.summary && s.summary.toLowerCase().includes(q))
       );
     });
   }, [stores, storeSearchText]);
 
   // Statistics
-  const totalStoresCount = stores.length;
-  const activeStoresCount = stores.filter((s) => s.activeOnWebsite !== false).length;
-  const featuredStoresCount = stores.filter((s) => s.featuredOnHome).length;
-  const totalProductsCount = products.length;
-  const activeProductsCount = products.filter((p) => p.visibleOnWebsite !== false).length;
-  const featuredProductsCount = products.filter((p) => p.featured).length;
+  const totalStoresCount = (Array.isArray(stores) ? stores : []).length;
+  const activeStoresCount = (Array.isArray(stores) ? stores : []).filter((s) => s.activeOnWebsite !== false).length;
+  const featuredStoresCount = (Array.isArray(stores) ? stores : []).filter((s) => s.featuredOnHome).length;
+  const totalProductsCount = (Array.isArray(products) ? products : []).length;
+  const activeProductsCount = (Array.isArray(products) ? products : []).filter((p) => p.visibleOnWebsite !== false).length;
+  const featuredProductsCount = (Array.isArray(products) ? products : []).filter((p) => p.featured).length;
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -1216,7 +1236,7 @@ function StoresControllerTab({
               fontSize: 16,
             }}
           >
-            {record.logoText || record.name.slice(0, 2).toUpperCase()}
+            {record.logoText || (record.name ? record.name.slice(0, 2).toUpperCase() : 'ST')}
           </Avatar>
           <div>
             <Flex align="center" gap={6}>

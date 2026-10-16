@@ -225,7 +225,7 @@ export default function AdminQrCodeGenerator() {
 
     ctx.fillStyle = '#0f172a';
     ctx.font = 'bold 28px "Segoe UI", Roboto, sans-serif';
-    const locTitle = `${locationType.toUpperCase()} #${locationNumber}`;
+    const locTitle = `${(locationType || 'LOCATION').toUpperCase()} #${locationNumber}`;
     ctx.fillText(locTitle, cardWidth / 2, 298);
 
     // 5. Draw QR Code centered
@@ -297,7 +297,7 @@ export default function AdminQrCodeGenerator() {
       list.push({
         key: i,
         id: i,
-        number: `${batchLocationType.toUpperCase()} #${i}`,
+        number: `${(batchLocationType || 'LOCATION').toUpperCase()} #${i}`,
         type: batchLocationType,
         url: url,
         store: activeStore?.name,
@@ -695,7 +695,7 @@ export default function AdminQrCodeGenerator() {
                           }}
                         >
                           <Text strong style={{ fontSize: 16, color: '#0f172a' }}>
-                            {locationType.toUpperCase()} #{locationNumber || '1'}
+                            {(locationType || 'LOCATION').toUpperCase()} #{locationNumber || '1'}
                           </Text>
                           {zoneLabel && (
                             <span style={{ fontSize: 11, color: '#64748b', marginLeft: 6 }}>

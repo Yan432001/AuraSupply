@@ -7,6 +7,7 @@ import Patients from './Patients';
 import AdminCmsManager from './cms/AdminCmsManager';
 import AdminSimpleDataManager from './AdminSimpleDataManager';
 import AdminProductsManager from './AdminProductsManager';
+import BpasInventoryWorkspace from './BpasInventoryWorkspace';
 import AdminModulesManager from './AdminModulesManager';
 import AdminBranchesManager from './AdminBranchesManager';
 import AdminFrontEndManager from './AdminFrontEndManager';
@@ -129,9 +130,23 @@ const AdminDashboardRouter = () => {
     );
   }
 
-  // Products
-  if (menuKey === 'products' || (moduleKey === 'inventory' && menuKey === 'products')) {
-    return <AdminProductsManager />;
+  // Inventory & Products (BPAS Inventory Concept UI)
+  if (
+    moduleKey === 'inventory' ||
+    menuKey === 'products' ||
+    menuKey === 'add-product' ||
+    menuKey === 'import-products' ||
+    menuKey === 'print-barcodes' ||
+    menuKey === 'stock-counts' ||
+    menuKey === 'quantity-adjustments' ||
+    menuKey === 'cost-adjustments' ||
+    menuKey === 'using-stock' ||
+    menuKey === 'stock-received' ||
+    menuKey === 'transfers' ||
+    menuKey === 'consignments' ||
+    menuKey === 'rewards-exchange'
+  ) {
+    return <BpasInventoryWorkspace />;
   }
 
   // Categories

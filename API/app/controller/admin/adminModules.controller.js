@@ -9,16 +9,20 @@ const { logActivity } = require('../../services/auditLogger.service');
 exports.listModules = async (req, res) => {
   try {
     const [modules] = await db.query(`
-      SELECT id, module_key, label, category, icon_key, accent_color, is_enabled, sort_order, description
+      SELECT *
       FROM aura_module_settings
       ORDER BY sort_order ASC, id ASC
     `);
 
-    const [submodules] = await db.query(`
-      SELECT id, module_key, sub_module_key, label, is_enabled, description
-      FROM aura_sub_module_settings
-      ORDER BY id ASC
-    `);
+    let submodules = [];
+    try {
+      const [subRows] = await db.query(`
+        SELECT *
+        FROM aura_sub_module_settings
+        ORDER BY id ASC
+      `);
+      submodules = subRows;
+    } catch (_) {}
 
     // Group submodules by module_key
     const subMap = {};
@@ -28,25 +32,34 @@ exports.listModules = async (req, res) => {
       }
       subMap[sub.module_key].push({
         id: sub.id,
-        key: sub.sub_module_key,
-        label: sub.label,
+        key: sub.sub_module_key || sub.key,
+        label: sub.label || sub.title || sub.name,
         enabled: sub.is_enabled === 1,
-        description: sub.description
+        description: sub.description || ''
       });
     }
 
-    const payload = modules.map(m => ({
-      id: m.id,
-      key: m.module_key,
-      label: m.label,
-      category: m.category,
-      iconKey: m.icon_key,
-      accent: m.accent_color,
-      enabled: m.is_enabled === 1,
-      sortOrder: m.sort_order,
-      description: m.description,
-      submodules: subMap[m.module_key] || []
-    }));
+    const payload = modules.map(m => {
+      let configObj = {};
+      try {
+        if (m.config) {
+          configObj = typeof m.config === 'string' ? JSON.parse(m.config) : m.config;
+        }
+      } catch (_) {}
+
+      return {
+        id: m.id,
+        key: m.module_key,
+        label: m.title || m.label || configObj.label || m.module_key,
+        category: m.category || configObj.category || 'Operations',
+        iconKey: m.icon_key || configObj.iconKey || m.module_key,
+        accent: m.accent_color || configObj.accent || '#2563eb',
+        enabled: m.is_enabled === 1,
+        sortOrder: m.sort_order || 0,
+        description: m.description || configObj.description || '',
+        submodules: subMap[m.module_key] || []
+      };
+    });
 
     // Calculate summary statistics
     const totalModules = payload.length;
