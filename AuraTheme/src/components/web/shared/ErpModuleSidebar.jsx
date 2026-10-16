@@ -20,6 +20,24 @@ import {
   SearchOutlined,
   StarFilled,
   StarOutlined,
+  CarOutlined,
+  WalletOutlined,
+  CalendarOutlined,
+  RocketOutlined,
+  ShopOutlined,
+  ThunderboltOutlined,
+  ReadOutlined,
+  ProjectOutlined,
+  ToolOutlined,
+  SwapOutlined,
+  FieldTimeOutlined,
+  PercentageOutlined,
+  ApartmentOutlined,
+  DollarOutlined,
+  PayCircleOutlined,
+  GoldOutlined,
+  RestOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import { erpModules, getMenuLineage } from '../../../data/erpModules';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
@@ -46,6 +64,29 @@ const moduleIconMap = {
   frontEnd: GlobalOutlined,
   'front-end': GlobalOutlined,
   cms: GlobalOutlined,
+  leasing: CarOutlined,
+  commission: PercentageOutlined,
+  pawns: GoldOutlined,
+  savings: WalletOutlined,
+  installments: CalendarOutlined,
+  rooms: RestOutlined,
+  tickets: RocketOutlined,
+  concretes: BuildOutlined,
+  truckings: CarOutlined,
+  clearances: AuditOutlined,
+  store_sales: ShopOutlined,
+  gym: ThunderboltOutlined,
+  schools: ReadOutlined,
+  projects: ProjectOutlined,
+  workorder: ToolOutlined,
+  money_change: SwapOutlined,
+  tax: PercentageOutlined,
+  attendance: FieldTimeOutlined,
+  repairs: ToolOutlined,
+  expenses: PayCircleOutlined,
+  calendar: CalendarOutlined,
+  people: TeamOutlined,
+  companies: ApartmentOutlined,
 };
 
 const getIconNode = (iconKey) => {
@@ -54,10 +95,12 @@ const getIconNode = (iconKey) => {
 };
 
 const sectionGroups = [
-  { label: 'Operations', keys: ['inventory', 'procurement', 'sales', 'pos', 'asset'] },
-  { label: 'People', keys: ['crm', 'hr', 'payroll', 'clinic'] },
-  { label: 'Finance', keys: ['accounting', 'loans', 'property'] },
-  { label: 'System', keys: ['cms', 'reports', 'settings', 'front-end'] },
+  { label: 'Operations', keys: ['inventory', 'procurement', 'sales', 'pos', 'asset', 'leasing', 'store_sales', 'repairs'] },
+  { label: 'Logistics & Projects', keys: ['concretes', 'truckings', 'clearances', 'projects', 'workorder'] },
+  { label: 'Specialty & Industry', keys: ['clinic', 'schools', 'rooms', 'tickets', 'gym'] },
+  { label: 'People & HR', keys: ['crm', 'people', 'hr', 'attendance', 'payroll'] },
+  { label: 'Finance & Banking', keys: ['accounting', 'loans', 'pawns', 'savings', 'installments', 'property', 'commission', 'money_change', 'tax', 'expenses'] },
+  { label: 'Administration & Web', keys: ['companies', 'calendar', 'reports', 'settings', 'front-end', 'cms'] },
 ];
 
 const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGroups, onToggleGroup, onNavigate, depth = 1, parentPath = [] }) => {

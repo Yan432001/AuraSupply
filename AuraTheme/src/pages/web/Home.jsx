@@ -216,13 +216,14 @@ export default function Home() {
   };
 
   const filteredProducts = useMemo(() => {
-    if (activeCategory === 'all') return products;
-    return products.filter((p) => Number(p.category_id) === Number(activeCategory));
+    const list = Array.isArray(products) ? products : [];
+    if (activeCategory === 'all') return list;
+    return list.filter((p) => Number(p.category_id) === Number(activeCategory));
   }, [products, activeCategory]);
 
-
   const discountedProducts = useMemo(() => {
-    return retailProducts.filter((p) => p.originalPrice && p.originalPrice > p.price);
+    const list = Array.isArray(retailProducts) ? retailProducts : [];
+    return list.filter((p) => p.originalPrice && p.originalPrice > p.price);
   }, [retailProducts]);
 
   const handleOrderRetailProduct = (product, triggerElement) => {

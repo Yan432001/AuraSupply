@@ -863,12 +863,12 @@ const UserManagement = () => {
         ) : (
           <Timeline
             items={activityLogs.map((log) => ({
-              color: log.action.includes('delete') ? 'red' : log.action.includes('login') ? 'green' : 'blue',
+              color: (log.action || '').includes('delete') ? 'red' : (log.action || '').includes('login') ? 'green' : 'blue',
               children: (
                 <div>
                   <Flex orientation="horizontal" justify="space-between" align="center">
                     <Tag color="blue" style={{ borderRadius: 6, fontWeight: 700, fontSize: 10 }}>
-                      {log.action.toUpperCase()}
+                      {(log.action || 'ACTION').toUpperCase()}
                     </Tag>
                     <Text style={{ fontSize: 11, color: adminTheme.subtext }}>
                       {new Date(log.created_at).toLocaleString()}

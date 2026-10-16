@@ -126,6 +126,9 @@ const AppContent = () => {
         <Route path="login" element={<ModernAuraLogin />} />
         <Route path="dashboard" element={<AdminDashboardRouter />} />
         <Route path="products" element={<AdminProducts />} />
+        <Route path="products/add" element={<AdminProducts />} />
+        <Route path="products/import" element={<AdminProducts />} />
+        <Route path="products/print_barcodes" element={<AdminProducts />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="customers" element={<CustomersManagement />} />
         <Route path="orders" element={<OrdersManagement />} />

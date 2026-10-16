@@ -57,15 +57,20 @@ const LIVE_PRODUCTS_KEY = 'aura_admin_live_products_v2';
 const getLiveProducts = () => {
   try {
     const raw = localStorage.getItem(LIVE_PRODUCTS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed?.products)) return parsed.products;
+    return [];
   } catch {
     return [];
   }
 };
 const saveLiveProducts = (prods) => {
   try {
-    localStorage.setItem(LIVE_PRODUCTS_KEY, JSON.stringify(prods));
-    window.dispatchEvent(new CustomEvent('aura_live_products_updated', { detail: { products: prods } }));
+    const list = Array.isArray(prods) ? prods : Array.isArray(prods?.products) ? prods.products : [];
+    localStorage.setItem(LIVE_PRODUCTS_KEY, JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent('aura_live_products_updated', { detail: list }));
   } catch (_) {}
 };
 const resetLiveProducts = () => {
@@ -572,11 +577,12 @@ export default function AdminProductsManager() {
 
   // Metrics
   const metrics = useMemo(() => {
-    const total = productsList.length;
-    const inStockCount = productsList.filter((p) => p.inStock).length;
+    const list = Array.isArray(productsList) ? productsList : [];
+    const total = list.length;
+    const inStockCount = list.filter((p) => p.inStock).length;
     const outOfStockCount = total - inStockCount;
-    const lowStockCount = productsList.filter((p) => (p.stockCount ?? 15) < 10).length;
-    const totalValue = productsList.reduce((acc, p) => acc + (p.price || 0) * (p.stockCount ?? 50), 0);
+    const lowStockCount = list.filter((p) => (p.stockCount ?? 15) < 10).length;
+    const totalValue = list.reduce((acc, p) => acc + (p.price || 0) * (p.stockCount ?? 50), 0);
 
     return {
       total,
@@ -591,7 +597,8 @@ export default function AdminProductsManager() {
 
   // Filtering
   const filteredProducts = useMemo(() => {
-    return productsList.filter((item) => {
+    const list = Array.isArray(productsList) ? productsList : [];
+    return list.filter((item) => {
       const matchSearch =
         !searchText ||
         item.name.toLowerCase().includes(searchText.toLowerCase()) ||

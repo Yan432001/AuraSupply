@@ -1,6 +1,6 @@
 import React from 'react';
-import AdminProductsManager from './AdminProductsManager';
+import BpasInventoryWorkspace from './BpasInventoryWorkspace';
 
 export default function AdminProducts() {
-  return <AdminProductsManager />;
+  return <BpasInventoryWorkspace />;
 }
