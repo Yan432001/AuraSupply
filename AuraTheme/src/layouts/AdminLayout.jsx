@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Drawer, Layout } from 'antd';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Drawer, Layout, Spin } from 'antd';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import { NotificationProvider } from '../pages/admins/NotificationContext';
 import HeaderDefault from '../pages/admins/AdminHeaderDefault';
 import Head from '../pages/admins/AdminHead';
@@ -10,6 +10,7 @@ import { erpModules } from '../data/erpModules';
 import { useAdminTheme } from '../hooks/useAdminTheme';
 import { useAdminModules } from '../hooks/useAdminModules';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const { Content } = Layout;
 const MOBILE_BREAKPOINT = 992;
@@ -31,9 +32,12 @@ const AdminLayout = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
+  const { user, token, isAuthenticated, loadingSession } = useAuth();
+
+  // Check if current route is a login route
+  const isLoginPage = NO_SIDEBAR_ROUTES.some(route => location.pathname.startsWith(route));
   // Check if sidebar should be shown
-  const showSidebar = location.pathname.startsWith('/admins') && 
-    !NO_SIDEBAR_ROUTES.some(route => location.pathname.startsWith(route));
+  const showSidebar = !isLoginPage && location.pathname.startsWith('/admins');
 
   useEffect(() => {
     const handleResize = () => {
@@ -108,6 +112,47 @@ const AdminLayout = () => {
   };
 
   const contentMarginLeft = !showSidebar ? 0 : isMobile ? 0 : collapsed ? 72 : 264;
+
+  // 1. If currently on a login page:
+  if (isLoginPage) {
+    if (isAuthenticated) {
+      return <Navigate to="/admins/dashboard" replace />;
+    }
+    return (
+      <Layout className="admin-layout" style={{ minHeight: '100vh', background: adminTheme.pageBackground }}>
+        <Content style={{ margin: 0, padding: 0, minHeight: '100vh' }}>
+          <Outlet />
+        </Content>
+      </Layout>
+    );
+  }
+
+  // 2. If validating active session token on app initialization:
+  if (loadingSession) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: adminTheme.pageBackground,
+          gap: 16,
+        }}
+      >
+        <Spin size="large" />
+        <span style={{ color: adminTheme.subtext, fontSize: 13, fontWeight: 500 }}>
+          Authenticating Aura ERP session...
+        </span>
+      </div>
+    );
+  }
+
+  // 3. If accessing protected admin routes without an authenticated session:
+  if (!isAuthenticated) {
+    return <Navigate to="/admins/login" state={{ from: location }} replace />;
+  }
 
   return (
     <NotificationProvider>

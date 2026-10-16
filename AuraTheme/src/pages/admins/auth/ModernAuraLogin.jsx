@@ -98,20 +98,28 @@ const ModernAuraLogin = () => {
         remember_me: values.remember_me || false
       });
 
-      if (res.data?.success && res.data?.data) {
-        const { token, user, group, permissions, branches } = res.data.data;
+      if (res.data?.success || res.data?.status) {
+        const payload = res.data.data || res.data;
+        const token = payload.token || payload.access_token || res.data.token || res.data.access_token;
+        const user = payload.user || payload.profile || res.data.user || res.data.profile || {};
+        const group = payload.group || res.data.group;
+        const GP = payload.GP || res.data.GP || {};
+        const permissions = payload.permissions || res.data.permissions || [];
+        const branches = payload.branches || res.data.branches || [];
+
         const enrichedUser = {
           ...user,
           group,
-          role: group?.name || user.role,
-          level: group?.level ?? user.level,
-          permissions: permissions || [],
-          branches: branches || []
+          role: group?.name || user?.role || 'admin',
+          group_name: group?.name || user?.group_name || 'admin',
+          level: group?.level ?? user?.level,
+          GP,
+          permissions,
+          branches
         };
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(enrichedUser));
-        login(enrichedUser);
-        message.success(`Welcome back, ${user.first_name || user.username}!`);
+
+        login({ token, user: enrichedUser });
+        message.success(`Welcome back, ${user.first_name || user.username || 'Admin'}!`);
         navigate('/admins/dashboard');
       } else {
         setErrorMessage(res.data?.message || 'Login failed. Please verify credentials.');

@@ -23,8 +23,14 @@ module.exports = (app) => {
   app.post('/api/admin/login', authCtrl.login);
   app.post('/api/admin/auth/logout', authenticate, authCtrl.logout);
   app.post('/api/admin/auth/refresh', authCtrl.refreshToken);
+  app.get('/api/admin/auth/session', authenticate, authCtrl.getProfile);
   app.get('/api/admin/auth/profile', authenticate, authCtrl.getProfile);
+  app.put('/api/admin/auth/profile', authenticate, authCtrl.updateProfile);
+  app.post('/api/admin/auth/profile', authenticate, authCtrl.updateProfile);
   app.get('/api/admin/profile', authenticate, authCtrl.getProfile);
+  app.put('/api/admin/profile', authenticate, authCtrl.updateProfile);
+  app.post('/api/admin/auth/change-password', authenticate, authCtrl.changePassword);
+  app.put('/api/admin/auth/change-password', authenticate, authCtrl.changePassword);
   app.post('/api/admin/auth/forgot-password', authCtrl.forgotPassword);
   app.post('/api/admin/auth/reset-password', authCtrl.resetPassword);
 

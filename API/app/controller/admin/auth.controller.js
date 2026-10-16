@@ -1,703 +1,431 @@
-
-
 const { db, access_token_key } = require("../../config/utill/helper");
 const { logError } = require("../../config/utill/logErr");
 const bcrypt = require("bcryptjs");
-const jwt = require('jsonwebtoken');
-// const Auth_Model = require("../../models/admins/auth.model");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const permissionsUtil = require("../../config/utill/permissions");
+const accessControlService = require("../../services/accessControl.service");
 
+const JWT_SECRET = process.env.JWT_SECRET || access_token_key || "AURA_ERP_SECRET_TOKEN_2026";
+const ACCESS_TOKEN_EXPIRY = "7d";
 
-
-const crypto = require('crypto');
-
-// Get user profile for authenticated session
+/**
+ * GET /api/admin/auth/profile or GET /api/admin/auth/session
+ * Return current authenticated session, role flags, and permissions ($this->GP)
+ */
 exports.profile = async (req, res) => {
   try {
     const userId = req.user_id || req.user?.id || req.profile?.id;
     if (!userId) {
-      return res.status(401).json({ success: false, message: 'Unauthenticated' });
+      return res.status(401).json({ success: false, status: false, message: "Unauthenticated" });
     }
 
     const sql = `
       SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.phone, u.gender,
-             u.group_id, u.active, u.biller_id, u.warehouse_id, u.avatar,
-             g.name AS role, g.description AS role_description
+             u.group_id, u.active, u.biller_id, u.warehouse_id, u.company_id, u.avatar,
+             u.view_right, u.edit_right, u.show_cost, u.show_price,
+             g.name AS role, g.name AS group_name, g.description AS role_description, g.level AS group_level,
+             g.allow_admin_login, g.allow_web_login
       FROM aura_users u
       LEFT JOIN aura_groups g ON u.group_id = g.id
-      WHERE u.id = ?
+      WHERE u.id = ? AND u.deleted_at IS NULL
       LIMIT 1
     `;
     const [rows] = await db.query(sql, [userId]);
     if (!rows || rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res.status(404).json({ success: false, status: false, message: "User not found" });
     }
 
     const user = rows[0];
+    const roleName = (user.role || '').toLowerCase();
+    const isOwner = Number(user.group_id) === 1 || Number(user.group_level) === 1 || roleName === 'owner';
+    const isAdmin = Number(user.group_id) === 2 || Number(user.group_level) === 2 || roleName === 'admin';
+
+    // Retrieve group permissions ($this->GP)
+    const GP = await permissionsUtil.getGroupPermissions(user.group_id);
+    const allowedBranches = await accessControlService.getUserAllowedBranches(user.id, user.group_level);
+
+    const permissionKeys = isOwner || isAdmin
+      ? await permissionsUtil.getPermissionKeys()
+      : Object.entries(GP).filter(([k, v]) => k !== 'group_id' && v == 1).map(([k]) => k);
+
+    const sessionUser = {
+      id: user.id,
+      user_id: user.id,
+      username: user.username,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
+      phone: user.phone,
+      gender: user.gender,
+      avatar: user.avatar,
+      group_id: user.group_id,
+      role: user.role || 'admin',
+      group_name: user.group_name || 'admin',
+      level: user.group_level,
+      warehouse_id: user.warehouse_id,
+      biller_id: user.biller_id,
+      company_id: user.company_id,
+      view_right: user.view_right,
+      edit_right: user.edit_right,
+      show_cost: user.show_cost,
+      show_price: user.show_price,
+      Owner: isOwner,
+      Admin: isAdmin,
+      Store: roleName === 'store',
+      Supplier: roleName === 'supplier',
+      Customer: roleName === 'customer',
+      Salesman: roleName === 'salesman' || roleName === 'sale-agents',
+      isOwner,
+      isAdmin,
+      GP: isOwner || isAdmin ? { all: 1 } : GP,
+      permissions: permissionKeys,
+      branches: allowedBranches
+    };
+
     res.json({
       success: true,
-      data: user,
-      profile: user,
-      user
+      status: true,
+      data: sessionUser,
+      profile: sessionUser,
+      user: sessionUser,
+      GP,
+      permissions: permissionKeys,
+      branches: allowedBranches
     });
   } catch (err) {
     logError("profile.controller", err, res);
   }
 };
 
+/**
+ * POST /api/admin/auth/login, POST /api/admin/login, POST /api/auth/login
+ * Administrative Login & Session Creation
+ * (Cloned from CodeIgniter 3 AURA_v1 Auth::login & Auth_model)
+ */
 exports.login = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, remember = false, remember_me = false } = req.body;
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+
     if (!username || !password) {
       return res.status(400).json({
         success: false,
+        status: false,
+        message: "Username/email and password are required",
         error: { message: "Username and password are required" }
       });
     }
 
+    const cleanLogin = username.trim().toLowerCase();
+
+    // Query aura_users joined with aura_groups
     const query = `
-      SELECT u.*, g.name AS role, g.description AS role_description
+      SELECT u.*, 
+             g.name AS role, g.name AS group_name, g.description AS role_description, g.level AS group_level,
+             g.allow_admin_login, g.allow_web_login
       FROM aura_users u
       LEFT JOIN aura_groups g ON u.group_id = g.id
-      WHERE u.username = :username OR u.email = :username
+      WHERE (LOWER(u.username) = ? OR LOWER(u.email) = ?) AND u.deleted_at IS NULL
       LIMIT 1
     `;
-    const [data] = await db.query(query, { username: username.trim() });
+    const [data] = await db.query(query, [cleanLogin, cleanLogin]);
 
     if (!data || data.length === 0) {
+      // Record failed attempt
+      try {
+        await db.query(
+          "INSERT INTO aura_login_attempts (login, ip_address, area, time) VALUES (?, ?, 'admin', UNIX_TIMESTAMP())",
+          [cleanLogin, ipAddress]
+        );
+      } catch (_) {}
+
       return res.status(401).json({
         success: false,
+        status: false,
+        message: "Invalid username or password",
         error: { message: "Invalid username or password" }
       });
     }
 
     const user = data[0];
-    if (!user.active) {
+
+    // Check account status
+    if (user.active === 0 || (user.status && user.status !== 'active')) {
       return res.status(403).json({
         success: false,
+        status: false,
+        message: "Account has been deactivated. Please contact administrator.",
         error: { message: "Account has been deactivated" }
       });
     }
 
-    // Dual-algorithm password verification (Bcrypt + Legacy Ion Auth SHA1)
+    // Verify password with Bcrypt and legacy Ion Auth SHA1 auto-upgrade
     let isMatch = false;
-    try {
-      isMatch = await bcrypt.compare(password, user.password);
-    } catch (_) {
-      isMatch = false;
-    }
+    let needsUpgrade = false;
 
-    if (!isMatch && user.password && user.password.length === 40) {
+    if (user.password && (user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$'))) {
+      try {
+        isMatch = await bcrypt.compare(password, user.password);
+      } catch (_) {
+        isMatch = false;
+      }
+    } else if (user.password && user.password.length === 40) {
+      // Legacy Ion Auth SHA1 algorithm ($salt . substr(sha1($salt . $password), 0, -10))
       const salt = user.password.substring(0, 10);
-      const candidate = salt + crypto.createHash('sha1').update(salt + password).digest('hex').substring(0, 30);
+      const shaPart = crypto.createHash('sha1').update(salt + password).digest('hex');
+      const candidate = salt + shaPart.substring(0, shaPart.length - 10);
       if (candidate === user.password) {
         isMatch = true;
-        // Transparently upgrade legacy SHA1 hash to modern bcrypt
-        try {
-          const modernHash = await bcrypt.hash(password, 10);
-          await db.query('UPDATE aura_users SET password = ? WHERE id = ?', [modernHash, user.id]);
-        } catch (_) {}
+        needsUpgrade = true;
+      } else if (user.salt && crypto.createHash('sha1').update(password + user.salt).digest('hex') === user.password) {
+        isMatch = true;
+        needsUpgrade = true;
+      } else if (crypto.createHash('sha1').update(password).digest('hex') === user.password) {
+        isMatch = true;
+        needsUpgrade = true;
       }
+    } else if (crypto.createHash('md5').update(password).digest('hex') === user.password || user.password === password) {
+      // Plain text or MD5 fallback, upgrade immediately
+      isMatch = true;
+      needsUpgrade = true;
     }
 
     if (!isMatch) {
+      try {
+        await db.query(
+          "INSERT INTO aura_login_attempts (login, ip_address, area, time) VALUES (?, ?, 'admin', UNIX_TIMESTAMP())",
+          [cleanLogin, ipAddress]
+        );
+      } catch (_) {}
+
       return res.status(401).json({
         success: false,
+        status: false,
+        message: "Invalid username or password",
         error: { message: "Invalid username or password" }
       });
     }
 
-    // Update last login timestamp
+    // Transparently upgrade legacy hash to modern bcrypt
+    if (needsUpgrade) {
+      try {
+        const modernHash = await bcrypt.hash(password, 10);
+        await db.query("UPDATE aura_users SET password = ?, password_algo = 'bcrypt' WHERE id = ?", [modernHash, user.id]);
+      } catch (_) {}
+    }
+
+    // Update last login telemetry
     try {
-      const now = Math.floor(Date.now() / 1000);
-      await db.query('UPDATE aura_users SET last_login = ? WHERE id = ?', [now, user.id]);
+      const nowTs = Math.floor(Date.now() / 1000);
+      await db.query(
+        "UPDATE aura_users SET last_login = ?, last_login_at = NOW(), last_login_ip = ? WHERE id = ?",
+        [nowTs, ipAddress, user.id]
+      );
+      await db.query(
+        "INSERT INTO aura_user_logins (user_id, login, area, success, ip_address, user_agent, time) VALUES (?, ?, 'admin', 1, ?, ?, NOW())",
+        [user.id, user.username, ipAddress, userAgent]
+      );
     } catch (_) {}
 
-    // Safe sanitized user object (password excluded)
+    // Group & Permissions ($this->GP in CodeIgniter 3)
+    const roleName = (user.role || '').toLowerCase();
+    const isOwner = Number(user.group_id) === 1 || Number(user.group_level) === 1 || roleName === 'owner';
+    const isAdmin = Number(user.group_id) === 2 || Number(user.group_level) === 2 || roleName === 'admin';
+    const isStore = roleName === 'store';
+    const isSupplier = roleName === 'supplier';
+    const isCustomer = roleName === 'customer';
+    const isSalesman = roleName === 'salesman' || roleName === 'sale-agents';
+
+    // Retrieve group permissions from aura_permissions
+    const GP = await permissionsUtil.getGroupPermissions(user.group_id);
+    const allowedBranches = await accessControlService.getUserAllowedBranches(user.id, user.group_level);
+
+    const permissionKeys = isOwner || isAdmin
+      ? await permissionsUtil.getPermissionKeys()
+      : Object.entries(GP).filter(([k, v]) => k !== 'group_id' && v == 1).map(([k]) => k);
+
+    // Complete session data cloned from CodeIgniter 3 Auth_model
     const sanitizedUser = {
       id: user.id,
+      user_id: user.id,
       username: user.username,
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
       phone: user.phone,
+      gender: user.gender,
+      avatar: user.avatar,
       group_id: user.group_id,
       role: user.role || 'admin',
-      group_name: user.role || 'admin',
-      role_description: user.role_description,
+      group_name: user.group_name || 'admin',
+      level: user.group_level,
+      warehouse_id: user.warehouse_id,
       biller_id: user.biller_id,
-      warehouse_id: user.warehouse_id
+      company_id: user.company_id,
+      view_right: user.view_right,
+      edit_right: user.edit_right,
+      show_cost: user.show_cost,
+      show_price: user.show_price,
+      Owner: isOwner,
+      Admin: isAdmin,
+      Store: isStore,
+      Supplier: isSupplier,
+      Customer: isCustomer,
+      Salesman: isSalesman,
+      isOwner,
+      isAdmin,
+      GP: isOwner || isAdmin ? { all: 1 } : GP,
+      permissions: permissionKeys,
+      branches: allowedBranches
     };
 
+    const groupData = {
+      id: user.group_id,
+      name: user.group_name || 'admin',
+      description: user.role_description,
+      level: user.group_level,
+      allow_admin_login: user.allow_admin_login,
+      allow_web_login: user.allow_web_login
+    };
+
+    // Issue JWT access token
     const tokenPayload = {
       id: user.id,
+      user_id: user.id,
       username: user.username,
-      role: user.role || 'admin',
+      email: user.email,
       group_id: user.group_id,
+      role: user.role || 'admin',
+      level: user.group_level,
+      area: 'admin',
       data: {
         profile: sanitizedUser
       }
     };
 
-    const accessToken = jwt.sign(tokenPayload, access_token_key, { expiresIn: '7d' });
+    const accessToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
+
+    // Response structure formatted for all frontend consumers:
+    // Supports both direct root properties AND nested data: { token, user, group, permissions, branches }
+    const responsePayload = {
+      token: accessToken,
+      accessToken,
+      access_token: accessToken,
+      user: sanitizedUser,
+      profile: sanitizedUser,
+      group: groupData,
+      GP,
+      permissions: permissionKeys,
+      branches: allowedBranches
+    };
 
     res.json({
       success: true,
-      access_token: accessToken,
+      status: true,
+      message: `Welcome back, ${user.first_name || user.username}!`,
       token: accessToken,
-      profile: sanitizedUser,
+      access_token: accessToken,
+      data: responsePayload,
       user: sanitizedUser,
-      permissions: ['view', 'add', 'edit', 'delete']
+      profile: sanitizedUser,
+      group: groupData,
+      GP,
+      permissions: permissionKeys,
+      branches: allowedBranches
     });
   } catch (err) {
     logError("login.controller", err, res);
   }
 };
 
-const getAccessToken = async (data) => {
-  return jwt.sign({ data }, access_token_key, { expiresIn: '7d' });
+/**
+ * POST /api/admin/auth/logout, POST /api/admin/logout
+ * Administrative Logout & Session Termination
+ */
+exports.logout = async (req, res) => {
+  try {
+    const userId = req.user_id || req.user?.id;
+    if (userId) {
+      try {
+        await db.query("DELETE FROM aura_user_tokens WHERE user_id = ?", [userId]);
+      } catch (_) {}
+    }
+
+    res.json({
+      success: true,
+      status: true,
+      message: "Logged out successfully"
+    });
+  } catch (err) {
+    logError("logout.controller", err, res);
+  }
 };
 
+/**
+ * Authentication middleware for routes
+ */
 exports.token_key_login = () => {
-    // call in midleware in  route (role route, user route, teacher rout)
-    return (req, res, next)  => {
-        var authorization = req.headers.authorization; // token from client 
-        var token_from_client = null;
+  return (req, res, next) => {
+    const authorization = req.headers.authorization;
+    let token = null;
 
-        if (authorization != null && authorization != ""){
-            token_from_client = authorization.split(" "); // authorization : "Bearer key token (ERTGGGEDSFDRE#5R###@ alraeady bycrypt)"
-            token_from_client = token_from_client[1]; // get only access_token 
-        }
-        if (token_from_client == null){
-            res.status(401).send({
-                message: "Unauthorized",
-            });
-        }else{
-            jwt.verify(token_from_client, access_token_key, (error, result) => {
-                if(error){
-                    res.status(401).send({
-                        message: "Unauthorized",
-                        error: error,
-                    })
-                }else{
-                    req.current_id = result.data.profile.id; // write user property
-                    req.profile = result.data.profile; // write user property
-                    req.permissions = result.data.permissions; // write user property
-                    next(); // continue controller 
-                }
-            })
-        }
-
+    if (authorization && authorization.startsWith("Bearer ")) {
+      token = authorization.split(" ")[1];
     }
-}
 
-exports.register = async (req, res) => {
-    try {
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        status: false,
+        message: "Unauthorized: Missing authentication token"
+      });
+    }
 
-        const { 
-            username,
-            password,
-            first_name,
-            last_name,
-            email
-        } = req.body;
-
-        // Validate required fields
-        if (!username || !password || !first_name || !last_name || !email) {
-            return res.status(400).json({
-                error: "username, password, first_name, last_name, email are required"
-            });
-        }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Get client IP
-        const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-
-        // Timestamp
-        const created_on = Math.floor(Date.now() / 1000);
-
-        // Simple insert object
-        const userObj = {
-            group_id: 3,
-            first_name,
-            last_name,
-            username,
-            password: hashedPassword,
-            email,
-            active: 1,
-            ip_address: clientIp,
-            last_ip_address: clientIp,
-            created_on
-        };
-
-        const sql = `
-            INSERT INTO aura_users
-            (group_id, first_name, last_name, username, password, email, active, ip_address, last_ip_address, created_on)
-            VALUES
-            (:group_id, :first_name, :last_name, :username, :password, :email, :active, :ip_address, :last_ip_address, :created_on)
-        `;
-
-        const [result] = await db.query(sql, userObj);
-
-        res.json({
-            success: true,
-            message: "User registered successfully",
-            user_id: result.insertId
+    jwt.verify(token, JWT_SECRET, (error, decoded) => {
+      if (error) {
+        return res.status(401).json({
+          success: false,
+          status: false,
+          message: "Unauthorized: Invalid or expired token",
+          error: error.message
         });
+      }
 
-    } catch (err) {
-
-        if (err.code === "ER_DUP_ENTRY") {
-            return res.status(409).json({
-                error: "Username or email already exists"
-            });
-        }
-
-        logError("auth.register", err, res);
-    }
+      req.user_id = decoded.id || decoded.user_id || decoded.data?.profile?.id;
+      req.user = decoded.data?.profile || decoded;
+      next();
+    });
+  };
 };
 
+/**
+ * POST /api/admin/auth/register
+ */
+exports.register = async (req, res) => {
+  try {
+    const { username, password, email, first_name, last_name, phone, group_id = 2 } = req.body;
+    if (!username || !password || !email) {
+      return res.status(400).json({ success: false, message: "Username, email, and password are required" });
+    }
 
-// exports.register = async (req, res) => {
-//     try {
-//         const requiredFields = ['username', 'password', 'first_name', 'last_name', 'email'];
-//         for (const field of requiredFields) {
-//             if (!req.body[field]) {
-//                 return res.status(400).json({
-//                     error: `${field} is required`
-//                 });
-//             }
-//         }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const sql = `
+      INSERT INTO aura_users (username, password, email, first_name, last_name, phone, group_id, active, created_on)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, UNIX_TIMESTAMP())
+    `;
+    const [result] = await db.query(sql, [username, hashedPassword, email, first_name, last_name, phone, group_id]);
 
-//         // Hash password
-//         const hashedPassword = bcrypt.hashSync(req.body.password, 10);
-
-//         // Get current timestamp in MySQL format
-//         const created_on = new Date().toISOString().slice(0, 19).replace('T', ' ');
-
-//         // Fix: Changed VALUE to VALUES
-//         const sql = `INSERT INTO aura_users (
-//             group_id,
-//             emp_id,
-//             emp_code,
-//             first_name,
-//             last_name,
-//             username,
-//             password,
-//             gender,
-//             company,
-//             phone,
-//             email,
-//             biller_id,
-//             multi_biller,
-//             warehouse_id,
-//             company_id,
-//             show_cost,
-//             show_price,
-//             view_right,
-//             edit_right,
-//             allow_discount,
-//             language,
-//             active,
-//             last_login,
-//             last_ip_address,
-//             ip_address,
-//             pin_code,
-//             salt,
-//             activation_code,
-//             forgotten_password_code,
-//             forgotten_password_time,
-//             remember_code,
-//             created_on,
-//             avatar,
-//             nationality,
-//             position,
-//             employeed_date,
-//             user_type,
-//             award_points,
-//             expired_date,
-//             zone_id,
-//             multi_zone,
-//             save_point,
-//             is_remote_allow,
-//             basic_salary,
-//             commission,
-//             commission_product,
-//             saleman_group_id,
-//             saleman_group,
-//             saleman_commission,
-//             salesman_area,
-//             share_commissions,
-//             payroll_option,
-//             signature,
-//             technician,
-//             password_reset_code,
-//             product_commission_id,
-//             fuel_time_id,
-//             money_change
-//         ) VALUES (
-//             :group_id,
-//             :emp_id,
-//             :emp_code,
-//             :first_name,
-//             :last_name,
-//             :username,
-//             :password,
-//             :gender,
-//             :company,
-//             :phone,
-//             :email,
-//             :biller_id,
-//             :multi_biller,
-//             :warehouse_id,
-//             :company_id,
-//             :show_cost,
-//             :show_price,
-//             :view_right,
-//             :edit_right,
-//             :allow_discount,
-//             :language,
-//             :active,
-//             :last_login,
-//             :last_ip_address,
-//             :ip_address,
-//             :pin_code,
-//             :salt,
-//             :activation_code,
-//             :forgotten_password_code,
-//             :forgotten_password_time,
-//             :remember_code,
-//             :created_on,
-//             :avatar,
-//             :nationality,
-//             :position,
-//             :employeed_date,
-//             :user_type,
-//             :award_points,
-//             :expired_date,
-//             :zone_id,
-//             :multi_zone,
-//             :save_point,
-//             :is_remote_allow,
-//             :basic_salary,
-//             :commission,
-//             :commission_product,
-//             :saleman_group_id,
-//             :saleman_group,
-//             :saleman_commission,
-//             :salesman_area,
-//             :share_commissions,
-//             :payroll_option,
-//             :signature,
-//             :technician,
-//             :password_reset_code,
-//             :product_commission_id,
-//             :fuel_time_id,
-//             :money_change
-//         )`;
-
-//         const [data] = await db.query(sql, {
-//             group_id: req.body.group_id || 3, // Default user group
-//             emp_id: req.body.emp_id || 0,
-//             emp_code: req.body.emp_code || null,
-//             first_name: req.body.first_name,
-//             last_name: req.body.last_name,
-//             username: req.body.username,
-//             password: hashedPassword,
-//             gender: req.body.gender || null,
-//             company: req.body.company || null,
-//             phone: req.body.phone || null,
-//             email: req.body.email,
-//             biller_id: req.body.biller_id || null,
-//             multi_biller: req.body.multi_biller || null,
-//             warehouse_id: req.body.warehouse_id || 0,
-//             company_id: req.body.company_id || null,
-//             show_cost: req.body.show_cost || 0,
-//             show_price: req.body.show_price || 0,
-//             view_right: req.body.view_right || 0,
-//             edit_right: req.body.edit_right || 0,
-//             allow_discount: req.body.allow_discount || 0,
-//             language: req.body.language || 'english',
-//             active: req.body.active ?? 1,
-//             last_login: req.body.last_login || null,
-//             last_ip_address: req.body.last_ip_address || null,
-//             ip_address: req.body.ip_address || null,
-//             pin_code: req.body.pin_code || null,
-//             salt: req.body.salt || null,
-//             activation_code: req.body.activation_code || null,
-//             forgotten_password_code: req.body.forgotten_password_code || null,
-//             forgotten_password_time: req.body.forgotten_password_time || null,
-//             remember_code: req.body.remember_code || null,
-//             created_on: created_on, // Fixed timestamp format
-//             avatar: req.body.avatar || null,
-//             nationality: req.body.nationality || null,
-//             position: req.body.position || null,
-//             employeed_date: req.body.employeed_date || null,
-//             user_type: req.body.user_type || null,
-//             award_points: req.body.award_points || 0,
-//             expired_date: req.body.expired_date || null,
-//             zone_id: req.body.zone_id || null,
-//             multi_zone: req.body.multi_zone || null,
-//             save_point: req.body.save_point || 0,
-//             is_remote_allow: req.body.is_remote_allow || 0,
-//             basic_salary: req.body.basic_salary || 0,
-//             commission: req.body.commission || 0,
-//             commission_product: req.body.commission_product || null,
-//             saleman_group_id: req.body.saleman_group_id || null,
-//             saleman_group: req.body.saleman_group || null,
-//             saleman_commission: req.body.saleman_commission || 0,
-//             salesman_area: req.body.salesman_area || null,
-//             share_commissions: req.body.share_commissions || 0,
-//             payroll_option: req.body.payroll_option || null,
-//             signature: req.body.signature || null,
-//             technician: req.body.technician || 0,
-//             password_reset_code: req.body.password_reset_code || null,
-//             product_commission_id: req.body.product_commission_id || null,
-//             fuel_time_id: req.body.fuel_time_id || null,
-//             money_change: req.body.money_change || 0,
-//         });
-
-//         res.json({
-//             success: true,
-//             message: "User registered successfully",
-//             userId: data.insertId
-//         });
-
-//     } catch (err) {
-//         // Log the actual error for debugging
-//         console.error("Registration error details:", err);
-
-//         // Handle specific errors
-//         if (err.code === 'ER_NO_DEFAULT_FOR_FIELD') {
-//             return res.status(400).json({
-//                 error: 'Missing required field: ' + err.sqlMessage
-//             });
-//         }
-
-//         if (err.code === 'ER_DUP_ENTRY') {
-//             return res.status(409).json({
-//                 error: 'Username or email already exists'
-//             });
-//         }
-
-//         logError('add.auth.controller', err, res);
-//     }
-// }
-
-
-// exports.register_test = async (req, res) => {
-//     try {
-//         const clientIp = getClientIp(req);
-
-//         const required = ['username', 'password', 'email', 'first_name', 'last_name'];
-//         for (const field of required) {
-//             if (!req.body[field]) {
-//                 return res.status(400).json({ error: `${field} required` });
-//             }
-//         }
-
-//         const hashedPassword = bcrypt.hashSync(req.body.password, 10);
-//         const created_on = new Date();
-
-//         const sql = `
-//         INSERT INTO aura_users (
-//             first_name,
-//             last_name,
-//             username,
-//             password,
-//             email,
-//             group_id,
-//             active,
-//             ip_address,
-//             last_ip_address,
-//             created_on
-//         ) VALUES (
-//             :first_name,
-//             :last_name,
-//             :username,
-//             :password,
-//             :email,
-//             :group_id,
-//             :active,
-//             :ip_address,
-//             :last_ip_address,
-//             :created_on
-//         )`;
-
-//         const [data] = await db.query(sql, {
-//             first_name: req.body.first_name,
-//             last_name: req.body.last_name,
-//             username: req.body.username,
-//             password: hashedPassword,
-//             email: req.body.email,
-//             group_id: req.body.group_id || 3,
-//             active: req.body.active ?? 1,
-//             ip_address: clientIp,
-//             last_ip_address: clientIp,
-//             created_on
-//         });
-
-//         res.json({ success: true, id: data.insertId });
-
-//     } catch (err) {
-//         console.error("Error:", err);
-//         res.status(500).json({ error: err.message });
-//     }
-// };
-
-// exports.editAuth = async (req, res) => {
-//     try {
-//         const sql = `UPDATE aura_users SET
-//                     group_id:group_id,
-//                     emp_id:emp_id,
-//                     emp_code:emp_code,
-//                     first_name:first_name,
-//                     last_name:last_name,
-//                     username:username,
-//                     password:password,
-//                     gender:gender,
-//                     company:company,
-//                     phone:phone,
-//                     email:email,
-//                     biller_id:biller_id,
-//                     multi_biller:multi_biller,
-//                     warehouse_id:warehouse_id,
-//                     company_id:company_id,
-//                     show_cost:show_cost,
-//                     show_price:show_price,
-//                     view_right:view_right,
-//                     edit_right:edit_right,
-//                     allow_discount:allow_discount,
-//                     language:language,
-//                     active:active,
-//                     last_login:last_login,
-//                     last_ip_address:last_ip_address,
-//                     ip_address:ip_address,
-//                     pin_code:pin_code,
-//                     salt:salt,
-//                     activation_code:activation_code,
-//                     forgotten_password_code:forgotten_password_code,
-//                     forgotten_password_time:forgotten_password_time,
-//                     remember_code:remember_code,
-//                     created_on:created_on,
-//                     avatar:avatar,
-//                     nationality:nationality,
-//                     position:position,
-//                     employeed_date:employeed_date,
-//                     user_type:user_type,
-//                     award_points:award_points,
-//                     expired_date:expired_date,
-//                     zone_id:zone_id,
-//                     multi_zone:multi_zone,
-//                     save_point:save_point,
-//                     is_remote_allow:is_remote_allow,
-//                     basic_salary:basic_salary,
-//                     commission:commission,
-//                     commission_product:commission_product,
-//                     saleman_group_id:saleman_group_id,
-//                     saleman_group:saleman_group,
-//                     saleman_commission:saleman_commission,
-//                     salesman_area:salesman_area,
-//                     share_commissions:share_commissions,
-//                     payroll_option:payroll_option,
-//                     signature:signature,
-//                     technician:technician,
-//                     password_reset_code:password_reset_code,
-//                     product_commission_id:product_commission_id,
-//                     fuel_time_id:fuel_time_id,
-//                     money_change:money_change 
-//                     WHERE id=:id
-
-//                 `;
-//         const [data] = await db.query(sql, req.body);
-
-//         res.json({ success: true, data });
-
-
-//     } catch (err) {
-//         logError('edit.auth.controlle', err, res);
-//     }
-// }
-// exports.deleteAuth = async (req, res) => {
-//     try {
-//         const sql = "DELETE FROM aura_users WHERE id = :id";
-//         const [data] = await db.query(sql, { id: req.body.id });
-
-//         res.json({ success: true, data });
-//     } catch (err) {
-//         logError("delete.auth.controller", err, res);
-//     }
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// permission Groups  
-// exports.getGroups = async (req, res) => {
-//     try {
-//         const [data] = await db.query("SELECT * FROM aura_groups");
-//         res.json({
-//             data: data,
-//         });
-//     } catch (err) {
-//         logError("get.groups.controller", err, res);
-//     }
-// }
-// exports.addGroups = async (req, res) => {
-//     try {
-//         const insert_sql = `INSERT INTO aura_groups (name, description, status) VALUES (:name, :description, :status)`;
-//         const [data] = await db.query(insert_sql, {
-//             name: req.body.name,
-//             description: req.body.description,
-//             status: req.body.status || 0
-//         });
-//         res.json({ success: true, data });
-//     } catch (err) {
-//         logError('add.groups.controller', err, res);
-//     }
-// }
-// exports.updateGroups = async (req, res) => {
-//     try {
-//         const sql = `
-//       UPDATE aura_groups 
-//       SET name=:name, description=:description, status=:status 
-//       WHERE id=:id
-//     `;
-
-//         const [data] = await db.query(sql, req.body);
-
-//         res.json({ success: true, data });
-//     } catch (err) {
-//         logError("edit.groups.controller", err, res);
-//     }
-// };
-// exports.deleteGroups = async (req, res) => {
-//     try {
-//         const sql = "DELETE FROM aura_groups WHERE id = :id";
-//         const [data] = await db.query(sql, { id: req.body.id });
-
-//         res.json({ success: true, data });
-//     } catch (err) {
-//         logError("delete.groups.controller", err, res);
-//     }
-// };
-
+    res.json({
+      success: true,
+      status: true,
+      message: "User registered successfully",
+      userId: result.insertId
+    });
+  } catch (err) {
+    logError("register.controller", err, res);
+  }
+};

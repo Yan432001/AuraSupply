@@ -5,6 +5,7 @@ const { db, access_token_key } = require('../../config/utill/helper');
 const { sendSuccess, sendError } = require('../../config/utill/response');
 const tokenService = require('../../services/token.service');
 const accessControlService = require('../../services/accessControl.service');
+const permissionsUtil = require('../../config/utill/permissions');
 
 const JWT_SECRET = process.env.JWT_SECRET || access_token_key || 'AURA_ERP_SECRET_TOKEN_2026';
 const ACCESS_TOKEN_EXPIRY = '2h'; // Short access token
@@ -37,9 +38,10 @@ exports.login = async (req, res) => {
 
     // Query aura_users joined with aura_groups
     const [users] = await db.query(`
-      SELECT u.id, u.username, u.email, u.password, u.password_algo, u.group_id,
+      SELECT u.id, u.username, u.email, u.password, u.password_algo, u.salt, u.group_id,
              u.status, u.active, u.first_name, u.last_name, u.phone, u.avatar, u.theme,
              u.failed_login_count, u.locked_until, u.deleted_at,
+             u.warehouse_id, u.biller_id, u.company_id, u.view_right, u.edit_right, u.show_cost, u.show_price,
              g.name AS group_name, g.description AS group_description, g.level AS group_level,
              g.allow_admin_login, g.allow_web_login
       FROM aura_users u
@@ -49,10 +51,12 @@ exports.login = async (req, res) => {
     `, [cleanLogin, cleanLogin]);
 
     if (!users || users.length === 0) {
-      await db.query(`
-        INSERT INTO aura_login_attempts (login, ip_address, area, time)
-        VALUES (?, ?, 'admin', NOW())
-      `, [cleanLogin, ipAddress]);
+      try {
+        await db.query(`
+          INSERT INTO aura_login_attempts (login, ip_address, area, time)
+          VALUES (?, ?, 'admin', UNIX_TIMESTAMP())
+        `, [cleanLogin, ipAddress]);
+      } catch (_) {}
       return sendError(res, 'Invalid credentials', 401);
     }
 
@@ -91,16 +95,43 @@ exports.login = async (req, res) => {
       );
     }
 
-    // Password Verification (bcrypt with legacy sha1 fallback & auto-upgrade)
+    // Password Verification (supporting bcrypt, CI3 Ion Auth embedded-salt SHA1, separate salt, and legacy fallbacks)
     let passwordMatches = false;
     let needsUpgradeToBcrypt = false;
 
     if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$')) {
+      // 1. Modern Bcrypt
       passwordMatches = await bcrypt.compare(password, user.password);
+    } else if (user.password.length === 40) {
+      // 2. CodeIgniter 3 / Ion Auth embedded 10-char salt SHA1 ($salt . substr(sha1($salt . $password), 0, -10))
+      const embeddedSalt = user.password.substring(0, 10);
+      const shaPart = crypto.createHash('sha1').update(embeddedSalt + password).digest('hex');
+      const ionAuthHash = embeddedSalt + shaPart.substring(0, shaPart.length - 10);
+      if (ionAuthHash === user.password) {
+        passwordMatches = true;
+        needsUpgradeToBcrypt = true;
+      } else {
+        // 3. Separate salt check ($user->salt)
+        if (user.salt) {
+          const saltedHash = crypto.createHash('sha1').update(password + user.salt).digest('hex');
+          if (saltedHash === user.password) {
+            passwordMatches = true;
+            needsUpgradeToBcrypt = true;
+          }
+        }
+        // 4. Plain SHA1 fallback
+        if (!passwordMatches) {
+          const plainSha1 = crypto.createHash('sha1').update(password).digest('hex');
+          if (plainSha1 === user.password) {
+            passwordMatches = true;
+            needsUpgradeToBcrypt = true;
+          }
+        }
+      }
     } else {
-      // Legacy SHA1 check
-      const sha1Hash = crypto.createHash('sha1').update(password).digest('hex');
-      if (sha1Hash === user.password) {
+      // 5. Plain MD5 or plain-text fallback
+      const plainMd5 = crypto.createHash('md5').update(password).digest('hex');
+      if (plainMd5 === user.password || user.password === password) {
         passwordMatches = true;
         needsUpgradeToBcrypt = true;
       }
@@ -123,10 +154,12 @@ exports.login = async (req, res) => {
         WHERE id = ?
       `, [newFailedCount, user.id]);
 
-      await db.query(`
-        INSERT INTO aura_login_attempts (login, ip_address, area, time)
-        VALUES (?, ?, 'admin', NOW())
-      `, [cleanLogin, ipAddress]);
+      try {
+        await db.query(`
+          INSERT INTO aura_login_attempts (login, ip_address, area, time)
+          VALUES (?, ?, 'admin', UNIX_TIMESTAMP())
+        `, [cleanLogin, ipAddress]);
+      } catch (_) {}
 
       if (isNowLocked) {
         return sendError(res, 'Too many failed login attempts. Account locked for 15 minutes.', 423);
@@ -157,10 +190,12 @@ exports.login = async (req, res) => {
     `, [ipAddress, user.id]);
 
     // Record login in aura_user_logins (area='admin', success=1)
-    await db.query(`
-      INSERT INTO aura_user_logins (user_id, area, success, ip_address, user_agent, time)
-      VALUES (?, 'admin', 1, ?, ?, NOW())
-    `, [user.id, ipAddress, userAgent]);
+    try {
+      await db.query(`
+        INSERT INTO aura_user_logins (user_id, login, area, success, ip_address, user_agent, time)
+        VALUES (?, ?, 'admin', 1, ?, ?, NOW())
+      `, [user.id, user.username, ipAddress, userAgent]);
+    } catch (_) {}
 
     // Issue JWT short access token
     const tokenPayload = {
@@ -199,11 +234,52 @@ exports.login = async (req, res) => {
       rememberToken = rem.plainToken;
     }
 
-    // Fetch allowed permission keys (array) and allowed branches
-    const [allowedPermissions, allowedBranches] = await Promise.all([
+    // Fetch allowed permission keys (array), allowed branches, and GP ($this->GP in CodeIgniter 3)
+    const [allowedPermissions, allowedBranches, GP] = await Promise.all([
       accessControlService.getUserAllowedPermissions(user.id, user.group_id, user.group_level),
-      accessControlService.getUserAllowedBranches(user.id, user.group_level)
+      accessControlService.getUserAllowedBranches(user.id, user.group_level),
+      permissionsUtil.getGroupPermissions(user.group_id)
     ]);
+
+    const isOwner = Number(user.group_id) === 1 || Number(user.group_level) === 1 || user.group_name === 'owner';
+    const isAdmin = Number(user.group_id) === 2 || Number(user.group_level) === 2 || user.group_name === 'admin';
+    const roleName = (user.group_name || '').toLowerCase();
+
+    // Complete session user payload matching CodeIgniter 3 MY_Controller
+    const sessionUserData = {
+      id: user.id,
+      user_id: user.id,
+      username: user.username,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
+      phone: user.phone,
+      avatar: user.avatar,
+      theme: user.theme || 'light',
+      group_id: user.group_id,
+      role: user.group_name,
+      group_name: user.group_name,
+      level: user.group_level,
+      warehouse_id: user.warehouse_id,
+      biller_id: user.biller_id,
+      company_id: user.company_id,
+      view_right: user.view_right,
+      edit_right: user.edit_right,
+      show_cost: user.show_cost,
+      show_price: user.show_price,
+      Owner: isOwner,
+      Admin: isAdmin,
+      Store: roleName === 'store',
+      Supplier: roleName === 'supplier',
+      Customer: roleName === 'customer',
+      Salesman: roleName === 'salesman' || roleName === 'sale-agents',
+      isOwner,
+      isAdmin,
+      GP: isOwner || isAdmin ? { all: 1 } : GP,
+      permissions: allowedPermissions,
+      branches: allowedBranches
+    };
 
     // Build standard response payload
     const responseData = {
@@ -211,16 +287,8 @@ exports.login = async (req, res) => {
       refreshToken: refreshTokenRecord.plainToken,
       rememberToken,
       expiresIn: ACCESS_TOKEN_EXPIRY,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        phone: user.phone,
-        avatar: user.avatar,
-        theme: user.theme || 'light'
-      },
+      user: sessionUserData,
+      profile: sessionUserData,
       group: {
         id: user.group_id,
         name: user.group_name,
@@ -229,6 +297,7 @@ exports.login = async (req, res) => {
         allow_admin_login: user.allow_admin_login,
         allow_web_login: user.allow_web_login
       },
+      GP: isOwner || isAdmin ? { all: 1 } : GP,
       permissions: allowedPermissions,
       branches: allowedBranches
     };
@@ -319,14 +388,19 @@ exports.refreshToken = async (req, res) => {
  */
 exports.getProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user_id || req.user?.id;
     const [users] = await db.query(`
-      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.phone,
-             u.avatar, u.theme, u.group_id, u.status, u.created_at, u.last_login_at,
+      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.phone, u.gender,
+             u.avatar, u.theme, u.group_id, u.status, u.created_at, u.last_login_at, u.last_login_ip,
+             u.warehouse_id, u.biller_id, u.company_id, u.view_right, u.edit_right, u.show_cost, u.show_price,
              g.name AS group_name, g.description AS group_description, g.level AS group_level,
-             g.allow_admin_login, g.allow_web_login
+             g.allow_admin_login, g.allow_web_login,
+             c.company AS biller_name, c.name AS biller_code,
+             w.name AS warehouse_name, w.code AS warehouse_code
       FROM aura_users u
       JOIN aura_groups g ON g.id = u.group_id
+      LEFT JOIN aura_companies c ON c.id = u.biller_id
+      LEFT JOIN aura_warehouses w ON w.id = u.warehouse_id
       WHERE u.id = ? AND u.deleted_at IS NULL
       LIMIT 1
     `, [userId]);
@@ -336,30 +410,68 @@ exports.getProfile = async (req, res) => {
     }
 
     const user = users[0];
-    const [permissions, branches] = await Promise.all([
+    const [permissions, branches, GP] = await Promise.all([
       accessControlService.getUserAllowedPermissions(user.id, user.group_id, user.group_level),
-      accessControlService.getUserAllowedBranches(user.id, user.group_level)
+      accessControlService.getUserAllowedBranches(user.id, user.group_level),
+      permissionsUtil.getGroupPermissions(user.group_id)
     ]);
 
+    const isOwner = Number(user.group_id) === 1 || Number(user.group_level) === 1 || user.group_name === 'owner';
+    const isAdmin = Number(user.group_id) === 2 || Number(user.group_level) === 2 || user.group_name === 'admin';
+    const roleName = (user.group_name || '').toLowerCase();
+
+    const sessionUserData = {
+      id: user.id,
+      user_id: user.id,
+      username: user.username,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
+      phone: user.phone,
+      gender: user.gender,
+      avatar: user.avatar,
+      theme: user.theme || 'light',
+      group_id: user.group_id,
+      role: user.group_name,
+      group_name: user.group_name,
+      level: user.group_level,
+      warehouse_id: user.warehouse_id,
+      warehouse_name: user.warehouse_name || 'Central Warehouse',
+      biller_id: user.biller_id,
+      biller_name: user.biller_name || 'All Billers (Central)',
+      company_id: user.company_id,
+      view_right: user.view_right,
+      edit_right: user.edit_right,
+      show_cost: user.show_cost,
+      show_price: user.show_price,
+      Owner: isOwner,
+      Admin: isAdmin,
+      Store: roleName === 'store',
+      Supplier: roleName === 'supplier',
+      Customer: roleName === 'customer',
+      Salesman: roleName === 'salesman' || roleName === 'sale-agents',
+      isOwner,
+      isAdmin,
+      GP: isOwner || isAdmin ? { all: 1 } : GP,
+      permissions,
+      branches,
+      last_login_at: user.last_login_at,
+      last_login_ip: user.last_login_ip
+    };
+
     return sendSuccess(res, {
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        phone: user.phone,
-        avatar: user.avatar,
-        theme: user.theme,
-        last_login_at: user.last_login_at
-      },
+      user: sessionUserData,
+      profile: sessionUserData,
       group: {
         id: user.group_id,
         name: user.group_name,
         description: user.group_description,
         level: user.group_level,
-        allow_admin_login: user.allow_admin_login
+        allow_admin_login: user.allow_admin_login,
+        allow_web_login: user.allow_web_login
       },
+      GP: isOwner || isAdmin ? { all: 1 } : GP,
       permissions,
       branches
     });
@@ -453,3 +565,99 @@ exports.resetPassword = async (req, res) => {
     return sendError(res, 'Failed to reset password', 500, err.message);
   }
 };
+
+/**
+ * PUT /api/admin/auth/profile
+ * Update authenticated user's own profile (first_name, last_name, phone, gender, avatar, theme)
+ */
+exports.updateProfile = async (req, res) => {
+  try {
+    const userId = req.user_id || req.user?.id;
+    if (!userId) {
+      return sendError(res, 'Unauthenticated', 401);
+    }
+
+    const { first_name, last_name, phone, gender, avatar, theme } = req.body;
+    const updates = [];
+    const params = [];
+
+    if (first_name !== undefined) { updates.push('first_name = ?'); params.push(first_name); }
+    if (last_name !== undefined) { updates.push('last_name = ?'); params.push(last_name); }
+    if (phone !== undefined) { updates.push('phone = ?'); params.push(phone); }
+    if (gender !== undefined) { updates.push('gender = ?'); params.push(gender); }
+    if (avatar !== undefined) { updates.push('avatar = ?'); params.push(avatar); }
+    if (theme !== undefined) { updates.push('theme = ?'); params.push(theme); }
+
+    if (updates.length > 0) {
+      params.push(userId);
+      await db.query(`UPDATE aura_users SET ${updates.join(', ')} WHERE id = ?`, params);
+    }
+
+    return exports.getProfile(req, res);
+  } catch (err) {
+    return sendError(res, 'Failed to update profile', 500, err.message);
+  }
+};
+
+/**
+ * POST /api/admin/auth/change-password
+ * Change authenticated user's own password
+ */
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user_id || req.user?.id;
+    if (!userId) {
+      return sendError(res, 'Unauthenticated', 401);
+    }
+
+    const { current_password, new_password, confirm_password } = req.body;
+    if (!current_password || !new_password) {
+      return sendError(res, 'Current password and new password are required', 400);
+    }
+
+    if (new_password.length < 6) {
+      return sendError(res, 'New password must be at least 6 characters', 400);
+    }
+
+    if (confirm_password && new_password !== confirm_password) {
+      return sendError(res, 'New password and confirmation do not match', 400);
+    }
+
+    const [users] = await db.query('SELECT id, password, salt FROM aura_users WHERE id = ? LIMIT 1', [userId]);
+    if (!users || users.length === 0) {
+      return sendError(res, 'User not found', 404);
+    }
+
+    const user = users[0];
+    let isMatch = false;
+
+    if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$')) {
+      isMatch = await bcrypt.compare(current_password, user.password);
+    } else if (user.password.length === 40) {
+      const embeddedSalt = user.password.substring(0, 10);
+      const shaPart = crypto.createHash('sha1').update(embeddedSalt + current_password).digest('hex');
+      const ionAuthHash = embeddedSalt + shaPart.substring(0, shaPart.length - 10);
+      isMatch = (ionAuthHash === user.password);
+      if (!isMatch && user.salt) {
+        isMatch = (crypto.createHash('sha1').update(current_password + user.salt).digest('hex') === user.password);
+      }
+    } else {
+      isMatch = (user.password === current_password);
+    }
+
+    if (!isMatch) {
+      return sendError(res, 'Current password is incorrect', 400);
+    }
+
+    const newHash = await bcrypt.hash(new_password, 10);
+    await db.query(
+      'UPDATE aura_users SET password = ?, password_algo = ?, failed_login_count = 0, locked_until = NULL WHERE id = ?',
+      [newHash, 'bcrypt', userId]
+    );
+
+    return sendSuccess(res, null, 'Password changed successfully');
+  } catch (err) {
+    return sendError(res, 'Failed to change password', 500, err.message);
+  }
+};
+

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Avatar, Badge, Button, Dropdown, Flex, Input, Layout, Tooltip, Typography } from 'antd';
+import { Avatar, Badge, Button, Dropdown, Flex, Input, Layout, Modal, Tooltip, Typography } from 'antd';
 import {
   BellOutlined,
   ExpandOutlined,
@@ -32,6 +32,7 @@ const { Text, Title } = Typography;
 
 const pageTitles = {
   '/admins/dashboard': 'Command Center',
+  '/admins/profile': 'My User Profile',
   '/admins/products': 'Inventory Control',
   '/admins/users': 'Access Control',
   '/admins/orders': 'Orders Management',
@@ -72,11 +73,30 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
     transition: 'all 0.18s ease',
   };
 
+  const handleUserMenuClick = ({ key }) => {
+    if (key === 'logout') {
+      Modal.confirm({
+        title: 'Sign Out Confirmation',
+        content: 'Are you sure you want to log out of the Aura ERP administration portal?',
+        okText: 'Yes, Sign Out',
+        okType: 'danger',
+        cancelText: 'Cancel',
+        onOk: () => {
+          logout();
+        }
+      });
+    } else if (key === 'profile') {
+      navigate('/admins/profile');
+    } else if (key === 'settings') {
+      navigate('/admins/settings/system');
+    }
+  };
+
   const userMenuItems = [
-    { key: 'profile', icon: <UserOutlined />, label: 'Profile' },
+    { key: 'profile', icon: <UserOutlined />, label: 'My Profile' },
     { key: 'settings', icon: <SettingOutlined />, label: 'Settings' },
     { type: 'divider' },
-    { key: 'logout', icon: <LogoutOutlined />, label: 'Logout', danger: true, onClick: logout },
+    { key: 'logout', icon: <LogoutOutlined />, label: 'Sign Out', danger: true },
   ];
 
   const branchMenuItems = [
@@ -370,7 +390,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
             </Badge>
 
             {/* User Profile Chip (Upgraded Beautiful Image UI & Online Status) */}
-            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" trigger={['click']}>
+            <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} placement="bottomRight" trigger={['click']}>
               <div
                 style={{
                   height: 36,
@@ -415,7 +435,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                 {!isMobile && (
                   <div style={{ lineHeight: 1.15 }}>
                     <Text strong style={{ display: 'block', fontSize: 12, color: headerTextColor, fontWeight: 700 }}>
-                      {user?.name || 'Admin User'}
+                      {user?.name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : (user?.username || 'Admin User'))}
                     </Text>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
                       <span
@@ -429,7 +449,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                           letterSpacing: '0.03em',
                         }}
                       >
-                        SUPER ADMIN
+                        {(user?.group_name || user?.role || (user?.isOwner ? 'Owner' : (user?.isAdmin ? 'Admin' : 'Staff'))).toUpperCase()}
                       </span>
                     </div>
                   </div>
