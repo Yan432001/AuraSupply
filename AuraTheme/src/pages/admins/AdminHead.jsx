@@ -50,7 +50,8 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { themeMode, toggleThemeMode } = useTheme();
+  const { themeMode, toggleThemeMode, customSettings, toggleTransparentSystem } = useTheme();
+  const isGlassActive = Boolean(customSettings?.transparentSystem?.enabled);
   const { branches, billers, activeBranch, setActiveBranchId } = useBranchesAndBillers();
   const { headerRef } = useHeaderHeight();
 
@@ -369,6 +370,30 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
             </Tooltip>
 
             <ThemeSettings buttonStyle={iconButtonStyle} />
+
+            <Tooltip title={isGlassActive ? 'Transparent Glass Mode: ON (Click to disable)' : 'Transparent Glass Mode: OFF (Click to enable)'}>
+              <Button
+                type="text"
+                onClick={() => toggleTransparentSystem()}
+                style={{
+                  ...iconButtonStyle,
+                  border: isGlassActive ? `1.5px solid ${adminTheme.primary}` : iconButtonStyle.border,
+                  background: isGlassActive
+                    ? (themeMode === 'dark' ? 'rgba(47, 111, 237, 0.22)' : 'rgba(47, 111, 237, 0.12)')
+                    : iconButtonStyle.background,
+                  color: isGlassActive ? adminTheme.primary : iconButtonStyle.color,
+                  boxShadow: isGlassActive ? `0 0 10px ${adminTheme.primary}40` : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                icon={
+                  <span style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    💎
+                  </span>
+                }
+              />
+            </Tooltip>
 
             <Tooltip title="ERP Modules Switchboard (Open/Close Modules)">
               <Button

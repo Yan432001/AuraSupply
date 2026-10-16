@@ -131,7 +131,7 @@ export const getContrastTextColor = (bgColor) => {
   return yiq >= 148 ? '#0f172a' : '#ffffff';
 };
 
-const hexToRgba = (hex, alpha) => {
+export const hexToRgba = (hex, alpha) => {
   const clean = (hex || '').replace('#', '');
   if (clean.length !== 6 && clean.length !== 3) return hex;
   const full = clean.length === 3 ? clean.split('').map((ch) => ch + ch).join('') : clean;
@@ -141,6 +141,51 @@ const hexToRgba = (hex, alpha) => {
   const b = bigint & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
+
+export const WALLPAPER_PRESETS = [
+  {
+    key: 'aurora',
+    name: 'Aurora Borealis',
+    desc: 'Electric blue, royal purple, and emerald glow',
+    preview: 'linear-gradient(135deg, #2f6fed 0%, #7c3aed 50%, #10b981 100%)',
+    icon: '🌌',
+  },
+  {
+    key: 'cyber',
+    name: 'Cyberpunk Neon',
+    desc: 'Vivid cyan, magenta, and indigo cyber space',
+    preview: 'linear-gradient(135deg, #06b6d4 0%, #ec4899 50%, #6366f1 100%)',
+    icon: '⚡',
+  },
+  {
+    key: 'sunset',
+    name: 'Sunset Radiance',
+    desc: 'Warm rose, amber flare, and purple dusk',
+    preview: 'linear-gradient(135deg, #f43f5e 0%, #f59e0b 50%, #a855f7 100%)',
+    icon: '🌅',
+  },
+  {
+    key: 'emerald',
+    name: 'Emerald Forest',
+    desc: 'Rich banking emerald, deep mint, and golden teal',
+    preview: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #0284c7 100%)',
+    icon: '🌿',
+  },
+  {
+    key: 'cosmic',
+    name: 'Cosmic Nebula',
+    desc: 'Deep space violet nebula with starlight cyan',
+    preview: 'linear-gradient(135deg, #9333ea 0%, #3b82f6 50%, #ec4899 100%)',
+    icon: '🪐',
+  },
+  {
+    key: 'minimal',
+    name: 'Minimal Slate',
+    desc: 'Subtle clean geometric glow on dark/light slate',
+    preview: 'linear-gradient(135deg, #334155 0%, #64748b 50%, #94a3b8 100%)',
+    icon: '🏛️',
+  },
+];
 
 // Wallpaper generators for Transparent Background System
 export const getWallpaperBackground = (wallpaperKey, isDark, primary = '#2f6fed') => {
@@ -291,7 +336,10 @@ export const useAdminThemeTokens = (themeMode = 'light', presetPrimary, customSe
 
   const glow = transparentConfig.glassBorderGlow !== false;
   const wallpaperKey = transparentConfig.wallpaper || 'aurora';
-  const pageBg = getWallpaperBackground(wallpaperKey, isDark, primary);
+  let pageBg = getWallpaperBackground(wallpaperKey, isDark, primary);
+  if (transparentConfig.customWallpaperUrl) {
+    pageBg = `url("${transparentConfig.customWallpaperUrl}") center/cover no-repeat fixed, ${pageBg}`;
+  }
 
   const cardRgba = hexToRgba(rawCardBg, opacityFraction);
 

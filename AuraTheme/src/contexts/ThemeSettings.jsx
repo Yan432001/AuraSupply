@@ -42,6 +42,7 @@ import {
 } from '@ant-design/icons';
 import { useTheme } from './ThemeContext';
 import { useAdminTheme } from '../hooks/useAdminTheme';
+import { WALLPAPER_PRESETS } from '../utils/uiTheme';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -60,9 +61,43 @@ const ThemeSettings = ({ buttonStyle }) => {
     customSettings,
     updateCustomTheme,
     resetToDefaultTheme,
+    updateTransparentSystem,
+    toggleTransparentSystem,
   } = useTheme();
 
   const adminTheme = useAdminTheme();
+
+  // Glass Quick Presets
+  const glassPresets = [
+    {
+      key: 'frosted',
+      name: 'Frosted Glass',
+      icon: '❄️',
+      desc: 'Balanced blur with medium frost transparency',
+      config: { enabled: true, preset: 'frosted', surfaceOpacity: 78, blurRadius: 20, saturation: 140 },
+    },
+    {
+      key: 'crystal',
+      name: 'Crystal Clear',
+      icon: '💎',
+      desc: 'High transparency with deep refraction blur',
+      config: { enabled: true, preset: 'crystal', surfaceOpacity: 55, blurRadius: 24, saturation: 150 },
+    },
+    {
+      key: 'acrylic',
+      name: 'Acrylic Glow',
+      icon: '🔮',
+      desc: 'Luminescent vibrant acrylic with soft glow',
+      config: { enabled: true, preset: 'acrylic', surfaceOpacity: 85, blurRadius: 16, saturation: 120 },
+    },
+    {
+      key: 'solid',
+      name: 'Solid Opaque',
+      icon: '🏢',
+      desc: 'Classic clean solid non-transparent surfaces',
+      config: { enabled: false, preset: 'solid', surfaceOpacity: 100, blurRadius: 0, saturation: 100 },
+    },
+  ];
 
   // Curated Preset Palette Info
   const presetsList = [
@@ -578,6 +613,330 @@ const ThemeSettings = ({ buttonStyle }) => {
                       </div>
                     </div>
                   </div>
+                </div>
+              ),
+            },
+            {
+              key: 'transparency',
+              label: (
+                <span>
+                  Transparent &amp; Glass
+                  {customSettings?.transparentSystem?.enabled && (
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: '#10b981',
+                        marginLeft: 6,
+                        verticalAlign: 'middle',
+                      }}
+                    />
+                  )}
+                </span>
+              ),
+              children: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* Master Switch Card */}
+                  <Card
+                    size="small"
+                    style={{
+                      borderRadius: 14,
+                      border: customSettings?.transparentSystem?.enabled
+                        ? `2px solid ${adminTheme.primary}`
+                        : `1px solid ${adminTheme.border}`,
+                      background: adminTheme.card,
+                      boxShadow: customSettings?.transparentSystem?.enabled
+                        ? `0 6px 20px -4px ${adminTheme.primary}33`
+                        : '0 2px 6px rgba(0,0,0,0.02)',
+                    }}
+                    styles={{ body: { padding: 14 } }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ maxWidth: '75%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: adminTheme.text }}>
+                            Frosted Glass &amp; Wallpaper
+                          </span>
+                          <Tag
+                            color={customSettings?.transparentSystem?.enabled ? 'success' : 'default'}
+                            style={{ margin: 0, borderRadius: 6, fontWeight: 700, fontSize: 10 }}
+                          >
+                            {customSettings?.transparentSystem?.enabled ? 'ACTIVE' : 'OFF'}
+                          </Tag>
+                        </div>
+                        <div style={{ fontSize: 11, color: adminTheme.subtext, marginTop: 2 }}>
+                          Renders dynamic ambient wallpapers, frosted acrylic cards &amp; backdrop blur
+                        </div>
+                      </div>
+                      <Switch
+                        checked={Boolean(customSettings?.transparentSystem?.enabled)}
+                        onChange={(val) => {
+                          updateTransparentSystem({ enabled: val });
+                          message.success(val ? 'Transparent Glass Background Enabled!' : 'Reverted to Solid Opaque');
+                        }}
+                      />
+                    </div>
+                  </Card>
+
+                  {/* Glass Presets */}
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, marginBottom: 8 }}>
+                      Glass Presets
+                    </div>
+                    <Row gutter={[8, 8]}>
+                      {glassPresets.map((gp) => {
+                        const isMatch =
+                          (gp.key === 'solid' && !customSettings?.transparentSystem?.enabled) ||
+                          (customSettings?.transparentSystem?.enabled && customSettings?.transparentSystem?.preset === gp.key);
+                        return (
+                          <Col span={12} key={gp.key}>
+                            <div
+                              onClick={() => {
+                                updateTransparentSystem(gp.config);
+                                message.success(`Applied ${gp.name} preset!`);
+                              }}
+                              style={{
+                                padding: '10px 12px',
+                                borderRadius: 12,
+                                border: isMatch ? `2px solid ${adminTheme.primary}` : `1px solid ${adminTheme.border}`,
+                                background: isMatch
+                                  ? (themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(47, 111, 237, 0.08)')
+                                  : adminTheme.card,
+                                cursor: 'pointer',
+                                transition: 'all 0.18s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                              }}
+                            >
+                              <span style={{ fontSize: 18 }}>{gp.icon}</span>
+                              <div style={{ overflow: 'hidden' }}>
+                                <div style={{ fontSize: 11.5, fontWeight: isMatch ? 800 : 600, color: adminTheme.text }}>
+                                  {gp.name}
+                                </div>
+                                <div style={{ fontSize: 10, color: adminTheme.subtext }} className="truncate">
+                                  {gp.desc}
+                                </div>
+                              </div>
+                            </div>
+                          </Col>
+                        );
+                      })}
+                    </Row>
+                  </div>
+
+                  {/* Ambient Wallpaper Selection */}
+                  <Card
+                    size="small"
+                    style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}`, background: adminTheme.card }}
+                    styles={{ body: { padding: 14 } }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: adminTheme.text }}>
+                        Dynamic Background Wallpaper
+                      </span>
+                      <span style={{ fontSize: 10.5, color: adminTheme.subtext }}>
+                        Active: {customSettings?.transparentSystem?.wallpaper || 'aurora'}
+                      </span>
+                    </div>
+
+                    <Row gutter={[8, 8]}>
+                      {WALLPAPER_PRESETS.map((wp) => {
+                        const isSelected = (customSettings?.transparentSystem?.wallpaper || 'aurora') === wp.key;
+                        return (
+                          <Col span={8} key={wp.key}>
+                            <div
+                              onClick={() => {
+                                updateTransparentSystem({ wallpaper: wp.key, enabled: true });
+                                message.success(`Applied ${wp.name} wallpaper!`);
+                              }}
+                              style={{
+                                borderRadius: 10,
+                                border: isSelected ? `2px solid ${adminTheme.primary}` : `1px solid ${adminTheme.border}`,
+                                overflow: 'hidden',
+                                cursor: 'pointer',
+                                transition: 'all 0.18s ease',
+                                transform: isSelected ? 'scale(1.03)' : 'none',
+                                boxShadow: isSelected ? `0 4px 12px ${adminTheme.primary}40` : 'none',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  height: 48,
+                                  background: wp.preview,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontSize: 18,
+                                }}
+                              >
+                                {wp.icon}
+                              </div>
+                              <div
+                                style={{
+                                  padding: '5px 6px',
+                                  fontSize: 10,
+                                  fontWeight: isSelected ? 800 : 600,
+                                  textAlign: 'center',
+                                  color: isSelected ? adminTheme.primary : adminTheme.text,
+                                  background: themeMode === 'dark' ? '#0f172a' : '#f8fafc',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {wp.name.split(' ')[0]}
+                              </div>
+                            </div>
+                          </Col>
+                        );
+                      })}
+                    </Row>
+
+                    {/* Custom Wallpaper Image URL */}
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: adminTheme.subtext, marginBottom: 4 }}>
+                        Custom Image Wallpaper (URL):
+                      </div>
+                      <Input
+                        size="small"
+                        placeholder="https://images.unsplash.com/photo-..."
+                        value={customSettings?.transparentSystem?.customWallpaperUrl || ''}
+                        onChange={(e) => updateTransparentSystem({ customWallpaperUrl: e.target.value })}
+                        allowClear
+                        style={{ borderRadius: 8, fontSize: 11 }}
+                      />
+                    </div>
+                  </Card>
+
+                  {/* Surface Opacity & Blur Sliders */}
+                  <Card
+                    size="small"
+                    style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}`, background: adminTheme.card }}
+                    styles={{ body: { padding: 14 } }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text }}>
+                        Surface Opacity ({customSettings?.transparentSystem?.surfaceOpacity ?? 78}%)
+                      </span>
+                      <span style={{ fontSize: 10.5, color: adminTheme.subtext }}>
+                        {(customSettings?.transparentSystem?.surfaceOpacity ?? 78) < 60
+                          ? 'Ultra Sheer'
+                          : (customSettings?.transparentSystem?.surfaceOpacity ?? 78) < 85
+                          ? 'Frosted Glass'
+                          : 'Dense Acrylic'}
+                      </span>
+                    </div>
+                    <Slider
+                      min={20}
+                      max={100}
+                      step={5}
+                      value={customSettings?.transparentSystem?.surfaceOpacity ?? 78}
+                      onChange={(val) => updateTransparentSystem({ surfaceOpacity: val, preset: 'custom' })}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: adminTheme.subtext, marginBottom: 12 }}>
+                      <span>20% (Max Glass)</span>
+                      <span>78% (Balanced)</span>
+                      <span>100% (Solid)</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text }}>
+                        Backdrop Blur ({customSettings?.transparentSystem?.blurRadius ?? 20}px)
+                      </span>
+                      <span style={{ fontSize: 10.5, color: adminTheme.subtext }}>
+                        {(customSettings?.transparentSystem?.blurRadius ?? 20) === 0 ? 'Sharp Clear' : 'Frosted Diffusion'}
+                      </span>
+                    </div>
+                    <Slider
+                      min={0}
+                      max={40}
+                      step={2}
+                      value={customSettings?.transparentSystem?.blurRadius ?? 20}
+                      onChange={(val) => updateTransparentSystem({ blurRadius: val, preset: 'custom' })}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: adminTheme.subtext, marginBottom: 12 }}>
+                      <span>0px (No Blur)</span>
+                      <span>20px (Crisp Glass)</span>
+                      <span>40px (Deep Blur)</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text }}>
+                        Color Saturation Boost ({customSettings?.transparentSystem?.saturation ?? 140}%)
+                      </span>
+                    </div>
+                    <Slider
+                      min={100}
+                      max={200}
+                      step={10}
+                      value={customSettings?.transparentSystem?.saturation ?? 140}
+                      onChange={(val) => updateTransparentSystem({ saturation: val, preset: 'custom' })}
+                    />
+                  </Card>
+
+                  {/* Component Toggles */}
+                  <Card
+                    size="small"
+                    style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}`, background: adminTheme.card }}
+                    styles={{ body: { padding: 14 } }}
+                  >
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: adminTheme.text, marginBottom: 10 }}>
+                      Component Glass Surfaces
+                    </div>
+                    <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: adminTheme.text }}>Frosted Admin Sidebar</div>
+                          <div style={{ fontSize: 10.5, color: adminTheme.subtext }}>Apply glass acrylic to navigation drawer</div>
+                        </div>
+                        <Switch
+                          size="small"
+                          checked={customSettings?.transparentSystem?.transparentSidebar ?? true}
+                          onChange={(val) => updateTransparentSystem({ transparentSidebar: val })}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: adminTheme.text }}>Frosted Header Bar</div>
+                          <div style={{ fontSize: 10.5, color: adminTheme.subtext }}>Apply translucent frosted blur to top navigation</div>
+                        </div>
+                        <Switch
+                          size="small"
+                          checked={customSettings?.transparentSystem?.transparentHeader ?? true}
+                          onChange={(val) => updateTransparentSystem({ transparentHeader: val })}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: adminTheme.text }}>Frosted Dashboard Cards &amp; Tables</div>
+                          <div style={{ fontSize: 10.5, color: adminTheme.subtext }}>Render translucent content surfaces &amp; data grids</div>
+                        </div>
+                        <Switch
+                          size="small"
+                          checked={customSettings?.transparentSystem?.transparentCards ?? true}
+                          onChange={(val) => updateTransparentSystem({ transparentCards: val })}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: adminTheme.text }}>Luminous Glass Borders</div>
+                          <div style={{ fontSize: 10.5, color: adminTheme.subtext }}>Polished subtle refraction highlight along borders</div>
+                        </div>
+                        <Switch
+                          size="small"
+                          checked={customSettings?.transparentSystem?.glassBorderGlow ?? true}
+                          onChange={(val) => updateTransparentSystem({ glassBorderGlow: val })}
+                        />
+                      </div>
+                    </Space>
+                  </Card>
                 </div>
               ),
             },

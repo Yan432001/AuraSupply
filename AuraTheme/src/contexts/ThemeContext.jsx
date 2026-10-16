@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
 import { theme as antdTheme } from 'antd';
 
-import { isColorLight } from '../utils/uiTheme';
+import { isColorLight, hexToRgba, getWallpaperBackground } from '../utils/uiTheme';
 
 const ThemeContext = createContext();
 
@@ -434,6 +434,27 @@ export const ThemeProvider = ({ children }) => {
     } catch (_) {}
   };
 
+  const updateTransparentSystem = (updates) => {
+    setCustomSettings((prev) => {
+      const currentTS = prev?.transparentSystem || DEFAULT_THEME_SETTINGS.transparentSystem;
+      const updatedTS = { ...currentTS, ...updates };
+      const updated = {
+        ...prev,
+        transparentSystem: updatedTS,
+      };
+      try {
+        localStorage.setItem('admin-custom-theme-settings', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+  };
+
+  const toggleTransparentSystem = () => {
+    const isCurrentlyEnabled = Boolean(customSettings?.transparentSystem?.enabled);
+    updateTransparentSystem({ enabled: !isCurrentlyEnabled });
+    return !isCurrentlyEnabled;
+  };
+
   const resetToDefaultTheme = () => {
     setThemeMode('light');
     setThemePreset('default');
@@ -503,27 +524,59 @@ export const ThemeProvider = ({ children }) => {
     const defaultSidebarBg = isDark ? '#0f172a' : '#ffffff';
     const defaultCardBg = isDark ? '#161f30' : '#ffffff';
 
-    const headerBgVal = isDark
+    const rawHeaderBg = isDark
       ? resolveDarkColor(customSettings.headerBg, customSettings.darkHeaderBg, defaultHeaderBg)
       : resolveLightColor(customSettings.headerBg, customSettings.lightHeaderBg, defaultHeaderBg);
 
-    const headerColorVal = isDark
+    const rawHeaderColor = isDark
       ? resolveDarkColor(customSettings.headerColor, customSettings.darkHeaderColor, defaultHeaderColor)
       : resolveLightColor(customSettings.headerColor, customSettings.lightHeaderColor, defaultHeaderColor);
 
-    const cardBgVal = isDark
+    const rawCardBg = isDark
       ? resolveDarkColor(customSettings.cardBg, customSettings.darkCardBg, defaultCardBg)
       : resolveLightColor(customSettings.cardBg, customSettings.lightCardBg, defaultCardBg);
 
-    const sidebarBgVal = isDark
+    const rawSidebarBg = isDark
       ? resolveDarkColor(customSettings.sidebarBg, customSettings.darkSidebarBg, defaultSidebarBg)
       : resolveLightColor(customSettings.sidebarBg, customSettings.lightSidebarBg, defaultSidebarBg);
 
-    const borderVal = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(226, 232, 240, 0.85)';
+    const isGlass = Boolean(customSettings.transparentSystem?.enabled);
+    const transparentConfig = customSettings?.transparentSystem || DEFAULT_THEME_SETTINGS.transparentSystem;
+    const opacityFraction = isGlass
+      ? Math.max(0.15, Math.min(1, (transparentConfig?.surfaceOpacity ?? 78) / 100))
+      : 1;
+    const blurRadius = isGlass ? (transparentConfig?.blurRadius ?? 20) : 0;
+    const saturation = isGlass ? (transparentConfig?.saturation ?? 140) : 100;
+    const wallpaperKey = transparentConfig?.wallpaper || 'aurora';
+
+    let pageBgVal = isGlass
+      ? getWallpaperBackground(wallpaperKey, isDark, primary)
+      : (isDark ? '#080c14' : '#f8fafc');
+
+    if (isGlass && transparentConfig.customWallpaperUrl) {
+      pageBgVal = `url("${transparentConfig.customWallpaperUrl}") center/cover no-repeat fixed, ${pageBgVal}`;
+    }
+
+    const cardBgVal = isGlass && transparentConfig.transparentCards !== false
+      ? hexToRgba(rawCardBg, opacityFraction)
+      : rawCardBg;
+
+    const sidebarBgVal = isGlass && transparentConfig.transparentSidebar !== false
+      ? hexToRgba(rawSidebarBg, Math.min(0.92, opacityFraction + 0.08))
+      : rawSidebarBg;
+
+    const headerBgVal = isGlass && transparentConfig.transparentHeader !== false
+      ? hexToRgba(rawHeaderBg, opacityFraction)
+      : rawHeaderBg;
+
+    const headerColorVal = rawHeaderColor;
+
+    const glow = transparentConfig?.glassBorderGlow !== false;
+    const borderVal = isGlass
+      ? (isDark ? (glow ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)') : (glow ? 'rgba(255, 255, 255, 0.75)' : 'rgba(226, 232, 240, 0.7)'))
+      : (isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(226, 232, 240, 0.85)');
     const textVal = isDark ? '#f8fafc' : '#0f172a';
     const subtextVal = isDark ? '#94a3b8' : '#64748b';
-    const pageBgVal = isDark ? '#080c14' : '#f8fafc';
-    const isGlass = Boolean(customSettings.transparentSystem?.enabled);
 
     style.textContent = `
       :root, html, body.admin-active, .admin-layout, .ant-layout.admin-layout, [data-admin-theme], [data-theme] {
@@ -552,6 +605,12 @@ export const ThemeProvider = ({ children }) => {
         color-scheme: ${isDark ? 'dark' : 'light'};
       }
 
+      body.admin-active, .admin-layout, .ant-layout.admin-layout {
+        background: ${pageBgVal} !important;
+        background-attachment: fixed !important;
+        background-size: cover !important;
+      }
+
       /* Admin Panel UI Controls Override - Strictly Scoped to .admin-layout */
       .admin-layout .ant-btn-primary {
         box-shadow: 0 4px 14px -2px ${primary}55 !important;
@@ -578,7 +637,7 @@ export const ThemeProvider = ({ children }) => {
         background: ${cardBgVal} !important;
         border-color: ${borderVal} !important;
         color: ${textVal} !important;
-        ${isGlass ? 'backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);' : ''}
+        ${isGlass && transparentConfig.transparentCards !== false ? `backdrop-filter: blur(${blurRadius}px) saturate(${saturation}%); -webkit-backdrop-filter: blur(${blurRadius}px) saturate(${saturation}%);` : ''}
       }
 
       .admin-layout .ant-card-head {
@@ -594,13 +653,24 @@ export const ThemeProvider = ({ children }) => {
       .admin-layout .ant-table {
         background: ${cardBgVal} !important;
         color: ${textVal} !important;
+        ${isGlass && transparentConfig.transparentCards !== false ? `backdrop-filter: blur(${blurRadius}px); -webkit-backdrop-filter: blur(${blurRadius}px);` : ''}
       }
 
       .admin-layout .ant-table-thead > tr > th {
-        background: ${isDark ? 'rgba(255, 255, 255, 0.05)' : '#f8fafc'} !important;
+        background: ${isGlass ? hexToRgba(rawCardBg, Math.min(1, opacityFraction + 0.12)) : (isDark ? 'rgba(255, 255, 255, 0.05)' : '#f8fafc')} !important;
         color: ${isDark ? '#94a3b8' : '#475569'} !important;
         border-bottom: 1px solid ${borderVal} !important;
         font-weight: 600 !important;
+      }
+
+      .admin-layout .ant-layout-sider {
+        background: ${sidebarBgVal} !important;
+        ${isGlass && transparentConfig.transparentSidebar !== false ? `backdrop-filter: blur(${blurRadius}px); -webkit-backdrop-filter: blur(${blurRadius}px);` : ''}
+      }
+
+      .admin-layout .ant-layout-header, .admin-layout .admin-header {
+        background: ${headerBgVal} !important;
+        ${isGlass && transparentConfig.transparentHeader !== false ? `backdrop-filter: blur(${blurRadius}px); -webkit-backdrop-filter: blur(${blurRadius}px);` : ''}
       }
 
       .admin-layout .ant-table-tbody > tr > td {
@@ -781,6 +851,8 @@ export const ThemeProvider = ({ children }) => {
         themeConfigs,
         customSettings,
         updateCustomTheme,
+        updateTransparentSystem,
+        toggleTransparentSystem,
         resetToDefaultTheme,
         currentTheme,
       }}

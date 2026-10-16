@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Col, Flex, Row, Space, Switch, Typography, Button, Tag, Segmented } from 'antd';
+import { Card, Col, Flex, Row, Space, Switch, Typography, Button, Tag, Segmented, Slider, message } from 'antd';
 import {
   BgColorsOutlined,
   SettingOutlined,
@@ -13,6 +13,7 @@ import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getMenuByKey, getModuleByKey } from '../../data/erpModules';
 import ThemeSettings from '../../contexts/ThemeSettings';
+import { WALLPAPER_PRESETS } from '../../utils/uiTheme';
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -55,7 +56,7 @@ const presetQuickList = [
 
 const SystemSettings = () => {
   const adminTheme = useAdminTheme();
-  const { themeMode, setThemeMode, themePreset, changePreset, customSettings } = useTheme();
+  const { themeMode, setThemeMode, themePreset, changePreset, customSettings, updateTransparentSystem } = useTheme();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const moduleKey = searchParams.get('module') || 'settings';
@@ -208,7 +209,199 @@ const SystemSettings = () => {
       </Card>
 
       {/* ======================================================== */}
-      {/* 2. CORE PLATFORM POLICIES & CONTROLS                     */}
+      {/* 2. TRANSPARENT BACKGROUND & GLASS EXPERIENCE CONTROLLER  */}
+      {/* ======================================================== */}
+      <Card
+        style={{
+          borderRadius: 20,
+          border: customSettings?.transparentSystem?.enabled
+            ? `2px solid ${adminTheme.primary}`
+            : `1px solid ${adminTheme.border}`,
+          background: adminTheme.card,
+          boxShadow: adminTheme.shadow,
+          overflow: 'hidden',
+        }}
+        styles={{ body: { padding: '22px 24px' } }}
+      >
+        <Row gutter={[24, 20]} align="middle">
+          <Col xs={24} lg={8}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 12,
+                  background: 'linear-gradient(135deg, #06b6d4 0%, #ec4899 50%, #6366f1 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: 18,
+                  boxShadow: '0 6px 16px rgba(99, 102, 241, 0.3)',
+                  flexShrink: 0,
+                }}
+              >
+                💎
+              </div>
+              <div>
+                <Title level={5} style={{ margin: 0, color: adminTheme.text, fontWeight: 800 }}>
+                  Transparent Background &amp; Glass Engine
+                </Title>
+                <Text style={{ fontSize: 12, color: adminTheme.subtext }}>
+                  Dynamic ambient wallpapers, acrylic cards &amp; frosted blur
+                </Text>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Switch
+                checked={Boolean(customSettings?.transparentSystem?.enabled)}
+                onChange={(val) => {
+                  updateTransparentSystem({ enabled: val });
+                  message.success(val ? 'Transparent Glass Background Enabled!' : 'Reverted to Solid Background');
+                }}
+              />
+              <Tag
+                color={customSettings?.transparentSystem?.enabled ? 'success' : 'default'}
+                style={{ borderRadius: 6, fontWeight: 700, margin: 0 }}
+              >
+                {customSettings?.transparentSystem?.enabled ? 'ACTIVE GLASS' : 'SOLID OPAQUE'}
+              </Tag>
+            </div>
+
+            {/* Quick Presets */}
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: adminTheme.subtext, textTransform: 'uppercase', marginBottom: 6 }}>
+                Glass Presets
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {[
+                  { key: 'frosted', label: '❄️ Frosted', config: { enabled: true, preset: 'frosted', surfaceOpacity: 78, blurRadius: 20 } },
+                  { key: 'crystal', label: '💎 Crystal', config: { enabled: true, preset: 'crystal', surfaceOpacity: 55, blurRadius: 24 } },
+                  { key: 'acrylic', label: '🔮 Acrylic', config: { enabled: true, preset: 'acrylic', surfaceOpacity: 85, blurRadius: 16 } },
+                  { key: 'solid', label: '🏢 Solid', config: { enabled: false, preset: 'solid', surfaceOpacity: 100, blurRadius: 0 } },
+                ].map((p) => {
+                  const isActive =
+                    (p.key === 'solid' && !customSettings?.transparentSystem?.enabled) ||
+                    (customSettings?.transparentSystem?.enabled && customSettings?.transparentSystem?.preset === p.key);
+                  return (
+                    <Button
+                      key={p.key}
+                      size="small"
+                      onClick={() => updateTransparentSystem(p.config)}
+                      style={{
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: isActive ? 700 : 500,
+                        border: isActive ? `1.5px solid ${adminTheme.primary}` : `1px solid ${adminTheme.border}`,
+                        background: isActive ? (themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(47, 111, 237, 0.08)') : undefined,
+                        color: isActive ? adminTheme.primary : adminTheme.text,
+                      }}
+                    >
+                      {p.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          </Col>
+
+          {/* Wallpaper Grid */}
+          <Col xs={24} lg={10}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: adminTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>
+              Dynamic Ambient Wallpapers
+            </div>
+
+            <Row gutter={[8, 8]}>
+              {WALLPAPER_PRESETS.map((wp) => {
+                const isSelected = (customSettings?.transparentSystem?.wallpaper || 'aurora') === wp.key;
+                return (
+                  <Col span={8} key={wp.key}>
+                    <div
+                      onClick={() => {
+                        updateTransparentSystem({ wallpaper: wp.key, enabled: true });
+                        message.success(`Applied ${wp.name} wallpaper!`);
+                      }}
+                      style={{
+                        borderRadius: 10,
+                        border: isSelected ? `2px solid ${adminTheme.primary}` : `1px solid ${adminTheme.border}`,
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        transition: 'all 0.18s ease',
+                        boxShadow: isSelected ? `0 4px 12px ${adminTheme.primary}33` : 'none',
+                        transform: isSelected ? 'scale(1.03)' : 'none',
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: 38,
+                          background: wp.preview,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: 15,
+                        }}
+                      >
+                        {wp.icon}
+                      </div>
+                      <div
+                        style={{
+                          padding: '4px 6px',
+                          fontSize: 10,
+                          fontWeight: isSelected ? 800 : 500,
+                          textAlign: 'center',
+                          color: isSelected ? adminTheme.primary : adminTheme.text,
+                          background: themeMode === 'dark' ? '#0f172a' : '#f8fafc',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {wp.name.split(' ')[0]}
+                      </div>
+                    </div>
+                  </Col>
+                );
+              })}
+            </Row>
+          </Col>
+
+          {/* Sliders */}
+          <Col xs={24} lg={6}>
+            <div style={{ padding: '0 4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, fontWeight: 700, color: adminTheme.text }}>
+                <span>Surface Opacity</span>
+                <span>{customSettings?.transparentSystem?.surfaceOpacity ?? 78}%</span>
+              </div>
+              <Slider
+                min={20}
+                max={100}
+                step={5}
+                value={customSettings?.transparentSystem?.surfaceOpacity ?? 78}
+                onChange={(val) => updateTransparentSystem({ surfaceOpacity: val, preset: 'custom' })}
+                style={{ margin: '8px 0 14px' }}
+              />
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, fontWeight: 700, color: adminTheme.text }}>
+                <span>Backdrop Blur</span>
+                <span>{customSettings?.transparentSystem?.blurRadius ?? 20}px</span>
+              </div>
+              <Slider
+                min={0}
+                max={40}
+                step={2}
+                value={customSettings?.transparentSystem?.blurRadius ?? 20}
+                onChange={(val) => updateTransparentSystem({ blurRadius: val, preset: 'custom' })}
+                style={{ margin: '8px 0 0' }}
+              />
+            </div>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* ======================================================== */}
+      {/* 3. CORE PLATFORM POLICIES & CONTROLS                     */}
       {/* ======================================================== */}
       <Row gutter={[16, 16]}>
         {settingsGroups.map((group) => (
