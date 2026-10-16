@@ -154,13 +154,17 @@ const AdminDashboardRouter = () => {
     return <CategoriesPage />;
   }
 
-  // Sales Orders & Invoices
+  // Sales Orders & Invoices (including POS counter sales)
   if (
     menuKey === 'orders' ||
     menuKey === 'sales-orders' ||
     menuKey === 'sales-invoices' ||
     menuKey === 'pos-sales' ||
-    (moduleKey === 'sales' && (menuKey === 'sales-orders' || menuKey === 'sales-invoices'))
+    menuKey === 'list_pos' ||
+    menuKey === 'list-pos' ||
+    menuKey === 'list_POS' ||
+    (moduleKey === 'sales' && (menuKey === 'sales-orders' || menuKey === 'sales-invoices')) ||
+    (moduleKey === 'pos' && (menuKey === 'list_pos' || menuKey === 'list-pos' || menuKey === 'list_POS' || menuKey === 'pos-sales'))
   ) {
     return <OrdersManagement />;
   }
@@ -219,8 +223,8 @@ const AdminDashboardRouter = () => {
     return <AdminDashboard />;
   }
   
-  // If the menu is 'system-settings' or 'settings', render SystemSettings
-  if (menuKey === 'system-settings' || menuKey === 'settings') {
+  // If the menu is 'system-settings', 'settings', or 'pos-settings', render SystemSettings
+  if (menuKey === 'system-settings' || menuKey === 'settings' || menuKey === 'pos-settings') {
     return <SystemSettings />;
   }
   

@@ -87,6 +87,10 @@ const MENU_TO_ENTITY_MAP = {
 
   // POS
   'pos-sales': 'pos_sales',
+  'list_pos': 'pos_sales',
+  'list-pos': 'pos_sales',
+  'list_POS': 'pos_sales',
+  'pos-settings': 'pos_sales',
   'pos-screen': 'pos_sales',
   'gift-cards': 'gift_cards',
   'member-cards': 'gift_cards',

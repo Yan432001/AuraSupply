@@ -257,15 +257,28 @@ const ThemeSettings = ({ buttonStyle }) => {
         onClose={() => setOpen(false)}
         open={open}
         width={460}
+        zIndex={1200}
         styles={{
+          wrapper: {
+            zIndex: 1201,
+            pointerEvents: 'auto',
+          },
+          mask: {
+            zIndex: 1200,
+          },
+          content: {
+            pointerEvents: 'auto',
+          },
           body: {
             padding: '16px 20px 32px',
             background: themeMode === 'dark' ? '#0b0f19' : '#f8fafc',
+            pointerEvents: 'auto',
           },
           header: {
             borderBottom: `1px solid ${adminTheme.border}`,
             padding: '14px 20px',
             background: adminTheme.card,
+            pointerEvents: 'auto',
           },
         }}
       >

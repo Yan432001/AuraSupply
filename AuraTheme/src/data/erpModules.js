@@ -155,8 +155,9 @@ export const erpModules = [
       'Control customer reserve stocks and cashier register shift closes.',
     ],
     menus: [
-      leaf('pos-sales', 'POS Sales', 'Browse live counter sales and register transaction records.', { route: '/admins/orders' }),
+      leaf('list_pos', 'List POS', 'Browse live counter POS transactions, sales register, and receipt history.', { route: '/admins/orders' }),
       leaf('pos-screen', 'Open POS Terminal', 'Launch the fast counter touch-screen checkout register.', { route: '/shop' }),
+      leaf('pos-settings', 'POS Settings', 'Default POS register behaviors, sound effects, receipt printers, and cash drawer pins.'),
       leaf('gift-cards', 'Gift Cards', 'Issue stored-value prepaid gift cards and check balances.'),
       leaf('member-cards', 'Member Cards', 'Manage customer VIP membership cards, tiers, and loyalty points.'),
       leaf('coupons', 'Coupons', 'Issue percentage and fixed promotional voucher codes.'),
@@ -1090,7 +1091,6 @@ export const erpModules = [
     menus: [
       group('settings-general', 'General Settings', 'Core enterprise parameters.', [
         leaf('system-settings', 'System Settings', 'Company name, timezone, default currency, and system behaviors.', { route: '/admins?module=settings&menu=system-settings' }),
-        leaf('pos-settings', 'POS Settings', 'Default POS register behaviors, sound effects, receipt printers, and cash drawer pins.'),
         leaf('change-logo', 'Branding & Logo', 'Upload enterprise logos for website, invoices, and POS receipts.'),
         leaf('currencies', 'Currencies', 'Configure base currency and secondary exchange rates (USD, KHR, THB).'),
         leaf('tax-rates', 'Tax Rates', 'Define VAT, GST, and service charge rates applied to orders.'),
@@ -1297,9 +1297,10 @@ const visitMenuTree = (items = [], callback, path = []) => {
 };
 
 const findMenuPath = (items = [], targetKey, path = []) => {
+  const normalizedKey = targetKey === 'pos-sales' || targetKey === 'list-pos' || targetKey === 'list_POS' ? 'list_pos' : targetKey;
   for (const item of items) {
     const nextPath = [...path, item];
-    if (item.key === targetKey) {
+    if (item.key === targetKey || item.key === normalizedKey) {
       return nextPath;
     }
     if (item.children?.length) {
@@ -1340,8 +1341,9 @@ export const getDefaultMenuKey = (moduleKey) => getDefaultMenu(moduleKey)?.key |
 export const getMenuByKey = (moduleKey, menuKey) => {
   const module = getModuleByKey(moduleKey);
   const flattened = flattenMenuItems(module?.menus || []);
+  const normalizedKey = menuKey === 'pos-sales' || menuKey === 'list-pos' || menuKey === 'list_POS' ? 'list_pos' : menuKey;
 
-  return flattened.find((item) => item.key === menuKey) || flattened[0];
+  return flattened.find((item) => item.key === menuKey || item.key === normalizedKey) || flattened[0];
 };
 
 export const getMenuLineage = (moduleKey, menuKey) => {
