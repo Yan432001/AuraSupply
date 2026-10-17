@@ -16,6 +16,7 @@ import {
   CheckOutlined,
   GlobalOutlined,
   ExportOutlined,
+  BgColorsOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -91,6 +92,8 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
       });
     } else if (key === 'profile') {
       navigate('/admins/profile');
+    } else if (key === 'theme-transparent') {
+      navigate('/admins/profile?tab=appearance');
     } else if (key === 'settings') {
       navigate('/admins/settings/system');
     }
@@ -128,6 +131,29 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
 
   const userMenuItems = [
     { key: 'profile', icon: <UserOutlined />, label: t('profile', 'My Profile') },
+    {
+      key: 'theme-transparent',
+      icon: <BgColorsOutlined />,
+      label: (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <span>{t('transparent_theme_settings', 'Transparent Theme Settings')}</span>
+          <span
+            style={{
+              fontSize: 10,
+              padding: '1px 6px',
+              borderRadius: 4,
+              background: isGlassActive
+                ? (adminTheme.isDark ? 'rgba(47, 111, 237, 0.25)' : 'rgba(47, 111, 237, 0.12)')
+                : (adminTheme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'),
+              color: isGlassActive ? adminTheme.primary : adminTheme.subtext,
+              fontWeight: 700,
+            }}
+          >
+            {isGlassActive ? 'GLASS ON' : 'OFF'}
+          </span>
+        </div>
+      ),
+    },
     { key: 'settings', icon: <SettingOutlined />, label: t('settings', 'Settings') },
     {
       key: 'change_language_sub',

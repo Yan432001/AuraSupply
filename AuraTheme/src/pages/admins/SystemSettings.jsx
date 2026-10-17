@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Card, Col, Flex, Row, Space, Switch, Typography, Button, Tag, Segmented, Slider, message } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Col, Flex, Row, Space, Switch, Typography, Button, Tag, Segmented, Slider, Input, Divider, message } from 'antd';
 import {
   BgColorsOutlined,
   SettingOutlined,
@@ -74,6 +74,14 @@ const SystemSettings = () => {
   const [state, setState] = useState(() =>
     Object.fromEntries(settingsGroups.flatMap((g) => g.items.map((item) => [item.key, item.default])))
   );
+
+  const [customWallpaperInput, setCustomWallpaperInput] = useState(
+    customSettings?.transparentSystem?.customWallpaperUrl || ''
+  );
+
+  useEffect(() => {
+    setCustomWallpaperInput(customSettings?.transparentSystem?.customWallpaperUrl || '');
+  }, [customSettings?.transparentSystem?.customWallpaperUrl]);
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -389,7 +397,7 @@ const SystemSettings = () => {
                 style={{ margin: '8px 0 14px' }}
               />
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, fontWeight: 700, color: adminTheme.text }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, fontWeight: 700, color: adminTheme.text, marginTop: 14 }}>
                 <span>{t('backdrop_blur', 'Backdrop Blur')}</span>
                 <span>{customSettings?.transparentSystem?.blurRadius ?? 20}px</span>
               </div>
@@ -401,7 +409,114 @@ const SystemSettings = () => {
                 onChange={(val) => updateTransparentSystem({ blurRadius: val, preset: 'custom' })}
                 style={{ margin: '8px 0 0' }}
               />
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, fontWeight: 700, color: adminTheme.text, marginTop: 14 }}>
+                <span>{t('color_saturation', 'Color Saturation')}</span>
+                <span>{customSettings?.transparentSystem?.saturation ?? 140}%</span>
+              </div>
+              <Slider
+                min={100}
+                max={200}
+                step={5}
+                value={customSettings?.transparentSystem?.saturation ?? 140}
+                onChange={(val) => updateTransparentSystem({ saturation: val, preset: 'custom' })}
+                style={{ margin: '8px 0 0' }}
+              />
             </div>
+          </Col>
+        </Row>
+
+        <Divider style={{ margin: '18px 0' }} />
+
+        {/* Custom Wallpaper URL & Component Layers */}
+        <Row gutter={[20, 16]}>
+          <Col xs={24} lg={10}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: adminTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
+              {t('custom_wallpaper_url', 'Custom Wallpaper Image URL (Optional)')}
+            </div>
+            <Space orientation="horizontal" style={{ width: '100%', display: 'flex' }}>
+              <Input
+                placeholder="https://images.unsplash.com/... or /images/..."
+                value={customWallpaperInput}
+                onChange={(e) => setCustomWallpaperInput(e.target.value)}
+                allowClear
+                style={{ flex: 1 }}
+              />
+              <Button
+                type="primary"
+                onClick={() => {
+                  updateTransparentSystem({ customWallpaperUrl: customWallpaperInput, enabled: true });
+                  message.success(t('custom_wallpaper_applied', 'Custom wallpaper applied!'));
+                }}
+              >
+                {t('apply', 'Apply')}
+              </Button>
+              {customSettings?.transparentSystem?.customWallpaperUrl && (
+                <Button
+                  onClick={() => {
+                    setCustomWallpaperInput('');
+                    updateTransparentSystem({ customWallpaperUrl: '' });
+                    message.info(t('custom_wallpaper_cleared', 'Custom wallpaper cleared'));
+                  }}
+                >
+                  {t('clear', 'Clear')}
+                </Button>
+              )}
+            </Space>
+          </Col>
+
+          <Col xs={24} lg={14}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: adminTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
+              {t('component_glass_layers', 'Component Glass Layers')}
+            </div>
+            <Row gutter={[12, 10]}>
+              {[
+                {
+                  key: 'transparentSidebar',
+                  title: t('transparent_sidebar', 'Transparent Sidebar'),
+                  checked: customSettings?.transparentSystem?.transparentSidebar !== false,
+                },
+                {
+                  key: 'transparentHeader',
+                  title: t('transparent_header', 'Transparent Header'),
+                  checked: customSettings?.transparentSystem?.transparentHeader !== false,
+                },
+                {
+                  key: 'transparentCards',
+                  title: t('transparent_cards', 'Transparent Content Cards'),
+                  checked: customSettings?.transparentSystem?.transparentCards !== false,
+                },
+                {
+                  key: 'glassBorderGlow',
+                  title: t('glass_border_glow', 'Glass Border Rim Glow'),
+                  checked: customSettings?.transparentSystem?.glassBorderGlow !== false,
+                },
+              ].map((comp) => (
+                <Col xs={12} sm={6} key={comp.key}>
+                  <div
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 10,
+                      background: themeMode === 'dark' ? 'rgba(255,255,255,0.03)' : '#f8fafc',
+                      border: `1px solid ${adminTheme.border}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 8,
+                    }}
+                  >
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: adminTheme.text }} className="truncate">
+                      {comp.title}
+                    </span>
+                    <Switch
+                      size="small"
+                      checked={comp.checked}
+                      onChange={(val) => updateTransparentSystem({ [comp.key]: val })}
+                    />
+                  </div>
+                </Col>
+              ))}
+            </Row>
           </Col>
         </Row>
       </Card>
