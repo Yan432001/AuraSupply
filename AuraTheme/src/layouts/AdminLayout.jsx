@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Drawer, Layout, Spin } from 'antd';
-import { Outlet, useLocation, Navigate } from 'react-router-dom';
+import { Drawer, Layout, Spin, Result, Button, Space, Typography } from 'antd';
+import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { NotificationProvider } from '../pages/admins/NotificationContext';
 import HeaderDefault from '../pages/admins/AdminHeaderDefault';
 import Head from '../pages/admins/AdminHead';
@@ -29,12 +29,23 @@ const AdminLayout = () => {
   const { t } = useTranslation();
   const { themeMode, themePreset } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const { moduleState, toggleModule } = useAdminModules();
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
-  const { user, token, isAuthenticated, loadingSession } = useAuth();
+  const { user, token, isAuthenticated, isOwner, isAdmin, logout, loadingSession } = useAuth();
+
+  // Role and administrative permission classification
+  const userRole = (user?.role || user?.group_name || '').toLowerCase();
+  const isCustomer = userRole === 'customer' || Number(user?.group_id) === 4 || Boolean(user?.Customer) || Number(user?.allow_admin_login) === 0;
+  const hasAdminAccess = Boolean(
+    (isOwner || isAdmin || Number(user?.level) <= 30 || Number(user?.allow_admin_login) === 1) &&
+    !isCustomer &&
+    userRole !== 'customer' &&
+    Number(user?.group_id) !== 4
+  );
 
   // Check if current route is a login route
   const isLoginPage = NO_SIDEBAR_ROUTES.some(route => location.pathname.startsWith(route));
@@ -124,7 +135,11 @@ const AdminLayout = () => {
   // 1. If currently on a login page:
   if (isLoginPage) {
     if (isAuthenticated) {
-      return <Navigate to="/admins/dashboard" replace />;
+      if (hasAdminAccess) {
+        return <Navigate to="/admins/dashboard" replace />;
+      }
+      // Customer account cannot access admin dashboard, redirect to main website
+      return <Navigate to="/" replace />;
     }
     return (
       <Layout className="admin-layout" style={{ minHeight: '100vh', background: adminTheme.pageBackground }}>
@@ -160,6 +175,40 @@ const AdminLayout = () => {
   // 3. If accessing protected admin routes without an authenticated session:
   if (!isAuthenticated) {
     return <Navigate to="/admins/login" state={{ from: location }} replace />;
+  }
+
+  // 4. Strict Route Protection: Block customer accounts from accessing the Admin panel
+  if (isAuthenticated && (isCustomer || !hasAdminAccess)) {
+    return (
+      <Layout className="admin-layout" style={{ minHeight: '100vh', background: adminTheme.pageBackground }}>
+        <Content style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: 24 }}>
+          <div style={{
+            maxWidth: 540,
+            width: '100%',
+            background: adminTheme.cardBackground || '#ffffff',
+            border: `1px solid ${adminTheme.borderColor || '#e2e8f0'}`,
+            borderRadius: 16,
+            padding: 36,
+            boxShadow: '0 20px 40px rgba(0,0,0,0.08)',
+            textAlign: 'center'
+          }}>
+            <Result
+              status="403"
+              title="403 - Access Denied"
+              subTitle="Customer accounts are strictly blocked from accessing the Admin Dashboard. Only users with administrative privileges may view this panel."
+              extra={[
+                <Button type="primary" size="large" key="home" onClick={() => navigate('/')} style={{ borderRadius: 8 }}>
+                  Return to Main Website
+                </Button>,
+                <Button size="large" key="switch" onClick={async () => { await logout(); navigate('/admins/login'); }} style={{ borderRadius: 8 }}>
+                  Sign In with Admin Account
+                </Button>
+              ]}
+            />
+          </div>
+        </Content>
+      </Layout>
+    );
   }
 
   return (

@@ -1151,27 +1151,57 @@ const ThemePublicController = {
       const firstName = nameParts[0] || fullName;
       const lastName = nameParts.slice(1).join(' ') || '';
 
-      // Insert customer user in aura_users with group_id = 3 (customer)
+      // Always assign 'customer' role (group_id = 4) by default for storefront website registration
+      const [groups] = await db.query(
+        "SELECT id, name FROM aura_groups WHERE LOWER(name) = 'customer' LIMIT 1"
+      );
+      const customerGroupId = groups && groups.length > 0 ? Number(groups[0].id) : 4;
+
+      // Insert customer user in aura_users with group_id = customerGroupId (customer role)
       const [userResult] = await db.query(`
-        INSERT INTO aura_users (username, password, email, first_name, last_name, phone, group_id, active, created_on)
-        VALUES (?, ?, ?, ?, ?, ?, 3, 1, UNIX_TIMESTAMP())
-      `, [username, hashedPassword, email, firstName, lastName, phone || '']);
+        INSERT INTO aura_users (
+          username, password, password_algo, email, first_name, last_name,
+          phone, group_id, active, status, register_source, created_on, created_at
+        ) VALUES (?, ?, 'bcrypt', ?, ?, ?, ?, ?, 1, 'active', 'website', UNIX_TIMESTAMP(), NOW())
+      `, [username, hashedPassword, email, firstName, lastName, phone || '', customerGroupId]);
 
       const newUserId = userResult.insertId;
 
-      // Also create a company customer entry in aura_companies
+      // Also create a customer entry in aura_companies
       try {
         await db.query(`
           INSERT INTO aura_companies (group_id, group_name, customer_group_id, customer_group_name, name, company, email, phone)
-          VALUES (3, 'customer', 1, 'General', ?, ?, ?, ?)
-        `, [fullName, fullName, email, phone || '']);
+          VALUES (?, 'customer', 1, 'General', ?, ?, ?, ?)
+        `, [customerGroupId, fullName, fullName, email, phone || '']);
+      } catch (_) {}
+
+      // Sync to RBAC users and user_group_mappings table if present
+      try {
+        const crypto = require('crypto');
+        const userUuid = crypto.randomUUID ? crypto.randomUUID() : `usr-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+        const [uRes] = await db.query(`
+          INSERT INTO users (uuid, username, email, password_hash, first_name, last_name, phone, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+        `, [userUuid, username, email, hashedPassword, firstName, lastName, phone || '']);
+
+        const [ugRows] = await db.query("SELECT id FROM user_groups WHERE code = 'CUSTOMER' LIMIT 1");
+        if (ugRows && ugRows.length > 0) {
+          await db.query(`
+            INSERT INTO user_group_mappings (user_id, group_id, assigned_by)
+            VALUES (?, ?, ?)
+          `, [uRes.insertId, ugRows[0].id, uRes.insertId]);
+        }
       } catch (_) {}
 
       let token = `aura_jwt_${newUserId}_${Date.now()}`;
       try {
         const jwt = require('jsonwebtoken');
         const { access_token_key } = require('../../config/utill/helper');
-        token = jwt.sign({ id: newUserId, username, email, group_id: 3 }, access_token_key || 'secret', { expiresIn: '7d' });
+        token = jwt.sign(
+          { id: newUserId, username, email, group_id: customerGroupId, role: 'customer', area: 'website' },
+          access_token_key || 'secret',
+          { expiresIn: '7d' }
+        );
       } catch (_) {}
 
       const userProfile = {
@@ -1181,14 +1211,14 @@ const ThemePublicController = {
         email,
         phone: phone || '',
         role: 'customer',
-        group_id: 3,
+        group_id: customerGroupId,
         token
       };
 
       return res.status(201).json({
         success: true,
         status: true,
-        message: 'Account successfully registered in database!',
+        message: 'Account successfully registered with customer role!',
         data: userProfile,
         user: userProfile,
         token

@@ -130,12 +130,22 @@ export const AuthProvider = ({ children }) => {
 
       axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
 
+      let parsedUser = null;
       try {
-        const res = await axios.get('/api/admin/auth/session', {
+        const savedUser = localStorage.getItem('user');
+        parsedUser = savedUser ? JSON.parse(savedUser) : null;
+      } catch (_) {}
+
+      const isCustomerAccount = parsedUser?.role === 'customer' || Number(parsedUser?.group_id) === 4;
+
+      try {
+        // Customer accounts authenticate via /api/auth/profile; Admin/staff via /api/admin/auth/session
+        const sessionEndpoint = isCustomerAccount ? '/api/auth/profile' : '/api/admin/auth/session';
+        const res = await axios.get(sessionEndpoint, {
           headers: { Authorization: `Bearer ${savedToken}` }
         });
 
-        if (isMounted && res.data?.success && res.data?.data) {
+        if (isMounted && (res.data?.success || res.data?.status) && res.data?.data) {
           const freshUser = res.data.data;
           setUser(freshUser);
           localStorage.setItem('user', JSON.stringify(freshUser));
@@ -148,6 +158,11 @@ export const AuthProvider = ({ children }) => {
             setToken(null);
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+          }
+        } else if (err.response?.status === 403 && !isCustomerAccount) {
+          // If 403 when hitting admin session, account may be a customer or restricted
+          if (isMounted && parsedUser) {
+            setUser(parsedUser);
           }
         }
       } finally {

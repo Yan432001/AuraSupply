@@ -111,6 +111,23 @@ exports.register = async (req, res) => {
       address || null
     ]);
 
+    // Sync to RBAC users and user_group_mappings table if present
+    try {
+      const userUuid = crypto.randomUUID ? crypto.randomUUID() : `usr-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+      const [uRes] = await db.query(`
+        INSERT INTO users (uuid, username, email, password_hash, first_name, phone, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [userUuid, username, cleanEmail, hash, name.trim(), phone.trim(), initialStatus]);
+
+      const [ugRows] = await db.query("SELECT id FROM user_groups WHERE LOWER(code) = ? OR LOWER(name) = ? LIMIT 1", [cleanRole, cleanRole]);
+      if (ugRows && ugRows.length > 0) {
+        await db.query(`
+          INSERT INTO user_group_mappings (user_id, group_id, assigned_by)
+          VALUES (?, ?, ?)
+        `, [uRes.insertId, ugRows[0].id, uRes.insertId]);
+      }
+    } catch (_) {}
+
     // Issue email verification token (valid for 24h)
     const { plainToken } = await tokenService.issueToken({
       userId: newUserId,

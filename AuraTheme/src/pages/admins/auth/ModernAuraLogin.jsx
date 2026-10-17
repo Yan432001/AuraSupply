@@ -97,6 +97,14 @@ const ModernAuraLogin = () => {
           branches
         };
 
+        const userRole = (group?.name || user?.role || user?.group_name || '').toLowerCase();
+        const isCustomer = userRole === 'customer' || Number(user?.group_id) === 4 || Number(group?.allow_admin_login) === 0;
+
+        if (isCustomer) {
+          setErrorMessage('Access denied: Customer accounts are strictly prohibited from logging into the administrative portal.');
+          return;
+        }
+
         login({ token, user: enrichedUser });
         message.success(`Welcome back, ${user.first_name || user.username || 'Admin'}!`);
         navigate('/admins/dashboard');

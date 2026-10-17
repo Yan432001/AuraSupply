@@ -45,7 +45,8 @@ const authenticate = async (req, res, next) => {
     // Sole Source of Truth: query aura_users JOIN aura_groups
     const sql = `
       SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.group_id, u.active,
-             u.biller_id, u.warehouse_id, g.name AS role, g.description AS role_description
+             u.biller_id, u.warehouse_id, g.name AS role, g.description AS role_description,
+             g.level, g.allow_admin_login, g.allow_web_login
       FROM aura_users u
       LEFT JOIN aura_groups g ON u.group_id = g.id
       WHERE u.id = ?
@@ -68,6 +69,20 @@ const authenticate = async (req, res, next) => {
       });
     }
 
+    // Strict Admin Protection: Customers are strictly blocked from /api/admin/* endpoints
+    const isAdminEndpoint = req.originalUrl && (req.originalUrl.includes('/api/admin') || req.baseUrl.includes('/api/admin'));
+    const userRole = (user.role || '').toLowerCase();
+    const isCustomer = userRole === 'customer' || Number(user.group_id) === 4 || Number(user.allow_admin_login) === 0;
+
+    if (isAdminEndpoint && isCustomer) {
+      return res.status(403).json({
+        success: false,
+        error: 'FORBIDDEN',
+        code: 'FORBIDDEN_CUSTOMER',
+        message: 'Access denied: Customer accounts are strictly prohibited from accessing administrative endpoints.'
+      });
+    }
+
     // Attach verified user and role to request
     req.user = {
       id: user.id,
@@ -78,6 +93,9 @@ const authenticate = async (req, res, next) => {
       group_id: user.group_id,
       role: user.role || 'staff',
       role_description: user.role_description,
+      level: user.level,
+      allow_admin_login: user.allow_admin_login,
+      allow_web_login: user.allow_web_login,
       biller_id: user.biller_id,
       warehouse_id: user.warehouse_id
     };
@@ -161,8 +179,33 @@ const requirePermission = (permissionKey) => {
   };
 };
 
+/**
+ * Require Administrative Access (Strictly blocks customer accounts)
+ */
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, error: 'UNAUTHORIZED', message: 'Authentication required' });
+  }
+
+  const role = (req.user.role || '').toLowerCase();
+  const groupId = Number(req.user.group_id);
+  const allowAdminLogin = req.user.allow_admin_login !== undefined ? Number(req.user.allow_admin_login) : null;
+
+  if (role === 'customer' || groupId === 4 || allowAdminLogin === 0) {
+    return res.status(403).json({
+      success: false,
+      error: 'FORBIDDEN',
+      code: 'FORBIDDEN_CUSTOMER',
+      message: 'Access denied: Customer accounts are strictly prohibited from accessing administrative endpoints.'
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   authenticate,
   requireRole,
-  requirePermission
+  requirePermission,
+  requireAdmin
 };

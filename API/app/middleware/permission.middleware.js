@@ -64,11 +64,23 @@ const authenticate = async (req, res, next) => {
 
     // Role flags matching CodeIgniter 3 MY_Controller
     const roleName = (user.group_name || '').toLowerCase();
+    const isCustomer = roleName === 'customer' || Number(user.group_id) === 4 || Number(user.allow_admin_login) === 0;
+
+    // Strict Admin Protection: Customers are strictly blocked from /api/admin/* endpoints
+    const isAdminEndpoint = req.originalUrl && (req.originalUrl.includes('/api/admin') || req.baseUrl.includes('/api/admin'));
+    if (isAdminEndpoint && isCustomer) {
+      return sendError(
+        res,
+        'Access denied: Customer accounts are strictly prohibited from accessing administrative endpoints.',
+        403,
+        { code: 'FORBIDDEN_CUSTOMER' }
+      );
+    }
+
     const isOwner = Number(user.group_id) === 1 || Number(user.group_level) === 1 || roleName === 'owner';
     const isAdmin = Number(user.group_id) === 2 || Number(user.group_level) === 2 || roleName === 'admin';
     const isStore = roleName === 'store';
     const isSupplier = roleName === 'supplier';
-    const isCustomer = roleName === 'customer';
     const isSalesman = roleName === 'salesman' || roleName === 'sale-agents' || roleName === 'saleman';
 
     // Group Permissions ($this->GP in CodeIgniter 3)
@@ -233,10 +245,36 @@ const branchScopeFilter = (req, res, next) => {
   next();
 };
 
+/**
+ * 6. Require Administrative Role Guard
+ * Strictly blocks any account with the 'customer' role or without admin login capability
+ */
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return sendError(res, 'Authentication required', 401);
+  }
+
+  const role = (req.user.role || req.user.group_name || '').toLowerCase();
+  const groupId = Number(req.user.group_id);
+  const allowAdminLogin = req.user.allow_admin_login !== undefined ? Number(req.user.allow_admin_login) : null;
+
+  if (role === 'customer' || groupId === 4 || allowAdminLogin === 0 || req.Customer) {
+    return sendError(
+      res,
+      'Access denied: Customer accounts are strictly prohibited from accessing administrative endpoints.',
+      403,
+      { code: 'FORBIDDEN_CUSTOMER' }
+    );
+  }
+
+  next();
+};
+
 module.exports = {
   authenticate,
   requirePermission,
   requireRole,
+  requireAdmin,
   checkModuleEnabled,
   branchScopeFilter
 };

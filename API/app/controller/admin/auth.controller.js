@@ -37,7 +37,21 @@ exports.profile = async (req, res) => {
     }
 
     const user = rows[0];
-    const roleName = (user.role || '').toLowerCase();
+    const roleName = (user.role || user.group_name || '').toLowerCase();
+
+    // Block customer accounts from accessing administrative session/profile endpoints
+    if (req.originalUrl && req.originalUrl.includes('/admin')) {
+      if (roleName === 'customer' || Number(user.group_id) === 4 || Number(user.allow_admin_login) === 0) {
+        return res.status(403).json({
+          success: false,
+          status: false,
+          error: 'FORBIDDEN',
+          code: 'FORBIDDEN_CUSTOMER',
+          message: 'Access denied: Customer accounts are strictly prohibited from accessing administrative endpoints.'
+        });
+      }
+    }
+
     const isOwner = Number(user.group_id) === 1 || Number(user.group_level) === 1 || roleName === 'owner';
     const isAdmin = Number(user.group_id) === 2 || Number(user.group_level) === 2 || roleName === 'admin';
 
@@ -162,6 +176,21 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Admin Login Restriction: Strictly block customer accounts from administrative login
+    const roleName = (user.role || user.group_name || '').toLowerCase();
+    const isCustomer = roleName === 'customer' || Number(user.group_id) === 4 || Number(user.allow_admin_login) === 0;
+    const isAdminRoute = req.originalUrl && (req.originalUrl.includes('/admin') || req.baseUrl.includes('/admin'));
+
+    if (isAdminRoute && isCustomer) {
+      return res.status(403).json({
+        success: false,
+        status: false,
+        error: 'FORBIDDEN',
+        code: 'FORBIDDEN_CUSTOMER',
+        message: 'Access denied: Customer accounts are not permitted to log into the administrative portal.'
+      });
+    }
+
     // Verify password with Bcrypt and legacy Ion Auth SHA1 auto-upgrade
     let isMatch = false;
     let needsUpgrade = false;
@@ -231,12 +260,10 @@ exports.login = async (req, res) => {
     } catch (_) {}
 
     // Group & Permissions ($this->GP in CodeIgniter 3)
-    const roleName = (user.role || '').toLowerCase();
     const isOwner = Number(user.group_id) === 1 || Number(user.group_level) === 1 || roleName === 'owner';
     const isAdmin = Number(user.group_id) === 2 || Number(user.group_level) === 2 || roleName === 'admin';
     const isStore = roleName === 'store';
     const isSupplier = roleName === 'supplier';
-    const isCustomer = roleName === 'customer';
     const isSalesman = roleName === 'salesman' || roleName === 'sale-agents';
 
     // Retrieve group permissions from aura_permissions
@@ -292,18 +319,24 @@ exports.login = async (req, res) => {
       allow_web_login: user.allow_web_login
     };
 
-    // Issue JWT access token
+    // Issue JWT access token (optimized compact payload)
     const tokenPayload = {
       id: user.id,
       user_id: user.id,
       username: user.username,
       email: user.email,
       group_id: user.group_id,
-      role: user.role || 'admin',
+      role: user.role || user.group_name || 'admin',
       level: user.group_level,
-      area: 'admin',
+      area: isCustomer ? 'website' : 'admin',
       data: {
-        profile: sanitizedUser
+        profile: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role || user.group_name || 'admin',
+          group_id: user.group_id
+        }
       }
     };
 
@@ -395,8 +428,22 @@ exports.token_key_login = () => {
         });
       }
 
+      const decodedUser = decoded.data?.profile || decoded;
+      const role = (decodedUser.role || decodedUser.group_name || '').toLowerCase();
+      const isCustomer = role === 'customer' || Number(decodedUser.group_id) === 4;
+
+      if (req.originalUrl && req.originalUrl.includes('/admin') && isCustomer) {
+        return res.status(403).json({
+          success: false,
+          status: false,
+          error: 'FORBIDDEN',
+          code: 'FORBIDDEN_CUSTOMER',
+          message: 'Access denied: Customer accounts are strictly prohibited from accessing administrative endpoints.'
+        });
+      }
+
       req.user_id = decoded.id || decoded.user_id || decoded.data?.profile?.id;
-      req.user = decoded.data?.profile || decoded;
+      req.user = decodedUser;
       next();
     });
   };

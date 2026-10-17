@@ -72,9 +72,15 @@ exports.login = async (req, res) => {
       );
     }
 
-    // Check admin portal privilege (aura_groups.allow_admin_login = 1)
-    if (Number(user.allow_admin_login) !== 1) {
-      return sendError(res, 'Access denied: Your account role does not have administrative permissions.', 403);
+    // Strictly block customer accounts and roles without admin privileges (aura_groups.allow_admin_login = 1)
+    const roleName = (user.group_name || '').toLowerCase();
+    if (roleName === 'customer' || Number(user.group_id) === 4 || Number(user.allow_admin_login) !== 1) {
+      return sendError(
+        res,
+        'Access denied: Customer accounts are not permitted to log into the administrative portal.',
+        403,
+        { code: 'FORBIDDEN_CUSTOMER' }
+      );
     }
 
     // Check user account status
@@ -243,7 +249,6 @@ exports.login = async (req, res) => {
 
     const isOwner = Number(user.group_id) === 1 || Number(user.group_level) === 1 || user.group_name === 'owner';
     const isAdmin = Number(user.group_id) === 2 || Number(user.group_level) === 2 || user.group_name === 'admin';
-    const roleName = (user.group_name || '').toLowerCase();
 
     // Complete session user payload matching CodeIgniter 3 MY_Controller
     const sessionUserData = {
@@ -410,6 +415,18 @@ exports.getProfile = async (req, res) => {
     }
 
     const user = users[0];
+
+    // Block customer accounts from accessing administrative session/profile endpoints
+    const roleName = (user.group_name || '').toLowerCase();
+    if (roleName === 'customer' || Number(user.group_id) === 4 || Number(user.allow_admin_login) !== 1) {
+      return sendError(
+        res,
+        'Access denied: Customer accounts are strictly prohibited from accessing administrative endpoints.',
+        403,
+        { code: 'FORBIDDEN_CUSTOMER' }
+      );
+    }
+
     const [permissions, branches, GP] = await Promise.all([
       accessControlService.getUserAllowedPermissions(user.id, user.group_id, user.group_level),
       accessControlService.getUserAllowedBranches(user.id, user.group_level),
@@ -418,7 +435,6 @@ exports.getProfile = async (req, res) => {
 
     const isOwner = Number(user.group_id) === 1 || Number(user.group_level) === 1 || user.group_name === 'owner';
     const isAdmin = Number(user.group_id) === 2 || Number(user.group_level) === 2 || user.group_name === 'admin';
-    const roleName = (user.group_name || '').toLowerCase();
 
     const sessionUserData = {
       id: user.id,
