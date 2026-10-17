@@ -601,37 +601,43 @@ export const ThemeProvider = ({ children }) => {
         --admin-subtext-color: ${subtextVal};
         --admin-border-color: ${borderVal};
         --admin-page-bg: ${pageBgVal};
+        --admin-card-backdrop: ${isGlass && transparentConfig.transparentCards !== false ? `blur(${blurRadius}px) saturate(${saturation}%)` : 'none'};
+        --admin-sidebar-backdrop: ${isGlass && transparentConfig.transparentSidebar !== false ? `blur(${blurRadius}px)` : 'none'};
+        --admin-header-backdrop: ${isGlass && transparentConfig.transparentHeader !== false ? `blur(${blurRadius}px)` : 'blur(16px)'};
+        --admin-input-bg: ${isDark ? 'rgba(255, 255, 255, 0.05)' : '#ffffff'};
+        --admin-dropdown-bg: ${isDark ? '#1e293b' : '#ffffff'};
+        --admin-table-header-bg: ${isGlass ? hexToRgba(rawCardBg, Math.min(1, opacityFraction + 0.12)) : (isDark ? 'rgba(255, 255, 255, 0.05)' : '#f8fafc')};
         font-family: ${customSettings.fontFamily};
         color-scheme: ${isDark ? 'dark' : 'light'};
       }
 
-      body.admin-active, .admin-layout, .ant-layout.admin-layout {
+      html.admin-active body, body.admin-active, .admin-layout, .ant-layout.admin-layout {
         background: ${pageBgVal} !important;
         background-attachment: fixed !important;
         background-size: cover !important;
       }
 
-      /* Admin Panel UI Controls Override - Strictly Scoped to .admin-layout */
-      .admin-layout .ant-btn-primary {
+      /* Admin Panel UI Controls Override - Strictly Scoped to .admin-layout and admin-active */
+      html.admin-active .ant-btn-primary, .admin-layout .ant-btn-primary {
         box-shadow: 0 4px 14px -2px ${primary}55 !important;
         font-weight: 600 !important;
         background-color: ${primary} !important;
         border-color: ${primary} !important;
       }
 
-      .admin-layout .ant-btn-default:not(.ant-btn-primary) {
+      html.admin-active .ant-btn-default:not(.ant-btn-primary), .admin-layout .ant-btn-default:not(.ant-btn-primary) {
         background: ${isDark ? 'rgba(255, 255, 255, 0.07)' : '#ffffff'} !important;
         color: ${isDark ? '#f8fafc' : '#0f172a'} !important;
         border-color: ${borderVal} !important;
       }
 
-      .admin-layout .ant-btn-default:not(.ant-btn-primary):hover {
+      html.admin-active .ant-btn-default:not(.ant-btn-primary):hover, .admin-layout .ant-btn-default:not(.ant-btn-primary):hover {
         background: ${isDark ? 'rgba(255, 255, 255, 0.12)' : '#f8fafc'} !important;
         color: ${primary} !important;
         border-color: ${primary} !important;
       }
       
-      .admin-layout .ant-card {
+      html.admin-active .ant-card, body.admin-active .ant-card, .admin-layout .ant-card {
         border-radius: ${densityMetrics.borderRadius + 4}px !important;
         transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
         background: ${cardBgVal} !important;
@@ -640,35 +646,35 @@ export const ThemeProvider = ({ children }) => {
         ${isGlass && transparentConfig.transparentCards !== false ? `backdrop-filter: blur(${blurRadius}px) saturate(${saturation}%); -webkit-backdrop-filter: blur(${blurRadius}px) saturate(${saturation}%);` : ''}
       }
 
-      .admin-layout .ant-card-head {
+      html.admin-active .ant-card-head, body.admin-active .ant-card-head, .admin-layout .ant-card-head {
         border-bottom-color: ${borderVal} !important;
         color: ${textVal} !important;
       }
 
-      .admin-layout .ant-card-head-title {
+      html.admin-active .ant-card-head-title, body.admin-active .ant-card-head-title, .admin-layout .ant-card-head-title {
         color: ${textVal} !important;
         font-weight: 700 !important;
       }
 
-      .admin-layout .ant-table {
+      html.admin-active .ant-table, body.admin-active .ant-table, .admin-layout .ant-table {
         background: ${cardBgVal} !important;
         color: ${textVal} !important;
         ${isGlass && transparentConfig.transparentCards !== false ? `backdrop-filter: blur(${blurRadius}px); -webkit-backdrop-filter: blur(${blurRadius}px);` : ''}
       }
 
-      .admin-layout .ant-table-thead > tr > th {
+      html.admin-active .ant-table-thead > tr > th, .admin-layout .ant-table-thead > tr > th {
         background: ${isGlass ? hexToRgba(rawCardBg, Math.min(1, opacityFraction + 0.12)) : (isDark ? 'rgba(255, 255, 255, 0.05)' : '#f8fafc')} !important;
         color: ${isDark ? '#94a3b8' : '#475569'} !important;
         border-bottom: 1px solid ${borderVal} !important;
         font-weight: 600 !important;
       }
 
-      .admin-layout .ant-layout-sider {
+      html.admin-active .ant-layout-sider, body.admin-active .ant-layout-sider, .admin-layout .ant-layout-sider {
         background: ${sidebarBgVal} !important;
         ${isGlass && transparentConfig.transparentSidebar !== false ? `backdrop-filter: blur(${blurRadius}px); -webkit-backdrop-filter: blur(${blurRadius}px);` : ''}
       }
 
-      .admin-layout .ant-layout-header, .admin-layout .admin-header {
+      html.admin-active .admin-header, body.admin-active .admin-header, .admin-layout .ant-layout-header, .admin-layout .admin-header {
         background: ${headerBgVal} !important;
         ${isGlass && transparentConfig.transparentHeader !== false ? `backdrop-filter: blur(${blurRadius}px); -webkit-backdrop-filter: blur(${blurRadius}px);` : ''}
       }

@@ -148,8 +148,8 @@
     <script type="module" crossorigin src="/assets/index-C012gRlU.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-nO1vH0Bi.css">
     <style id="admin-global-theme-system">
-      /* 1. Admin CSS Variables - strictly scoped to .admin-layout or html.admin-active */
-      html.admin-active[data-mode="light"], html.admin-active.light, body.admin-active.light, .admin-layout {
+      /* 1. Admin CSS Variables - Fallback tokens scoped to html.admin-active or .admin-layout */
+      html.admin-active, body.admin-active, .admin-layout {
         color-scheme: light;
         --admin-bg-base: #f8fafc;
         --admin-bg-page: #f8fafc;
@@ -158,9 +158,20 @@
         --admin-card-bg: #ffffff;
         --admin-sidebar-bg: #ffffff;
         --admin-header-bg: rgba(255, 255, 255, 0.95);
+        --admin-header-color: #0f172a;
+        --admin-header-border: rgba(226, 232, 240, 0.9);
+        --admin-sidebar-border: rgba(226, 232, 240, 0.9);
         --admin-text-base: #0f172a;
         --admin-subtext-base: #64748b;
+        --admin-text-color: #0f172a;
+        --admin-subtext-color: #64748b;
         --admin-border-base: rgba(226, 232, 240, 0.9);
+        --admin-border-color: rgba(226, 232, 240, 0.9);
+        --admin-card-border: rgba(226, 232, 240, 0.9);
+        --admin-page-bg: #f8fafc;
+        --admin-input-bg: #ffffff;
+        --admin-dropdown-bg: #ffffff;
+        --admin-table-header-bg: #f8fafc;
       }
       html.admin-active[data-mode="dark"], html.admin-active.dark, body.admin-active.dark, .admin-layout.dark, .admin-layout[data-mode="dark"] {
         color-scheme: dark;
@@ -171,200 +182,133 @@
         --admin-card-bg: #161f30;
         --admin-sidebar-bg: #0f172a;
         --admin-header-bg: rgba(11, 17, 30, 0.92);
+        --admin-header-color: #f8fafc;
+        --admin-header-border: rgba(255, 255, 255, 0.08);
+        --admin-sidebar-border: rgba(255, 255, 255, 0.08);
         --admin-text-base: #f8fafc;
         --admin-subtext-base: #94a3b8;
+        --admin-text-color: #f8fafc;
+        --admin-subtext-color: #94a3b8;
         --admin-border-base: rgba(255, 255, 255, 0.08);
+        --admin-border-color: rgba(255, 255, 255, 0.08);
+        --admin-card-border: rgba(255, 255, 255, 0.08);
+        --admin-page-bg: #0b0f19;
+        --admin-input-bg: rgba(255, 255, 255, 0.05);
+        --admin-dropdown-bg: #1e293b;
+        --admin-table-header-bg: #0f172a;
       }
-      /* 2. Base Page Backgrounds (Only applied when html.admin-active is active) */
-      html.admin-active[data-mode="light"] body, html.admin-active.light body, body.admin-active.light {
-        background-color: #f8fafc !important;
-        color: #0f172a !important;
+
+      /* 2. Base Page Backgrounds (Driven by reactive CSS variables) */
+      html.admin-active body, body.admin-active {
+        background: var(--admin-page-bg, #f8fafc) !important;
+        background-attachment: fixed !important;
+        background-size: cover !important;
+        color: var(--admin-text-color, #0f172a) !important;
       }
-      html.admin-active[data-mode="dark"] body, html.admin-active.dark body, body.admin-active.dark {
-        background-color: #0b0f19 !important;
-        color: #f8fafc !important;
-      }
-      /* 3. Admin Header & Sidebar */
-      html.admin-active[data-mode="light"] .admin-header, html.admin-active[data-mode="light"] .app-sticky-header, html.admin-active[data-mode="light"] header.ant-layout-header,
-      html.admin-active.light .admin-header, html.admin-active.light .app-sticky-header, html.admin-active.light header.ant-layout-header,
+
+      /* 3. Admin Header & Sidebar (Driven by reactive CSS variables) */
+      html.admin-active .admin-header, html.admin-active .app-sticky-header, html.admin-active header.ant-layout-header,
       .admin-layout .admin-header {
-        background: rgba(255, 255, 255, 0.95) !important;
-        color: #0f172a !important;
-        border-bottom: 1px solid rgba(226, 232, 240, 0.9) !important;
+        background: var(--admin-header-bg, rgba(255, 255, 255, 0.95)) !important;
+        color: var(--admin-header-color, #0f172a) !important;
+        border-bottom: 1px solid var(--admin-header-border, rgba(226, 232, 240, 0.9)) !important;
         box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04) !important;
+        backdrop-filter: var(--admin-header-backdrop, blur(16px));
+        -webkit-backdrop-filter: var(--admin-header-backdrop, blur(16px));
       }
-      html.admin-active[data-mode="light"] .ant-layout-sider, html.admin-active[data-mode="light"] aside.ant-layout-sider,
-      html.admin-active.light .ant-layout-sider, html.admin-active.light aside.ant-layout-sider,
+      html.admin-active .ant-layout-sider, html.admin-active aside.ant-layout-sider,
       .admin-layout .ant-layout-sider {
-        background: #ffffff !important;
-        border-right: 1px solid rgba(226, 232, 240, 0.9) !important;
+        background: var(--admin-sidebar-bg, #ffffff) !important;
+        border-right: 1px solid var(--admin-sidebar-border, rgba(226, 232, 240, 0.9)) !important;
         box-shadow: 2px 0 16px rgba(15, 23, 42, 0.04) !important;
+        backdrop-filter: var(--admin-sidebar-backdrop, none);
+        -webkit-backdrop-filter: var(--admin-sidebar-backdrop, none);
       }
-      html.admin-active[data-mode="light"] .admin-layout, html.admin-active[data-mode="light"] .admin-layout .ant-layout-content,
-      html.admin-active.light .admin-layout, html.admin-active.light .admin-layout .ant-layout-content {
-        background: #f8fafc !important;
-        color: #0f172a !important;
+      html.admin-active .admin-layout, html.admin-active .admin-layout .ant-layout-content,
+      .admin-layout, .admin-layout .ant-layout-content {
+        background: var(--admin-page-bg, #f8fafc) !important;
+        background-attachment: fixed !important;
+        background-size: cover !important;
+        color: var(--admin-text-color, #0f172a) !important;
       }
-      html.admin-active[data-mode="dark"] .admin-header, html.admin-active[data-mode="dark"] .app-sticky-header, html.admin-active[data-mode="dark"] header.ant-layout-header,
-      html.admin-active.dark .admin-header, html.admin-active.dark .app-sticky-header, html.admin-active.dark header.ant-layout-header {
-        background: rgba(11, 17, 30, 0.92) !important;
-        color: #f8fafc !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+
+      /* 4. Cards & Content Panels inside Admin (Driven by reactive CSS variables) */
+      html.admin-active .ant-card, .admin-layout .ant-card {
+        background: var(--admin-card-bg, #ffffff) !important;
+        border-color: var(--admin-card-border, rgba(226, 232, 240, 0.9)) !important;
+        color: var(--admin-text-color, #0f172a) !important;
+        backdrop-filter: var(--admin-card-backdrop, none);
+        -webkit-backdrop-filter: var(--admin-card-backdrop, none);
       }
-      html.admin-active[data-mode="dark"] .ant-layout-sider, html.admin-active[data-mode="dark"] aside.ant-layout-sider,
-      html.admin-active.dark .ant-layout-sider, html.admin-active.dark aside.ant-layout-sider {
-        background: #0f172a !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+      html.admin-active .ant-card-head, .admin-layout .ant-card-head {
+        background: var(--admin-card-bg, #ffffff) !important;
+        border-bottom-color: var(--admin-card-border, rgba(226, 232, 240, 0.9)) !important;
+        color: var(--admin-text-color, #0f172a) !important;
       }
-      html.admin-active[data-mode="dark"] .admin-layout, html.admin-active[data-mode="dark"] .admin-layout .ant-layout-content,
-      html.admin-active.dark .admin-layout, html.admin-active.dark .admin-layout .ant-layout-content {
-        background: #0b0f19 !important;
-        color: #f8fafc !important;
+      html.admin-active .ant-card-head-title, .admin-layout .ant-card-head-title {
+        color: var(--admin-text-color, #0f172a) !important;
       }
-      /* 4. Cards & Content Panels inside Admin */
-      html.admin-active[data-mode="light"] .ant-card, html.admin-active.light .ant-card, .admin-layout .ant-card {
-        background: #ffffff !important;
-        border-color: rgba(226, 232, 240, 0.9) !important;
-        color: #0f172a !important;
-        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 16px -4px rgba(15, 23, 42, 0.03) !important;
-      }
-      html.admin-active[data-mode="light"] .ant-card-head, html.admin-active.light .ant-card-head, .admin-layout .ant-card-head {
-        background: #ffffff !important;
-        border-bottom-color: rgba(226, 232, 240, 0.9) !important;
-        color: #0f172a !important;
-      }
-      html.admin-active[data-mode="light"] .ant-card-head-title, html.admin-active.light .ant-card-head-title, .admin-layout .ant-card-head-title {
-        color: #0f172a !important;
-      }
-      html.admin-active[data-mode="dark"] .ant-card, html.admin-active.dark .ant-card {
-        background: #161f30 !important;
-        border-color: rgba(255, 255, 255, 0.08) !important;
-        color: #f8fafc !important;
-      }
-      html.admin-active[data-mode="dark"] .ant-card-head, html.admin-active.dark .ant-card-head {
-        background: #161f30 !important;
-        border-bottom-color: rgba(255, 255, 255, 0.08) !important;
-        color: #f8fafc !important;
-      }
-      html.admin-active[data-mode="dark"] .ant-card-head-title, html.admin-active.dark .ant-card-head-title {
-        color: #f8fafc !important;
-      }
+
       /* 5. Tables inside Admin */
-      html.admin-active[data-mode="light"] .ant-table-wrapper .ant-table, html.admin-active.light .ant-table-wrapper .ant-table {
-        background: #ffffff !important;
-        color: #0f172a !important;
+      html.admin-active .ant-table-wrapper .ant-table, .admin-layout .ant-table {
+        background: var(--admin-card-bg, #ffffff) !important;
+        color: var(--admin-text-color, #0f172a) !important;
+        backdrop-filter: var(--admin-card-backdrop, none);
+        -webkit-backdrop-filter: var(--admin-card-backdrop, none);
       }
-      html.admin-active[data-mode="light"] .ant-table-thead > tr > th, html.admin-active.light .ant-table-thead > tr > th {
-        background: #f8fafc !important;
-        color: #475569 !important;
-        border-bottom: 1px solid rgba(226, 232, 240, 0.9) !important;
+      html.admin-active .ant-table-thead > tr > th, .admin-layout .ant-table-thead > tr > th {
+        background: var(--admin-table-header-bg, #f8fafc) !important;
+        color: var(--admin-subtext-color, #475569) !important;
+        border-bottom: 1px solid var(--admin-border-color, rgba(226, 232, 240, 0.9)) !important;
         font-weight: 600 !important;
       }
-      html.admin-active[data-mode="light"] .ant-table-tbody > tr > td, html.admin-active.light .ant-table-tbody > tr > td {
-        background: #ffffff !important;
-        color: #0f172a !important;
-        border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
+      html.admin-active .ant-table-tbody > tr > td, .admin-layout .ant-table-tbody > tr > td {
+        background: var(--admin-card-bg, #ffffff) !important;
+        color: var(--admin-text-color, #0f172a) !important;
+        border-bottom: 1px solid var(--admin-border-color, rgba(226, 232, 240, 0.6)) !important;
       }
-      html.admin-active[data-mode="light"] .ant-table-tbody > tr:hover > td, html.admin-active.light .ant-table-tbody > tr:hover > td {
-        background: #f1f5f9 !important;
+      html.admin-active .ant-table-tbody > tr:hover > td, .admin-layout .ant-table-tbody > tr:hover > td {
+        background: var(--admin-hover-bg, #f1f5f9) !important;
       }
-      html.admin-active[data-mode="dark"] .ant-table-wrapper .ant-table, html.admin-active.dark .ant-table-wrapper .ant-table {
-        background: #161f30 !important;
-        color: #f8fafc !important;
-      }
-      html.admin-active[data-mode="dark"] .ant-table-thead > tr > th, html.admin-active.dark .ant-table-thead > tr > th {
-        background: #0f172a !important;
-        color: #94a3b8 !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-      }
-      html.admin-active[data-mode="dark"] .ant-table-tbody > tr > td, html.admin-active.dark .ant-table-tbody > tr > td {
-        background: #161f30 !important;
-        color: #e2e8f0 !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-      }
-      html.admin-active[data-mode="dark"] .ant-table-tbody > tr:hover > td, html.admin-active.dark .ant-table-tbody > tr:hover > td {
-        background: rgba(255, 255, 255, 0.04) !important;
-      }
+
       /* 6. Form Controls & Inputs inside Admin */
-      html.admin-active[data-mode="light"] .admin-layout .ant-input, html.admin-active[data-mode="light"] .admin-layout .ant-input-affix-wrapper, html.admin-active[data-mode="light"] .admin-layout .ant-input-number,
-      html.admin-active.light .admin-layout .ant-input, html.admin-active.light .admin-layout .ant-input-affix-wrapper, html.admin-active.light .admin-layout .ant-input-number {
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        border-color: #cbd5e1 !important;
+      html.admin-active .admin-layout .ant-input, html.admin-active .admin-layout .ant-input-affix-wrapper, html.admin-active .admin-layout .ant-input-number,
+      .admin-layout .ant-input, .admin-layout .ant-input-affix-wrapper, .admin-layout .ant-input-number {
+        background-color: var(--admin-input-bg, #ffffff) !important;
+        color: var(--admin-text-color, #0f172a) !important;
+        border-color: var(--admin-border-color, #cbd5e1) !important;
       }
-      html.admin-active[data-mode="light"] .admin-layout .ant-select-selector, html.admin-active.light .admin-layout .ant-select-selector {
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        border-color: #cbd5e1 !important;
+      html.admin-active .admin-layout .ant-select-selector, .admin-layout .ant-select-selector {
+        background-color: var(--admin-input-bg, #ffffff) !important;
+        color: var(--admin-text-color, #0f172a) !important;
+        border-color: var(--admin-border-color, #cbd5e1) !important;
       }
-      html.admin-active[data-mode="light"] .admin-layout .ant-select-dropdown, html.admin-active.light .admin-layout .ant-select-dropdown {
-        background-color: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
-        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1) !important;
+      html.admin-active .admin-layout .ant-select-dropdown, .admin-layout .ant-select-dropdown {
+        background-color: var(--admin-dropdown-bg, #ffffff) !important;
+        border: 1px solid var(--admin-border-color, #e2e8f0) !important;
       }
-      html.admin-active[data-mode="dark"] .admin-layout .ant-input, html.admin-active[data-mode="dark"] .admin-layout .ant-input-affix-wrapper, html.admin-active[data-mode="dark"] .admin-layout .ant-input-number,
-      html.admin-active.dark .admin-layout .ant-input, html.admin-active.dark .admin-layout .ant-input-affix-wrapper, html.admin-active.dark .admin-layout .ant-input-number {
-        background-color: #0f172a !important;
-        color: #f8fafc !important;
-        border-color: rgba(255, 255, 255, 0.12) !important;
-      }
-      html.admin-active[data-mode="dark"] .admin-layout .ant-select-selector, html.admin-active.dark .admin-layout .ant-select-selector {
-        background-color: #0f172a !important;
-        color: #f8fafc !important;
-        border-color: rgba(255, 255, 255, 0.12) !important;
-      }
-      html.admin-active[data-mode="dark"] .admin-layout .ant-select-dropdown, html.admin-active.dark .admin-layout .ant-select-dropdown {
-        background-color: #1e293b !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-      }
+
       /* 7. Modals & Drawers inside Admin */
-      html.admin-active[data-mode="light"] .ant-modal-content, html.admin-active[data-mode="light"] .ant-drawer-content,
-      html.admin-active.light .ant-modal-content, html.admin-active.light .ant-drawer-content {
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        border: 1px solid #e2e8f0 !important;
-        box-shadow: 0 20px 35px -5px rgba(15, 23, 42, 0.15) !important;
+      html.admin-active .ant-modal-content, html.admin-active .ant-drawer-content,
+      .admin-layout .ant-modal-content, .admin-layout .ant-drawer-content {
+        background-color: var(--admin-card-bg, #ffffff) !important;
+        color: var(--admin-text-color, #0f172a) !important;
+        border: 1px solid var(--admin-border-color, #e2e8f0) !important;
       }
-      html.admin-active[data-mode="light"] .ant-modal-header, html.admin-active[data-mode="light"] .ant-drawer-header,
-      html.admin-active.light .ant-modal-header, html.admin-active.light .ant-drawer-header {
-        background-color: #ffffff !important;
-        border-bottom: 1px solid #e2e8f0 !important;
+      html.admin-active .ant-modal-header, html.admin-active .ant-drawer-header,
+      .admin-layout .ant-modal-header, .admin-layout .ant-drawer-header {
+        background-color: var(--admin-card-bg, #ffffff) !important;
+        border-bottom: 1px solid var(--admin-border-color, #e2e8f0) !important;
       }
-      html.admin-active[data-mode="dark"] .ant-modal-content, html.admin-active[data-mode="dark"] .ant-drawer-content,
-      html.admin-active.dark .ant-modal-content, html.admin-active.dark .ant-drawer-content {
-        background-color: #161f30 !important;
-        color: #f8fafc !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-      }
-      html.admin-active[data-mode="dark"] .ant-modal-header, html.admin-active[data-mode="dark"] .ant-drawer-header,
-      html.admin-active.dark .ant-modal-header, html.admin-active.dark .ant-drawer-header {
-        background-color: #161f30 !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-      }
+
       /* 8. Typography inside Admin */
-      html.admin-active[data-mode="light"] .admin-layout .ant-typography, html.admin-active[data-mode="light"] .admin-layout .ant-statistic-content,
-      html.admin-active.light .admin-layout .ant-typography, html.admin-active.light .admin-layout .ant-statistic-content {
-        color: #0f172a !important;
+      html.admin-active .admin-layout .ant-typography, html.admin-active .admin-layout .ant-statistic-content,
+      .admin-layout .ant-typography, .admin-layout .ant-statistic-content {
+        color: var(--admin-text-color, #0f172a) !important;
       }
-      html.admin-active[data-mode="light"] .admin-layout .ant-statistic-title, html.admin-active[data-mode="light"] .admin-layout .ant-descriptions-item-label,
-      html.admin-active.light .admin-layout .ant-statistic-title, html.admin-active.light .admin-layout .ant-descriptions-item-label {
-        color: #64748b !important;
-      }
-      html.admin-active[data-mode="dark"] .admin-layout .ant-typography, html.admin-active[data-mode="dark"] .admin-layout .ant-statistic-content,
-      html.admin-active.dark .admin-layout .ant-typography, html.admin-active.dark .admin-layout .ant-statistic-content {
-        color: #f8fafc !important;
-      }
-      html.admin-active[data-mode="dark"] .admin-layout .ant-statistic-title, html.admin-active[data-mode="dark"] .admin-layout .ant-descriptions-item-label,
-      html.admin-active.dark .admin-layout .ant-statistic-title, html.admin-active.dark .admin-layout .ant-descriptions-item-label {
-        color: #94a3b8 !important;
-      }
-      /* 9. Universal Tailwind Utility Class Overrides strictly for Admin Views */
-      html.admin-active[data-mode="light"] .admin-layout .bg-slate-950, html.admin-active[data-mode="light"] .admin-layout .bg-slate-900,
-      html.admin-active[data-mode="light"] .admin-layout .bg-\[\#090d16\], html.admin-active[data-mode="light"] .admin-layout .bg-\[\#0c121e\],
-      html.admin-active.light .admin-layout .bg-slate-950, html.admin-active.light .admin-layout .bg-slate-900 {
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        border-color: rgba(226, 232, 240, 0.9) !important;
+      html.admin-active .admin-layout .ant-statistic-title, html.admin-active .admin-layout .ant-descriptions-item-label,
+      .admin-layout .ant-statistic-title, .admin-layout .ant-descriptions-item-label {
+        color: var(--admin-subtext-color, #64748b) !important;
       }
     </style>
     <script>

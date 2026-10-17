@@ -58,7 +58,7 @@ const AdminLayout = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Strict isolation: Activate admin-active while inside AdminLayout, cleanly restore default light mode on exit
+  // Strict isolation: Activate admin-active while inside AdminLayout
   useEffect(() => {
     const doc = document.documentElement;
     const body = document.body;
@@ -79,10 +79,16 @@ const AdminLayout = () => {
       body.setAttribute('data-mode', mode);
       body.setAttribute('data-theme', preset);
       body.style.colorScheme = mode;
+      body.style.backgroundColor = '';
+      body.style.color = '';
     }
+  }, [themeMode, themePreset]);
 
+  // Clean up when unmounting AdminLayout (navigating away back to public website)
+  useEffect(() => {
     return () => {
-      // Clean up when navigating away from AdminLayout back to the public website
+      const doc = document.documentElement;
+      const body = document.body;
       doc.classList.remove('admin-active', 'dark', 'theme-dark', 'admin-dark');
       doc.classList.add('light', 'theme-light');
       doc.setAttribute('data-mode', 'light');
@@ -99,7 +105,7 @@ const AdminLayout = () => {
         body.style.color = '#0f172a';
       }
     };
-  }, [themeMode, themePreset]);
+  }, []);
 
   const handleToggle = () => {
     if (isMobile) {
