@@ -19,6 +19,7 @@ import {
 } from '@ant-design/icons';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
 import { countLeafMenus, erpModules, flattenMenuItems, moduleHealthLabel } from '../../data/erpModules';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -62,6 +63,7 @@ const ModuleControllerPanel = ({
   onSelectMenu,
 }) => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const enabledCount = useMemo(
     () => erpModules.filter((module) => moduleState[module.key]).length,
     [moduleState]
@@ -185,7 +187,7 @@ const ModuleControllerPanel = ({
                         <div>
                           <Flex align="center" gap={8} wrap="wrap">
                             <Text strong style={{ color: adminTheme.text }}>
-                              {module.label}
+                              {t(module.key, module.label)}
                             </Text>
                             <Tag color={isEnabled ? healthColorMap[module.health] : 'default'} style={{ borderRadius: 999, margin: 0 }}>
                               {isEnabled ? moduleHealthLabel[module.health] : 'Disabled'}
@@ -242,7 +244,7 @@ const ModuleControllerPanel = ({
                 <div>
                   <Flex align="center" gap={10} wrap="wrap">
                     <Title level={3} style={{ margin: 0, color: adminTheme.text }}>
-                      {activeModule.label}
+                      {t(activeModule.key, activeModule.label)}
                     </Title>
                     <Tag color={moduleState[activeModule.key] ? healthColorMap[activeModule.health] : 'default'} style={{ borderRadius: 999, margin: 0 }}>
                       {moduleState[activeModule.key] ? moduleHealthLabel[activeModule.health] : 'Disabled'}
@@ -321,7 +323,7 @@ const ModuleControllerPanel = ({
                       <Flex justify="space-between" align="start" gap={12}>
                         <div>
                           <Text strong style={{ color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-                            {menu.label}
+                            {t(menu.key, menu.label)}
                           </Text>
                           {!!menu.groupPath?.length && (
                             <Space wrap size={[6, 6]} style={{ marginBottom: 8 }}>

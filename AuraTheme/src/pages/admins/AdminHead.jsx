@@ -159,17 +159,21 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
     },
   ];
 
-  const currentTitle = pageTitles[location.pathname] || 'ERP Workspace';
+  const pageKey = location.pathname.replace('/admins/', '').replace(/\//g, '_');
+  const currentTitle = t(pageKey, pageTitles[location.pathname] || 'ERP Workspace');
   const dashboardModuleKey = new URLSearchParams(location.search).get('module');
+  const activeMod = dashboardModuleKey ? getModuleByKey(dashboardModuleKey) : null;
   const headerTitle =
-    location.pathname === '/admins/dashboard' && dashboardModuleKey
-      ? `${getModuleByKey(dashboardModuleKey).label} Controller`
+    location.pathname === '/admins/dashboard' && activeMod
+      ? `${t(dashboardModuleKey, activeMod.label)} ${t('controller', 'Controller')}`
       : currentTitle;
 
-  const firstName = user?.name?.split(' ')[0] || 'Admin';
+  const firstName = user?.name?.split(' ')[0] || t('admin', 'Admin');
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? t('good_morning', 'Good Morning') : hour < 18 ? t('good_afternoon', 'Good Afternoon') : t('good_evening', 'Good Evening');
   const greeting =
     location.pathname === '/admins/dashboard'
-      ? `Good ${new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}`
+      ? `${timeGreeting}, ${firstName}`
       : headerTitle;
 
   const handleFullscreen = () => {

@@ -10,6 +10,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../../../contexts/CartContext';
 import { useWishlist } from '../../../contexts/WishlistContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useTranslation } from '../../../contexts/LanguageContext';
 import { publicTheme } from '../../../utils/webTheme';
 
 const { useBreakpoint } = Grid;
@@ -21,6 +22,7 @@ const MobileBottomNav = () => {
   const { cartItemCount } = useCart();
   const { wishlistItemCount } = useWishlist();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   // Show only on mobile phone screens (< 576px)
   const isMobilePhone = screens.xs && !screens.sm;
@@ -32,14 +34,14 @@ const MobileBottomNav = () => {
   const navItems = [
     {
       key: 'home',
-      label: 'Home',
+      label: t('home', 'Home'),
       icon: <HomeOutlined style={{ fontSize: 20 }} />,
       path: '/',
       isActive: currentPath === '/',
     },
     {
       key: 'like',
-      label: 'Like',
+      label: t('like', 'Like'),
       icon: (
         <Badge count={wishlistItemCount} size="small" offset={[4, -2]}>
           <HeartOutlined style={{ fontSize: 20 }} />
@@ -50,7 +52,7 @@ const MobileBottomNav = () => {
     },
     {
       key: 'cart',
-      label: 'Cart',
+      label: t('cart', 'Cart'),
       icon: (
         <Badge count={cartItemCount} size="small" offset={[4, -2]}>
           <ShoppingCartOutlined style={{ fontSize: 20 }} />
@@ -62,7 +64,7 @@ const MobileBottomNav = () => {
     },
     {
       key: 'account',
-      label: 'Account',
+      label: t('account', 'Account'),
       icon: <UserOutlined style={{ fontSize: 20 }} />,
       path: user ? '/profile' : '/login',
       isActive: currentPath.startsWith('/profile') || currentPath.startsWith('/login'),

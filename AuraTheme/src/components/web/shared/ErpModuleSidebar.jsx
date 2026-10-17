@@ -43,6 +43,7 @@ import { erpModules, getMenuLineage } from '../../../data/erpModules';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
 import { useAdminModules } from '../../../hooks/useAdminModules';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
 const { Text } = Typography;
 
@@ -105,6 +106,7 @@ const sectionGroups = [
 
 const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGroups, onToggleGroup, onNavigate, depth = 1, parentPath = [] }) => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
 
   return (
     <div
@@ -164,7 +166,7 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
                     flexShrink: 0,
                   }}
                 />
-                <span style={{ flex: 1 }} className="truncate">{item.label}</span>
+                <span style={{ flex: 1 }} className="truncate">{t(item.key, item.label)}</span>
                 <DownOutlined rotate={isOpen ? 0 : -90} style={{ fontSize: 8.5, opacity: 0.55 }} />
               </button>
               {isOpen && (
@@ -230,7 +232,7 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
                 flexShrink: 0,
               }}
             />
-            <span className="truncate">{item.label}</span>
+            <span className="truncate">{t(item.key, item.label)}</span>
           </button>
         );
       })}
@@ -242,6 +244,7 @@ const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigat
   const adminTheme = useAdminTheme();
   const { isModuleOpen } = useAdminModules();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const activeLineage = useMemo(() => getMenuLineage(activeModuleKey, activeMenuKey), [activeMenuKey, activeModuleKey]);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -435,7 +438,7 @@ const hasUserPermission = (user, moduleKey) => {
       <div style={{ padding: '0 4px 4px' }}>
         <Input
           size="small"
-          placeholder="Search modules..."
+          placeholder={t('search_modules', 'Search modules...')}
           prefix={<SearchOutlined style={{ color: adminTheme.subtext, fontSize: 12 }} />}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -454,7 +457,7 @@ const hasUserPermission = (user, moduleKey) => {
         <div style={{ padding: '0 6px 4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <Text style={{ fontSize: 9.5, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1.2 }}>
-              ★ Pinned Favorites
+              ★ {t('pinned_favorites', 'Pinned Favorites')}
             </Text>
           </div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -479,7 +482,7 @@ const hasUserPermission = (user, moduleKey) => {
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  {favMod.label}
+                  {t(favMod.key, favMod.label)}
                 </button>
               );
             })}
@@ -509,7 +512,7 @@ const hasUserPermission = (user, moduleKey) => {
                 fontWeight: 700,
               }}
             >
-              {section.label}
+              {t(section.label.toLowerCase().replace(/[\s&]+/g, '_'), section.label)}
             </Text>
             <span
               style={{
@@ -592,7 +595,7 @@ const hasUserPermission = (user, moduleKey) => {
                     >
                       {getIconNode(module.iconKey)}
                     </span>
-                    <span style={{ flex: 1 }} className="truncate">{module.label}</span>
+                    <span style={{ flex: 1 }} className="truncate">{t(module.key, module.label)}</span>
                     {module.menus?.length > 0 && (
                       <RightOutlined
                         rotate={isOpen ? 90 : 0}

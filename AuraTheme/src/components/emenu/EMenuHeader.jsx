@@ -1,13 +1,17 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Dropdown } from 'antd';
 import {
   ArrowLeftOutlined,
   AppstoreOutlined,
   UnorderedListOutlined,
   ShoppingCartOutlined,
   DownOutlined,
+  CheckOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import { useHeaderHeight } from '../../hooks/useHeaderHeight';
+import { useLanguage, useTranslation, SUPPORTED_LANGUAGES } from '../../contexts/LanguageContext';
 
 /**
  * Universal Shared Sticky Header for Telegram Mini App & E-Menu Pages
@@ -36,6 +40,8 @@ export default function EMenuHeader({
 }) {
   const navigate = useNavigate();
   const { headerRef } = useHeaderHeight();
+  const { currentLanguage, setLanguage } = useLanguage();
+  const { t } = useTranslation();
 
   const handleBack = () => {
     if (onBack) {
@@ -52,7 +58,7 @@ export default function EMenuHeader({
     if (table && mode) return `${table} • ${mode}`;
     if (table) return String(table);
     if (mode) return String(mode);
-    return 'Dine-In • Table';
+    return t('dine_in_table', 'Dine-In • Table');
   }
 
   return (
@@ -116,7 +122,7 @@ export default function EMenuHeader({
               <span>{displayLocation}</span>
               {onLocationClick && (
                 <span className="text-[10px] bg-[var(--tg-theme-secondary-bg-color,#f1f5f9)] text-[var(--tg-theme-button-color,#2F6FED)] px-1 py-0.5 rounded font-bold inline-flex items-center gap-0.5 shrink-0 border border-[var(--tg-theme-secondary-bg-color,#e2e8f0)]">
-                  <span>Switch</span>
+                  <span>{t('switch', 'Switch')}</span>
                   <DownOutlined style={{ fontSize: 6 }} />
                 </span>
               )}
@@ -125,9 +131,42 @@ export default function EMenuHeader({
         </div>
       </div>
 
-      {/* Right side: Actions / View Switcher / Cart */}
+      {/* Right side: Actions / View Switcher / Language / Cart */}
       <div className="flex items-center gap-2 shrink-0">
         {rightActions}
+
+        {/* Multi-language Selector Pill */}
+        <Dropdown
+          menu={{
+            items: SUPPORTED_LANGUAGES.map((lang) => ({
+              key: lang.code,
+              onClick: () => setLanguage(lang.code),
+              label: (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 125, padding: '2px 0' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>{lang.flag}</span>
+                    <span style={{ fontWeight: currentLanguage === lang.code ? 700 : 400 }}>{lang.native}</span>
+                  </span>
+                  {currentLanguage === lang.code && <CheckOutlined style={{ color: '#2F6FED', fontSize: 12 }} />}
+                </div>
+              ),
+            })),
+            selectedKeys: [currentLanguage],
+          }}
+          trigger={['click']}
+          placement="bottomRight"
+        >
+          <button
+            type="button"
+            aria-label="Change Language"
+            className="h-9 px-2.5 rounded-xl bg-[var(--tg-theme-secondary-bg-color,#f1f5f9)] hover:opacity-90 text-[var(--tg-theme-text-color,#334155)] border border-[var(--tg-theme-secondary-bg-color,#e2e8f0)] flex items-center gap-1.5 text-xs font-semibold cursor-pointer active:scale-95 transition shrink-0"
+          >
+            <span>{SUPPORTED_LANGUAGES.find((l) => l.code === currentLanguage)?.flag || '🌐'}</span>
+            <span className="uppercase text-[11px] font-bold text-slate-700">
+              {SUPPORTED_LANGUAGES.find((l) => l.code === currentLanguage)?.iso || currentLanguage}
+            </span>
+          </button>
+        </Dropdown>
 
         {onToggleViewMode && (
           <button
@@ -147,7 +186,7 @@ export default function EMenuHeader({
             className="min-h-[36px] px-3 py-1.5 rounded-xl bg-[var(--tg-theme-button-color,#2F6FED)] text-[var(--tg-theme-button-text-color,#ffffff)] font-bold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer"
           >
             <ShoppingCartOutlined style={{ fontSize: 14 }} />
-            <span>Basket</span>
+            <span>{t('basket', 'Basket')}</span>
             <span className="bg-white text-[var(--tg-theme-button-color,#2F6FED)] px-1.5 py-0.2 rounded-full text-[11px] font-black">
               {cartCount}
             </span>

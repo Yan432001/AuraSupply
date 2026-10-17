@@ -35,11 +35,14 @@ import {
   ToolOutlined,
   UserAddOutlined,
   UserOutlined,
+  GlobalOutlined,
+  CheckOutlined,
 } from '@ant-design/icons';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../../../contexts/CartContext';
 import { useWishlist } from '../../../contexts/WishlistContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useLanguage, useTranslation } from '../../../contexts/LanguageContext';
 import { fetchProducts, fetchShops } from '../../../utils/apiconfig';
 import { formatCurrency, publicTheme } from '../../../utils/webTheme';
 import OfflineWarningBanner from '../../common/OfflineWarningBanner';
@@ -84,6 +87,8 @@ const Header = ({ currentPage }) => {
   const { cartItemCount, cartTotal = 0 } = useCart();
   const { wishlistItemCount } = useWishlist();
   const { user, logout } = useAuth();
+  const { currentLanguage, setLanguage, activeLanguage, supportedLanguages } = useLanguage();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const screens = useBreakpoint();
   const [searchParams] = useSearchParams();
@@ -295,26 +300,50 @@ const Header = ({ currentPage }) => {
     };
   }, [searchQuery, allStoresCatalog, selectedStoreFilter]);
 
+  const languageMenuItems = useMemo(() => {
+    return supportedLanguages.map((lang) => {
+      const isSelected = currentLanguage === lang.code;
+      return {
+        key: `lang-${lang.code}`,
+        icon: <span style={{ fontSize: 16 }}>{lang.flag}</span>,
+        label: (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, minWidth: 140, padding: '2px 0' }}>
+            <div>
+              <div style={{ fontWeight: isSelected ? 700 : 500, color: isSelected ? publicTheme.primary : undefined, fontSize: 13 }}>
+                {lang.native}
+              </div>
+              <div style={{ fontSize: 11, color: publicTheme.subtext }}>
+                {lang.name}
+              </div>
+            </div>
+            {isSelected && <CheckOutlined style={{ color: publicTheme.primary, fontSize: 12 }} />}
+          </div>
+        ),
+        onClick: () => setLanguage(lang.code),
+      };
+    });
+  }, [supportedLanguages, currentLanguage, setLanguage]);
+
   const navItems = useMemo(
     () => [
-      { key: '/', icon: <HomeOutlined />, label: 'Home' },
-      { key: '/shops', icon: <ShopOutlined />, label: 'Shops' },
-      { key: '/products', icon: <AppstoreOutlined />, label: 'Products' },
-      { key: '/service', icon: <TeamOutlined />, label: 'Service' },
-      { key: '/learn', icon: <BookOutlined />, label: 'Learn' },
+      { key: '/', icon: <HomeOutlined />, label: t('home', 'Home') },
+      { key: '/shops', icon: <ShopOutlined />, label: t('shops', 'Shops') },
+      { key: '/products', icon: <AppstoreOutlined />, label: t('products', 'Products') },
+      { key: '/service', icon: <TeamOutlined />, label: t('service', 'Service') },
+      { key: '/learn', icon: <BookOutlined />, label: t('learn', 'Learn') },
     ],
-    []
+    [t]
   );
 
   const quickLinks = [
-    { key: '/wishlist', icon: <HeartOutlined />, label: 'Wishlist' },
-    { key: '/cart', icon: <ShoppingCartOutlined />, label: 'Cart' },
+    { key: '/wishlist', icon: <HeartOutlined />, label: t('wishlist', 'Wishlist') },
+    { key: '/cart', icon: <ShoppingCartOutlined />, label: t('cart', 'Cart') },
   ];
 
   const mobileShortcuts = [
-    { key: '/shops', icon: <ShopOutlined />, label: 'Shops' },
-    { key: '/products', icon: <AppstoreOutlined />, label: 'Products' },
-    { key: '/service', icon: <TeamOutlined />, label: 'Support' },
+    { key: '/shops', icon: <ShopOutlined />, label: t('shops', 'Shops') },
+    { key: '/products', icon: <AppstoreOutlined />, label: t('products', 'Products') },
+    { key: '/service', icon: <TeamOutlined />, label: t('service', 'Support') },
   ];
 
   const handleMenuClick = ({ key }) => {
@@ -358,18 +387,18 @@ const Header = ({ currentPage }) => {
         {
           key: 'profile',
           icon: <UserOutlined style={{ color: publicTheme.primary }} />,
-          label: 'My Profile & Settings',
+          label: t('profile', 'My Profile & Settings'),
         },
         {
           key: 'admins',
           icon: <ThunderboltOutlined style={{ color: '#f59e0b' }} />,
-          label: 'Operations & ERP Portal',
+          label: t('operations_portal', 'Operations & ERP Portal'),
         },
         { type: 'divider' },
         {
           key: 'logout',
           icon: <LogoutOutlined style={{ color: '#ef4444' }} />,
-          label: 'Sign Out of Workspace',
+          label: t('logout', 'Sign Out of Workspace'),
           danger: true,
         },
       ];
@@ -380,8 +409,8 @@ const Header = ({ currentPage }) => {
         disabled: true,
         label: (
           <div style={{ padding: '2px 0' }}>
-            <div style={{ fontWeight: 800, fontSize: 12.5, color: publicTheme.text }}>Guest Workspace</div>
-            <div style={{ fontSize: 11, color: publicTheme.subtext }}>Public Catalog & Ordering Mode</div>
+            <div style={{ fontWeight: 800, fontSize: 12.5, color: publicTheme.text }}>{t('guest_workspace', 'Guest Workspace')}</div>
+            <div style={{ fontSize: 11, color: publicTheme.subtext }}>{t('public_catalog_mode', 'Public Catalog & Ordering Mode')}</div>
           </div>
         ),
       },
@@ -389,20 +418,20 @@ const Header = ({ currentPage }) => {
       {
         key: 'login',
         icon: <LoginOutlined style={{ color: publicTheme.primary }} />,
-        label: 'Sign In to Workspace',
+        label: t('sign_in_workspace', 'Sign In to Workspace'),
       },
       {
         key: 'signup',
         icon: <UserAddOutlined style={{ color: '#10b981' }} />,
-        label: 'Create Account / Register',
+        label: t('create_account', 'Create Account / Register'),
       },
       {
         key: 'admins',
         icon: <ThunderboltOutlined style={{ color: '#f59e0b' }} />,
-        label: 'ERP Operations Portal (/admins)',
+        label: t('operations_portal', 'ERP Operations Portal (/admins)'),
       },
     ];
-  }, [user]);
+  }, [user, t]);
 
   const handleSelectResult = (targetUrl) => {
     setIsSearchFocused(false);
@@ -1135,6 +1164,26 @@ const Header = ({ currentPage }) => {
                   </Button>
                 </Dropdown>
 
+                {/* Tablet / Mobile Language Switcher Dropdown */}
+                <Dropdown menu={{ items: languageMenuItems }} trigger={['click']} placement="bottomRight">
+                  <Button
+                    type="text"
+                    style={{
+                      height: 34,
+                      padding: '0 6px',
+                      borderRadius: 11,
+                      background: publicTheme.cardMuted,
+                      border: `1px solid ${publicTheme.softBorder}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 3,
+                    }}
+                  >
+                    <span style={{ fontSize: 15 }}>{activeLanguage?.flag || '🇰🇭'}</span>
+                    <DownOutlined style={{ fontSize: 8, opacity: 0.6 }} />
+                  </Button>
+                </Dropdown>
+
                 <Button
                   type="text"
                   icon={<MenuOutlined style={{ fontSize: 14 }} />}
@@ -1249,7 +1298,7 @@ const Header = ({ currentPage }) => {
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onFocus={() => setIsSearchFocused(true)}
                       onPressEnter={() => handlePerformGlobalSearch()}
-                      placeholder="Search wholesale products, stores, categories..."
+                      placeholder={t('search_placeholder', 'Search wholesale products, stores, categories...')}
                       prefix={<SearchOutlined style={{ color: publicTheme.subtext }} />}
                       allowClear
                       style={{
@@ -1279,7 +1328,7 @@ const Header = ({ currentPage }) => {
                         fontSize: 'var(--font-base)',
                       }}
                     >
-                      Operations Portal
+                      {t('operations_portal', 'Operations Portal')}
                     </Button>
                   )}
 
@@ -1314,7 +1363,7 @@ const Header = ({ currentPage }) => {
                       fontWeight: 700,
                     }}
                   >
-                    <span>Cart</span>
+                    <span>{t('cart', 'Cart')}</span>
                     {cartItemCount > 0 && (
                       <Badge
                         count={cartItemCount}
@@ -1327,6 +1376,30 @@ const Header = ({ currentPage }) => {
                       </span>
                     )}
                   </Button>
+
+                  {/* Desktop Language Switcher Dropdown */}
+                  <Dropdown menu={{ items: languageMenuItems }} trigger={['click']} placement="bottomRight">
+                    <Button
+                      style={{
+                        height: 40,
+                        borderRadius: 14,
+                        paddingInline: 12,
+                        background: publicTheme.cardMuted,
+                        border: `1px solid ${publicTheme.softBorder}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        color: publicTheme.text,
+                        fontWeight: 700,
+                        fontSize: 'var(--font-base)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>{activeLanguage?.flag || '🇰🇭'}</span>
+                      <span className="hidden xl:inline">{activeLanguage?.native || 'ភាសាខ្មែរ'}</span>
+                      <DownOutlined style={{ fontSize: 9, opacity: 0.6 }} />
+                    </Button>
+                  </Dropdown>
 
                   <Dropdown
                     menu={{
@@ -1517,6 +1590,55 @@ const Header = ({ currentPage }) => {
               )}
             </div>
           </div>
+
+          {/* Mobile Language Switcher Card */}
+          <div
+            style={{
+              padding: '10px 12px',
+              borderRadius: 14,
+              background: 'rgba(47, 111, 237, 0.04)',
+              border: `1px solid ${publicTheme.softBorder}`,
+              marginBottom: 8,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                🌐 {t('language', 'Language / ភាសា')}
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: publicTheme.primary }}>
+                {activeLanguage?.native}
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5 }}>
+              {supportedLanguages.map((l) => {
+                const isSelected = currentLanguage === l.code;
+                return (
+                  <button
+                    key={l.code}
+                    type="button"
+                    onClick={() => setLanguage(l.code)}
+                    style={{
+                      padding: '6px 2px',
+                      borderRadius: 8,
+                      border: isSelected ? `2px solid ${publicTheme.primary}` : `1px solid ${publicTheme.softBorder}`,
+                      background: isSelected ? 'rgba(47, 111, 237, 0.12)' : '#ffffff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 2,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span style={{ fontSize: 18 }}>{l.flag}</span>
+                    <span style={{ fontSize: 10, fontWeight: isSelected ? 800 : 600, color: isSelected ? publicTheme.primary : publicTheme.text }}>
+                      {l.iso.toUpperCase()}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 6px' }}>
             Navigation
           </div>
