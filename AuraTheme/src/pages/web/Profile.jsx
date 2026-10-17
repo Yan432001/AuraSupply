@@ -35,6 +35,7 @@ import {
   BankOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import OrderReceiptModal from '../../components/common/OrderReceiptModal';
@@ -57,6 +58,7 @@ const SYNC_STORAGE_KEY = 'aura_order_background_sync';
 
 export default function Profile() {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [backgroundSyncEnabled, setBackgroundSyncEnabled] = useState(() => {
@@ -154,8 +156,19 @@ export default function Profile() {
 
   const handleLogout = () => {
     logout();
-    message.success('Successfully logged out.');
+    message.success(t('logout_success', 'Successfully logged out.'));
     navigate('/');
+  };
+
+  const statusLabel = (st) => {
+    switch (st.toLowerCase()) {
+      case 'all': return t('all', 'ALL');
+      case 'confirmed': return t('confirmed', 'CONFIRMED');
+      case 'preparing': return t('preparing', 'PREPARING');
+      case 'completed': return t('completed', 'COMPLETED');
+      case 'pending': return t('pending', 'PENDING');
+      default: return st.toUpperCase();
+    }
   };
 
   return (
@@ -187,18 +200,18 @@ export default function Profile() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <Title level={2} style={{ margin: 0, fontWeight: 850, color: publicTheme.text }}>
-                    {user?.name || 'Aura Wholesale Partner'}
+                    {user?.name || t('wholesale_partner', 'Aura Wholesale Partner')}
                   </Title>
                   <Tag color="blue" style={{ borderRadius: 6, fontWeight: 700, fontSize: 11 }}>
-                    {user?.tier || 'Enterprise Tier 1 VIP'}
+                    {user?.tier || t('enterprise_vip', 'Enterprise Tier 1 VIP')}
                   </Tag>
                 </div>
                 <div style={{ color: publicTheme.subtext, fontSize: 13, marginTop: 4 }}>
-                  {user?.email || 'procurement@auraglobal.com'} • Account ID: {user?.id || 'AUR-CORP-9182'}
+                  {user?.email || 'procurement@auraglobal.com'} • {t('account_id', 'Account ID')}: {user?.id || 'AUR-CORP-9182'}
                 </div>
-                <div style={{ display: 'flex', gap: 14, marginTop: 8, fontSize: 12, color: publicTheme.subtext }}>
-                  <span><BankOutlined /> Net-30 Corporate Credit: <strong>$50,000 Approved</strong></span>
-                  <span><SafetyCertificateOutlined style={{ color: '#10b981' }} /> Verified Business Buyer</span>
+                <div style={{ display: 'flex', gap: 14, marginTop: 8, fontSize: 12, color: publicTheme.subtext, flexWrap: 'wrap' }}>
+                  <span><BankOutlined /> {t('net_30_credit', 'Net-30 Corporate Credit')}: <strong>$50,000 {t('approved', 'Approved')}</strong></span>
+                  <span><SafetyCertificateOutlined style={{ color: '#10b981' }} /> {t('verified_business_buyer', 'Verified Business Buyer')}</span>
                 </div>
               </div>
             </div>
@@ -212,7 +225,7 @@ export default function Profile() {
                 loading={loadingOrders}
                 style={{ borderRadius: 12, height: 42, fontWeight: 700 }}
               >
-                Sync Orders
+                {t('sync_orders', 'Sync Orders')}
               </Button>
               <Button
                 danger
@@ -220,7 +233,7 @@ export default function Profile() {
                 onClick={handleLogout}
                 style={{ borderRadius: 12, height: 42, fontWeight: 700 }}
               >
-                Sign Out
+                {t('sign_out', 'Sign Out')}
               </Button>
             </Space>
           </Col>
@@ -254,15 +267,15 @@ export default function Profile() {
             }}
           />
           <span style={{ fontSize: 13, fontWeight: 700, color: publicTheme.text }}>
-            Live Background Order Sync:
+            {t('live_background_sync', 'Live Background Order Sync:')}
           </span>
           <span style={{ fontSize: 12, color: publicTheme.subtext }}>
-            {backgroundSyncEnabled ? `Active (last sync ${syncSecondsAgo}s ago)` : 'Paused (Battery Saver)'}
+            {backgroundSyncEnabled ? `${t('active', 'Active')} (${t('last_sync', 'last sync')} ${syncSecondsAgo}s ${t('ago', 'ago')})` : t('paused_battery_saver', 'Paused (Battery Saver)')}
           </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 12, color: publicTheme.subtext }}>Auto Refresh:</span>
+          <span style={{ fontSize: 12, color: publicTheme.subtext }}>{t('auto_refresh', 'Auto Refresh:')}</span>
           <Switch checked={backgroundSyncEnabled} onChange={handleToggleSync} />
         </div>
       </div>
@@ -279,10 +292,10 @@ export default function Profile() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 850, color: publicTheme.text }}>
-              Procurement Orders History
+              {t('procurement_orders_history', 'Procurement Orders History')}
             </div>
             <div style={{ fontSize: 12, color: publicTheme.subtext }}>
-              Track order tickets, view fulfillment progress, and download PDF tax receipts.
+              {t('procurement_orders_desc', 'Track order tickets, view fulfillment progress, and download PDF tax receipts.')}
             </div>
           </div>
 
@@ -302,7 +315,7 @@ export default function Profile() {
                   padding: '3px 12px',
                 }}
               >
-                {st.toUpperCase()}
+                {statusLabel(st)}
               </Tag>
             ))}
           </Space>
@@ -312,24 +325,24 @@ export default function Profile() {
           <div style={{ padding: '40px 0', textAlign: 'center' }}>
             <Spin indicator={<SyncOutlined spin style={{ fontSize: 32, color: publicTheme.primary }} />} />
             <div style={{ marginTop: 12, fontWeight: 700, color: publicTheme.text }}>
-              Syncing procurement orders...
+              {t('syncing_orders', 'Syncing procurement orders...')}
             </div>
           </div>
         ) : filteredOrders.length === 0 ? (
           <div style={{ padding: '40px 0', textAlign: 'center' }}>
             <div style={{ fontSize: 44, marginBottom: 10 }}>📦</div>
             <Title level={4} style={{ color: publicTheme.text, margin: 0 }}>
-              No orders found in this category
+              {t('no_orders_found', 'No orders found in this category')}
             </Title>
             <Paragraph style={{ color: publicTheme.subtext, marginTop: 4 }}>
-              When you submit wholesale orders or telegram e-menu bookings, they appear here in real-time.
+              {t('no_orders_desc', 'When you submit wholesale orders or telegram e-menu bookings, they appear here in real-time.')}
             </Paragraph>
             <Button
               type="primary"
               onClick={() => navigate('/products')}
               style={{ borderRadius: 12, fontWeight: 700, marginTop: 12 }}
             >
-              Start Procurement Order
+              {t('start_procurement_order', 'Start Procurement Order')}
             </Button>
           </div>
         ) : (
@@ -352,7 +365,7 @@ export default function Profile() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
                     <div>
                       <span style={{ fontSize: 15, fontWeight: 850, color: publicTheme.text }}>
-                        Order #{order.orderId || `AUR-${1000 + idx}`}
+                        {t('order', 'Order')} #{order.orderId || `AUR-${1000 + idx}`}
                       </span>
                       {order.customer?.poNumber && (
                         <span style={{ fontSize: 12, color: publicTheme.subtext, marginLeft: 8 }}>
@@ -360,13 +373,13 @@ export default function Profile() {
                         </span>
                       )}
                       <div style={{ fontSize: 11.5, color: publicTheme.subtext, marginTop: 2 }}>
-                        Placed on {order.createdAt || 'Recent'} • Carrier: {order.deliveryMethod || 'Regional Freight'}
+                        {t('placed_on', 'Placed on')} {order.createdAt || t('recent', 'Recent')} • {t('carrier', 'Carrier')}: {order.deliveryMethod || t('regional_freight', 'Regional Freight')}
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <Tag color={statusColor[currentStatus] || 'blue'} style={{ borderRadius: 6, fontWeight: 800 }}>
-                        {currentStatus.toUpperCase()}
+                        {statusLabel(currentStatus)}
                       </Tag>
                       <span style={{ fontSize: 18, fontWeight: 900, color: publicTheme.primary }}>
                         {formatCurrency(orderTotal)}
@@ -410,7 +423,7 @@ export default function Profile() {
                       onClick={() => exportSingleOrderPdf(order)}
                       style={{ borderRadius: 8, fontWeight: 700 }}
                     >
-                      Proforma Invoice
+                      {t('proforma_invoice', 'Proforma Invoice')}
                     </Button>
                     <Button
                       size="small"
@@ -419,7 +432,7 @@ export default function Profile() {
                       onClick={() => setSelectedReceiptOrder(order)}
                       style={{ borderRadius: 8, fontWeight: 700, background: publicTheme.primary }}
                     >
-                      View Receipt Ticket
+                      {t('view_receipt_ticket', 'View Receipt Ticket')}
                     </Button>
                   </div>
                 </div>

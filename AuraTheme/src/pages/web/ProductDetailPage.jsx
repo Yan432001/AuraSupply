@@ -37,6 +37,7 @@ import {
 import { fetchProductBySlug, fetchProducts, fetchReviews, submitReview } from '../../utils/apiconfig';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { formatCurrency, publicTheme, B2B_WHOLESALE_TIERS, calculateTierPrice } from '../../utils/webTheme';
 import RetailProductCard from '../../components/web/shared/RetailProductCard';
 import TelegramMiniAppModal from '../../components/web/shared/TelegramMiniAppModal';
@@ -44,6 +45,7 @@ import TelegramMiniAppModal from '../../components/web/shared/TelegramMiniAppMod
 const { Title, Text, Paragraph } = Typography;
 
 export default function ProductDetailPage() {
+  const { t } = useTranslation();
   const { productId } = useParams();
   const navigate = useNavigate();
   const { addItem, addToCart } = useCart();
@@ -94,7 +96,7 @@ export default function ProductDetailPage() {
 
   const handleSubmitReview = async () => {
     if (!reviewName.trim() || !reviewComment.trim()) {
-      message.warning('Please enter your name and comments.');
+      message.warning(t('enter_name_and_comments', 'Please enter your name and comments.'));
       return;
     }
     setSubmittingReview(true);
@@ -106,7 +108,7 @@ export default function ProductDetailPage() {
         comment: reviewComment,
       });
       if (res?.success) {
-        message.success('Thank you! Your review has been saved to the database.');
+        message.success(t('review_saved_success', 'Thank you! Your review has been saved to the database.'));
         setReviewComment('');
         // Refresh reviews
         const rRes = await fetchReviews(foundProduct.id);
@@ -114,10 +116,10 @@ export default function ProductDetailPage() {
           setReviews(rRes.data);
         }
       } else {
-        message.error(res?.error || 'Failed to submit review');
+        message.error(res?.error || t('failed_submit_review', 'Failed to submit review'));
       }
     } catch (e) {
-      message.error(e.message || 'Error submitting review');
+      message.error(e.message || t('error_submitting_review', 'Error submitting review'));
     } finally {
       setSubmittingReview(false);
     }
@@ -125,7 +127,7 @@ export default function ProductDetailPage() {
 
   const matchingShop = foundProduct?.shop || {
     name: foundProduct?.brand || 'Aura Partner',
-    summary: 'Authorized B2B Supplier Partner',
+    summary: t('authorized_b2b_supplier', 'Authorized B2B Supplier Partner'),
     rating: 4.9,
     id: foundProduct?.biller_id || 1,
   };
@@ -133,7 +135,7 @@ export default function ProductDetailPage() {
   if (loading) {
     return (
       <div style={{ padding: '100px 20px', textAlign: 'center' }}>
-        <Spin size="large" tip="Loading product details from database..." />
+        <Spin size="large" tip={t('loading_product_details', 'Loading product details from database...')} />
       </div>
     );
   }
@@ -141,13 +143,13 @@ export default function ProductDetailPage() {
   if (!foundProduct) {
     return (
       <div style={{ padding: '80px 20px', textAlign: 'center' }}>
-        <Title level={3} style={{ color: publicTheme.text }}>Product not found</Title>
+        <Title level={3} style={{ color: publicTheme.text }}>{t('product_not_found', 'Product not found')}</Title>
         <Button
           type="primary"
           onClick={() => navigate('/products')}
           style={{ borderRadius: 12, height: 44, fontWeight: 700 }}
         >
-          Return to Wholesale Catalog
+          {t('return_to_catalog', 'Return to Wholesale Catalog')}
         </Button>
       </div>
     );
@@ -173,7 +175,7 @@ export default function ProductDetailPage() {
       image: foundProduct.image,
       quantity,
     });
-    message.success(`Added ${quantity} units of ${foundProduct.name} to procurement cart!`);
+    message.success(`${t('added', 'Added')} ${quantity} ${t('units_of', 'units of')} ${foundProduct.name} ${t('to_procurement_cart', 'to procurement cart!')}`);
   };
 
   const handleBuyNow = () => {
@@ -191,7 +193,7 @@ export default function ProductDetailPage() {
     const url = window.location.href;
     if (navigator.clipboard) {
       await navigator.clipboard.writeText(url);
-      message.success('Product link copied to clipboard!');
+      message.success(t('product_link_copied', 'Product link copied to clipboard!'));
     }
   };
 
@@ -201,9 +203,9 @@ export default function ProductDetailPage() {
       <Breadcrumb
         style={{ marginBottom: 20 }}
         items={[
-          { title: <Link to="/">Home</Link> },
-          { title: <Link to="/products">Wholesale Catalog</Link> },
-          { title: <Link to={`/products?category=${foundProduct.category}`}>{foundProduct.category || 'Supplies'}</Link> },
+          { title: <Link to="/">{t('home', 'Home')}</Link> },
+          { title: <Link to="/products">{t('wholesale_catalog', 'Wholesale Catalog')}</Link> },
+          { title: <Link to={`/products?category=${foundProduct.category}`}>{foundProduct.category || t('supplies', 'Supplies')}</Link> },
           { title: foundProduct.name },
         ]}
       />
@@ -289,10 +291,10 @@ export default function ProductDetailPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span className="verified-supplier-pill">
-                  <CheckCircleFilled style={{ color: '#2f6fed' }} /> Verified Supplier: {matchingShop?.name || 'Aura Partner'}
+                  <CheckCircleFilled style={{ color: '#2f6fed' }} /> {t('verified_supplier', 'Verified Supplier')}: {matchingShop?.name || 'Aura Partner'}
                 </span>
                 <Tag color="green" style={{ borderRadius: 6, fontSize: 11 }}>
-                  In Stock ({foundProduct.inStock ? 'Ready' : 'Backorder'})
+                  {t('in_stock', 'In Stock')} ({foundProduct.inStock ? t('ready', 'Ready') : t('backorder', 'Backorder')})
                 </Tag>
               </div>
 
@@ -313,10 +315,10 @@ export default function ProductDetailPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
               <Rate disabled defaultValue={foundProduct.rating || 4.9} style={{ fontSize: 14 }} />
               <span style={{ fontSize: 12, fontWeight: 700, color: publicTheme.text }}>
-                {foundProduct.rating || 4.9} ({foundProduct.reviews || 42} verified business reviews)
+                {foundProduct.rating || 4.9} ({foundProduct.reviews || 42} {t('verified_business_reviews', 'verified business reviews')})
               </span>
               <span style={{ color: '#cbd5e1' }}>•</span>
-              <span className="moq-pill">MOQ: {moq} units</span>
+              <span className="moq-pill">MOQ: {moq} {t('units', 'units')}</span>
             </div>
 
             <Paragraph style={{ color: publicTheme.subtext, fontSize: 13.5, lineHeight: 1.6, marginBottom: 20 }}>
@@ -334,7 +336,7 @@ export default function ProductDetailPage() {
               }}
             >
               <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', marginBottom: 10, letterSpacing: '0.04em' }}>
-                📊 Wholesale Volume Tier Pricing
+                📊 {t('wholesale_tier_pricing', 'Wholesale Volume Tier Pricing')}
               </div>
               <Row gutter={[12, 12]}>
                 {B2B_WHOLESALE_TIERS.map((tier) => {
@@ -354,13 +356,13 @@ export default function ProductDetailPage() {
                         }}
                       >
                         <div style={{ fontSize: 11, fontWeight: 700, color: isCurrentTier ? publicTheme.primary : publicTheme.subtext }}>
-                          {tier.maxQty === Infinity ? `${tier.minQty}+ pcs` : `${tier.minQty}–${tier.maxQty} pcs`}
+                          {tier.maxQty === Infinity ? `${tier.minQty}+ ${t('pcs', 'pcs')}` : `${tier.minQty}–${tier.maxQty} ${t('pcs', 'pcs')}`}
                         </div>
                         <div style={{ fontSize: 16, fontWeight: 850, color: publicTheme.text, margin: '2px 0' }}>
                           {formatCurrency(unitP)}
                         </div>
                         <div style={{ fontSize: 10, fontWeight: 700, color: tier.discountRate > 0 ? '#10b981' : '#64748b' }}>
-                          {tier.discountRate > 0 ? `Save ${(tier.discountRate * 100).toFixed(0)}%` : 'Base Tier'}
+                          {tier.discountRate > 0 ? `${t('save', 'Save')} ${(tier.discountRate * 100).toFixed(0)}%` : t('base_tier', 'Base Tier')}
                         </div>
                       </div>
                     </Col>
@@ -385,7 +387,7 @@ export default function ProductDetailPage() {
             >
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: publicTheme.subtext, marginBottom: 4 }}>
-                  Select Procurement Quantity (Min: {moq}):
+                  {t('select_procurement_qty', 'Select Procurement Quantity')} ({t('min', 'Min')}: {moq}):
                 </div>
                 <InputNumber
                   min={moq}
@@ -399,13 +401,13 @@ export default function ProductDetailPage() {
 
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#10b981' }}>
-                  {tierCalc.discountRate > 0 ? `Tier Discount Applied: -${(tierCalc.discountRate * 100).toFixed(0)}%` : 'Standard Rate'}
+                  {tierCalc.discountRate > 0 ? `${t('tier_discount_applied', 'Tier Discount Applied')}: -${(tierCalc.discountRate * 100).toFixed(0)}%` : t('standard_rate', 'Standard Rate')}
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: publicTheme.text }}>
                   {formatCurrency(tierCalc.totalPrice)}
                 </div>
                 <div style={{ fontSize: 11, color: publicTheme.subtext }}>
-                  Unit: {formatCurrency(tierCalc.unitPrice)} • Total Savings: {formatCurrency(tierCalc.savings)}
+                  {t('unit', 'Unit')}: {formatCurrency(tierCalc.unitPrice)} • {t('total_savings', 'Total Savings')}: {formatCurrency(tierCalc.savings)}
                 </div>
               </div>
             </div>
@@ -429,7 +431,7 @@ export default function ProductDetailPage() {
                   boxShadow: '0 8px 20px rgba(47, 111, 237, 0.3)',
                 }}
               >
-                Add {quantity} to Order
+                {t('add', 'Add')} {quantity} {t('to_order', 'to Order')}
               </Button>
 
               <Button
@@ -446,7 +448,7 @@ export default function ProductDetailPage() {
                   color: publicTheme.text,
                 }}
               >
-                Instant Checkout
+                {t('instant_checkout', 'Instant Checkout')}
               </Button>
 
               <Button
@@ -462,20 +464,20 @@ export default function ProductDetailPage() {
                   borderColor: '#bae6fd',
                 }}
               >
-                Telegram Inquiry
+                {t('telegram_inquiry', 'Telegram Inquiry')}
               </Button>
             </div>
 
             {/* Guarantees Strip */}
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: publicTheme.subtext, paddingTop: 14, borderTop: '1px solid #f1f5f9' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <SafetyCertificateFilled style={{ color: '#10b981' }} /> Escrow Inspection Guarantee
+                <SafetyCertificateFilled style={{ color: '#10b981' }} /> {t('escrow_guarantee', 'Escrow Inspection Guarantee')}
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <CarOutlined style={{ color: publicTheme.primary }} /> Express Regional Freight (2-4 Days)
+                <CarOutlined style={{ color: publicTheme.primary }} /> {t('express_regional_freight', 'Express Regional Freight (2-4 Days)')}
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <FileTextOutlined style={{ color: '#ea580c' }} /> Commercial Proforma Tax Invoice Included
+                <FileTextOutlined style={{ color: '#ea580c' }} /> {t('proforma_invoice_included', 'Commercial Proforma Tax Invoice Included')}
               </span>
             </div>
           </Col>
@@ -497,38 +499,38 @@ export default function ProductDetailPage() {
           items={[
             {
               key: 'specs',
-              label: 'Technical Specifications',
+              label: t('technical_specs', 'Technical Specifications'),
               children: (
                 <div>
                   <table className="b2b-spec-table">
                     <tbody>
                       <tr>
-                        <td className="spec-label">Product / Model Name</td>
+                        <td className="spec-label">{t('product_model_name', 'Product / Model Name')}</td>
                         <td className="spec-val">{foundProduct.name}</td>
                       </tr>
                       <tr>
-                        <td className="spec-label">Verified Manufacturer</td>
+                        <td className="spec-label">{t('verified_manufacturer', 'Verified Manufacturer')}</td>
                         <td className="spec-val">{matchingShop?.name || foundProduct.brand}</td>
                       </tr>
                       <tr>
-                        <td className="spec-label">Industry Classification</td>
+                        <td className="spec-label">{t('industry_classification', 'Industry Classification')}</td>
                         <td className="spec-val">{foundProduct.category}</td>
                       </tr>
                       <tr>
-                        <td className="spec-label">Minimum Order Quantity (MOQ)</td>
-                        <td className="spec-val">{moq} units</td>
+                        <td className="spec-label">{t('minimum_order_quantity', 'Minimum Order Quantity (MOQ)')}</td>
+                        <td className="spec-val">{moq} {t('units', 'units')}</td>
                       </tr>
                       <tr>
-                        <td className="spec-label">Quality Standard & Compliance</td>
+                        <td className="spec-label">{t('quality_standard_compliance', 'Quality Standard & Compliance')}</td>
                         <td className="spec-val">ISO 9001:2015 / Factory Audited Batch</td>
                       </tr>
                       <tr>
-                        <td className="spec-label">Fulfillment Logistics Hub</td>
-                        <td className="spec-val">{foundProduct.branch || 'Phnom Penh Flagship Hub'}</td>
+                        <td className="spec-label">{t('fulfillment_logistics_hub', 'Fulfillment Logistics Hub')}</td>
+                        <td className="spec-val">{foundProduct.branch || t('phnom_penh_flagship_hub', 'Phnom Penh Flagship Hub')}</td>
                       </tr>
                       <tr>
-                        <td className="spec-label">Commercial Warranty</td>
-                        <td className="spec-val">12 Months Manufacturer Warranty & Replacement Guarantee</td>
+                        <td className="spec-label">{t('commercial_warranty', 'Commercial Warranty')}</td>
+                        <td className="spec-val">{t('warranty_desc', '12 Months Manufacturer Warranty & Replacement Guarantee')}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -537,18 +539,18 @@ export default function ProductDetailPage() {
             },
             {
               key: 'logistics',
-              label: 'Logistics & Lead Times',
+              label: t('logistics_lead_times', 'Logistics & Lead Times'),
               children: (
                 <div style={{ color: publicTheme.text, lineHeight: 1.7, fontSize: 13.5 }}>
-                  <p><strong>Regional Hub Dispatch:</strong> Items stored locally at our Phnom Penh, Bangkok, or Rayong fulfillment facilities ship within 24 to 48 business hours.</p>
-                  <p><strong>Custom OEM & Bulk Orders:</strong> Quantities exceeding 500 units are dispatched direct from manufacturer facilities with 10–14 days transit and full container tracking.</p>
-                  <p><strong>FOB & CIF IncoTerms:</strong> Proforma invoices include clear customs clearance, import tax documentation, and bill of lading issuance.</p>
+                  <p><strong>{t('regional_hub_dispatch', 'Regional Hub Dispatch')}:</strong> {t('regional_hub_dispatch_desc', 'Items stored locally at our Phnom Penh, Bangkok, or Rayong fulfillment facilities ship within 24 to 48 business hours.')}</p>
+                  <p><strong>{t('custom_oem_bulk_orders', 'Custom OEM & Bulk Orders')}:</strong> {t('custom_oem_bulk_orders_desc', 'Quantities exceeding 500 units are dispatched direct from manufacturer facilities with 10–14 days transit and full container tracking.')}</p>
+                  <p><strong>{t('fob_cif_terms', 'FOB & CIF IncoTerms')}:</strong> {t('fob_cif_terms_desc', 'Proforma invoices include clear customs clearance, import tax documentation, and bill of lading issuance.')}</p>
                 </div>
               ),
             },
             {
               key: 'supplier',
-              label: 'Supplier Profile & Factory Credentials',
+              label: t('supplier_profile', 'Supplier Profile & Factory Credentials'),
               children: (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
@@ -557,24 +559,24 @@ export default function ProductDetailPage() {
                     </div>
                     <div>
                       <div style={{ fontSize: 16, fontWeight: 800, color: publicTheme.text }}>{matchingShop?.name}</div>
-                      <div style={{ fontSize: 12, color: publicTheme.subtext }}>{matchingShop?.summary || 'Authorized B2B Supplier Partner'}</div>
+                      <div style={{ fontSize: 12, color: publicTheme.subtext }}>{matchingShop?.summary || t('authorized_b2b_supplier', 'Authorized B2B Supplier Partner')}</div>
                     </div>
                   </div>
                   <Button type="primary" onClick={() => navigate(`/shops/${matchingShop?.id}`)}>
-                    View Supplier Storefront & Full Catalog
+                    {t('view_supplier_storefront', 'View Supplier Storefront & Full Catalog')}
                   </Button>
                 </div>
               ),
             },
             {
               key: 'reviews',
-              label: `Customer Reviews (${reviews.length})`,
+              label: `${t('customer_reviews', 'Customer Reviews')} (${reviews.length})`,
               children: (
                 <div>
                   <div style={{ marginBottom: 24 }}>
-                    <Title level={4} style={{ marginBottom: 16 }}>Verified Business Reviews</Title>
+                    <Title level={4} style={{ marginBottom: 16 }}>{t('verified_business_reviews', 'Verified Business Reviews')}</Title>
                     {reviews.length === 0 ? (
-                      <Paragraph style={{ color: publicTheme.subtext }}>No reviews yet for this product. Be the first to review!</Paragraph>
+                      <Paragraph style={{ color: publicTheme.subtext }}>{t('no_reviews_yet', 'No reviews yet for this product. Be the first to review!')}</Paragraph>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         {reviews.map((rev) => (
@@ -606,13 +608,13 @@ export default function ProductDetailPage() {
                   <Divider />
 
                   <div style={{ maxWidth: 600 }}>
-                    <Title level={4} style={{ marginBottom: 12 }}>Write a Commercial Review</Title>
+                    <Title level={4} style={{ marginBottom: 12 }}>{t('write_commercial_review', 'Write a Commercial Review')}</Title>
                     <div style={{ marginBottom: 12 }}>
-                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Rating:</label>
+                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{t('rating', 'Rating')}:</label>
                       <Rate value={reviewRating} onChange={setReviewRating} />
                     </div>
                     <div style={{ marginBottom: 12 }}>
-                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Your Name / Company:</label>
+                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{t('your_name_company', 'Your Name / Company')}:</label>
                       <AntInput
                         placeholder="e.g. Acme Procurement Dept"
                         value={reviewName}
@@ -621,10 +623,10 @@ export default function ProductDetailPage() {
                       />
                     </div>
                     <div style={{ marginBottom: 16 }}>
-                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Review Comments:</label>
+                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{t('review_comments', 'Review Comments')}:</label>
                       <AntInput.TextArea
                         rows={3}
-                        placeholder="Detail the quality, delivery speed, and wholesale reliability..."
+                        placeholder={t('review_comments_placeholder', 'Detail the quality, delivery speed, and wholesale reliability...')}
                         value={reviewComment}
                         onChange={(e) => setReviewComment(e.target.value)}
                         style={{ borderRadius: 8 }}
@@ -636,7 +638,7 @@ export default function ProductDetailPage() {
                       onClick={handleSubmitReview}
                       style={{ borderRadius: 8, height: 40, fontWeight: 700 }}
                     >
-                      Submit Review to Database
+                      {t('submit_review', 'Submit Review to Database')}
                     </Button>
                   </div>
                 </div>
@@ -650,7 +652,7 @@ export default function ProductDetailPage() {
       {relatedProducts.length > 0 && (
         <div>
           <Title level={3} style={{ fontWeight: 850, color: publicTheme.text, marginBottom: 18 }}>
-            Frequently Sourced Together
+            {t('frequently_sourced_together', 'Frequently Sourced Together')}
           </Title>
           <Row gutter={[16, 16]}>
             {relatedProducts.map((prod) => (

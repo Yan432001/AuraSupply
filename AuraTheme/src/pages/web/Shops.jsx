@@ -35,6 +35,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchShops, fetchBranches, fetchProducts } from '../../utils/apiconfig';
 import { mapShop, mapProduct } from '../../utils/dataMappers';
 import { publicTheme } from '../../utils/webTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 import TelegramMiniAppModal from '../../components/web/shared/TelegramMiniAppModal';
 import RetailShopCard from '../../components/web/shared/RetailShopCard';
 import ShopQuickViewModal from '../../components/web/shared/ShopQuickViewModal';
@@ -43,6 +44,7 @@ const { useBreakpoint } = Grid;
 const { Paragraph, Text, Title } = Typography;
 
 export default function Shops() {
+  const { t } = useTranslation();
   const screens = useBreakpoint();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -119,9 +121,9 @@ export default function Shops() {
     } catch {}
 
     if (isSaved) {
-      messageApi.info(`${shop.name} removed from bookmarks`);
+      messageApi.info(`${shop.name} ${t('removed_from_bookmarks', 'removed from bookmarks')}`);
     } else {
-      messageApi.success(`${shop.name} added to bookmarks`);
+      messageApi.success(`${shop.name} ${t('added_to_bookmarks', 'added to bookmarks')}`);
     }
   };
 
@@ -135,7 +137,7 @@ export default function Shops() {
     }
     try {
       await navigator.clipboard.writeText(shareUrl);
-      messageApi.success('Supplier profile link copied');
+      messageApi.success(t('supplier_link_copied', 'Supplier profile link copied'));
     } catch {
       messageApi.info('Link: ' + shareUrl);
     }
@@ -185,7 +187,7 @@ export default function Shops() {
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '100px 0' }}>
-        <Spin size="large" tip="Loading verified suppliers from database..." />
+        <Spin size="large" tip={t('loading_suppliers', 'Loading verified suppliers from database...')} />
       </div>
     );
   }
@@ -208,7 +210,7 @@ export default function Shops() {
           <Col xs={24} md={8}>
             <Input
               prefix={<SearchOutlined style={{ color: publicTheme.subtext }} />}
-              placeholder="Search supplier name, specialty, location..."
+              placeholder={t('search_supplier_placeholder', 'Search supplier name, specialty, location...')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               allowClear
@@ -221,7 +223,7 @@ export default function Shops() {
               onChange={setBranch}
               style={{ width: '100%', height: 40 }}
               options={[
-                { label: 'All Logistics Hubs', value: 'all' },
+                { label: t('all_logistics_hubs', 'All Logistics Hubs'), value: 'all' },
                 ...branches.filter((b) => b.id !== 'all').map((b) => ({ label: `📍 ${b.name}`, value: b.id || b.name })),
               ]}
             />
@@ -232,20 +234,20 @@ export default function Shops() {
               onChange={setMinRating}
               style={{ width: '100%', height: 40 }}
               options={[
-                { label: 'All Ratings', value: 'all' },
-                { label: '★ 4.8 & Above', value: '4.8' },
-                { label: '★ 4.9 & Above', value: '4.9' },
+                { label: t('all_ratings', 'All Ratings'), value: 'all' },
+                { label: t('rating_48_above', '★ 4.8 & Above'), value: '4.8' },
+                { label: t('rating_49_above', '★ 4.9 & Above'), value: '4.9' },
               ]}
             />
           </Col>
           <Col xs={24} sm={12} md={7} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: publicTheme.subtext }}>
-              Fast Dispatch (&lt; 5m):
+              {t('fast_dispatch', 'Fast Dispatch (< 5m):')}
             </span>
             <Switch checked={fastReplyOnly} onChange={setFastReplyOnly} />
             {activeFiltersCount > 0 && (
               <Button type="link" onClick={clearAllFilters} style={{ padding: 0, fontWeight: 700 }}>
-                Reset
+                {t('reset', 'Reset')}
               </Button>
             )}
           </Col>
@@ -263,9 +265,9 @@ export default function Shops() {
           }}
         >
           <div style={{ fontSize: 44, marginBottom: 12 }}>🏬</div>
-          <Title level={4} style={{ color: publicTheme.text }}>No suppliers matched your search criteria</Title>
+          <Title level={4} style={{ color: publicTheme.text }}>{t('no_suppliers_matched', 'No suppliers matched your search criteria')}</Title>
           <Button type="primary" onClick={clearAllFilters} style={{ borderRadius: 10, marginTop: 12 }}>
-            Reset Filters
+            {t('reset_filters', 'Reset Filters')}
           </Button>
         </Card>
       ) : (

@@ -5,7 +5,9 @@ import {
   HeartFilled,
   HeartOutlined,
   ShoppingCartOutlined,
+} from '@ant-design/icons';
 import { formatCurrency, publicTheme } from '../../../utils/webTheme';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
 const { useBreakpoint } = Grid;
 const { Paragraph, Text, Title } = Typography;
@@ -27,13 +29,14 @@ const ProductCard = ({
   onToggleFavorite,
   onAddToCart,
 }) => {
+  const { t } = useTranslation();
   const screens = useBreakpoint();
   const isPhone = !screens.sm;
   const isTablet = screens.sm && !screens.lg;
   const isCompact = !screens.lg;
 
-  const sellerName = product.storeName || product.store_name || product.seller || 'Official Store';
-  const branchName = product.branchName || product.branch_name || product.warehouse_name || 'Main Warehouse';
+  const sellerName = product.storeName || product.store_name || product.seller || t('official_store', 'Official Store');
+  const branchName = product.branchName || product.branch_name || product.warehouse_name || t('main_warehouse', 'Main Warehouse');
   const orderMeta = getOrderMeta(product);
   const discountPercent = product.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
@@ -124,7 +127,7 @@ const ProductCard = ({
                   padding: isPhone ? '1px 5px' : '2px 8px',
                 }}
               >
-                MOQ {orderMeta.minOrder}
+                {t('moq_label', 'MOQ')} {orderMeta.minOrder}
               </Tag>
             </div>
 
@@ -155,6 +158,7 @@ const ProductCard = ({
                 justifyContent: 'center',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
               }}
+              title={isFavorite ? t('remove_from_favorites', 'Remove from favorites') : t('add_to_favorites', 'Add to favorites')}
             />
 
             {!product.inStock && (
@@ -179,7 +183,7 @@ const ProductCard = ({
                     fontSize: isPhone ? 10 : 12,
                   }}
                 >
-                  Backorder only
+                  {t('backorder_only', 'Backorder only')}
                 </Tag>
               </div>
             )}
@@ -202,7 +206,7 @@ const ProductCard = ({
                 padding: isPhone ? '0 5px' : '1px 8px',
               }}
             >
-              Verified
+              {t('verified', 'Verified')}
             </Tag>
             <Text style={{ color: publicTheme.subtext, fontSize: isPhone ? 10 : 12 }}>
               {branchName}
@@ -257,15 +261,15 @@ const ProductCard = ({
             >
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, textAlign: 'center' }}>
                 <div>
-                  <Text style={{ display: 'block', fontSize: 10, color: publicTheme.subtext }}>Lead time</Text>
+                  <Text style={{ display: 'block', fontSize: 10, color: publicTheme.subtext }}>{t('lead_time', 'Lead time')}</Text>
                   <Text strong style={{ color: publicTheme.text, fontSize: isTablet ? 11 : 13 }}>{orderMeta.leadTime}d</Text>
                 </div>
                 <div>
-                  <Text style={{ display: 'block', fontSize: 10, color: publicTheme.subtext }}>Response</Text>
+                  <Text style={{ display: 'block', fontSize: 10, color: publicTheme.subtext }}>{t('response_rate', 'Response')}</Text>
                   <Text strong style={{ color: publicTheme.text, fontSize: isTablet ? 11 : 13 }}>{orderMeta.responseRate}%</Text>
                 </div>
                 <div>
-                  <Text style={{ display: 'block', fontSize: 10, color: publicTheme.subtext }}>Rating</Text>
+                  <Text style={{ display: 'block', fontSize: 10, color: publicTheme.subtext }}>{t('rating', 'Rating')}</Text>
                   <Text strong style={{ color: publicTheme.text, fontSize: isTablet ? 11 : 13 }}>{product.rating}/5</Text>
                 </div>
               </div>
@@ -299,7 +303,7 @@ const ProductCard = ({
                 padding: isPhone ? '1px 5px' : '2px 8px',
               }}
             >
-              {product.inStock ? 'In stock' : 'Restock'}
+              {product.inStock ? t('in_stock', 'In stock') : t('restock', 'Restock')}
             </Tag>
           </div>
 
@@ -321,7 +325,7 @@ const ProductCard = ({
               fontSize: isPhone ? 11 : 13,
             }}
           >
-            {isPhone ? '+ RFQ' : 'Start RFQ'}
+            {isPhone ? t('plus_rfq', '+ RFQ') : t('start_rfq', 'Start RFQ')}
           </Button>
         </div>
       </div>

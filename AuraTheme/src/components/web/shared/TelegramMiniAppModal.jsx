@@ -21,6 +21,7 @@ import {
 } from '@ant-design/icons';
 import { formatCurrency } from '../../../utils/webTheme';
 import AuraLogo from '../../common/AuraLogo';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
 // Telegram staff & kitchen dispatch channels per shop
 export const shopTelegramGroups = {
@@ -57,6 +58,7 @@ export default function TelegramMiniAppModal({
   shop,
   product,
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   // Derive target shop if only product is provided
@@ -122,7 +124,7 @@ export default function TelegramMiniAppModal({
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(directBotLink);
-    message.success('Telegram direct bot link copied!');
+    message.success(t('telegram_bot_link_copied', 'Telegram direct bot link copied!'));
   };
 
   const qrCodeContainerRef = useRef(null);
@@ -158,7 +160,7 @@ export default function TelegramMiniAppModal({
     if (!qrCodeContainerRef.current) return;
     const qrCanvas = qrCodeContainerRef.current.querySelector('canvas');
     if (!qrCanvas) {
-      message.error('QR code canvas not ready yet');
+      message.error(t('qr_canvas_not_ready', 'QR code canvas not ready yet'));
       return;
     }
 
@@ -248,7 +250,7 @@ export default function TelegramMiniAppModal({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      message.success('QR Code image downloaded!');
+      message.success(t('qr_image_downloaded', 'QR Code image downloaded!'));
     } catch (err) {
       console.error('Error rendering QR image:', err);
       const rawUrl = qrCanvas.toDataURL('image/png');
@@ -258,7 +260,7 @@ export default function TelegramMiniAppModal({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      message.success('QR Code image downloaded!');
+      message.success(t('qr_image_downloaded', 'QR Code image downloaded!'));
     }
   };
 
@@ -328,11 +330,11 @@ export default function TelegramMiniAppModal({
                   padding: '1px 8px',
                 }}
               >
-                Verified
+                {t('verified', 'Verified')}
               </Tag>
             </div>
             <div style={{ fontSize: 12, opacity: 0.9 }}>
-              Telegram Mini App • {product ? 'Item Product Link' : 'Shop Directory Link'}
+              Telegram Mini App • {product ? t('item_product_link', 'Item Product Link') : t('shop_directory_link', 'Shop Directory Link')}
             </div>
           </div>
         </div>
@@ -351,7 +353,7 @@ export default function TelegramMiniAppModal({
             background: 'rgba(255,255,255,0.18)',
             border: 'none',
           }}
-          title="Close modal"
+          title={t('close_modal', 'Close modal')}
         />
       </div>
 
@@ -383,7 +385,7 @@ export default function TelegramMiniAppModal({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                   <Tag color="blue" style={{ borderRadius: 999, fontWeight: 700, margin: 0, fontSize: 10 }}>
-                    TELEGRAM PRODUCT ITEM
+                    {t('telegram_product_item', 'TELEGRAM PRODUCT ITEM')}
                   </Tag>
                   <span style={{ fontSize: 11, color: '#64748b' }}>{targetShop?.name}</span>
                 </div>
@@ -422,7 +424,7 @@ export default function TelegramMiniAppModal({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                   <Tag color="blue" style={{ borderRadius: 999, fontWeight: 700, margin: 0, fontSize: 10 }}>
-                    TELEGRAM SHOP
+                    {t('telegram_shop', 'TELEGRAM SHOP')}
                   </Tag>
                   <span style={{ fontSize: 11, color: '#64748b' }}>
                     <StarFilled style={{ color: '#f59e0b' }} /> {targetShop?.rating || 4.9}
@@ -432,7 +434,7 @@ export default function TelegramMiniAppModal({
                   {targetShop?.name}
                 </div>
                 <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                  Direct orders dispatched to: <strong>{targetGroup}</strong>
+                  {t('direct_orders_dispatched_to', 'Direct orders dispatched to')}: <strong>{targetGroup}</strong>
                 </div>
               </div>
             </div>
@@ -444,7 +446,7 @@ export default function TelegramMiniAppModal({
           <Col xs={24} sm={14}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>
-                Launch directly inside Telegram to customize items, add to cart, and place orders with real-time status updates.
+                {t('telegram_modal_desc', 'Launch directly inside Telegram to customize items, add to cart, and place orders with real-time status updates.')}
               </div>
 
               <Button
@@ -466,7 +468,7 @@ export default function TelegramMiniAppModal({
                   gap: 8,
                 }}
               >
-                Launch Telegram
+                {t('launch_telegram', 'Launch Telegram')}
               </Button>
 
               <Button
@@ -485,7 +487,7 @@ export default function TelegramMiniAppModal({
                   gap: 6,
                 }}
               >
-                Copy Telegram Link
+                {t('copy_telegram_link', 'Copy Telegram Link')}
               </Button>
             </div>
           </Col>
@@ -513,7 +515,7 @@ export default function TelegramMiniAppModal({
               </div>
 
               <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginTop: 8 }}>
-                Scan with Phone / Telegram
+                {t('scan_with_phone_telegram', 'Scan with Phone / Telegram')}
               </div>
 
               {/* Download QR Image Button */}
@@ -540,7 +542,7 @@ export default function TelegramMiniAppModal({
                   cursor: 'pointer',
                 }}
               >
-                Download QR Image
+                {t('download_qr_image', 'Download QR Image')}
               </Button>
             </div>
           </Col>

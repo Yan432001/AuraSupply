@@ -33,6 +33,7 @@ import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { formatCurrency } from '../../utils/webTheme';
 import { isImageDeleted, deleteProductImage, restoreProductImage } from '../../data/menuImageManager';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 /**
  * Flexible Product Normalizer
@@ -221,6 +222,7 @@ export default function TaobaoProductDetail({
   triggerHaptic,
 }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { tg } = useTelegram();
   const { wishlist, toggleWishlist } = useWishlist();
   const { totalItems = 0 } = useCart();
@@ -347,7 +349,7 @@ export default function TaobaoProductDetail({
     triggerHaptic?.('medium');
     setIsFavorite((prev) => !prev);
     toggleWishlist?.(product);
-    message.success(!isFavorite ? 'Saved to Favorites ❤️' : 'Removed from Favorites');
+    message.success(!isFavorite ? t('saved_to_favorites_toast', 'Saved to Favorites ❤️') : t('removed_from_favorites_toast', 'Removed from Favorites'));
   };
 
   // Share Product Link
@@ -356,7 +358,7 @@ export default function TaobaoProductDetail({
     const url = window.location.href;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url);
-      message.success('Product link copied to clipboard! 🔗');
+      message.success(t('product_link_copied_toast', 'Product link copied to clipboard! 🔗'));
     }
   };
 
@@ -381,10 +383,10 @@ export default function TaobaoProductDetail({
 
     if (skuDrawerAction === 'buy') {
       onBuyNow?.(orderItem);
-      message.success(`Proceeding to checkout with ${quantity}x "${product.name}"!`);
+      message.success(`${t('proceeding_to_checkout', 'Proceeding to checkout with')} ${quantity}x "${product.name}"!`);
     } else {
       onAddToCart?.(orderItem);
-      message.success(`Added ${quantity}x "${product.name}" to Cart! 🛍️`);
+      message.success(`${t('added_to_cart_toast', 'Added to Cart!')} ${quantity}x "${product.name}" 🛍️`);
     }
 
     setIsSkuDrawerOpen(false);
@@ -496,25 +498,25 @@ export default function TaobaoProductDetail({
                   onClick={() => setIsVideoPlaying(false)}
                   className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/60 text-white text-[11px] font-bold z-20 backdrop-blur-xs cursor-pointer active:scale-95"
                 >
-                  ✕ Close Video
+                  ✕ {t('close_video', 'Close Video')}
                 </button>
               </div>
             ) : isCurrentImageDeleted ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-6 text-center select-none">
                 <CameraOutlined style={{ fontSize: 36 }} className="text-slate-400 mb-2" />
-                <span className="text-sm font-bold text-slate-600">Product Image Deleted</span>
-                <span className="text-xs text-slate-400 mt-1">Image removed from digital menu & synced with store manager</span>
+                <span className="text-sm font-bold text-slate-600">{t('product_image_deleted', 'Product Image Deleted')}</span>
+                <span className="text-xs text-slate-400 mt-1">{t('image_removed_sync_desc', 'Image removed from digital menu & synced with store manager')}</span>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     restoreProductImage(product.id, storeSlug);
-                    message.success(`Restored image for "${product.name}"!`);
+                    message.success(`${t('restored_image_toast', 'Restored image for')} "${product.name}"!`);
                   }}
                   className="mt-3.5 px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
                 >
                   <ReloadOutlined style={{ fontSize: 11 }} />
-                  <span>Restore Image</span>
+                  <span>{t('restore_image', 'Restore Image')}</span>
                 </button>
               </div>
             ) : (
@@ -543,13 +545,13 @@ export default function TaobaoProductDetail({
                   onClick={(e) => {
                     e.stopPropagation();
                     deleteProductImage(product.id, storeSlug, product.name, currentPreviewImage);
-                    message.success(`Deleted image for "${product.name}" from E-Menu!`);
+                    message.success(`${t('deleted_image_toast', 'Deleted image for')} "${product.name}" ${t('from_emenu', 'from E-Menu!')}`);
                   }}
                   className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/60 hover:bg-rose-600 text-white text-[11px] font-bold flex items-center gap-1 backdrop-blur-xs transition z-20 cursor-pointer shadow-sm active:scale-95"
                   title="Delete image directly"
                 >
                   <DeleteOutlined style={{ fontSize: 10 }} />
-                  <span>Del Image</span>
+                  <span>{t('del_image', 'Del Image')}</span>
                 </button>
 
                 {/* Video Play Pill Button overlay on slide 0 */}
@@ -563,7 +565,7 @@ export default function TaobaoProductDetail({
                     className="absolute bottom-3 left-3 px-3 py-1.5 rounded-full bg-black/75 hover:bg-black text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md backdrop-blur-xs transition active:scale-95 cursor-pointer z-10"
                   >
                     <PlayCircleFilled className="text-amber-400 text-sm" />
-                    <span>Watch Video Demo</span>
+                    <span>{t('watch_video_demo', 'Watch Video Demo')}</span>
                   </button>
                 )}
 
@@ -658,7 +660,7 @@ export default function TaobaoProductDetail({
                 ${product.originalPrice.toFixed(2)}
               </span>
               <span className="px-1.5 py-0.5 rounded text-[length:var(--font-small)] font-black bg-rose-500 text-white shadow-2xs">
-                -{product.discountPercent}% OFF
+                -{product.discountPercent}% {t('off', 'OFF')}
               </span>
             </div>
 
@@ -684,10 +686,10 @@ export default function TaobaoProductDetail({
               <div className="flex items-center gap-1">
                 <StarFilled className="text-amber-400 text-xs" />
                 <span className="font-bold text-[var(--tg-theme-text-color,#0f172a)]">{product.rating}</span>
-                <span>({product.reviewsList.length * 40}+ reviews)</span>
+                <span>({product.reviewsList.length * 40}+ {t('reviews', 'reviews')})</span>
               </div>
-              <div>Sales: <strong className="text-[var(--tg-theme-text-color,#0f172a)] font-mono">{product.salesCount}</strong></div>
-              <div>Stock: <strong className="text-emerald-600 font-bold">{product.stockCount > 0 ? `${product.stockCount} in stock` : 'Out of stock'}</strong></div>
+              <div>{t('sales_colon', 'Sales:')} <strong className="text-[var(--tg-theme-text-color,#0f172a)] font-mono">{product.salesCount}</strong></div>
+              <div>{t('stock_colon', 'Stock:')} <strong className="text-emerald-600 font-bold">{product.stockCount > 0 ? `${product.stockCount} ${t('in_stock', 'in stock')}` : t('out_of_stock', 'Out of stock')}</strong></div>
             </div>
           </div>
 
@@ -697,10 +699,10 @@ export default function TaobaoProductDetail({
           <div className="p-3.5 rounded-2xl bg-[var(--tg-theme-section-bg-color,#ffffff)] border border-[var(--tg-theme-secondary-bg-color,#e2e8f0)] shadow-2xs space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[length:var(--font-title)] font-bold text-[var(--tg-theme-text-color,#0f172a)] uppercase tracking-wider">
-                Select Variants &amp; Options
+                {t('select_variants_options', 'Select Variants & Options')}
               </span>
               <span className="text-[length:var(--font-small)] text-[var(--tg-theme-button-color,#2F6FED)] font-semibold">
-                Selected: {Object.values(selectedVariants).filter(Boolean).join(', ')}
+                {t('selected_colon', 'Selected:')} {Object.values(selectedVariants).filter(Boolean).join(', ')}
               </span>
             </div>
 
@@ -731,7 +733,7 @@ export default function TaobaoProductDetail({
                           <img src={opt.image} alt="" className="w-4 h-4 rounded object-cover" />
                         )}
                         <span>{opt.name}</span>
-                        {!opt.inStock && <span className="text-[9px] uppercase font-bold">(Out)</span>}
+                        {!opt.inStock && <span className="text-[9px] uppercase font-bold">({t('out_tag', 'Out')})</span>}
                       </button>
                     );
                   })}
@@ -741,7 +743,7 @@ export default function TaobaoProductDetail({
 
             {/* Quantity Stepper */}
             <div className="flex items-center justify-between pt-2 border-t border-[var(--tg-theme-secondary-bg-color,#e2e8f0)]">
-              <span className="text-[length:var(--font-base)] font-bold text-[var(--tg-theme-text-color,#0f172a)]">Purchase Quantity</span>
+              <span className="text-[length:var(--font-base)] font-bold text-[var(--tg-theme-text-color,#0f172a)]">{t('purchase_quantity', 'Purchase Quantity')}</span>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
@@ -777,7 +779,7 @@ export default function TaobaoProductDetail({
             {/* Pickup or Delivery Option Toggle */}
             <div className="flex items-center justify-between gap-2 pb-2 border-b border-[var(--tg-theme-secondary-bg-color,#e2e8f0)]">
               <span className="text-[length:var(--font-small)] font-bold text-[var(--tg-theme-hint-color,#64748b)]">
-                Fulfillment Mode
+                {t('fulfillment_mode', 'Fulfillment Mode')}
               </span>
               <div className="flex items-center gap-1 p-0.5 rounded-xl bg-[var(--tg-theme-secondary-bg-color,#f1f5f9)]">
                 <button
@@ -792,7 +794,7 @@ export default function TaobaoProductDetail({
                       : 'text-[var(--tg-theme-hint-color,#64748b)] hover:text-[var(--tg-theme-text-color,#0f172a)]'
                   }`}
                 >
-                  🚀 Delivery
+                  🚀 {t('delivery_mode', 'Delivery')}
                 </button>
                 <button
                   type="button"
@@ -806,7 +808,7 @@ export default function TaobaoProductDetail({
                       : 'text-[var(--tg-theme-hint-color,#64748b)] hover:text-[var(--tg-theme-text-color,#0f172a)]'
                   }`}
                 >
-                  🛍️ Self-Pickup
+                  🛍️ {t('self_pickup_mode', 'Self-Pickup')}
                 </button>
               </div>
             </div>
@@ -817,37 +819,37 @@ export default function TaobaoProductDetail({
               <div className="min-w-0">
                 <p className="font-bold text-[var(--tg-theme-text-color,#0f172a)] leading-tight text-[length:var(--font-base)]">
                   {deliveryMethod === 'delivery'
-                    ? 'Delivery: Free Standard Shipping (Over $20)'
-                    : 'Pickup: Ready in 15 mins at Counter'}
+                    ? t('delivery_guarantee_free', 'Delivery: Free Standard Shipping (Over $20)')
+                    : t('pickup_guarantee_ready', 'Pickup: Ready in 15 mins at Counter')}
                 </p>
                 <p className="text-[length:var(--font-small)] text-[var(--tg-theme-hint-color,#64748b)]">
                   {deliveryMethod === 'delivery'
-                    ? 'Est. arrival: 25-35 mins (Express) · Next-day (Courier)'
-                    : 'Show order QR at pickup counter upon arrival'}
+                    ? t('delivery_est_arrival', 'Est. arrival: 25-35 mins (Express) · Next-day (Courier)')
+                    : t('pickup_qr_instructions', 'Show order QR at pickup counter upon arrival')}
                 </p>
               </div>
             </div>
 
             {/* Payment Methods */}
             <div className="pt-2 border-t border-[var(--tg-theme-secondary-bg-color,#e2e8f0)] flex items-center justify-between text-[length:var(--font-small)]">
-              <span className="text-[var(--tg-theme-hint-color,#64748b)]">Payment:</span>
+              <span className="text-[var(--tg-theme-hint-color,#64748b)]">{t('payment_label', 'Payment:')}</span>
               <span className="font-semibold text-[var(--tg-theme-text-color,#0f172a)]">
-                Telegram Pay · ABA KHQR · Card · Cash on Delivery
+                {t('payment_methods_list', 'Telegram Pay · ABA KHQR · Card · Cash on Delivery')}
               </span>
             </div>
 
             {/* Guarantee Badges */}
             <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-[var(--tg-theme-secondary-bg-color,#e2e8f0)] text-[length:var(--font-small)] text-[var(--tg-theme-hint-color,#64748b)]">
               <span className="flex items-center gap-1 font-semibold text-emerald-600">
-                <SafetyCertificateOutlined /> 7-Day Return
+                <SafetyCertificateOutlined /> {t('seven_day_return', '7-Day Return')}
               </span>
               <span>·</span>
               <span className="flex items-center gap-1 font-semibold text-blue-600">
-                <CheckCircleFilled /> 100% Authentic
+                <CheckCircleFilled /> {t('hundred_percent_authentic', '100% Authentic')}
               </span>
               <span>·</span>
               <span className="flex items-center gap-1 font-semibold text-purple-600">
-                <ThunderboltFilled /> Damage Coverage
+                <ThunderboltFilled /> {t('damage_coverage', 'Damage Coverage')}
               </span>
             </div>
           </div>
@@ -869,7 +871,7 @@ export default function TaobaoProductDetail({
                 <p className="text-[length:var(--font-small)] text-[var(--tg-theme-hint-color,#64748b)] flex items-center gap-1">
                   <StarFilled className="text-amber-400 text-[10px]" />
                   <span className="font-bold text-[var(--tg-theme-text-color,#0f172a)]">{product.shop.rating}</span>
-                  <span>· {product.shop.followers} fans</span>
+                  <span>· {product.shop.followers} {t('fans_count', 'fans')}</span>
                 </p>
               </div>
             </div>
@@ -882,7 +884,7 @@ export default function TaobaoProductDetail({
               }}
               className="px-3 py-1.5 rounded-xl text-[length:var(--font-small)] font-bold bg-[var(--tg-theme-secondary-bg-color,#f1f5f9)] hover:opacity-90 text-[var(--tg-theme-button-color,#2F6FED)] border border-[var(--tg-theme-secondary-bg-color,#e2e8f0)] transition active:scale-95 cursor-pointer shrink-0"
             >
-              Visit Shop
+              {t('visit_shop', 'Visit Shop')}
             </button>
           </div>
 
@@ -892,7 +894,7 @@ export default function TaobaoProductDetail({
           <div id="taobao-tab-reviews" className="p-3.5 rounded-2xl bg-[var(--tg-theme-section-bg-color,#ffffff)] border border-[var(--tg-theme-secondary-bg-color,#e2e8f0)] shadow-2xs space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-[length:var(--font-title)] text-[var(--tg-theme-text-color,#0f172a)]">
-                Buyer Reviews ({product.reviewsList.length * 40}+)
+                {t('buyer_reviews', 'Buyer Reviews')} ({product.reviewsList.length * 40}+)
               </h3>
               <button
                 type="button"
@@ -902,7 +904,7 @@ export default function TaobaoProductDetail({
                 }}
                 className="text-[length:var(--font-small)] text-[var(--tg-theme-button-color,#2F6FED)] font-bold flex items-center gap-0.5 cursor-pointer hover:underline"
               >
-                <span>View all reviews</span>
+                <span>{t('view_all_reviews', 'View all reviews')}</span>
                 <RightOutlined style={{ fontSize: 9 }} />
               </button>
             </div>
@@ -915,7 +917,7 @@ export default function TaobaoProductDetail({
                     <div className="flex items-center gap-1.5">
                       <img src={rev.avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
                       <span className="font-bold text-[var(--tg-theme-text-color,#0f172a)]">{rev.author}</span>
-                      <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1 rounded font-semibold">Verified</span>
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1 rounded font-semibold">{t('verified', 'Verified')}</span>
                     </div>
                     <span className="text-[10px] text-slate-400">{rev.date}</span>
                   </div>
@@ -954,7 +956,7 @@ export default function TaobaoProductDetail({
                 }}
                 className="text-[11.5px] font-bold text-[var(--tg-theme-button-color,#2F6FED)] hover:opacity-80 py-1"
               >
-                Read all {product.reviewsList.length * 40}+ customer reviews →
+                {t('read_all_reviews_prefix', 'Read all')} {product.reviewsList.length * 40}+ {t('customer_reviews_suffix', 'customer reviews →')}
               </button>
             </div>
           </div>
@@ -964,10 +966,10 @@ export default function TaobaoProductDetail({
           {/* ==================================================== */}
           <div className="sticky top-[48px] z-30 bg-[var(--tg-theme-bg-color,#ffffff)]/95 backdrop-blur-md p-1 rounded-xl border border-[var(--tg-theme-secondary-bg-color,#e2e8f0)] flex items-center justify-around text-[length:var(--font-base)] font-bold">
             {[
-              { id: 'details', label: 'Details' },
-              { id: 'specs', label: 'Specifications' },
-              { id: 'reviews', label: 'Reviews' },
-              { id: 'recommended', label: 'Recommended' },
+              { id: 'details', label: t('tab_details', 'Details') },
+              { id: 'specs', label: t('tab_specifications', 'Specifications') },
+              { id: 'reviews', label: t('tab_reviews', 'Reviews') },
+              { id: 'recommended', label: t('tab_recommended', 'Recommended') },
             ].map((t) => (
               <button
                 key={t.id}
@@ -987,7 +989,7 @@ export default function TaobaoProductDetail({
           {/* Specifications Table */}
           <div id="taobao-tab-specs" className="p-3.5 rounded-2xl bg-[var(--tg-theme-section-bg-color,#ffffff)] border border-[var(--tg-theme-secondary-bg-color,#e2e8f0)] shadow-2xs space-y-2">
             <h3 className="font-bold text-[length:var(--font-title)] text-[var(--tg-theme-text-color,#0f172a)]">
-              Product Specifications
+              {t('product_specifications', 'Product Specifications')}
             </h3>
             <div className="grid grid-cols-1 divide-y divide-[var(--tg-theme-secondary-bg-color,#e2e8f0)] text-[length:var(--font-base)]">
               {product.specifications.map((spec, sIdx) => (
@@ -1004,7 +1006,7 @@ export default function TaobaoProductDetail({
           {/* Long Description & Vertical Detail Imagery (Taobao style) */}
           <div id="taobao-tab-details" className="p-3.5 rounded-2xl bg-[var(--tg-theme-section-bg-color,#ffffff)] border border-[var(--tg-theme-secondary-bg-color,#e2e8f0)] shadow-2xs space-y-3">
             <h3 className="font-bold text-[length:var(--font-title)] text-[var(--tg-theme-text-color,#0f172a)]">
-              Product Graphic Story &amp; Details
+              {t('product_graphic_story', 'Product Graphic Story & Details')}
             </h3>
             <p className="text-[length:var(--font-base)] text-[var(--tg-theme-text-color,#334155)] leading-relaxed">
               {product.description}
@@ -1030,7 +1032,7 @@ export default function TaobaoProductDetail({
           {/* ==================================================== */}
           <div id="taobao-tab-recommended" className="p-3.5 rounded-2xl bg-[var(--tg-theme-section-bg-color,#ffffff)] border border-[var(--tg-theme-secondary-bg-color,#e2e8f0)] shadow-2xs space-y-2.5">
             <h3 className="font-bold text-[length:var(--font-title)] text-[var(--tg-theme-text-color,#0f172a)]">
-              You May Also Like
+              {t('you_may_also_like', 'You May Also Like')}
             </h3>
             <div className="grid grid-cols-2 gap-2">
               {[
@@ -1076,7 +1078,7 @@ export default function TaobaoProductDetail({
               title="Shop"
             >
               <ShopOutlined className="text-sm" />
-              <span className="text-[length:var(--font-small)] font-semibold mt-0.5">Shop</span>
+              <span className="text-[length:var(--font-small)] font-semibold mt-0.5">{t('nav_shop', 'Shop')}</span>
             </button>
 
             <button
@@ -1089,7 +1091,7 @@ export default function TaobaoProductDetail({
               title="Chat"
             >
               <MessageOutlined className="text-sm" />
-              <span className="text-[length:var(--font-small)] font-semibold mt-0.5">Chat</span>
+              <span className="text-[length:var(--font-small)] font-semibold mt-0.5">{t('nav_chat', 'Chat')}</span>
             </button>
 
             <button
@@ -1101,7 +1103,7 @@ export default function TaobaoProductDetail({
               title="Favorite"
             >
               {isFavorite ? <HeartFilled className="text-sm" /> : <HeartOutlined className="text-sm" />}
-              <span className="text-[length:var(--font-small)] font-semibold mt-0.5">Fav</span>
+              <span className="text-[length:var(--font-small)] font-semibold mt-0.5">{t('nav_fav', 'Fav')}</span>
             </button>
           </div>
 
@@ -1113,7 +1115,7 @@ export default function TaobaoProductDetail({
               className="flex-1 max-w-[140px] min-h-[42px] px-3 py-1.5 rounded-xl font-bold text-[length:var(--font-base)] bg-amber-500 hover:bg-amber-600 text-white shadow-2xs active:scale-95 transition cursor-pointer flex items-center justify-center gap-1"
             >
               <ShoppingCartOutlined />
-              <span>Add to Cart</span>
+              <span>{t('add_to_cart', 'Add to Cart')}</span>
             </button>
 
             <button
@@ -1122,7 +1124,7 @@ export default function TaobaoProductDetail({
               className="flex-1 max-w-[140px] min-h-[42px] px-3 py-1.5 rounded-xl font-bold text-[length:var(--font-base)] bg-rose-500 hover:bg-rose-600 text-white shadow-xs active:scale-95 transition cursor-pointer flex items-center justify-center gap-1"
             >
               <ThunderboltFilled />
-              <span>Buy Now</span>
+              <span>{t('buy_now', 'Buy Now')}</span>
             </button>
           </div>
         </div>
@@ -1150,10 +1152,10 @@ export default function TaobaoProductDetail({
                     ${dynamicPrice.toFixed(2)}
                   </div>
                   <p className="text-[length:var(--font-small)] text-[var(--tg-theme-hint-color,#64748b)] truncate">
-                    Selected: {Object.values(selectedVariants).filter(Boolean).join(', ')}
+                    {t('selected_colon', 'Selected:')} {Object.values(selectedVariants).filter(Boolean).join(', ')}
                   </p>
                   <p className="text-[length:var(--font-small)] text-emerald-600 font-bold">
-                    In Stock ({product.stockCount} left)
+                    {t('in_stock', 'In Stock')} ({product.stockCount} {t('left', 'left')})
                   </p>
                 </div>
               </div>
@@ -1203,7 +1205,7 @@ export default function TaobaoProductDetail({
 
               {/* Quantity */}
               <div className="flex items-center justify-between pt-2 border-t border-[var(--tg-theme-secondary-bg-color,#e2e8f0)]">
-                <span className="text-[length:var(--font-base)] font-bold text-[var(--tg-theme-text-color,#0f172a)]">Purchase Quantity</span>
+                <span className="text-[length:var(--font-base)] font-bold text-[var(--tg-theme-text-color,#0f172a)]">{t('purchase_quantity', 'Purchase Quantity')}</span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -1234,7 +1236,7 @@ export default function TaobaoProductDetail({
                 skuDrawerAction === 'buy' ? 'bg-rose-500 hover:bg-rose-600' : 'bg-amber-500 hover:bg-amber-600'
               }`}
             >
-              {skuDrawerAction === 'buy' ? `Confirm & Buy Now ($${(dynamicPrice * quantity).toFixed(2)})` : `Confirm Add to Cart ($${(dynamicPrice * quantity).toFixed(2)})`}
+              {skuDrawerAction === 'buy' ? `${t('confirm_buy_now', 'Confirm & Buy Now')} ($${(dynamicPrice * quantity).toFixed(2)})` : `${t('confirm_add_to_cart', 'Confirm Add to Cart')} ($${(dynamicPrice * quantity).toFixed(2)})`}
             </button>
           </div>
         </div>
@@ -1298,10 +1300,10 @@ export default function TaobaoProductDetail({
             <div className="p-3.5 border-b border-[var(--tg-theme-secondary-bg-color,#e2e8f0)] flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-[14px] text-[var(--tg-theme-text-color,#0f172a)]">
-                  Customer Reviews ({product.reviewsList.length * 40}+)
+                  {t('customer_reviews', 'Customer Reviews')} ({product.reviewsList.length * 40}+)
                 </h3>
                 <p className="text-[11px] text-[var(--tg-theme-hint-color,#64748b)]">
-                  ⭐ {product.rating} Overall · 98.4% Recommended
+                  ⭐ {product.rating} {t('overall', 'Overall')} · 98.4% {t('recommended', 'Recommended')}
                 </p>
               </div>
               <button
@@ -1328,7 +1330,7 @@ export default function TaobaoProductDetail({
                           {rev.author}
                         </span>
                         <span className="text-[10px] text-emerald-600 font-semibold">
-                          Verified Buyer · {rev.variant}
+                          {t('verified_buyer', 'Verified Buyer')} · {rev.variant}
                         </span>
                       </div>
                     </div>

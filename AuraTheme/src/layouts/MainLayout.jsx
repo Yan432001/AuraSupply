@@ -6,6 +6,7 @@ import Header from '../components/web/common/Header';
 import Footer from '../components/web/common/Footer';
 import MobileBottomNav from '../components/web/common/MobileBottomNav';
 import { useCart } from '../contexts/CartContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import { publicTheme } from '../utils/webTheme';
 
@@ -48,6 +49,7 @@ const MainLayout = () => {
   const screens = useBreakpoint();
   const { cartItemCount, cartTotal } = useCart();
   const { headerRef } = useHeaderHeight();
+  const { t } = useTranslation();
   const currentPage = location.pathname;
 
   // Enforce website theme isolation: ensure admin theme styles or dark classes never leak onto the public website
@@ -180,7 +182,7 @@ const MainLayout = () => {
               {cartItemCount}
             </span>
           </div>
-          <span>View Cart</span>
+          <span>{t('view_cart', 'View Cart')}</span>
           <span style={{ opacity: 0.6, fontWeight: 700 }}>•</span>
           <span>${cartTotal.toFixed(2)}</span>
         </button>

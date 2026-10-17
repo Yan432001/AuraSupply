@@ -14,8 +14,10 @@ import {
 } from '@ant-design/icons';
 import { fetchBanners } from '../../../utils/apiconfig';
 import { mapBanner } from '../../../utils/dataMappers';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
 export default function PromotionPosterSlider({ onSelectPoster }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [posters, setPosters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +84,7 @@ export default function PromotionPosterSlider({ onSelectPoster }) {
     if (!code) return;
     navigator.clipboard?.writeText(code);
     setCopiedCode(code);
-    message.success(`Copied code: ${code}`);
+    message.success(`${t('copied_code', 'Copied code')}: ${code}`);
     setTimeout(() => setCopiedCode(null), 2500);
   };
 
@@ -167,12 +169,12 @@ export default function PromotionPosterSlider({ onSelectPoster }) {
               type="button"
               onClick={(e) => handleCopyCoupon(currentPoster.couponCode, e)}
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white text-xs font-bold transition active:scale-95 border border-white/25 cursor-pointer"
-              title="Click to copy coupon code"
+              title={t('click_copy_coupon', 'Click to copy coupon code')}
             >
               {copiedCode === currentPoster.couponCode ? (
                 <>
                   <CheckOutlined className="text-emerald-400" />
-                  <span className="text-emerald-300 font-mono font-bold">COPIED!</span>
+                  <span className="text-emerald-300 font-mono font-bold">{t('copied', 'COPIED!')}</span>
                 </>
               ) : (
                 <>
@@ -273,7 +275,7 @@ export default function PromotionPosterSlider({ onSelectPoster }) {
                 boxShadow: `0 6px 18px ${currentPoster.accentColor || '#2F6FED'}55`,
               }}
             >
-              <span>{currentPoster.ctaText}</span>
+              <span>{currentPoster.ctaText || t('claim_offer', 'Claim Offer')}</span>
               <ArrowRightOutlined className="text-[11px]" />
             </button>
           </div>

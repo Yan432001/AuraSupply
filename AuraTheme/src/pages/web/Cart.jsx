@@ -19,6 +19,7 @@ import {
   Badge,
 } from 'antd';
 import { useCart } from '../../contexts/CartContext';
+import { useTranslation } from '../../contexts/LanguageContext';
 import {
   MinusOutlined,
   PlusOutlined,
@@ -47,6 +48,7 @@ import { submitOrder } from '../../utils/apiconfig';
 const { Title, Paragraph, Text } = Typography;
 
 export default function Cart() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { cart, updateQuantity, removeFromCart, clearCart, cartTotal, cartItemCount } = useCart();
   const { isOnline } = useNetworkStatus();
@@ -77,11 +79,11 @@ export default function Cart() {
 
   const handleOpenCheckout = () => {
     if (!isOnline) {
-      message.error('You are currently offline. Please restore connection to proceed.');
+      message.error(t('offline_warning', 'You are currently offline. Please restore connection to proceed.'));
       return;
     }
     if (cart.length === 0) {
-      message.warning('Your cart is empty. Add products to continue!');
+      message.warning(t('cart_empty_warning', 'Your cart is empty. Add products to continue!'));
       return;
     }
     setCheckoutModalOpen(true);
@@ -89,11 +91,11 @@ export default function Cart() {
 
   const handlePlaceOrder = async () => {
     if (!isOnline) {
-      message.error('Cannot submit order: Offline.');
+      message.error(t('cannot_submit_offline', 'Cannot submit order: Offline.'));
       return;
     }
     if (!customerName.trim() || !customerPhone.trim()) {
-      message.error('Please enter buyer contact details.');
+      message.error(t('enter_buyer_details', 'Please enter buyer contact details.'));
       return;
     }
 
@@ -155,10 +157,10 @@ export default function Cart() {
       setIsSubmitting(false);
       setCheckoutModalOpen(false);
       setCompletedOrder(orderData);
-      message.success(`Procurement Order ${orderRef} recorded in real database!`);
+      message.success(`${t('order_recorded_success', 'Procurement Order')} ${orderRef} ${t('recorded_in_db', 'recorded in real database!')}`);
     } catch (err) {
       console.error('Order submission error:', err);
-      message.error(err.message || 'Error recording order. Please try again.');
+      message.error(err.message || t('error_recording_order', 'Error recording order. Please try again.'));
       setIsSubmitting(false);
     }
   };
@@ -179,12 +181,12 @@ export default function Cart() {
             status="success"
             title={
               <div style={{ fontWeight: 850, fontSize: 24, color: '#0f172a' }}>
-                🎉 Commercial Order Confirmed!
+                🎉 {t('order_confirmed', 'Commercial Order Confirmed!')}
               </div>
             }
             subTitle={
               <div style={{ fontSize: 14, color: '#64748b' }}>
-                Order Ref: <strong style={{ color: publicTheme.primary }}>{completedOrder.orderId}</strong>
+                {t('order_ref', 'Order Ref')}: <strong style={{ color: publicTheme.primary }}>{completedOrder.orderId}</strong>
                 {completedOrder.customer?.poNumber && ` • PO: ${completedOrder.customer.poNumber}`}
               </div>
             }
@@ -196,46 +198,46 @@ export default function Cart() {
                 onClick={() => exportSingleOrderPdf(completedOrder)}
                 style={{ borderRadius: 12, height: 44, fontWeight: 700, background: publicTheme.primary }}
               >
-                Download Proforma Invoice PDF
+                {t('download_pdf', 'Download Proforma Invoice PDF')}
               </Button>,
               <Button
                 key="profile"
                 onClick={() => navigate('/profile')}
                 style={{ borderRadius: 12, height: 44, fontWeight: 700 }}
               >
-                View in Procurement Orders
+                {t('view_orders', 'View in Procurement Orders')}
               </Button>,
               <Button
                 key="catalog"
                 onClick={() => navigate('/products')}
                 style={{ borderRadius: 12, height: 44 }}
               >
-                Continue Sourcing
+                {t('continue_sourcing', 'Continue Sourcing')}
               </Button>,
             ]}
           >
             <div style={{ background: '#f8fafc', borderRadius: 16, padding: '18px 22px', marginTop: 12, border: '1px solid #e2e8f0' }}>
               <div style={{ fontWeight: 800, fontSize: 14, color: '#0f172a', marginBottom: 12 }}>
-                Order Summary & Settlement
+                {t('order_summary_settlement', 'Order Summary & Settlement')}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#64748b' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Company / Organization:</span>
+                  <span>{t('company_organization', 'Company / Organization:')}</span>
                   <strong style={{ color: '#0f172a' }}>{completedOrder.customer?.company || 'N/A'}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Settlement Method:</span>
+                  <span>{t('settlement_method', 'Settlement Method:')}</span>
                   <span style={{ textTransform: 'uppercase', fontWeight: 700, color: publicTheme.primary }}>
                     {completedOrder.paymentMethod}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Logistics Carrier:</span>
-                  <span>{completedOrder.deliveryMethod === 'express' ? 'Priority Air Freight' : 'Regional Land Carrier'}</span>
+                  <span>{t('logistics_carrier', 'Logistics Carrier:')}</span>
+                  <span>{completedOrder.deliveryMethod === 'express' ? t('priority_air_freight', 'Priority Air Freight') : t('regional_land_carrier', 'Regional Land Carrier')}</span>
                 </div>
                 <Divider style={{ margin: '8px 0' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 900, color: '#0f172a' }}>
-                  <span>Grand Total Paid:</span>
+                  <span>{t('grand_total_paid', 'Grand Total Paid:')}</span>
                   <span style={{ color: publicTheme.primary }}>{formatCurrency(completedOrder.total)}</span>
                 </div>
               </div>
@@ -261,10 +263,10 @@ export default function Cart() {
         >
           <div style={{ fontSize: 56, marginBottom: 16, color: publicTheme.primary }}>🛒</div>
           <Title level={3} style={{ marginBottom: 8, fontWeight: 850, color: publicTheme.text }}>
-            Your Procurement Cart is Empty
+            {t('cart_empty', 'Your Procurement Cart is Empty')}
           </Title>
           <Paragraph style={{ color: publicTheme.subtext, fontSize: 14, maxWidth: 420, margin: '0 auto 28px' }}>
-            Browse our wholesale catalog to order specialty coffee micro-lots, artisan bakery goods, packaging, or tech equipment with bulk tier pricing.
+            {t('cart_empty_desc', 'Browse our wholesale catalog to order specialty coffee micro-lots, artisan bakery goods, packaging, or tech equipment with bulk tier pricing.')}
           </Paragraph>
           <Space size={12}>
             <Button
@@ -280,7 +282,7 @@ export default function Cart() {
                 border: 'none',
               }}
             >
-              Explore Wholesale Catalog
+              {t('explore_catalog', 'Explore Wholesale Catalog')}
             </Button>
             <Button
               size="large"
@@ -292,7 +294,7 @@ export default function Cart() {
                 fontWeight: 700,
               }}
             >
-              Browse Verified Suppliers
+              {t('browse_suppliers', 'Browse Verified Suppliers')}
             </Button>
           </Space>
         </Card>
@@ -321,10 +323,10 @@ export default function Cart() {
       >
         <div>
           <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#38bdf8', fontWeight: 800, marginBottom: 4 }}>
-            Commercial Procurement
+            {t('commercial_procurement', 'Commercial Procurement')}
           </div>
           <Title level={2} style={{ color: '#ffffff', margin: 0, fontWeight: 850 }}>
-            Procurement Workspace ({cartItemCount} Items)
+            {t('procurement_workspace', 'Procurement Workspace')} ({cartItemCount} {t('items', 'Items')})
           </Title>
         </div>
 
@@ -334,14 +336,14 @@ export default function Cart() {
             onClick={() => navigate('/products')}
             style={{ borderRadius: 12, height: 42, color: '#ffffff', borderColor: 'rgba(255,255,255,0.3)', fontWeight: 700 }}
           >
-            ← Add More SKUs
+            ← {t('add_more_skus', 'Add More SKUs')}
           </Button>
           <Button
             danger
             onClick={() => clearCart()}
             style={{ borderRadius: 12, height: 42, fontWeight: 700 }}
           >
-            Clear Cart
+            {t('clear_cart', 'Clear Cart')}
           </Button>
         </Space>
       </div>
@@ -360,7 +362,7 @@ export default function Cart() {
             styles={{ body: { padding: '20px 24px' } }}
           >
             <div style={{ fontSize: 14, fontWeight: 800, color: publicTheme.text, marginBottom: 16 }}>
-              Wholesale Order Items
+              {t('wholesale_order_items', 'Wholesale Order Items')}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -396,7 +398,7 @@ export default function Cart() {
                           {item.name}
                         </div>
                         <div style={{ fontSize: 11.5, color: publicTheme.subtext, marginTop: 2 }}>
-                          Unit Price: <strong style={{ color: publicTheme.primary }}>{formatCurrency(itemPrice)}</strong>
+                          {t('unit_price', 'Unit Price:')} <strong style={{ color: publicTheme.primary }}>{formatCurrency(itemPrice)}</strong>
                         </div>
                       </div>
                     </div>
@@ -451,13 +453,13 @@ export default function Cart() {
             styles={{ body: { padding: '20px 24px' } }}
           >
             <div style={{ fontSize: 14, fontWeight: 800, color: publicTheme.text, marginBottom: 16 }}>
-              🏢 Commercial Invoicing & Freight Destination
+              🏢 {t('commercial_invoicing_destination', 'Commercial Invoicing & Freight Destination')}
             </div>
 
             <Row gutter={[16, 14]}>
               <Col xs={24} sm={12}>
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: publicTheme.subtext, marginBottom: 4 }}>
-                  Company / Organization Name:
+                  {t('company_name_label', 'Company / Organization Name:')}
                 </div>
                 <Input
                   value={companyName}
@@ -468,7 +470,7 @@ export default function Cart() {
               </Col>
               <Col xs={24} sm={12}>
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: publicTheme.subtext, marginBottom: 4 }}>
-                  Corporate Tax ID / VAT Number:
+                  {t('tax_id_label', 'Corporate Tax ID / VAT Number:')}
                 </div>
                 <Input
                   value={taxId}
@@ -479,7 +481,7 @@ export default function Cart() {
               </Col>
               <Col xs={24} sm={12}>
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: publicTheme.subtext, marginBottom: 4 }}>
-                  Purchase Order Ref (PO #):
+                  {t('po_ref_label', 'Purchase Order Ref (PO #):')}
                 </div>
                 <Input
                   value={poNumber}
@@ -490,7 +492,7 @@ export default function Cart() {
               </Col>
               <Col xs={24} sm={12}>
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: publicTheme.subtext, marginBottom: 4 }}>
-                  Buyer Contact Phone:
+                  {t('buyer_phone_label', 'Buyer Contact Phone:')}
                 </div>
                 <Input
                   value={customerPhone}
@@ -501,7 +503,7 @@ export default function Cart() {
               </Col>
               <Col xs={24}>
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: publicTheme.subtext, marginBottom: 4 }}>
-                  Fulfillment & Freight Delivery Address:
+                  {t('delivery_address_label', 'Fulfillment & Freight Delivery Address:')}
                 </div>
                 <Input
                   value={shippingAddress}
@@ -524,13 +526,13 @@ export default function Cart() {
             styles={{ body: { padding: '20px 24px' } }}
           >
             <div style={{ fontSize: 14, fontWeight: 800, color: publicTheme.text, marginBottom: 16 }}>
-              🚚 Logistics Carrier & Payment Terms
+              🚚 {t('logistics_payment_terms', 'Logistics Carrier & Payment Terms')}
             </div>
 
             <Row gutter={[24, 20]}>
               <Col xs={24} sm={12}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: publicTheme.subtext, marginBottom: 8 }}>
-                  Delivery Method:
+                  {t('delivery_method_label', 'Delivery Method:')}
                 </div>
                 <Radio.Group
                   value={deliveryMethod}
@@ -539,16 +541,16 @@ export default function Cart() {
                 >
                   <Space direction="vertical" style={{ width: '100%' }}>
                     <Radio value="standard">
-                      <span style={{ fontWeight: 700 }}>Regional Land Freight</span>
-                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>2–4 days (Free over $100)</div>
+                      <span style={{ fontWeight: 700 }}>{t('regional_land_freight', 'Regional Land Freight')}</span>
+                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>{t('regional_freight_desc', '2–4 days (Free over $100)')}</div>
                     </Radio>
                     <Radio value="express">
-                      <span style={{ fontWeight: 700 }}>Priority Air Cargo (+$15)</span>
-                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>Next-day express delivery</div>
+                      <span style={{ fontWeight: 700 }}>{t('priority_air_cargo', 'Priority Air Cargo (+$15)')}</span>
+                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>{t('next_day_delivery', 'Next-day express delivery')}</div>
                     </Radio>
                     <Radio value="pickup">
-                      <span style={{ fontWeight: 700 }}>Direct Warehouse Pickup (Free)</span>
-                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>Collect from Phnom Penh Hub</div>
+                      <span style={{ fontWeight: 700 }}>{t('warehouse_pickup', 'Direct Warehouse Pickup (Free)')}</span>
+                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>{t('collect_from_hub', 'Collect from Phnom Penh Hub')}</div>
                     </Radio>
                   </Space>
                 </Radio.Group>
@@ -556,7 +558,7 @@ export default function Cart() {
 
               <Col xs={24} sm={12}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: publicTheme.subtext, marginBottom: 8 }}>
-                  Settlement & Terms:
+                  {t('settlement_terms_label', 'Settlement & Terms:')}
                 </div>
                 <Radio.Group
                   value={paymentMethod}
@@ -565,20 +567,20 @@ export default function Cart() {
                 >
                   <Space direction="vertical" style={{ width: '100%' }}>
                     <Radio value="khqr">
-                      <span style={{ fontWeight: 700 }}>KHQR Instant QR Code</span>
-                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>Instant multi-bank settlement</div>
+                      <span style={{ fontWeight: 700 }}>{t('khqr_code', 'KHQR Instant QR Code')}</span>
+                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>{t('instant_multibank_settlement', 'Instant multi-bank settlement')}</div>
                     </Radio>
                     <Radio value="invoice">
-                      <span style={{ fontWeight: 700 }}>Net-30 Corporate Wire Invoice</span>
-                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>Bank wire against commercial proforma</div>
+                      <span style={{ fontWeight: 700 }}>{t('net_30_invoice', 'Net-30 Corporate Wire Invoice')}</span>
+                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>{t('bank_wire_proforma', 'Bank wire against commercial proforma')}</div>
                     </Radio>
                     <Radio value="card">
-                      <span style={{ fontWeight: 700 }}>Corporate Credit Card</span>
-                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>Visa / Mastercard commercial card</div>
+                      <span style={{ fontWeight: 700 }}>{t('corporate_credit_card', 'Corporate Credit Card')}</span>
+                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>{t('visa_mastercard_card', 'Visa / Mastercard commercial card')}</div>
                     </Radio>
                     <Radio value="cod">
-                      <span style={{ fontWeight: 700 }}>Cash On Delivery (COD)</span>
-                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>Settle at loading dock / warehouse</div>
+                      <span style={{ fontWeight: 700 }}>{t('cash_on_delivery', 'Cash On Delivery (COD)')}</span>
+                      <div style={{ fontSize: 11, color: publicTheme.subtext }}>{t('settle_dock_warehouse', 'Settle at loading dock / warehouse')}</div>
                     </Radio>
                   </Space>
                 </Radio.Group>
@@ -600,31 +602,31 @@ export default function Cart() {
             styles={{ body: { padding: '24px 22px' } }}
           >
             <div style={{ fontSize: 16, fontWeight: 850, color: publicTheme.text, marginBottom: 18 }}>
-              Procurement Summary
+              {t('procurement_summary', 'Procurement Summary')}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: publicTheme.subtext }}>
-                <span>Subtotal ({cartItemCount} items)</span>
+                <span>{t('subtotal', 'Subtotal')} ({cartItemCount} {t('items', 'items')})</span>
                 <span style={{ fontWeight: 700, color: publicTheme.text }}>{formatCurrency(cartTotal)}</span>
               </div>
 
               {bulkDiscount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10b981' }}>
-                  <span>Volume Wholesale Discount</span>
+                  <span>{t('volume_discount', 'Volume Wholesale Discount')}</span>
                   <span style={{ fontWeight: 800 }}>-{formatCurrency(bulkDiscount)}</span>
                 </div>
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', color: publicTheme.subtext }}>
-                <span>Logistics & Freight ({deliveryMethod})</span>
+                <span>{t('logistics_freight', 'Logistics & Freight')} ({deliveryMethod})</span>
                 <span style={{ fontWeight: 700, color: publicTheme.text }}>
-                  {shippingFee === 0 ? <Tag color="green" style={{ margin: 0 }}>FREE</Tag> : formatCurrency(shippingFee)}
+                  {shippingFee === 0 ? <Tag color="green" style={{ margin: 0 }}>{t('free', 'FREE')}</Tag> : formatCurrency(shippingFee)}
                 </span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', color: publicTheme.subtext }}>
-                <span>Commercial Tax / VAT (10%)</span>
+                <span>{t('commercial_tax', 'Commercial Tax / VAT (10%)')}</span>
                 <span style={{ fontWeight: 700, color: publicTheme.text }}>{formatCurrency(taxFee)}</span>
               </div>
 
@@ -633,14 +635,14 @@ export default function Cart() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 4 }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase' }}>
-                    Total Procurement
+                    {t('total_procurement', 'Total Procurement')}
                   </div>
                   <div style={{ fontSize: 26, fontWeight: 900, color: publicTheme.primary }}>
                     {formatCurrency(grandTotal)}
                   </div>
                 </div>
                 <Tag color="blue" style={{ borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                  Escrow Protected
+                  {t('escrow_protected', 'Escrow Protected')}
                 </Tag>
               </div>
             </div>
@@ -661,7 +663,7 @@ export default function Cart() {
                 boxShadow: '0 8px 24px rgba(47, 111, 237, 0.35)',
               }}
             >
-              Proceed to Secure Order &rarr;
+              {t('proceed_secure_order', 'Proceed to Secure Order')} &rarr;
             </Button>
 
             <div style={{ textAlign: 'center', marginTop: 14 }}>
@@ -682,7 +684,7 @@ export default function Cart() {
                 }}
                 style={{ fontSize: 12, fontWeight: 700, color: publicTheme.primary }}
               >
-                Download Proforma Invoice PDF
+                {t('download_pdf', 'Download Proforma Invoice PDF')}
               </Button>
             </div>
           </Card>
@@ -696,7 +698,7 @@ export default function Cart() {
       <Modal
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 850 }}>
-            <span>Confirm & Settle Commercial Order</span>
+            <span>{t('confirm_settle_order', 'Confirm & Settle Commercial Order')}</span>
           </div>
         }
         open={checkoutModalOpen}
@@ -710,15 +712,15 @@ export default function Cart() {
           {/* Order Snapshot */}
           <div style={{ background: '#f8fafc', borderRadius: 16, padding: '14px 18px', border: '1px solid #e2e8f0', marginBottom: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 12, color: publicTheme.subtext }}>Organization:</span>
+              <span style={{ fontSize: 12, color: publicTheme.subtext }}>{t('organization', 'Organization:')}</span>
               <span style={{ fontWeight: 700 }}>{companyName}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 12, color: publicTheme.subtext }}>PO Number:</span>
+              <span style={{ fontSize: 12, color: publicTheme.subtext }}>{t('po_number', 'PO Number:')}</span>
               <span style={{ fontWeight: 700 }}>{poNumber}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 12, color: publicTheme.subtext }}>Total Payable:</span>
+              <span style={{ fontSize: 12, color: publicTheme.subtext }}>{t('total_payable', 'Total Payable:')}</span>
               <span style={{ fontWeight: 900, color: publicTheme.primary, fontSize: 16 }}>{formatCurrency(grandTotal)}</span>
             </div>
           </div>
@@ -727,7 +729,7 @@ export default function Cart() {
           {paymentMethod === 'khqr' && (
             <div style={{ textAlign: 'center', padding: '14px 0', background: '#ffffff', borderRadius: 16, border: '1px dashed #cbd5e1', marginBottom: 18 }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: '#ef4444', marginBottom: 8, textTransform: 'uppercase' }}>
-                🇰🇭 Scan to Pay via KHQR / Bakong
+                🇰🇭 {t('scan_to_pay_khqr', 'Scan to Pay via KHQR / Bakong')}
               </div>
               <QRCode
                 value={`https://bakong.nbc.org.kh/pay?amount=${grandTotal}&currency=USD&ref=${poNumber}`}
@@ -735,14 +737,14 @@ export default function Cart() {
                 style={{ margin: '0 auto' }}
               />
               <div style={{ fontSize: 11, color: publicTheme.subtext, marginTop: 8 }}>
-                Scan with any Cambodian Banking App (ABA, Canadia, Acleda, Wing)
+                {t('scan_khqr_apps', 'Scan with any Cambodian Banking App (ABA, Canadia, Acleda, Wing)')}
               </div>
             </div>
           )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
             <Button onClick={() => setCheckoutModalOpen(false)} style={{ borderRadius: 10, height: 42 }}>
-              Cancel
+              {t('cancel', 'Cancel')}
             </Button>
             <Button
               type="primary"
@@ -756,7 +758,7 @@ export default function Cart() {
                 paddingInline: 24,
               }}
             >
-              Confirm & Authorize Order
+              {t('confirm_authorize_order', 'Confirm & Authorize Order')}
             </Button>
           </div>
         </div>

@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { formatCompact, publicTheme } from '../../../utils/webTheme';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
 const { useBreakpoint } = Grid;
 const { Paragraph, Text, Title } = Typography;
@@ -29,6 +30,7 @@ const RetailShopCard = ({
   onOpenEMenu,
   gridMode = 6,
 }) => {
+  const { t } = useTranslation();
   const screens = useBreakpoint();
   const navigate = useNavigate();
 
@@ -137,7 +139,7 @@ const RetailShopCard = ({
                 letterSpacing: '-0.01em',
               }}
             >
-              {shop.logoText || 'STORE'}
+              {shop.logoText || t('store', 'STORE')}
             </Tag>
 
             {/* Wishlist / Favorite Heart Button (Top Right) */}
@@ -169,7 +171,7 @@ const RetailShopCard = ({
                 justifyContent: 'center',
                 border: 'none',
               }}
-              title={isWishlisted ? 'Remove favorite' : 'Add to favorites'}
+              title={isWishlisted ? t('remove_favorite', 'Remove favorite') : t('add_to_favorites', 'Add to favorites')}
             />
 
             {/* Quick Preview Eye Button (Bottom Right) */}
@@ -195,7 +197,7 @@ const RetailShopCard = ({
                 justifyContent: 'center',
                 border: 'none',
               }}
-              title="Quick preview shop"
+              title={t('quick_preview_shop', 'Quick preview shop')}
             />
           </div>
         </div>
@@ -217,7 +219,7 @@ const RetailShopCard = ({
               textOverflow: 'ellipsis',
             }}
           >
-            {shop.branch ? shop.branch.replace('-', ' ') : 'STORE DIRECTORY'}
+            {shop.branch ? shop.branch.replace('-', ' ') : t('store_directory', 'STORE DIRECTORY')}
           </Text>
 
           <Title
@@ -274,7 +276,7 @@ const RetailShopCard = ({
               ★ {shop.rating}
             </Text>
             <Text style={{ color: publicTheme.subtext, fontSize: 'var(--font-small)' }}>
-              ({formatCompact(shopProducts.length)} items)
+              ({formatCompact(shopProducts.length)} {t('items', 'items')})
             </Text>
           </div>
 
@@ -290,7 +292,7 @@ const RetailShopCard = ({
               padding: isPhone ? '1px 6px' : '2px 8px',
             }}
           >
-            In stock
+            {t('in_stock', 'In stock')}
           </Tag>
         </Flex>
 
@@ -325,10 +327,10 @@ const RetailShopCard = ({
               padding: '0 8px',
             }}
           >
-            Visit
+            {t('visit', 'Visit')}
           </Button>
 
-          <Tooltip title={`Digital E-Menu (/shop/menu/${targetSlug})`}>
+          <Tooltip title={`${t('digital_emenu', 'Digital E-Menu')} (/shop/menu/${targetSlug})`}>
             <Button
               size="small"
               icon={<CoffeeOutlined style={{ color: '#A31D1D', fontSize: 13 }} />}
@@ -345,12 +347,12 @@ const RetailShopCard = ({
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
-              title="Digital E-Menu"
-              aria-label="Digital E-Menu"
+              title={t('digital_emenu', 'Digital E-Menu')}
+              aria-label={t('digital_emenu', 'Digital E-Menu')}
             />
           </Tooltip>
 
-          <Tooltip title="Telegram E-Menu">
+          <Tooltip title={t('telegram_emenu', 'Telegram E-Menu')}>
             <Button
               size="small"
               icon={<SendOutlined style={{ color: '#2481cc', fontSize: 12 }} />}
@@ -370,8 +372,8 @@ const RetailShopCard = ({
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
-              title="Telegram E-Menu"
-              aria-label="Telegram E-Menu"
+              title={t('telegram_emenu', 'Telegram E-Menu')}
+              aria-label={t('telegram_emenu', 'Telegram E-Menu')}
             />
           </Tooltip>
 
@@ -399,7 +401,7 @@ const RetailShopCard = ({
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            title={isWishlisted ? 'Remove favorite' : 'Add to favorites'}
+            title={isWishlisted ? t('remove_favorite', 'Remove favorite') : t('add_to_favorites', 'Add to favorites')}
           />
 
           <Button
@@ -420,7 +422,7 @@ const RetailShopCard = ({
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            title="Like shop"
+            title={t('like_shop', 'Like shop')}
           />
 
           <Button
@@ -441,7 +443,7 @@ const RetailShopCard = ({
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            title="Share shop"
+            title={t('share_shop', 'Share shop')}
           />
         </div>
       </div>

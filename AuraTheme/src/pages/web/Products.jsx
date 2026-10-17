@@ -44,6 +44,7 @@ import TelegramMiniAppModal from '../../components/web/shared/TelegramMiniAppMod
 import { fetchProducts, fetchCategories, fetchBrands, fetchShops, fetchBranches } from '../../utils/apiconfig';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { animateAddToCart } from '../../utils/helpers';
 import { formatCurrency, publicTheme, calculateTierPrice } from '../../utils/webTheme';
 
@@ -51,6 +52,7 @@ const { useBreakpoint } = Grid;
 const { Paragraph, Text, Title } = Typography;
 
 const Products = () => {
+  const { t } = useTranslation();
   const screens = useBreakpoint();
   const navigate = useNavigate();
   const { addToCart, addItem } = useCart();
@@ -241,9 +243,9 @@ const Products = () => {
     }
     try {
       await navigator.clipboard.writeText(shareUrl);
-      messageApi.success('Product link copied to clipboard');
+      messageApi.success(t('product_link_copied', 'Product link copied to clipboard'));
     } catch {
-      messageApi.info('Product link ready');
+      messageApi.info(t('product_link_ready', 'Product link ready'));
     }
   };
 
@@ -255,8 +257,8 @@ const Products = () => {
     addToCart(product);
 
     notificationApi.success({
-      message: `${product.name} added to cart`,
-      description: `Wholesale procurement item recorded. Bulk discounts will apply automatically.`,
+      message: `${product.name} ${t('added_to_cart_success', 'added to cart')}`,
+      description: t('wholesale_item_recorded', 'Wholesale procurement item recorded. Bulk discounts will apply automatically.'),
       placement: 'bottomRight',
     });
   };
@@ -264,7 +266,7 @@ const Products = () => {
   const handleWishlist = (product) => {
     const added = toggleWishlist(product);
     messageApi.success(
-      added ? `${product.name} added to procurement bookmarks` : `${product.name} removed from bookmarks`
+      added ? `${product.name} ${t('added_to_bookmarks', 'added to procurement bookmarks')}` : `${product.name} ${t('removed_from_bookmarks', 'removed from bookmarks')}`
     );
   };
 
@@ -287,7 +289,7 @@ const Products = () => {
       <Space direction="vertical" size={18} style={{ width: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text strong style={{ color: publicTheme.text, fontSize: 15 }}>
-            Sourcing Filters
+            {t('sourcing_filters', 'Sourcing Filters')}
           </Text>
           {activeFiltersCount > 0 && (
             <Button
@@ -295,7 +297,7 @@ const Products = () => {
               onClick={clearAllFilters}
               style={{ padding: 0, fontSize: 12, fontWeight: 700, color: publicTheme.primary }}
             >
-              Reset ({activeFiltersCount})
+              {t('reset', 'Reset')} ({activeFiltersCount})
             </Button>
           )}
         </div>
@@ -303,11 +305,11 @@ const Products = () => {
         {/* Keyword Search */}
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, marginBottom: 6, textTransform: 'uppercase' }}>
-            Product or SKU:
+            {t('product_or_sku', 'Product or SKU:')}
           </div>
           <Input
             prefix={<SearchOutlined style={{ color: publicTheme.subtext }} />}
-            placeholder="Search equipment, lot, brand..."
+            placeholder={t('search_equipment_placeholder', 'Search equipment, lot, brand...')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             allowClear
@@ -318,14 +320,14 @@ const Products = () => {
         {/* Category Filter */}
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, marginBottom: 6, textTransform: 'uppercase' }}>
-            Industry Category:
+            {t('industry_category', 'Industry Category:')}
           </div>
           <Select
             value={category}
             onChange={setCategory}
             style={{ width: '100%' }}
             options={[
-              { label: 'All Categories', value: 'all' },
+              { label: t('all_categories', 'All Categories'), value: 'all' },
               ...shopCategories.map((c) => ({ label: `${c.icon || '📦'} ${c.name}`, value: c.id })),
             ]}
           />
@@ -334,14 +336,14 @@ const Products = () => {
         {/* Regional Warehouse Hub */}
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, marginBottom: 6, textTransform: 'uppercase' }}>
-            Regional Logistics Hub:
+            {t('regional_logistics_hub', 'Regional Logistics Hub:')}
           </div>
           <Select
             value={branch}
             onChange={setBranch}
             style={{ width: '100%' }}
             options={[
-              { label: 'All Logistics Hubs', value: 'all' },
+              { label: t('all_logistics_hubs', 'All Logistics Hubs'), value: 'all' },
               ...branches.filter((b) => b.id !== 'all').map((b) => ({ label: `📍 ${b.name}`, value: b.id })),
             ]}
           />
@@ -350,14 +352,14 @@ const Products = () => {
         {/* Verified Supplier / Store */}
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, marginBottom: 6, textTransform: 'uppercase' }}>
-            Verified Supplier:
+            {t('verified_supplier', 'Verified Supplier:')}
           </div>
           <Select
             value={shopId}
             onChange={setShopId}
             style={{ width: '100%' }}
             options={[
-              { label: 'All Verified Suppliers', value: 'all' },
+              { label: t('all_verified_suppliers', 'All Verified Suppliers'), value: 'all' },
               ...shops.map((s) => ({ label: `🏬 ${s.name}`, value: s.id })),
             ]}
           />
@@ -374,7 +376,7 @@ const Products = () => {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <Text style={{ fontSize: 12, color: publicTheme.text, fontWeight: 700 }}>
-              Wholesale Price Range
+              {t('wholesale_price_range', 'Wholesale Price Range')}
             </Text>
           </div>
           <Slider
@@ -395,16 +397,16 @@ const Products = () => {
         {/* MOQ Filter */}
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, marginBottom: 6, textTransform: 'uppercase' }}>
-            Minimum Order Qty (MOQ):
+            {t('minimum_order_qty', 'Minimum Order Qty (MOQ):')}
           </div>
           <Select
             value={moqFilter}
             onChange={setMoqFilter}
             style={{ width: '100%' }}
             options={[
-              { label: 'Any Minimum Order Quantity', value: 'all' },
-              { label: 'Low MOQ (≤ 5 units / Samples)', value: 'low' },
-              { label: 'Bulk Wholesale (> 5 units)', value: 'bulk' },
+              { label: t('any_moq', 'Any Minimum Order Quantity'), value: 'all' },
+              { label: t('low_moq', 'Low MOQ (≤ 5 units / Samples)'), value: 'low' },
+              { label: t('bulk_wholesale', 'Bulk Wholesale (> 5 units)'), value: 'bulk' },
             ]}
           />
         </div>
@@ -423,10 +425,10 @@ const Products = () => {
         >
           <div>
             <div style={{ fontSize: 12.5, fontWeight: 700, color: publicTheme.text }}>
-              In-Stock Ready to Ship
+              {t('in_stock_ready', 'In-Stock Ready to Ship')}
             </div>
             <div style={{ fontSize: 11, color: publicTheme.subtext }}>
-              Exclude pre-orders and backorders
+              {t('exclude_preorders', 'Exclude pre-orders and backorders')}
             </div>
           </div>
           <Switch checked={stockOnly} onChange={setStockOnly} />
@@ -438,7 +440,7 @@ const Products = () => {
   // Table Columns for Wholesale Procurement Table View
   const procurementTableColumns = [
     {
-      title: 'Product / SKU',
+      title: t('product_sku', 'Product / SKU'),
       dataIndex: 'name',
       key: 'name',
       render: (_, record) => (
@@ -456,55 +458,55 @@ const Products = () => {
               {record.name}
             </div>
             <div style={{ fontSize: 11, color: publicTheme.subtext }}>
-              {record.brand || record.shopName} • {record.badge || 'Standard SKU'}
+              {record.brand || record.shopName} • {record.badge || t('standard_sku', 'Standard SKU')}
             </div>
           </div>
         </div>
       ),
     },
     {
-      title: 'Industry',
+      title: t('industry', 'Industry'),
       dataIndex: 'category',
       key: 'category',
       render: (cat) => <Tag color="blue" style={{ borderRadius: 6, fontSize: 11 }}>{cat}</Tag>,
     },
     {
-      title: 'MOQ',
+      title: t('moq', 'MOQ'),
       key: 'moq',
       render: (_, record) => (
         <span className="moq-pill">
-          MOQ: {record.moq || (record.price > 100 ? '2' : '5')} pcs
+          MOQ: {record.moq || (record.price > 100 ? '2' : '5')} {t('pcs', 'pcs')}
         </span>
       ),
     },
     {
-      title: 'Stock Status',
+      title: t('stock_status', 'Stock Status'),
       key: 'stock',
       render: (_, record) => (
         <Tag color={record.inStock ? 'green' : 'orange'} style={{ borderRadius: 6, fontSize: 11 }}>
-          {record.inStock ? '✓ Ready in Hub' : 'Lead Time 5d'}
+          {record.inStock ? `✓ ${t('ready_in_hub', 'Ready in Hub')}` : t('lead_time_5d', 'Lead Time 5d')}
         </Tag>
       ),
     },
     {
-      title: 'Wholesale Tier Price',
+      title: t('wholesale_tier_price', 'Wholesale Tier Price'),
       key: 'price',
       render: (_, record) => {
         const tier10 = calculateTierPrice(record.price, 10);
         return (
           <div>
             <div style={{ fontWeight: 800, fontSize: 14, color: publicTheme.text }}>
-              {formatCurrency(record.price)} <span style={{ fontSize: 10.5, fontWeight: 500, color: publicTheme.subtext }}>/ pc</span>
+              {formatCurrency(record.price)} <span style={{ fontSize: 10.5, fontWeight: 500, color: publicTheme.subtext }}>/ {t('pc', 'pc')}</span>
             </div>
             <div style={{ fontSize: 10.5, color: '#10b981', fontWeight: 700 }}>
-              10+ pcs: {formatCurrency(tier10.unitPrice)} (-12%)
+              10+ {t('pcs', 'pcs')}: {formatCurrency(tier10.unitPrice)} (-12%)
             </div>
           </div>
         );
       },
     },
     {
-      title: 'Action',
+      title: t('action', 'Action'),
       key: 'action',
       render: (_, record) => (
         <Space size={6}>
@@ -520,7 +522,7 @@ const Products = () => {
               background: publicTheme.primary,
             }}
           >
-            Order
+            {t('order', 'Order')}
           </Button>
           <Button
             size="small"
@@ -561,7 +563,7 @@ const Products = () => {
               onClick={() => setMobileFilterOpen(true)}
               style={{ borderRadius: 10, fontWeight: 700 }}
             >
-              Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
+              {t('filters', 'Filters')} {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
             </Button>
           )}
 
@@ -572,12 +574,12 @@ const Products = () => {
               onClick={() => setFiltersOpen(!filtersOpen)}
               style={{ borderRadius: 8, fontWeight: 700, color: publicTheme.text }}
             >
-              {filtersOpen ? 'Hide Filters' : 'Show Filters'}
+              {filtersOpen ? t('hide_filters', 'Hide Filters') : t('show_filters', 'Show Filters')}
             </Button>
           )}
 
           <span style={{ fontSize: 13, fontWeight: 700, color: publicTheme.text }}>
-            <strong>{filteredProducts.length}</strong> Products Found
+            <strong>{filteredProducts.length}</strong> {t('products_found', 'Products Found')}
           </span>
         </div>
 
@@ -588,11 +590,11 @@ const Products = () => {
             onChange={setSortBy}
             style={{ width: 170 }}
             options={[
-              { value: 'featured', label: '⭐ Recommended' },
-              { value: 'price-low', label: '💵 Price: Low to High' },
-              { value: 'price-high', label: '💎 Price: High to Low' },
-              { value: 'rating', label: '🏆 Supplier Rating' },
-              { value: 'name', label: '🔤 Product Name' },
+              { value: 'featured', label: t('sort_recommended', '⭐ Recommended') },
+              { value: 'price-low', label: t('price_low_to_high', '💵 Price: Low to High') },
+              { value: 'price-high', label: t('price_high_to_low', '💎 Price: High to Low') },
+              { value: 'rating', label: t('supplier_rating', '🏆 Supplier Rating') },
+              { value: 'name', label: t('product_name', '🔤 Product Name') },
             ]}
           />
 
@@ -604,7 +606,7 @@ const Products = () => {
                 icon={<AppstoreOutlined />}
                 onClick={() => setViewMode('grid4')}
                 style={{ borderRadius: 8, height: 28, width: 32, padding: 0 }}
-                title="Spacious Grid"
+                title={t('spacious_grid', 'Spacious Grid')}
               />
               <Button
                 type={viewMode === 'grid6' ? 'primary' : 'text'}
@@ -612,7 +614,7 @@ const Products = () => {
                 icon={<BarsOutlined />}
                 onClick={() => setViewMode('grid6')}
                 style={{ borderRadius: 8, height: 28, width: 32, padding: 0 }}
-                title="Dense Grid"
+                title={t('dense_grid', 'Dense Grid')}
               />
               <Button
                 type={viewMode === 'table' ? 'primary' : 'text'}
@@ -620,7 +622,7 @@ const Products = () => {
                 icon={<TableOutlined />}
                 onClick={() => setViewMode('table')}
                 style={{ borderRadius: 8, height: 28, width: 32, padding: 0 }}
-                title="Procurement Table View"
+                title={t('procurement_table_view', 'Procurement Table View')}
               />
             </div>
           )}
@@ -641,7 +643,7 @@ const Products = () => {
           {loading ? (
             <div style={{ padding: '80px 20px', textAlign: 'center' }}>
               <Spin size="large" />
-              <div style={{ marginTop: 16, color: publicTheme.subtext, fontWeight: 600 }}>Loading wholesale catalog from database...</div>
+              <div style={{ marginTop: 16, color: publicTheme.subtext, fontWeight: 600 }}>{t('loading_catalog', 'Loading wholesale catalog from database...')}</div>
             </div>
           ) : filteredProducts.length === 0 ? (
             <Card
@@ -655,17 +657,17 @@ const Products = () => {
             >
               <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
               <Title level={3} style={{ color: publicTheme.text, margin: '0 0 8px' }}>
-                No wholesale products match your filters
+                {t('no_products_match_filters', 'No wholesale products match your filters')}
               </Title>
               <Paragraph style={{ color: publicTheme.subtext, marginBottom: 20 }}>
-                Try adjusting your search terms, price range, or category filter to discover available items.
+                {t('adjust_filters_hint', 'Try adjusting your search terms, price range, or category filter to discover available items.')}
               </Paragraph>
               <Button
                 type="primary"
                 onClick={clearAllFilters}
                 style={{ borderRadius: 12, height: 42, fontWeight: 700, background: publicTheme.primary }}
               >
-                Reset All Filters
+                {t('reset_all_filters', 'Reset All Filters')}
               </Button>
             </Card>
           ) : viewMode === 'table' && screens.md ? (
@@ -713,7 +715,7 @@ const Products = () => {
             <div style={{ padding: '24px 0', textAlign: 'center' }}>
               <Spin indicator={<LoadingOutlined style={{ fontSize: 30, color: publicTheme.primary }} spin />} />
               <div style={{ fontSize: 13, fontWeight: 700, color: publicTheme.text, marginTop: 8 }}>
-                Loading more products...
+                {t('loading_more_products', 'Loading more products...')}
               </div>
             </div>
           )}
@@ -736,7 +738,7 @@ const Products = () => {
                   boxShadow: '0 4px 16px rgba(47, 111, 237, 0.12)',
                 }}
               >
-                Load next rows ({filteredProducts.length - visibleCount} more)
+                {t('load_next_rows', 'Load next rows')} ({filteredProducts.length - visibleCount} {t('more', 'more')})
               </Button>
             </div>
           )}
@@ -745,7 +747,7 @@ const Products = () => {
 
       {/* Mobile Filters Drawer */}
       <Drawer
-        title="Wholesale Sourcing Filters"
+        title={t('wholesale_sourcing_filters', 'Wholesale Sourcing Filters')}
         placement="left"
         closable={false}
         open={mobileFilterOpen}

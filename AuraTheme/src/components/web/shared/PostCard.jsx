@@ -25,11 +25,13 @@ import {
 } from '@ant-design/icons';
 import ReactionPopover from '../web/common/ReactionPopover';
 import { formatCurrency, publicTheme } from '../../utils/webTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Title, Paragraph, Text } = Typography;
 const { useBreakpoint } = Grid;
 
 const PostCard = ({ post, onReact, isOwner = false, onEdit, onDelete, onViewStats }) => {
+  const { t } = useTranslation();
   const screens = useBreakpoint();
   const [isLiked, setIsLiked] = useState(false);
 
@@ -40,19 +42,19 @@ const PostCard = ({ post, onReact, isOwner = false, onEdit, onDelete, onViewStat
   const ownerMenuItems = [
     {
       key: 'edit',
-      label: 'Edit Post',
+      label: t('edit_post', 'Edit Post'),
       icon: <EditOutlined />,
       onClick: () => onEdit && onEdit(post.id),
     },
     {
       key: 'stats',
-      label: 'View Stats',
+      label: t('view_stats', 'View Stats'),
       icon: <EyeOutlined />,
       onClick: () => onViewStats && onViewStats(post.id),
     },
     {
       key: 'delete',
-      label: 'Delete',
+      label: t('delete', 'Delete'),
       icon: <DeleteOutlined />,
       danger: true,
       onClick: () => onDelete && onDelete(post.id),
@@ -97,7 +99,7 @@ const PostCard = ({ post, onReact, isOwner = false, onEdit, onDelete, onViewStat
                 fontWeight: 700,
               }}
             >
-              Product
+              {t('product', 'Product')}
             </div>
           )}
 
@@ -231,7 +233,7 @@ const PostCard = ({ post, onReact, isOwner = false, onEdit, onDelete, onViewStat
               {post.rating}
             </Text>
             <Text style={{ fontSize: screens.xs ? 11 : 13, color: publicTheme.subtext }}>
-              ({post.reviewCount} reviews)
+              ({post.reviewCount} {t('reviews', 'reviews')})
             </Text>
           </div>
         )}
@@ -254,7 +256,7 @@ const PostCard = ({ post, onReact, isOwner = false, onEdit, onDelete, onViewStat
                   {post.user.name}
                 </Text>
                 <Text style={{ fontSize: screens.xs ? 10 : 12, color: publicTheme.subtext }}>
-                  {post.user.role || 'Business Team'}
+                  {post.user.role || t('business_team', 'Business Team')}
                 </Text>
               </div>
             </Space>
@@ -269,7 +271,7 @@ const PostCard = ({ post, onReact, isOwner = false, onEdit, onDelete, onViewStat
                 color: publicTheme.primary,
               }}
             >
-              {post.reactions.inspired + post.reactions.relatable} reactions
+              {post.reactions.inspired + post.reactions.relatable} {t('reactions', 'reactions')}
             </div>
           </Space>
 
@@ -296,7 +298,7 @@ const PostCard = ({ post, onReact, isOwner = false, onEdit, onDelete, onViewStat
                   }}
                   onClick={handleLike}
                 >
-                  {screens.xs ? '' : 'React'}
+                  {screens.xs ? '' : t('react', 'React')}
                 </Button>
               </Popover>
 
@@ -309,7 +311,7 @@ const PostCard = ({ post, onReact, isOwner = false, onEdit, onDelete, onViewStat
                   fontSize: screens.xs ? 12 : 14,
                 }}
               >
-                {screens.xs ? '' : 'Share'}
+                {screens.xs ? '' : t('share', 'Share')}
               </Button>
 
               {post.isProduct && (
@@ -323,7 +325,7 @@ const PostCard = ({ post, onReact, isOwner = false, onEdit, onDelete, onViewStat
                     fontSize: screens.xs ? 12 : 14,
                   }}
                 >
-                  {screens.xs ? '' : 'RFQ'}
+                  {screens.xs ? '' : t('rfq', 'RFQ')}
                 </Button>
               )}
             </Space>
@@ -353,7 +355,7 @@ const PostCard = ({ post, onReact, isOwner = false, onEdit, onDelete, onViewStat
                   fontSize: screens.xs ? 12 : 14,
                 }}
               >
-                {screens.xs ? '' : 'Flag'}
+                {screens.xs ? '' : t('flag', 'Flag')}
               </Button>
             </Space>
           </Space>

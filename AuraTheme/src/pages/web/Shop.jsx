@@ -16,46 +16,51 @@ import MarketplaceOrderRail from '../../components/web/shared/MarketplaceOrderRa
 import { fetchProducts, fetchCategories, fetchShops } from '../../utils/apiconfig';
 import { mapProduct, mapCategory, mapShop } from '../../utils/dataMappers';
 import { useCart } from '../../contexts/CartContext';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { formatCompact, formatCurrency, publicTheme } from '../../utils/webTheme';
 
 const { Title, Text, Paragraph } = Typography;
 const { useBreakpoint } = Grid;
 
-const SectionContainer = ({ title, children, onSeeMore, compact }) => (
-  <div
-    style={{
-      background: publicTheme.cardBackground,
-      borderRadius: 28,
-      padding: compact ? '16px' : '24px',
-      marginBottom: 24,
-      boxShadow: publicTheme.lightShadow,
-      border: `1px solid ${publicTheme.border}`,
-    }}
-  >
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
-      <Title level={3} style={{ margin: 0, fontSize: compact ? 18 : 20, color: publicTheme.text, fontWeight: 700 }}>
-        {title}
-      </Title>
-      {onSeeMore && (
-        <Button
-          type="link"
-          style={{
-            color: publicTheme.primary,
-            fontWeight: 600,
-            padding: 0,
-            fontSize: 13,
-          }}
-          onClick={onSeeMore}
-        >
-          See more <RightOutlined style={{ fontSize: 10 }} />
-        </Button>
-      )}
+const SectionContainer = ({ title, children, onSeeMore, compact }) => {
+  const { t } = useTranslation();
+  return (
+    <div
+      style={{
+        background: publicTheme.cardBackground,
+        borderRadius: 28,
+        padding: compact ? '16px' : '24px',
+        marginBottom: 24,
+        boxShadow: publicTheme.lightShadow,
+        border: `1px solid ${publicTheme.border}`,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
+        <Title level={3} style={{ margin: 0, fontSize: compact ? 18 : 20, color: publicTheme.text, fontWeight: 700 }}>
+          {title}
+        </Title>
+        {onSeeMore && (
+          <Button
+            type="link"
+            style={{
+              color: publicTheme.primary,
+              fontWeight: 600,
+              padding: 0,
+              fontSize: 13,
+            }}
+            onClick={onSeeMore}
+          >
+            {t('see_more', 'See more')} <RightOutlined style={{ fontSize: 10 }} />
+          </Button>
+        )}
+      </div>
+      {children}
     </div>
-    {children}
-  </div>
-);
+  );
+};
 
 const Shop = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const [notificationApi, notificationContextHolder] = notification.useNotification();
@@ -131,7 +136,7 @@ const Shop = () => {
     notificationApi.success({
       message: (
         <span style={{ fontWeight: 800, fontSize: 14 }}>
-          {product.name} Added to Cart!
+          {product.name} {t('added_to_cart', 'Added to Cart!')}
         </span>
       ),
       description: (
@@ -146,14 +151,14 @@ const Shop = () => {
             <div style={{ fontWeight: 800, fontSize: 14, color: '#2563eb' }}>
               ${Number(product.price).toFixed(2)}
             </div>
-            <div style={{ fontSize: 11, color: '#64748b' }}>Item ready for checkout</div>
+            <div style={{ fontSize: 11, color: '#64748b' }}>{t('item_ready_checkout', 'Item ready for checkout')}</div>
           </div>
         </div>
       ),
       actions: (
         <Space size={8}>
           <Button size="small" onClick={() => notificationApi.destroy()} style={{ borderRadius: 8, fontSize: 12 }}>
-            Continue
+            {t('continue_shopping', 'Continue')}
           </Button>
           <Button
             type="primary"
@@ -170,7 +175,7 @@ const Shop = () => {
               borderColor: '#2563eb',
             }}
           >
-            View Cart &amp; Checkout →
+            {t('view_cart_checkout', 'View Cart & Checkout →')}
           </Button>
         </Space>
       ),
@@ -286,23 +291,23 @@ const Shop = () => {
         <Row gutter={[18, 18]} align="middle">
           <Col xs={24} lg={14}>
             <Tag style={{ borderRadius: 999, border: 'none', background: publicTheme.pill, color: publicTheme.primary, fontWeight: 700, padding: '8px 14px', marginBottom: 12 }}>
-              Supplier chain marketplace
+              {t('supplier_chain_marketplace', 'Supplier chain marketplace')}
             </Tag>
             <Title level={1} style={{ marginTop: 0, marginBottom: 10, color: publicTheme.text, fontSize: 'clamp(28px, 4vw, 44px)', lineHeight: 1.1 }}>
-              Source business-ready products for warehousing, service, and operations teams.
+              {t('shop_hero_title', 'Source business-ready products for warehousing, service, and operations teams.')}
             </Title>
             <Paragraph style={{ color: publicTheme.subtext, fontSize: 16, display: 'block', marginBottom: 18 }}>
-              Search verified suppliers, compare hub availability, and move from sourcing filters into RFQ-ready product cards built for B2B buyers.
+              {t('shop_hero_desc', 'Search verified suppliers, compare hub availability, and move from sourcing filters into RFQ-ready product cards built for B2B buyers.')}
             </Paragraph>
             <Space size={10} wrap>
               <Tag style={{ margin: 0, borderRadius: 999, background: 'rgba(255,255,255,0.8)', color: publicTheme.text, border: `1px solid ${publicTheme.softBorder}`, padding: '8px 12px' }}>
-                {formatCompact(filteredProducts.length)} visible items
+                {formatCompact(filteredProducts.length)} {t('visible_items', 'visible items')}
               </Tag>
               <Tag style={{ margin: 0, borderRadius: 999, background: 'rgba(255,255,255,0.8)', color: publicTheme.text, border: `1px solid ${publicTheme.softBorder}`, padding: '8px 12px' }}>
-                {formatCompact(productsList.filter((item) => item.inStock).length)} in stock
+                {formatCompact(productsList.filter((item) => item.inStock).length)} {t('in_stock', 'in stock')}
               </Tag>
               <Tag style={{ margin: 0, borderRadius: 999, background: 'rgba(255,255,255,0.8)', color: publicTheme.text, border: `1px solid ${publicTheme.softBorder}`, padding: '8px 12px' }}>
-                {shopsList.length} verified stores
+                {shopsList.length} {t('verified_stores', 'verified stores')}
               </Tag>
             </Space>
           </Col>
@@ -317,11 +322,11 @@ const Shop = () => {
         <Alert
           type="error"
           showIcon
-          message="Catalog Connection Error"
+          message={t('catalog_connection_error', 'Catalog Connection Error')}
           description={fetchError}
           action={
             <Button size="small" danger onClick={loadData} icon={<ReloadOutlined />}>
-              Retry
+              {t('retry', 'Retry')}
             </Button>
           }
           style={{ marginBottom: 24, borderRadius: 16 }}
@@ -341,7 +346,7 @@ const Shop = () => {
           <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
             <Input
               size="large"
-              placeholder="Search products by title, SKU, or specs..."
+              placeholder={t('search_products_specs_placeholder', 'Search products by title, SKU, or specs...')}
               prefix={<SearchOutlined style={{ color: publicTheme.subtext }} />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -355,7 +360,7 @@ const Shop = () => {
               className="lg:hidden"
               style={{ borderRadius: 16 }}
             >
-              Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
+              {t('filters', 'Filters')} {activeFiltersCount > 0 && `(${activeFiltersCount})`}
             </Button>
           </div>
 
@@ -365,21 +370,21 @@ const Shop = () => {
               <Card style={{ borderRadius: 20, border: `1px solid ${publicTheme.border}`, background: publicTheme.cardBackground }} styles={{ body: { padding: 14 } }}>
                 <ShoppingCartOutlined style={{ fontSize: 18, color: publicTheme.primary, marginBottom: 6 }} />
                 <Title level={4} style={{ margin: 0, color: publicTheme.text }}>{formatCompact(productsList.filter((item) => item.inStock).length)}</Title>
-                <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>Ready-to-ship items</Text>
+                <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>{t('ready_to_ship_items', 'Ready-to-ship items')}</Text>
               </Card>
             </Col>
             <Col xs={12} md={8}>
               <Card style={{ borderRadius: 20, border: `1px solid ${publicTheme.border}`, background: publicTheme.cardBackground }} styles={{ body: { padding: 14 } }}>
                 <ThunderboltOutlined style={{ fontSize: 18, color: publicTheme.primary, marginBottom: 6 }} />
                 <Title level={4} style={{ margin: 0, color: publicTheme.text }}>{activeFiltersCount}</Title>
-                <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>Active filters</Text>
+                <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>{t('active_filters', 'Active filters')}</Text>
               </Card>
             </Col>
             <Col xs={24} md={8}>
               <Card style={{ borderRadius: 20, border: `1px solid ${publicTheme.border}`, background: publicTheme.cardBackground }} styles={{ body: { padding: 14 } }}>
                 <AppstoreOutlined style={{ fontSize: 18, color: publicTheme.primary, marginBottom: 6 }} />
                 <Title level={4} style={{ margin: 0, color: publicTheme.text }}>{filteredProducts.length}</Title>
-                <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>Items matching search</Text>
+                <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>{t('items_matching_search', 'Items matching search')}</Text>
               </Card>
             </Col>
           </Row>
@@ -388,10 +393,10 @@ const Shop = () => {
           {loading ? (
             <div style={{ textAlign: 'center', padding: '80px 0' }}>
               <Spin size="large" />
-              <div style={{ marginTop: 16, color: publicTheme.subtext, fontWeight: 600 }}>Loading real products catalog...</div>
+              <div style={{ marginTop: 16, color: publicTheme.subtext, fontWeight: 600 }}>{t('loading_products_catalog', 'Loading real products catalog...')}</div>
             </div>
           ) : filteredProducts.length > 0 ? (
-            <SectionContainer title={`Catalog Products (${filteredProducts.length})`} compact={screens.xs}>
+            <SectionContainer title={`${t('catalog_products', 'Catalog Products')} (${filteredProducts.length})`} compact={screens.xs}>
               <Row gutter={gridGutter}>
                 {filteredProducts.map((product) => (
                   <Col {...columnConfig} key={product.id}>
@@ -411,10 +416,10 @@ const Shop = () => {
                 description={
                   <div style={{ marginTop: 12 }}>
                     <Text strong style={{ fontSize: 16, display: 'block', color: publicTheme.text }}>
-                      No products found
+                      {t('no_products_found', 'No products found')}
                     </Text>
                     <Text style={{ color: publicTheme.subtext, fontSize: 13 }}>
-                      No supplier items match your current filter and search settings.
+                      {t('no_products_match_filter', 'No supplier items match your current filter and search settings.')}
                     </Text>
                   </div>
                 }
@@ -424,7 +429,7 @@ const Shop = () => {
                   onClick={handleClearFilters}
                   style={{ background: publicTheme.ribbon, border: 'none', color: 'white', height: 40, borderRadius: 14, fontWeight: 700, marginTop: 16 }}
                 >
-                  Reset all filters
+                  {t('reset_all_filters', 'Reset all filters')}
                 </Button>
               )}
             </Card>
@@ -434,7 +439,7 @@ const Shop = () => {
 
       {/* Mobile Filters Drawer */}
       <Drawer
-        title="Source Products Filters"
+        title={t('source_products_filters', 'Source Products Filters')}
         placement="left"
         onClose={() => setFilterDrawerVisible(false)}
         open={filterDrawerVisible}

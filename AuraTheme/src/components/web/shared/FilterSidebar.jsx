@@ -4,6 +4,7 @@ import { CheckCircleFilled, FilterOutlined, StarFilled } from '@ant-design/icons
 import { fetchCategories, fetchShops, fetchBranches } from '../../utils/apiconfig';
 import { mapCategory, mapShop } from '../../utils/dataMappers';
 import { publicTheme } from '../../utils/webTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Text, Title } = Typography;
 
@@ -22,10 +23,11 @@ const FilterSidebar = ({
   sellers: propSellers,
   branches: propBranches,
 }) => {
+  const { t } = useTranslation();
   const [sellerSearch, setSellerSearch] = useState('');
   const [categories, setCategories] = useState(propCategories || []);
   const [sellers, setSellers] = useState(propSellers || []);
-  const [branches, setBranches] = useState(propBranches || [{ id: 'all', name: 'All Branches' }]);
+  const [branches, setBranches] = useState(propBranches || [{ id: 'all', name: t('all_branches', 'All Branches') }]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -122,7 +124,7 @@ const FilterSidebar = ({
           <Space>
             <FilterOutlined style={{ color: publicTheme.primary, fontSize: 18 }} />
             <Title level={5} style={{ margin: 0, color: publicTheme.text }}>
-              Sourcing Filters
+              {t('sourcing_filters', 'Sourcing Filters')}
             </Title>
           </Space>
           {activeFiltersCount > 0 && (
@@ -136,7 +138,7 @@ const FilterSidebar = ({
                 fontWeight: 700,
               }}
             >
-              Clear all
+              {t('clear_all', 'Clear all')}
             </Button>
           )}
         </div>
@@ -161,15 +163,15 @@ const FilterSidebar = ({
                 fontWeight: 700,
               }}
             >
-              Buyer workflow
+              {t('buyer_workflow', 'Buyer workflow')}
             </Tag>
             <Text style={{ color: publicTheme.text, fontWeight: 600 }}>
-              Narrow verified suppliers, hub stock, and target price before starting a purchase request.
+              {t('filter_workflow_desc', 'Narrow verified suppliers, hub stock, and target price before starting a purchase request.')}
             </Text>
             <Space size={6}>
               <CheckCircleFilled style={{ color: publicTheme.success }} />
               <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>
-                {filteredSellers.length} suppliers in this lane
+                {filteredSellers.length} {t('suppliers_in_lane', 'suppliers in this lane')}
               </Text>
             </Space>
           </Space>
@@ -177,7 +179,7 @@ const FilterSidebar = ({
 
         <div>
           <Text strong style={{ display: 'block', marginBottom: 16, color: publicTheme.text }}>
-            Price range
+            {t('price_range', 'Price range')}
           </Text>
           <div style={{ padding: '0 8px' }}>
             <Slider
@@ -206,7 +208,7 @@ const FilterSidebar = ({
 
         <div>
           <Text strong style={{ display: 'block', marginBottom: 12, color: publicTheme.text }}>
-            Categories
+            {t('categories', 'Categories')}
           </Text>
           {loading && !categories.length ? (
             <div style={{ textAlign: 'center', padding: '12px 0' }}><Spin size="small" /></div>
@@ -227,7 +229,7 @@ const FilterSidebar = ({
                   border: selectedCategory === 'all' ? 'none' : `1px solid ${publicTheme.softBorder}`,
                 }}
               >
-                All Categories
+                {t('all_categories', 'All Categories')}
               </div>
               {categories.map((category) => (
                 <div
@@ -261,7 +263,7 @@ const FilterSidebar = ({
             <Divider style={{ margin: 0, borderColor: publicTheme.softBorder }} />
             <div>
               <Text strong style={{ display: 'block', marginBottom: 12, color: publicTheme.text }}>
-                Subcategories
+                {t('subcategories', 'Subcategories')}
               </Text>
               <Space direction="vertical" style={{ width: '100%' }} size={8}>
                 <div
@@ -275,7 +277,7 @@ const FilterSidebar = ({
                     fontWeight: !selectedSubcategory ? 700 : 500,
                   }}
                 >
-                  All Subcategories
+                  {t('all_subcategories', 'All Subcategories')}
                 </div>
                 {categories
                   .find((cat) => cat.id === selectedCategory)
@@ -307,7 +309,7 @@ const FilterSidebar = ({
 
         <div>
           <Text strong style={{ display: 'block', marginBottom: 12, color: publicTheme.text }}>
-            Fulfillment hub
+            {t('fulfillment_hub', 'Fulfillment hub')}
           </Text>
           <Select
             value={selectedBranch}
@@ -325,10 +327,10 @@ const FilterSidebar = ({
 
         <div>
           <Text strong style={{ display: 'block', marginBottom: 12, color: publicTheme.text }}>
-            Suppliers
+            {t('suppliers', 'Suppliers')}
           </Text>
           <Input
-            placeholder="Search suppliers..."
+            placeholder={t('search_suppliers_placeholder', 'Search suppliers...')}
             value={sellerSearch}
             onChange={(event) => setSellerSearch(event.target.value)}
             style={{ marginBottom: 12 }}

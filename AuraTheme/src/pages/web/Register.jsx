@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from '../../contexts/LanguageContext';
 import AuraLogo from '../../components/common/AuraLogo';
 import SocialAuthModal, { GoogleIcon, TelegramIcon } from '../../components/common/SocialAuthModal';
 import { registerCustomer } from '../../utils/apiconfig';
@@ -36,6 +37,7 @@ const { Option } = Select;
 export default function Register() {
   const [form] = Form.useForm();
   const { login } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -76,16 +78,16 @@ export default function Register() {
         }
 
         login(newUser);
-        message.success(`Welcome to Aura Supply, ${newUser.name}! Your account is registered in the database.`);
+        message.success(`${t('welcome_to_aura', 'Welcome to Aura Supply')}, ${newUser.name}! ${t('account_registered', 'Your account is registered in the database.')}`);
         setLoading(false);
         navigate('/profile');
       } else {
-        setErrorMsg(res?.message || res?.error || 'Registration failed. Please try again.');
+        setErrorMsg(res?.message || res?.error || t('registration_failed', 'Registration failed. Please try again.'));
         setLoading(false);
       }
     } catch (err) {
       console.warn('Registration error:', err);
-      setErrorMsg(err.message || 'Error creating account. Please try again.');
+      setErrorMsg(err.message || t('registration_error', 'Error creating account. Please try again.'));
       setLoading(false);
     }
   };
@@ -108,10 +110,10 @@ export default function Register() {
             <AuraLogo size={42} showText={true} textColor="#0f172a" />
           </div>
           <Title level={2} style={{ margin: '8px 0 4px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px' }}>
-            Create Your Account
+            {t('create_your_account', 'Create Your Account')}
           </Title>
           <Text style={{ color: '#64748b', fontSize: 13.5 }}>
-            Join Aura Supply for exclusive store rewards, table ordering &amp; order history.
+            {t('register_subtitle', 'Join Aura Supply for exclusive store rewards, table ordering & order history.')}
           </Text>
         </div>
 
@@ -141,14 +143,14 @@ export default function Register() {
           >
             <div style={{ fontSize: 20 }}>🎁</div>
             <div style={{ fontSize: 11.5, color: '#1e3a8a' }}>
-              <b>Member Perk:</b> Get <b>100 instant loyalty points</b> on registration for your next cafe or bakery visit!
+              <b>{t('member_perk', 'Member Perk')}:</b> {t('member_perk_desc', 'Get 100 instant loyalty points on registration for your next cafe or bakery visit!')}
             </div>
           </div>
 
           {/* Social 1-Tap Registration Concept (Google & Telegram) */}
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>
-              1-Tap Instant Registration:
+              {t('one_tap_instant_registration', '1-Tap Instant Registration:')}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <button
@@ -178,7 +180,7 @@ export default function Register() {
           </div>
 
           <Divider style={{ margin: '14px 0 18px', fontSize: 11.5, color: '#94a3b8' }}>
-            Or register with email
+            {t('or_register_with_email', 'Or register with email')}
           </Divider>
 
           {errorMsg && (
@@ -194,8 +196,8 @@ export default function Register() {
           >
             <Form.Item
               name="fullName"
-              label={<span style={{ fontWeight: 600, fontSize: 13 }}>Full Name</span>}
-              rules={[{ required: true, message: 'Please enter your full name' }]}
+              label={<span style={{ fontWeight: 600, fontSize: 13 }}>{t('full_name', 'Full Name')}</span>}
+              rules={[{ required: true, message: t('enter_full_name', 'Please enter your full name') }]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#94a3b8', marginRight: 6 }} />}
@@ -207,10 +209,10 @@ export default function Register() {
 
             <Form.Item
               name="email"
-              label={<span style={{ fontWeight: 600, fontSize: 13 }}>Email Address</span>}
+              label={<span style={{ fontWeight: 600, fontSize: 13 }}>{t('email_address', 'Email Address')}</span>}
               rules={[
-                { required: true, message: 'Please enter your email' },
-                { type: 'email', message: 'Please enter a valid email address' },
+                { required: true, message: t('enter_email', 'Please enter your email') },
+                { type: 'email', message: t('enter_valid_email', 'Please enter a valid email address') },
               ]}
             >
               <Input
@@ -223,7 +225,7 @@ export default function Register() {
 
             <Form.Item
               name="phone"
-              label={<span style={{ fontWeight: 600, fontSize: 13 }}>Phone / Telegram Number</span>}
+              label={<span style={{ fontWeight: 600, fontSize: 13 }}>{t('phone_telegram_number', 'Phone / Telegram Number')}</span>}
             >
               <Input
                 prefix={<PhoneOutlined style={{ color: '#94a3b8', marginRight: 6 }} />}
@@ -235,15 +237,15 @@ export default function Register() {
 
             <Form.Item
               name="password"
-              label={<span style={{ fontWeight: 600, fontSize: 13 }}>Password</span>}
+              label={<span style={{ fontWeight: 600, fontSize: 13 }}>{t('password', 'Password')}</span>}
               rules={[
-                { required: true, message: 'Please create a password' },
-                { min: 6, message: 'Password must be at least 6 characters' },
+                { required: true, message: t('create_password_req', 'Please create a password') },
+                { min: 6, message: t('password_min_6', 'Password must be at least 6 characters') },
               ]}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#94a3b8', marginRight: 6 }} />}
-                placeholder="At least 6 characters"
+                placeholder={t('at_least_6_chars', 'At least 6 characters')}
                 size="large"
                 style={{ borderRadius: 12, height: 46 }}
               />
@@ -251,23 +253,23 @@ export default function Register() {
 
             <Form.Item
               name="confirmPassword"
-              label={<span style={{ fontWeight: 600, fontSize: 13 }}>Confirm Password</span>}
+              label={<span style={{ fontWeight: 600, fontSize: 13 }}>{t('confirm_password', 'Confirm Password')}</span>}
               dependencies={['password']}
               rules={[
-                { required: true, message: 'Please confirm your password' },
+                { required: true, message: t('confirm_password_req', 'Please confirm your password') },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
                     if (!value || getFieldValue('password') === value) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('The two passwords do not match'));
+                    return Promise.reject(new Error(t('passwords_not_match', 'The two passwords do not match')));
                   },
                 }),
               ]}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#94a3b8', marginRight: 6 }} />}
-                placeholder="Repeat password"
+                placeholder={t('repeat_password', 'Repeat password')}
                 size="large"
                 style={{ borderRadius: 12, height: 46 }}
               />
@@ -275,12 +277,12 @@ export default function Register() {
 
             <Form.Item
               name="memberType"
-              label={<span style={{ fontWeight: 600, fontSize: 13 }}>Membership Type</span>}
+              label={<span style={{ fontWeight: 600, fontSize: 13 }}>{t('membership_type', 'Membership Type')}</span>}
             >
               <Select size="large" style={{ borderRadius: 12 }}>
-                <Option value="customer">🛍️ Dining &amp; Retail Customer</Option>
-                <Option value="b2b">🏪 Business / Wholesale Partner</Option>
-                <Option value="enthusiast">☕ Specialty Coffee Club Member</Option>
+                <Option value="customer">🛍️ {t('dining_retail_customer', 'Dining & Retail Customer')}</Option>
+                <Option value="b2b">🏪 {t('business_wholesale_partner', 'Business / Wholesale Partner')}</Option>
+                <Option value="enthusiast">☕ {t('specialty_coffee_member', 'Specialty Coffee Club Member')}</Option>
               </Select>
             </Form.Item>
 
@@ -290,13 +292,20 @@ export default function Register() {
               rules={[
                 {
                   validator: (_, value) =>
-                    value ? Promise.resolve() : Promise.reject(new Error('Please agree to terms & conditions')),
+                    value ? Promise.resolve() : Promise.reject(new Error(t('agree_terms_req', 'Please agree to terms & conditions'))),
                 },
               ]}
               style={{ marginBottom: 22 }}
             >
               <Checkbox style={{ fontSize: 12.5, color: '#64748b' }}>
-                I agree to the <a href="#terms" onClick={(e) => { e.preventDefault(); message.info('Aura Global terms apply.'); }}>Terms of Service</a> and <a href="#privacy" onClick={(e) => { e.preventDefault(); message.info('Aura Global privacy policy.'); }}>Privacy Policy</a>.
+                {t('agree_to_the', 'I agree to the')}{' '}
+                <a href="#terms" onClick={(e) => { e.preventDefault(); message.info(t('aura_terms_apply', 'Aura Global terms apply.')); }}>
+                  {t('terms_of_service', 'Terms of Service')}
+                </a>{' '}
+                {t('and', 'and')}{' '}
+                <a href="#privacy" onClick={(e) => { e.preventDefault(); message.info(t('aura_privacy_apply', 'Aura Global privacy policy.')); }}>
+                  {t('privacy_policy', 'Privacy Policy')}
+                </a>.
               </Checkbox>
             </Form.Item>
 
@@ -316,26 +325,26 @@ export default function Register() {
                   boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
                 }}
               >
-                Create Member Account
+                {t('create_member_account', 'Create Member Account')}
               </Button>
             </Form.Item>
           </Form>
 
           <Divider style={{ margin: '20px 0 16px', fontSize: 12, color: '#94a3b8' }}>
-            Already Registered?
+            {t('already_registered', 'Already Registered?')}
           </Divider>
 
           {/* Switch to Login */}
           <div style={{ textAlign: 'center' }}>
             <Text style={{ fontSize: 13, color: '#64748b' }}>
-              Already have an Aura account?{' '}
+              {t('already_have_account', 'Already have an Aura account?')}{' '}
             </Text>
             <Link
               to="/login"
               style={{ fontWeight: 700, color: '#2563eb', fontSize: 13 }}
               className="hover:underline"
             >
-              Sign In Instead &rarr;
+              {t('sign_in_instead', 'Sign In Instead')} &rarr;
             </Link>
           </div>
         </Card>
@@ -344,7 +353,7 @@ export default function Register() {
         <div style={{ textAlign: 'center', marginTop: 20 }}>
           <Space size={6} style={{ color: '#94a3b8', fontSize: 11.5 }}>
             <SafetyCertificateOutlined style={{ color: '#16a34a' }} />
-            <span>Encrypted Member Profile • Powered by Aura Global ERP</span>
+            <span>{t('encrypted_profile_footer', 'Encrypted Member Profile • Powered by Aura Global ERP')}</span>
           </Space>
         </div>
 

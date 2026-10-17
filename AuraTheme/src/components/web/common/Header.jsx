@@ -941,20 +941,20 @@ const Header = ({ currentPage }) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#f8fafc', fontWeight: 600 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-              Aura B2B Logistics Hubs: Phnom Penh • Bangkok • Rayong • Daun Penh
+              {t('b2b_logistics_strip', 'Aura B2B Logistics Hubs: Phnom Penh • Bangkok • Rayong • Daun Penh')}
             </span>
             <span style={{ color: '#334155' }}>•</span>
-            <span style={{ color: '#cbd5e1' }}>Direct Wholesale Sourcing & Multi-Store Automated Dispatch</span>
+            <span style={{ color: '#cbd5e1' }}>{t('wholesale_sourcing_strip', 'Direct Wholesale Sourcing & Multi-Store Automated Dispatch')}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span>📞 Sourcing Hotline: <strong style={{ color: '#f8fafc' }}>+855 12 345 678</strong></span>
+            <span>📞 {t('sourcing_hotline', 'Sourcing Hotline')}: <strong style={{ color: '#f8fafc' }}>+855 12 345 678</strong></span>
             <span style={{ color: '#334155' }}>|</span>
             <a href="https://t.me/aura_emenu_order_bot" target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', fontWeight: 700 }}>
-              Telegram Bot Direct
+              {t('telegram_bot_direct', 'Telegram Bot Direct')}
             </a>
             <span style={{ color: '#334155' }}>|</span>
             <Link to="/service" style={{ color: '#fb923c', fontWeight: 700 }}>
-              Request Quote (RFQ)
+              {t('request_quote_rfq', 'Request Quote (RFQ)')}
             </Link>
           </div>
         </div>
@@ -987,7 +987,7 @@ const Header = ({ currentPage }) => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}
                 onPressEnter={() => handlePerformGlobalSearch()}
-                placeholder="Search products across all stores..."
+                placeholder={t('search_placeholder', 'Search wholesale products, stores, categories...')}
                 prefix={<SearchOutlined style={{ color: publicTheme.primary, fontSize: 13, marginRight: 2 }} />}
                 allowClear
                 style={{
@@ -1080,7 +1080,7 @@ const Header = ({ currentPage }) => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setIsSearchFocused(true)}
                   onPressEnter={() => handlePerformGlobalSearch()}
-                  placeholder="Search products across all stores (e.g. Croissant, Latte)..."
+                  placeholder={t('search_placeholder', 'Search wholesale products, stores, categories...')}
                   prefix={<SearchOutlined style={{ color: publicTheme.primary, fontSize: 13 }} />}
                   allowClear
                   style={{
@@ -1423,10 +1423,10 @@ const Header = ({ currentPage }) => {
                         <Avatar icon={<UserOutlined />} size={26} style={{ background: publicTheme.primary }} />
                         <div style={{ textAlign: 'left' }}>
                           <div style={{ fontSize: 'var(--font-base)', fontWeight: 700, color: publicTheme.text }}>
-                            {user ? user.name : 'Guest'}
+                            {user ? user.name : t('guest', 'Guest')}
                           </div>
                           <div style={{ fontSize: 'var(--font-small)', color: publicTheme.subtext }}>
-                            {user ? 'Workspace ready' : 'Sign in'}
+                            {user ? t('workspace_ready', 'Workspace ready') : t('sign_in', 'Sign in')}
                           </div>
                         </div>
                       </Space>
@@ -1497,10 +1497,10 @@ const Header = ({ currentPage }) => {
                       textOverflow: 'ellipsis',
                     }}
                   >
-                    {user ? `${user.name}'s workspace` : 'Guest workspace'}
+                    {user ? `${user.name}'s ${t('workspace', 'workspace')}` : t('guest_workspace', 'Guest workspace')}
                   </div>
                   <div style={{ fontSize: 10.5, color: publicTheme.primary, fontWeight: 600 }}>
-                    {user ? (user.role || 'Active Member') : 'Tap to switch or sign in ▾'}
+                    {user ? (user.role || t('active_member', 'Active Member')) : t('tap_to_switch', 'Tap to switch or sign in ▾')}
                   </div>
                 </div>
               </Space>
@@ -1530,10 +1530,10 @@ const Header = ({ currentPage }) => {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                🏢 Workspace Mode
+                🏢 {t('workspace_mode', 'Workspace Mode')}
               </span>
               <Tag color={user ? 'blue' : 'default'} style={{ margin: 0, borderRadius: 6, fontWeight: 700, fontSize: 10.5 }}>
-                {user ? 'Authenticated' : 'Guest Mode'}
+                {user ? t('authenticated', 'Authenticated') : t('guest_mode', 'Guest Mode')}
               </Tag>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
@@ -1549,7 +1549,7 @@ const Header = ({ currentPage }) => {
                     }}
                     style={{ flex: 1, borderRadius: 8, fontWeight: 700, fontSize: 12 }}
                   >
-                    Sign In
+                    {t('sign_in', 'Sign In')}
                   </Button>
                   <Button
                     size="small"
@@ -1560,7 +1560,7 @@ const Header = ({ currentPage }) => {
                     }}
                     style={{ flex: 1, borderRadius: 8, fontSize: 12 }}
                   >
-                    Register
+                    {t('register', 'Register')}
                   </Button>
                 </>
               ) : (
@@ -1574,7 +1574,7 @@ const Header = ({ currentPage }) => {
                     }}
                     style={{ flex: 1, borderRadius: 8, fontWeight: 600, fontSize: 12 }}
                   >
-                    Profile
+                    {t('profile', 'Profile')}
                   </Button>
                   <Button
                     size="small"
@@ -1585,7 +1585,7 @@ const Header = ({ currentPage }) => {
                     }}
                     style={{ flex: 1, borderRadius: 8, fontWeight: 600, fontSize: 12 }}
                   >
-                    ERP Portal
+                    {t('erp_portal', 'ERP Portal')}
                   </Button>
                 </>
               )}
@@ -1641,7 +1641,7 @@ const Header = ({ currentPage }) => {
           </div>
 
           <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 6px' }}>
-            Navigation
+            {t('navigation', 'Navigation')}
           </div>
           {navItems.map((item) => (
             <Button
@@ -1669,7 +1669,7 @@ const Header = ({ currentPage }) => {
           ))}
 
           <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 6px 4px' }}>
-            Quick Shortcuts
+            {t('quick_shortcuts', 'Quick Shortcuts')}
           </div>
           <Button
             block
@@ -1688,7 +1688,7 @@ const Header = ({ currentPage }) => {
               fontSize: 13,
             }}
           >
-            <span>Saved Wishlist</span>
+            <span>{t('saved_wishlist', 'Saved Wishlist')}</span>
             {wishlistItemCount > 0 && <Tag color="blue">{wishlistItemCount}</Tag>}
           </Button>
 
@@ -1709,7 +1709,7 @@ const Header = ({ currentPage }) => {
               fontSize: 13,
             }}
           >
-            <span>Cart & Orders</span>
+            <span>{t('cart_and_orders', 'Cart & Orders')}</span>
             {cartItemCount > 0 && <Tag color="blue">{cartItemCount}</Tag>}
           </Button>
 
@@ -1729,11 +1729,11 @@ const Header = ({ currentPage }) => {
               fontSize: 13,
             }}
           >
-            Operations Portal
+            {t('operations_portal', 'Operations Portal')}
           </Button>
 
           <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 6px 4px' }}>
-            Account
+            {t('account', 'Account')}
           </div>
           {user ? (
             <>
@@ -1752,7 +1752,7 @@ const Header = ({ currentPage }) => {
                   fontSize: 13,
                 }}
               >
-                My Profile ({user.name})
+                {t('my_profile', 'My Profile')} ({user.name})
               </Button>
               <Button
                 block
@@ -1768,7 +1768,7 @@ const Header = ({ currentPage }) => {
                   fontSize: 13,
                 }}
               >
-                Logout
+                {t('logout', 'Logout')}
               </Button>
             </>
           ) : (
@@ -1788,7 +1788,7 @@ const Header = ({ currentPage }) => {
                   fontSize: 13,
                 }}
               >
-                Sign In to Account
+                {t('sign_in_to_account', 'Sign In to Account')}
               </Button>
               <Button
                 block
@@ -1804,7 +1804,7 @@ const Header = ({ currentPage }) => {
                   fontWeight: 600,
                 }}
               >
-                Register New Account
+                {t('register_new_account', 'Register New Account')}
               </Button>
             </Space>
           )}

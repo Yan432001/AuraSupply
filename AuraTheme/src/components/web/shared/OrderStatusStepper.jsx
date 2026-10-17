@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
 /**
  * Standard Order States:
@@ -86,12 +87,41 @@ export default function OrderStatusStepper({
   compact = false,
   className = '',
 }) {
+  const { t } = useTranslation();
   const activeStatus = status;
   const currentStepIndex = getOrderStepIndex(activeStatus);
-  const currentStep = ORDER_STEPS[currentStepIndex];
+
+  const localizedSteps = [
+    {
+      ...ORDER_STEPS[0],
+      label: t('order_pending', 'Pending'),
+      sublabel: t('order_placed', 'Order Placed'),
+      hint: t('awaiting_shop_review', 'Awaiting shop review'),
+    },
+    {
+      ...ORDER_STEPS[1],
+      label: t('order_confirmed', 'Confirmed'),
+      sublabel: t('accepted_by_shop', 'Accepted by Shop'),
+      hint: t('shop_accepted_order', 'Shop staff has accepted the order'),
+    },
+    {
+      ...ORDER_STEPS[2],
+      label: t('order_preparing', 'Preparing'),
+      sublabel: t('kitchen_in_progress', 'Kitchen in Progress'),
+      hint: t('items_being_prepared', 'Items are being prepared & packed'),
+    },
+    {
+      ...ORDER_STEPS[3],
+      label: t('order_delivered', 'Delivered'),
+      sublabel: t('completed_and_served', 'Completed & Served'),
+      hint: t('order_completed_delivered', 'Order completed and delivered to table / customer'),
+    },
+  ];
+
+  const currentStep = localizedSteps[currentStepIndex];
 
   // Calculate percentage width for progress line
-  const progressPercent = (currentStepIndex / (ORDER_STEPS.length - 1)) * 100;
+  const progressPercent = (currentStepIndex / (localizedSteps.length - 1)) * 100;
 
   return (
     <div
@@ -102,7 +132,7 @@ export default function OrderStatusStepper({
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full animate-ping bg-blue-500" />
           <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Order Progress
+            {t('order_progress', 'Order Progress')}
           </span>
         </div>
 
@@ -114,7 +144,7 @@ export default function OrderStatusStepper({
             <span>{currentStep.label}</span>
           </span>
           <span className="text-[10px] text-slate-400 font-mono font-medium">
-            Step {currentStepIndex + 1}/4
+            {t('step', 'Step')} {currentStepIndex + 1}/4
           </span>
         </div>
       </div>
@@ -132,7 +162,7 @@ export default function OrderStatusStepper({
 
         {/* Stepper Nodes */}
         <div className="relative z-10 flex items-start justify-between">
-          {ORDER_STEPS.map((step, idx) => {
+          {localizedSteps.map((step, idx) => {
             const isCompleted = idx < currentStepIndex;
             const isCurrent = idx === currentStepIndex;
             const isUpcoming = idx > currentStepIndex;
@@ -140,10 +170,7 @@ export default function OrderStatusStepper({
             return (
               <div
                 key={step.key}
-                onClick={showSimulateControls ? () => handleStepClick(step.key) : undefined}
-                className={`flex flex-col items-center flex-1 transition-all select-none ${
-                  showSimulateControls ? 'cursor-pointer group' : ''
-                }`}
+                className="flex flex-col items-center flex-1 transition-all select-none"
               >
                 {/* Node Circle */}
                 <div
@@ -193,7 +220,7 @@ export default function OrderStatusStepper({
       {/* Status Hint Note */}
       <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
         <span className="flex items-center gap-1.5">
-          <span className="text-slate-400">Status Details:</span>
+          <span className="text-slate-400">{t('status_details', 'Status Details')}:</span>
           <span className="font-medium text-slate-700 dark:text-slate-300">
             {currentStep.hint}
           </span>

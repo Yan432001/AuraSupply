@@ -31,6 +31,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchProducts, fetchShops, fetchCategories } from '../../utils/apiconfig';
 import { mapProduct, mapShop, mapCategory } from '../../utils/dataMappers';
 import { formatCurrency, publicTheme } from '../../utils/webTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { useBreakpoint } = Grid;
@@ -45,29 +46,8 @@ const shopTheme = {
   shadow: '0 20px 48px rgba(255, 106, 26, 0.14)',
 };
 
-const promoCards = [
-  {
-    title: 'Flash deals',
-    text: 'Fast discounts across top warehouse and workplace products.',
-    accent: 'linear-gradient(135deg, #ff6a1a 0%, #ff8d3a 100%)',
-  },
-  {
-    title: 'Factory direct',
-    text: 'Browse supplier-led offers with more aggressive marketplace pricing.',
-    accent: 'linear-gradient(135deg, #ff8447 0%, #ffb067 100%)',
-  },
-];
-
-const quickChannels = [
-  { title: 'New arrivals', icon: <RocketOutlined /> },
-  { title: 'Hot suppliers', icon: <FireOutlined /> },
-  { title: 'Bundle promos', icon: <GiftOutlined /> },
-  { title: 'Shop floors', icon: <ShopOutlined /> },
-  { title: 'Trending tools', icon: <ThunderboltOutlined /> },
-  { title: 'All categories', icon: <AppstoreOutlined /> },
-];
-
 const MarketplaceTile = ({ product, compact = false }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
@@ -116,7 +96,7 @@ const MarketplaceTile = ({ product, compact = false }) => {
     >
       <Space direction="vertical" size={6} style={{ width: '100%' }}>
         <Text style={{ fontSize: 12, color: publicTheme.subtext }}>
-          {product.storeName || 'Verified Supplier'}
+          {product.storeName || t('verified_supplier', 'Verified Supplier')}
         </Text>
         <Title
           level={4}
@@ -150,6 +130,7 @@ const MarketplaceTile = ({ product, compact = false }) => {
 };
 
 export default function ShopHome() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const screens = useBreakpoint();
 
@@ -159,6 +140,28 @@ export default function ShopHome() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const promoCards = [
+    {
+      title: t('flash_deals', 'Flash deals'),
+      text: t('flash_deals_desc', 'Fast discounts across top warehouse and workplace products.'),
+      accent: 'linear-gradient(135deg, #ff6a1a 0%, #ff8d3a 100%)',
+    },
+    {
+      title: t('factory_direct', 'Factory direct'),
+      text: t('factory_direct_desc', 'Browse supplier-led offers with more aggressive marketplace pricing.'),
+      accent: 'linear-gradient(135deg, #ff8447 0%, #ffb067 100%)',
+    },
+  ];
+
+  const quickChannels = [
+    { title: t('new_arrivals', 'New arrivals'), icon: <RocketOutlined /> },
+    { title: t('hot_suppliers', 'Hot suppliers'), icon: <FireOutlined /> },
+    { title: t('bundle_promos', 'Bundle promos'), icon: <GiftOutlined /> },
+    { title: t('shop_floors', 'Shop floors'), icon: <ShopOutlined /> },
+    { title: t('trending_tools', 'Trending tools'), icon: <ThunderboltOutlined /> },
+    { title: t('all_categories', 'All categories'), icon: <AppstoreOutlined /> },
+  ];
 
   const loadData = () => {
     setLoading(true);
@@ -174,7 +177,7 @@ export default function ShopHome() {
         } else if (prodRes.status === 'fulfilled' && prodRes.value?.data?.products && Array.isArray(prodRes.value.data.products)) {
           setProductsList(prodRes.value.data.products.map(mapProduct));
         } else {
-          setError(prodRes.value?.error || 'Could not load products catalog');
+          setError(prodRes.value?.error || t('could_not_load_catalog', 'Could not load products catalog'));
         }
 
         if (shopRes.status === 'fulfilled' && shopRes.value?.success && Array.isArray(shopRes.value.data)) {
@@ -186,7 +189,7 @@ export default function ShopHome() {
         }
       })
       .catch((err) => {
-        setError(err.message || 'Network error fetching shop data');
+        setError(err.message || t('network_error_shop', 'Network error fetching shop data'));
       })
       .finally(() => {
         setLoading(false);
@@ -235,13 +238,13 @@ export default function ShopHome() {
                   padding: '8px 14px',
                 }}
               >
-                Marketplace homepage
+                {t('marketplace_homepage', 'Marketplace homepage')}
               </Tag>
               <Title level={1} style={{ margin: '12px 0 6px', color: shopTheme.dark, fontSize: 'clamp(28px, 5vw, 48px)', lineHeight: 1.05 }}>
-                Shop with a brighter, faster discovery page.
+                {t('shop_home_title', 'Shop with a brighter, faster discovery page.')}
               </Title>
               <Paragraph style={{ margin: 0, color: '#7a4b2f', maxWidth: 720, fontSize: 16 }}>
-                Bold search, category navigation, supplier channels, and dense product discovery connected live to real database inventory.
+                {t('shop_home_desc', 'Bold search, category navigation, supplier channels, and dense product discovery connected live to real database inventory.')}
               </Paragraph>
             </div>
             <Space wrap>
@@ -256,7 +259,7 @@ export default function ShopHome() {
                   fontWeight: 700,
                 }}
               >
-                Open Full Catalog
+                {t('open_full_catalog', 'Open Full Catalog')}
               </Button>
               <Button
                 onClick={() => navigate('/shops')}
@@ -268,7 +271,7 @@ export default function ShopHome() {
                   fontWeight: 700,
                 }}
               >
-                All Verified Stores ({sellersList.length})
+                {t('all_verified_stores', 'All Verified Stores')} ({sellersList.length})
               </Button>
             </Space>
           </Flex>
@@ -277,7 +280,7 @@ export default function ShopHome() {
             <Input
               size="large"
               prefix={<SearchOutlined style={{ color: shopTheme.primary }} />}
-              placeholder="Search hot products, suppliers, and category deals"
+              placeholder={t('search_hot_deals_placeholder', 'Search hot products, suppliers, and category deals')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -303,7 +306,7 @@ export default function ShopHome() {
                 fontWeight: 800,
               }}
             >
-              Search Shop
+              {t('search_shop', 'Search Shop')}
             </Button>
           </Flex>
 
@@ -352,7 +355,7 @@ export default function ShopHome() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '80px 0' }}>
           <Spin size="large" />
-          <div style={{ marginTop: 16, color: publicTheme.subtext, fontWeight: 600 }}>Loading marketplace discovery...</div>
+          <div style={{ marginTop: 16, color: publicTheme.subtext, fontWeight: 600 }}>{t('loading_marketplace_discovery', 'Loading marketplace discovery...')}</div>
         </div>
       ) : (
         <>
@@ -372,7 +375,7 @@ export default function ShopHome() {
               >
                 <Space direction="vertical" size={10} style={{ width: '100%' }}>
                   <Text strong style={{ color: shopTheme.primary, fontSize: 16 }}>
-                    Top categories
+                    {t('top_categories', 'Top categories')}
                   </Text>
                   {categoriesList.slice(0, 6).map((category) => (
                     <Flex
@@ -429,13 +432,13 @@ export default function ShopHome() {
                           fontWeight: 700,
                         }}
                       >
-                        Marketplace promo zone
+                        {t('marketplace_promo_zone', 'Marketplace promo zone')}
                       </Tag>
                       <Title level={2} style={{ margin: 0, color: 'white', lineHeight: 1.05 }}>
-                        Big visuals, hot offers, and fast shopping entry points.
+                        {t('promo_banner_title', 'Big visuals, hot offers, and fast shopping entry points.')}
                       </Title>
                       <Paragraph style={{ margin: 0, color: 'rgba(255,255,255,0.86)', fontSize: 15 }}>
-                        Discover live commercial equipment, specialty beverages, and packaging direct from verified stores.
+                        {t('promo_banner_desc', 'Discover live commercial equipment, specialty beverages, and packaging direct from verified stores.')}
                       </Paragraph>
                       <Space wrap>
                         <Button
@@ -450,7 +453,7 @@ export default function ShopHome() {
                             fontWeight: 800,
                           }}
                         >
-                          Shop flash sale
+                          {t('shop_flash_sale', 'Shop flash sale')}
                         </Button>
                       </Space>
                     </Space>
@@ -496,7 +499,7 @@ export default function ShopHome() {
                   styles={{ body: { padding: 18 } }}
                 >
                   <Space direction="vertical" size={10} style={{ width: '100%' }}>
-                    <Text strong style={{ color: shopTheme.primary }}>Hot rankings</Text>
+                    <Text strong style={{ color: shopTheme.primary }}>{t('hot_rankings', 'Hot rankings')}</Text>
                     {productsList.slice(0, 4).map((product, index) => (
                       <Flex
                         key={product.id}
@@ -542,7 +545,7 @@ export default function ShopHome() {
                   styles={{ body: { padding: 18 } }}
                 >
                   <Space direction="vertical" size={10} style={{ width: '100%' }}>
-                    <Text strong style={{ color: shopTheme.primary }}>Verified Store Partners</Text>
+                    <Text strong style={{ color: shopTheme.primary }}>{t('verified_store_partners', 'Verified Store Partners')}</Text>
                     {sellersList.slice(0, 3).map((seller) => (
                       <Flex
                         key={seller.id}
@@ -585,10 +588,10 @@ export default function ShopHome() {
             <Flex justify="space-between" align={screens.xs ? 'flex-start' : 'center'} vertical={screens.xs} gap={10} style={{ marginBottom: 18 }}>
               <div>
                 <Title level={3} style={{ margin: 0, color: publicTheme.text }}>
-                  Flash sale picks
+                  {t('flash_sale_picks', 'Flash sale picks')}
                 </Title>
                 <Paragraph style={{ margin: '6px 0 0', color: publicTheme.subtext }}>
-                  Live commercial catalog products currently available for order.
+                  {t('flash_sale_picks_desc', 'Live commercial catalog products currently available for order.')}
                 </Paragraph>
               </div>
               <Button
@@ -596,7 +599,7 @@ export default function ShopHome() {
                 onClick={() => navigate('/shop')}
                 style={{ color: shopTheme.primary, fontWeight: 700, padding: 0 }}
               >
-                Go to full catalog <RightOutlined />
+                {t('go_to_full_catalog', 'Go to full catalog')} <RightOutlined />
               </Button>
             </Flex>
 
@@ -609,7 +612,7 @@ export default function ShopHome() {
                 ))}
               </Row>
             ) : (
-              <Empty description="No products found" />
+              <Empty description={t('no_products_found', 'No products found')} />
             )}
           </Card>
         </>

@@ -11,6 +11,7 @@ import {
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { formatCurrency, publicTheme } from '../../utils/webTheme';
 
 const { Paragraph, Text, Title } = Typography;
@@ -19,6 +20,7 @@ export default function Wishlist() {
   const navigate = useNavigate();
   const { addItem, addToCart } = useCart();
   const { wishlist, removeFromWishlist, wishlistItemCount, clearWishlist } = useWishlist();
+  const { t } = useTranslation();
 
   const handleMoveAllToCart = () => {
     if (wishlist.length === 0) return;
@@ -31,7 +33,7 @@ export default function Wishlist() {
         quantity: item.moq || 1,
       });
     });
-    message.success(`Moved all ${wishlist.length} bookmarked products to your procurement cart!`);
+    message.success(t('moved_all_to_cart_msg', `Moved all ${wishlist.length} bookmarked products to your procurement cart!`));
     navigate('/cart');
   };
 
@@ -43,7 +45,7 @@ export default function Wishlist() {
       image: item.image,
       quantity: item.moq || 1,
     });
-    message.success(`Added ${item.name} to cart!`);
+    message.success(`${t('added_to_cart', 'Added to cart')}: ${item.name}!`);
   };
 
   if (wishlist.length === 0) {
@@ -63,10 +65,10 @@ export default function Wishlist() {
             <HeartOutlined />
           </div>
           <Title level={3} style={{ color: publicTheme.text, margin: '0 0 8px', fontWeight: 850 }}>
-            Your Sourcing Shortlist is Empty
+            {t('sourcing_shortlist_empty', 'Your Sourcing Shortlist is Empty')}
           </Title>
           <Paragraph style={{ color: publicTheme.subtext, marginBottom: 24, fontSize: 14 }}>
-            Bookmark equipment, wholesale ingredients, packaging, and commercial supplies to compare and purchase in bulk.
+            {t('sourcing_shortlist_empty_desc', 'Bookmark equipment, wholesale ingredients, packaging, and commercial supplies to compare and purchase in bulk.')}
           </Paragraph>
           <Button
             type="primary"
@@ -81,7 +83,7 @@ export default function Wishlist() {
               fontWeight: 700,
             }}
           >
-            Explore Wholesale Catalog
+            {t('explore_wholesale_catalog', 'Explore Wholesale Catalog')}
           </Button>
         </Card>
       </div>
@@ -108,10 +110,10 @@ export default function Wishlist() {
       >
         <div>
           <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#38bdf8', fontWeight: 800, marginBottom: 4 }}>
-            Procurement Bookmarks
+            {t('procurement_bookmarks', 'Procurement Bookmarks')}
           </div>
           <Title level={2} style={{ color: '#ffffff', margin: 0, fontWeight: 850 }}>
-            Sourcing Shortlist ({wishlistItemCount} Items)
+            {t('sourcing_shortlist', 'Sourcing Shortlist')} ({wishlistItemCount} {t('items', 'Items')})
           </Title>
         </div>
 
@@ -129,7 +131,7 @@ export default function Wishlist() {
               paddingInline: 20,
             }}
           >
-            Move All to Cart &rarr;
+            {t('move_all_to_cart', 'Move All to Cart')} &rarr;
           </Button>
         </Space>
       </div>
@@ -175,7 +177,7 @@ export default function Wishlist() {
             >
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: publicTheme.subtext, textTransform: 'uppercase' }}>
-                  {item.brand || item.shopName || 'Wholesale Supplier'}
+                  {item.brand || item.shopName || t('wholesale_supplier', 'Wholesale Supplier')}
                 </div>
                 <div
                   onClick={() => navigate(`/products/${item.id}`)}
@@ -201,7 +203,7 @@ export default function Wishlist() {
                     {formatCurrency(item.price)}
                   </span>
                   <Tag color="green" style={{ borderRadius: 6, margin: 0 }}>
-                    In Stock
+                    {t('in_stock', 'In Stock')}
                   </Tag>
                 </div>
 
@@ -216,7 +218,7 @@ export default function Wishlist() {
                     background: publicTheme.primary,
                   }}
                 >
-                  Add to Cart
+                  {t('add_to_cart', 'Add to Cart')}
                 </Button>
               </div>
             </Card>

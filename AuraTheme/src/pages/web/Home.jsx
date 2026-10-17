@@ -43,6 +43,7 @@ import { mapShop, mapProduct, mapCategory, mapShopSettings } from '../../utils/d
 import { useCart } from '../../contexts/CartContext';
 
 import { useWishlist } from '../../contexts/WishlistContext';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { publicTheme, formatCurrency, formatCompact } from '../../utils/webTheme';
 import { animateAddToCart } from '../../utils/helpers';
 import TelegramMiniAppModal, { BOTFATHER_CONFIG } from '../../components/web/shared/TelegramMiniAppModal';
@@ -74,6 +75,7 @@ const useCountdown = (hours = 24) => {
 };
 
 export default function Home() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const screens = useBreakpoint();
   const countdown = useCountdown(18);
@@ -149,9 +151,9 @@ export default function Home() {
     } catch {}
 
     if (isSaved) {
-      message.info(`${shop.name} removed from favorites`);
+      message.info(`${shop.name} ${t('removed_from_favorites', 'removed from favorites')}`);
     } else {
-      message.success(`${shop.name} added to favorites`);
+      message.success(`${shop.name} ${t('added_to_favorites', 'added to favorites')}`);
     }
   };
 
@@ -189,7 +191,7 @@ export default function Home() {
         storeOrShop.summary ||
         storeOrShop.tagline ||
         matchedStore?.tagline ||
-        'Digital contactless dining and takeaway e-menu.',
+        t('digital_emenu_summary', 'Digital contactless dining and takeaway e-menu.'),
       specialties: ['E-Menu', 'Online Order', 'Telegram Mini App'],
       responseTime: storeOrShop.responseTime || 'instant',
     });
@@ -211,7 +213,7 @@ export default function Home() {
     }
     if (navigator.clipboard) {
       await navigator.clipboard.writeText(shareUrl);
-      message.success(`🔗 ${storeOrShop.name} link copied to clipboard!`);
+      message.success(`🔗 ${storeOrShop.name} ${t('link_copied_clipboard', 'link copied to clipboard!')}`);
     }
   };
 
@@ -238,7 +240,7 @@ export default function Home() {
       image: product.image,
       quantity: 1,
     });
-    message.success(`${product.name} added to cart!`);
+    message.success(`${product.name} ${t('added_to_cart_success', 'added to cart!')}`);
   };
 
   const handleShareProduct = async (product) => {
@@ -251,7 +253,7 @@ export default function Home() {
     }
     if (navigator.clipboard) {
       await navigator.clipboard.writeText(shareUrl);
-      message.success(`Product link copied to clipboard!`);
+      message.success(t('product_link_copied', 'Product link copied to clipboard!'));
     }
   };
 
@@ -327,7 +329,7 @@ export default function Home() {
                   textTransform: 'uppercase',
                 }}
               >
-                Premier B2B Supply & Multi-Store E-Menu Platform
+                {t('premier_b2b_supply_platform', 'Premier B2B Supply & Multi-Store E-Menu Platform')}
               </span>
             </div>
 
@@ -342,7 +344,7 @@ export default function Home() {
                 marginBottom: 16,
               }}
             >
-              Wholesale Sourcing, <span style={{ color: publicTheme.primary }}>Automated Dispatch</span> & Commercial Supply
+              {t('wholesale_sourcing', 'Wholesale Sourcing')}, <span style={{ color: publicTheme.primary }}>{t('automated_dispatch', 'Automated Dispatch')}</span> & {t('commercial_supply', 'Commercial Supply')}
             </Title>
 
             <Paragraph
@@ -354,7 +356,7 @@ export default function Home() {
                 marginBottom: 24,
               }}
             >
-              Connect directly with verified regional roasters, artisan bakeries, and industrial equipment manufacturers. Enjoy volume tier discounts, escrow payment protection, and automated Telegram kitchen ticket dispatch.
+              {t('hero_paragraph', 'Connect directly with verified regional roasters, artisan bakeries, and industrial equipment manufacturers. Enjoy volume tier discounts, escrow payment protection, and automated Telegram kitchen ticket dispatch.')}
             </Paragraph>
 
             {/* Main Action Buttons */}
@@ -377,7 +379,7 @@ export default function Home() {
                   boxShadow: '0 10px 24px rgba(47, 111, 237, 0.28)',
                 }}
               >
-                Browse Wholesale Catalog
+                {t('browse_wholesale_catalog', 'Browse Wholesale Catalog')}
               </Button>
               <Button
                 size="large"
@@ -395,7 +397,7 @@ export default function Home() {
                   paddingInline: 22,
                 }}
               >
-                Launch Telegram E-Menu
+                {t('launch_telegram_emenu', 'Launch Telegram E-Menu')}
               </Button>
             </Space>
 
@@ -413,22 +415,22 @@ export default function Home() {
             >
               <div>
                 <div style={{ fontSize: 22, fontWeight: 850, color: publicTheme.text }}>18,500+</div>
-                <div style={{ fontSize: 11.5, color: publicTheme.subtext }}>Verified SKUs</div>
+                <div style={{ fontSize: 11.5, color: publicTheme.subtext }}>{t('verified_skus', 'Verified SKUs')}</div>
               </div>
               <div style={{ width: 1, height: 28, background: publicTheme.softBorder }} />
               <div>
                 <div style={{ fontSize: 22, fontWeight: 850, color: publicTheme.primary }}>99.4%</div>
-                <div style={{ fontSize: 11.5, color: publicTheme.subtext }}>Fulfillment Rate</div>
+                <div style={{ fontSize: 11.5, color: publicTheme.subtext }}>{t('fulfillment_rate', 'Fulfillment Rate')}</div>
               </div>
               <div style={{ width: 1, height: 28, background: publicTheme.softBorder }} />
               <div>
                 <div style={{ fontSize: 22, fontWeight: 850, color: publicTheme.accent }}>&lt; 2 hrs</div>
-                <div style={{ fontSize: 11.5, color: publicTheme.subtext }}>Warehouse Dispatch</div>
+                <div style={{ fontSize: 11.5, color: publicTheme.subtext }}>{t('warehouse_dispatch', 'Warehouse Dispatch')}</div>
               </div>
               <div style={{ width: 1, height: 28, background: publicTheme.softBorder }} />
               <div>
                 <div style={{ fontSize: 22, fontWeight: 850, color: '#10b981' }}>4 Hubs</div>
-                <div style={{ fontSize: 11.5, color: publicTheme.subtext }}>Regional Network</div>
+                <div style={{ fontSize: 11.5, color: publicTheme.subtext }}>{t('regional_network', 'Regional Network')}</div>
               </div>
             </div>
           </Col>
@@ -446,23 +448,23 @@ export default function Home() {
           {[
             {
               icon: <FileProtectOutlined style={{ fontSize: 24, color: publicTheme.primary }} />,
-              title: 'Escrow Buyer Protection',
-              desc: 'Funds safely held until quality inspection & sign-off. Net-30 credit available.',
+              title: t('escrow_buyer_protection', 'Escrow Buyer Protection'),
+              desc: t('escrow_buyer_protection_desc', 'Funds safely held until quality inspection & sign-off. Net-30 credit available.'),
             },
             {
               icon: <SafetyCertificateOutlined style={{ fontSize: 24, color: '#10b981' }} />,
-              title: 'Factory-Audited Quality',
-              desc: 'ISO 9001 and HACCP compliance certified on all regional wholesale lots.',
+              title: t('factory_audited_quality', 'Factory-Audited Quality'),
+              desc: t('factory_audited_quality_desc', 'ISO 9001 and HACCP compliance certified on all regional wholesale lots.'),
             },
             {
               icon: <RocketOutlined style={{ fontSize: 24, color: publicTheme.accent }} />,
-              title: 'Express Cross-Border Logistics',
-              desc: 'Direct overland and air freight routing between Phnom Penh, Bangkok, and Rayong.',
+              title: t('express_logistics', 'Express Cross-Border Logistics'),
+              desc: t('express_logistics_desc', 'Direct overland and air freight routing between Phnom Penh, Bangkok, and Rayong.'),
             },
             {
               icon: <SendOutlined style={{ fontSize: 24, color: '#38bdf8' }} />,
-              title: 'Turnkey Telegram E-Menu',
-              desc: 'Instant QR code digital table ordering with sub-second kitchen ticket delivery.',
+              title: t('turnkey_telegram_emenu', 'Turnkey Telegram E-Menu'),
+              desc: t('turnkey_telegram_emenu_desc', 'Instant QR code digital table ordering with sub-second kitchen ticket delivery.'),
             },
           ].map((pillar, index) => (
             <Col xs={24} sm={12} lg={6} key={index}>
@@ -513,13 +515,13 @@ export default function Home() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: screens.xs ? 'flex-start' : 'flex-end', marginBottom: screens.xs ? 12 : 20, flexDirection: screens.xs ? 'column' : 'row', gap: screens.xs ? 6 : 0 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', color: publicTheme.primary, textTransform: 'uppercase', marginBottom: 4 }}>
-              Vetted Supplier Network
+              {t('vetted_supplier_network', 'Vetted Supplier Network')}
             </div>
             <Title level={screens.xs ? 3 : 2} style={{ margin: 0, fontWeight: 850, color: publicTheme.text }}>
-              Verified Manufacturers & Stores
+              {t('verified_manufacturers_stores', 'Verified Manufacturers & Stores')}
             </Title>
             <Paragraph style={{ color: publicTheme.subtext, fontSize: 13, margin: '4px 0 0' }}>
-              Direct factory stores with live Telegram Mini App dispatch, local warehouse inventory, and fast response times.
+              {t('verified_stores_subtitle', 'Direct factory stores with live Telegram Mini App dispatch, local warehouse inventory, and fast response times.')}
             </Paragraph>
           </div>
           <Button
@@ -527,7 +529,7 @@ export default function Home() {
             onClick={() => navigate('/shops')}
             style={{ fontWeight: 700, color: publicTheme.primary, padding: 0 }}
           >
-            All Suppliers ({shops.length}) <ArrowRightOutlined />
+            {t('all_suppliers', 'All Suppliers')} ({shops.length}) <ArrowRightOutlined />
           </Button>
         </div>
 
@@ -563,13 +565,13 @@ export default function Home() {
           <div>
             <div style={{ fontSize: 'var(--font-small)', fontWeight: 800, letterSpacing: '0.06em', color: publicTheme.danger, textTransform: 'uppercase', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
               <FireOutlined style={{ color: publicTheme.danger }} />
-              Limited-Time Wholesale Price Drops
+              {t('limited_time_wholesale_drops', 'Limited-Time Wholesale Price Drops')}
             </div>
             <Title level={screens.xs ? 3 : 2} style={{ margin: 0, fontWeight: 850, color: publicTheme.text }}>
-              Volume Procurement Deals
+              {t('volume_procurement_deals', 'Volume Procurement Deals')}
             </Title>
             <Paragraph style={{ color: publicTheme.subtext, fontSize: 'var(--font-base)', margin: '4px 0 0' }}>
-              Specialty equipment, direct-trade micro-lots, and packaging supplies with exclusive wholesale discounts.
+              {t('volume_deals_subtitle', 'Specialty equipment, direct-trade micro-lots, and packaging supplies with exclusive wholesale discounts.')}
             </Paragraph>
           </div>
           <Button
@@ -577,7 +579,7 @@ export default function Home() {
             onClick={() => navigate('/products')}
             style={{ fontWeight: 700, color: publicTheme.primary, padding: 0 }}
           >
-            All Volume Deals ({discountedProducts.length}) <ArrowRightOutlined />
+            {t('all_volume_deals', 'All Volume Deals')} ({discountedProducts.length}) <ArrowRightOutlined />
           </Button>
         </div>
 

@@ -25,6 +25,7 @@ import {
 } from '@ant-design/icons';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from '../../contexts/LanguageContext';
 import AuraLogo from '../../components/common/AuraLogo';
 import SocialAuthModal, { GoogleIcon, TelegramIcon } from '../../components/common/SocialAuthModal';
 import { loginUser } from '../../utils/apiconfig';
@@ -34,6 +35,7 @@ const { Title, Text, Paragraph } = Typography;
 export default function Login() {
   const [form] = Form.useForm();
   const { login } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
@@ -71,7 +73,7 @@ export default function Login() {
         };
 
         login(userData);
-        message.success(`Welcome back, ${userData.name}!`);
+        message.success(`${t('welcome_back', 'Welcome back')}, ${userData.name}!`);
         setLoading(false);
 
         if (profile.group_id === 1 || profile.group_id === 2 || profile.role === 'owner' || profile.role === 'admin') {
@@ -81,12 +83,12 @@ export default function Login() {
         }
         return;
       } else {
-        setErrorMsg(res?.message || res?.error?.message || 'Invalid username or password');
+        setErrorMsg(res?.message || res?.error?.message || t('invalid_username_password', 'Invalid username or password'));
         setLoading(false);
       }
     } catch (err) {
       console.warn('Real login error:', err);
-      setErrorMsg(err.message || 'Invalid username or password');
+      setErrorMsg(err.message || t('invalid_username_password', 'Invalid username or password'));
       setLoading(false);
     }
   };
@@ -117,13 +119,13 @@ export default function Login() {
           tier: 'System Master'
         };
         login(userData);
-        message.success(`Logged in as ${profile.username}`);
+        message.success(`${t('logged_in_as', 'Logged in as')} ${profile.username}`);
         navigate('/admins/dashboard');
       } else {
-        setErrorMsg(res?.message || res?.error?.message || 'Login failed');
+        setErrorMsg(res?.message || res?.error?.message || t('login_failed', 'Login failed'));
       }
     } catch (err) {
-      setErrorMsg(err.message || 'Quick login error');
+      setErrorMsg(err.message || t('quick_login_error', 'Quick login error'));
     } finally {
       setLoading(false);
     }
@@ -147,10 +149,10 @@ export default function Login() {
             <AuraLogo size={42} showText={true} textColor="#0f172a" />
           </div>
           <Title level={2} style={{ margin: '8px 0 4px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px' }}>
-            Welcome Back
+            {t('welcome_back', 'Welcome Back')}
           </Title>
           <Text style={{ color: '#64748b', fontSize: 13.5 }}>
-            Sign in to access your orders, member perks, and store management.
+            {t('login_subtitle', 'Sign in to access your orders, member perks, and store management.')}
           </Text>
         </div>
 
@@ -168,7 +170,7 @@ export default function Login() {
           {/* 1-Tap Social Authentication (Google & Telegram) */}
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>
-              1-Tap Instant Sign In:
+              {t('one_tap_instant_signin', '1-Tap Instant Sign In:')}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <button
@@ -198,7 +200,7 @@ export default function Login() {
           </div>
 
           <Divider style={{ margin: '14px 0 18px', fontSize: 11.5, color: '#94a3b8' }}>
-            Or sign in with credentials
+            {t('or_sign_in_with_credentials', 'Or sign in with credentials')}
           </Divider>
 
           {errorMsg && (
@@ -214,8 +216,8 @@ export default function Login() {
           >
             <Form.Item
               name="emailOrUsername"
-              label={<span style={{ fontWeight: 600, fontSize: 13 }}>Email or Username</span>}
-              rules={[{ required: true, message: 'Please enter your email or username' }]}
+              label={<span style={{ fontWeight: 600, fontSize: 13 }}>{t('email_or_username', 'Email or Username')}</span>}
+              rules={[{ required: true, message: t('enter_email_or_username', 'Please enter your email or username') }]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#94a3b8', marginRight: 6 }} />}
@@ -229,20 +231,20 @@ export default function Login() {
               name="password"
               label={
                 <Flex justify="space-between" align="center" style={{ width: '100%' }}>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>Password</span>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{t('password', 'Password')}</span>
                   <a
                     href="#forgot"
                     onClick={(e) => {
                       e.preventDefault();
-                      message.info('Password reset instructions sent to your email.');
+                      message.info(t('password_reset_sent', 'Password reset instructions sent to your email.'));
                     }}
                     style={{ fontSize: 12, color: '#2563eb', fontWeight: 500 }}
                   >
-                    Forgot password?
+                    {t('forgot_password_question', 'Forgot password?')}
                   </a>
                 </Flex>
               }
-              rules={[{ required: true, message: 'Please enter your password' }]}
+              rules={[{ required: true, message: t('enter_password', 'Please enter your password') }]}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#94a3b8', marginRight: 6 }} />}
@@ -254,7 +256,7 @@ export default function Login() {
 
             <Form.Item name="remember" valuePropName="checked" style={{ marginBottom: 20 }}>
               <Checkbox style={{ fontSize: 12.5, color: '#64748b' }}>
-                Keep me signed in on this device
+                {t('keep_signed_in', 'Keep me signed in on this device')}
               </Checkbox>
             </Form.Item>
 
@@ -274,7 +276,7 @@ export default function Login() {
                   boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
                 }}
               >
-                Sign In to Account
+                {t('sign_in_to_account', 'Sign In to Account')}
               </Button>
             </Form.Item>
           </Form>
@@ -283,9 +285,9 @@ export default function Login() {
           <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid #f1f5f9' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                1-Click Demo Credentials:
+                {t('one_click_demo_credentials', '1-Click Demo Credentials:')}
               </span>
-              <Tag color="blue" style={{ margin: 0, borderRadius: 6, fontSize: 10.5 }}>DEMO READY</Tag>
+              <Tag color="blue" style={{ margin: 0, borderRadius: 6, fontSize: 10.5 }}>{t('demo_ready', 'DEMO READY')}</Tag>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               <button
@@ -293,40 +295,40 @@ export default function Login() {
                 onClick={() => handleQuickLogin('customer')}
                 className="py-2 px-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all text-center border border-slate-200"
               >
-                👤 Customer
+                👤 {t('customer', 'Customer')}
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickLogin('manager')}
                 className="py-2 px-2 rounded-xl text-xs font-semibold bg-orange-50 hover:bg-orange-100 text-orange-700 transition-all text-center border border-orange-200"
               >
-                ☕ Manager
+                ☕ {t('manager', 'Manager')}
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickLogin('admin')}
                 className="py-2 px-2 rounded-xl text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 transition-all text-center border border-blue-200"
               >
-                👑 Admin
+                👑 {t('admin', 'Admin')}
               </button>
             </div>
           </div>
 
           <Divider style={{ margin: '20px 0 16px', fontSize: 12, color: '#94a3b8' }}>
-            New to Aura?
+            {t('new_to_aura', 'New to Aura?')}
           </Divider>
 
           {/* Switch to Register */}
           <div style={{ textAlign: 'center' }}>
             <Text style={{ fontSize: 13, color: '#64748b' }}>
-              Don't have an account yet?{' '}
+              {t('dont_have_account', "Don't have an account yet?")}{' '}
             </Text>
             <Link
               to="/register"
               style={{ fontWeight: 700, color: '#2563eb', fontSize: 13 }}
               className="hover:underline"
             >
-              Create an Account &rarr;
+              {t('create_an_account', 'Create an Account')} &rarr;
             </Link>
           </div>
         </Card>
@@ -335,7 +337,7 @@ export default function Login() {
         <div style={{ textAlign: 'center', marginTop: 20 }}>
           <Space size={6} style={{ color: '#94a3b8', fontSize: 11.5 }}>
             <SafetyCertificateOutlined style={{ color: '#16a34a' }} />
-            <span>256-bit encrypted authentication • Protected by Aura Cloud</span>
+            <span>{t('security_encrypted_auth', '256-bit encrypted authentication • Protected by Aura Cloud')}</span>
           </Space>
         </div>
 

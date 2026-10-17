@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Avatar, Button, Col, Grid, Modal, Row, Tag, Typography, message, Tooltip } from 'antd';
+import { Avatar, Button, Col, Grid, Modal, Row, Space, Tag, Typography, message, Tooltip } from 'antd';
 import {
   CoffeeOutlined,
   SendOutlined,
@@ -25,11 +25,13 @@ import { BOTFATHER_CONFIG } from './TelegramMiniAppModal';
 import { fetchProducts } from '../../../utils/apiconfig';
 import { mapProduct } from '../../../utils/dataMappers';
 import { useWishlist } from '../../../contexts/WishlistContext';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
 const { Paragraph, Text, Title } = Typography;
 const { useBreakpoint } = Grid;
 
 const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts = [] }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const screens = useBreakpoint();
   const [copied, setCopied] = useState(false);
@@ -115,7 +117,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
     if (navigator.clipboard) {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
-      message.success(`🔗 ${shop.name} link copied to clipboard!`);
+      message.success(`🔗 ${shop.name} ${t('link_copied_clipboard', 'link copied to clipboard!')}`);
       setTimeout(() => setCopied(false), 2500);
     }
   };
@@ -272,7 +274,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
               }}
             >
               <SafetyCertificateFilled style={{ fontSize: isMobile ? 11 : 13 }} />
-              <span>{isMobile ? 'VERIFIED' : 'VERIFIED MERCHANT'}</span>
+              <span>{isMobile ? t('verified', 'VERIFIED') : t('verified_merchant', 'VERIFIED MERCHANT')}</span>
             </div>
 
             <div
@@ -300,7 +302,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                   boxShadow: '0 0 6px #ffffff',
                 }}
               />
-              <span>{isMobile ? 'OPEN' : 'OPEN NOW'}</span>
+              <span>{isMobile ? t('open', 'OPEN') : t('open_now', 'OPEN NOW')}</span>
             </div>
 
             <div
@@ -319,7 +321,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
               }}
             >
               <ClockCircleOutlined style={{ fontSize: 11 }} />
-              <span>{shop.operating_hours || '6:30 AM - 8:30 PM'}</span>
+              <span>{shop.operating_hours || t('default_operating_hours', '6:30 AM - 8:30 PM')}</span>
             </div>
           </div>
 
@@ -340,7 +342,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                 zIndex: 2,
               }}
             >
-              Est. {shop.established || '2019'}
+              {t('est_year', 'Est.')} {shop.established || '2019'}
             </div>
           )}
 
@@ -408,13 +410,13 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     <strong>
                       {shop.branch
                         ? shop.branch.replace(/-/g, ' ').toUpperCase()
-                        : 'CENTRAL HUB'}
+                        : t('central_hub', 'CENTRAL HUB')}
                     </strong>
                   </span>
                   <span style={{ opacity: 0.6 }}>•</span>
                   {shop.established && (
                     <>
-                      <span>Est. {shop.established}</span>
+                      <span>{t('est_year', 'Est.')} {shop.established}</span>
                       <span style={{ opacity: 0.6 }}>•</span>
                     </>
                   )}
@@ -430,7 +432,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     <StarFilled />
                     <span>{shop.rating || '4.9'}</span>
                     <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
-                      ({shop.reviews || 160}+ verified reviews)
+                      ({shop.reviews || 160}+ {t('verified_reviews', 'verified reviews')})
                     </span>
                   </span>
                   <span style={{ opacity: 0.6 }}>•</span>
@@ -444,7 +446,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     }}
                   >
                     <ThunderboltFilled />
-                    <span>{shop.responseTime || '< 15m reply'}</span>
+                    <span>{shop.responseTime || t('quick_reply_time', '< 15m reply')}</span>
                   </span>
                 </div>
               </div>
@@ -468,7 +470,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     boxShadow: '0 4px 16px rgba(47, 111, 237, 0.45)',
                   }}
                 >
-                  Visit Shop Page
+                  {t('visit_shop_page', 'Visit Shop Page')}
                 </Button>
                 <Button
                   icon={<ShareAltOutlined />}
@@ -485,10 +487,10 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
                   }}
                 >
-                  {copied ? 'Copied! ✓' : 'Share'}
+                  {copied ? t('copied_success', 'Copied! ✓') : t('share', 'Share')}
                 </Button>
                 {toggleWishlist && (
-                  <Tooltip title={isFavorited ? 'Remove from favorites' : 'Save to favorites'}>
+                  <Tooltip title={isFavorited ? t('remove_from_favorites', 'Remove from favorites') : t('save_to_favorites', 'Save to favorites')}>
                     <Button
                       icon={
                         isFavorited ? (
@@ -553,7 +555,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                         letterSpacing: '0.04em',
                       }}
                     >
-                      Store Rating
+                      {t('store_rating', 'Store Rating')}
                     </div>
                     <div
                       style={{
@@ -592,7 +594,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                         letterSpacing: '0.04em',
                       }}
                     >
-                      Followers
+                      {t('followers', 'Followers')}
                     </div>
                     <div
                       style={{
@@ -624,7 +626,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                         letterSpacing: '0.04em',
                       }}
                     >
-                      Live Catalog
+                      {t('live_catalog', 'Live Catalog')}
                     </div>
                     <div
                       style={{
@@ -634,7 +636,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                         marginTop: 3,
                       }}
                     >
-                      {displayProducts.length} items
+                      {displayProducts.length} {t('items_count', 'items')}
                     </div>
                   </div>
 
@@ -656,7 +658,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                         letterSpacing: '0.04em',
                       }}
                     >
-                      Dispatch Speed
+                      {t('dispatch_speed', 'Dispatch Speed')}
                     </div>
                     <div
                       style={{
@@ -666,7 +668,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                         marginTop: 3,
                       }}
                     >
-                      {shop.responseTime || '< 15 mins'}
+                      {shop.responseTime || t('quick_reply_time', '< 15 mins')}
                     </div>
                   </div>
                 </div>
@@ -691,7 +693,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                   >
                     {shop.summary ||
                       shop.description ||
-                      'Official authorized flagship store providing enterprise-grade supply chain, warehouse automation hardware, and direct dispatch materials.'}
+                      t('default_shop_desc', 'Official authorized flagship store providing enterprise-grade supply chain, warehouse automation hardware, and direct dispatch materials.')}
                   </Paragraph>
 
                   {/* Specialties Pills */}
@@ -711,7 +713,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                           marginBottom: 8,
                         }}
                       >
-                        Specialties &amp; Categories:
+                        {t('specialties_and_categories', 'Specialties & Categories:')}
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {shop.specialties.map((spec) => (
@@ -806,10 +808,10 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                           textOverflow: 'ellipsis',
                         }}
                       >
-                        Telegram Menu
+                        {t('telegram_menu', 'Telegram Menu')}
                       </div>
                       <div style={{ fontSize: 11.5, color: '#64748b' }}>
-                        Instant Ordering &amp; Kitchen Updates
+                        {t('instant_ordering_updates', 'Instant Ordering & Kitchen Updates')}
                       </div>
                     </div>
                   </div>
@@ -833,7 +835,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                         flexShrink: 0,
                       }}
                     >
-                      E-Menu 🍽️
+                      {t('e_menu_cta', 'E-Menu 🍽️')}
                     </Button>
 
                     <Button
@@ -853,7 +855,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                         flexShrink: 0,
                       }}
                     >
-                      Open Bot ↗
+                      {t('open_bot_cta', 'Open Bot ↗')}
                     </Button>
                   </Space>
                 </div>
@@ -885,19 +887,19 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                         letterSpacing: '0.04em',
                       }}
                     >
-                      Store Catalog Preview
+                      {t('store_catalog_preview', 'Store Catalog Preview')}
                     </div>
                     <div style={{ fontSize: 17, fontWeight: 900, color: publicTheme.text }}>
-                      Featured Products ({displayProducts.length})
+                      {t('featured_products', 'Featured Products')} ({displayProducts.length})
                     </div>
                   </div>
 
                   {/* Filter tabs: All / In Stock / Deals */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {[
-                      { key: 'all', label: 'All Items' },
-                      { key: 'instock', label: 'In Stock' },
-                      { key: 'discount', label: 'Deals & Offers' },
+                      { key: 'all', label: t('all_items', 'All Items') },
+                      { key: 'instock', label: t('in_stock', 'In Stock') },
+                      { key: 'discount', label: t('deals_and_offers', 'Deals & Offers') },
                     ].map((tab) => (
                       <button
                         key={tab.key}
@@ -932,7 +934,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                         fontSize: 12.5,
                       }}
                     >
-                      View All <RightOutlined style={{ fontSize: 10 }} />
+                      {t('view_all', 'View All')} <RightOutlined style={{ fontSize: 10 }} />
                     </Button>
                   </div>
                 </div>
@@ -951,8 +953,8 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     <ShoppingOutlined style={{ fontSize: 36, color: '#94a3b8', marginBottom: 8 }} />
                     <div style={{ fontSize: 14, fontWeight: 700, color: publicTheme.text }}>
                       {displayProducts.length === 0
-                        ? 'This store currently has no products published in its catalog.'
-                        : 'No items matched this filter'}
+                        ? t('store_no_products', 'This store currently has no products published in its catalog.')
+                        : t('no_items_matched_filter', 'No items matched this filter')}
                     </div>
                     {displayProducts.length > 0 && activeTab !== 'all' && (
                       <Button
@@ -960,7 +962,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                         onClick={() => setActiveTab('all')}
                         style={{ borderRadius: 10, marginTop: 12 }}
                       >
-                        Show All Items
+                        {t('show_all_items', 'Show All Items')}
                       </Button>
                     )}
                   </div>
@@ -1061,7 +1063,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                                 borderRadius: 5,
                               }}
                             >
-                              {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% OFF
+                              {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% {t('off', 'OFF')}
                             </span>
                           ) : null}
 
@@ -1081,7 +1083,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                               borderRadius: 5,
                             }}
                           >
-                            {item.inStock !== false ? 'In stock' : 'Pre-order'}
+                            {item.inStock !== false ? t('in_stock', 'In stock') : t('pre_order', 'Pre-order')}
                           </span>
                         </div>
 
@@ -1183,10 +1185,10 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     <CheckCircleFilled style={{ color: '#10b981', fontSize: 18 }} />
                     <div>
                       <div style={{ fontSize: 12.5, fontWeight: 800, color: publicTheme.text }}>
-                        Verified Aura Fulfillment Network
+                        {t('verified_fulfillment_network', 'Verified Aura Fulfillment Network')}
                       </div>
                       <div style={{ fontSize: 11, color: publicTheme.subtext }}>
-                        Guaranteed authentic stock, real-time inventory sync &amp; instant Telegram dispatch.
+                        {t('verified_fulfillment_desc', 'Guaranteed authentic stock, real-time inventory sync & instant Telegram dispatch.')}
                       </div>
                     </div>
                   </div>
@@ -1200,7 +1202,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                       padding: '2px 8px',
                     }}
                   >
-                    Direct Sync
+                    {t('direct_sync', 'Direct Sync')}
                   </Tag>
                 </div>
 
@@ -1222,7 +1224,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                       boxShadow: '0 6px 18px rgba(47, 111, 237, 0.35)',
                     }}
                   >
-                    Visit Shop Page
+                    {t('visit_shop_page', 'Visit Shop Page')}
                   </Button>
 
                   <Button
@@ -1244,7 +1246,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                       background: 'rgba(163, 29, 29, 0.08)',
                     }}
                   >
-                    Digital E-Menu
+                    {t('digital_e_menu', 'Digital E-Menu')}
                   </Button>
 
                   <Button
@@ -1265,7 +1267,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                       background: 'rgba(36, 129, 204, 0.08)',
                     }}
                   >
-                    Telegram E-Menu
+                    {t('telegram_e_menu', 'Telegram E-Menu')}
                   </Button>
                 </div>
               </div>

@@ -7,23 +7,33 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../../../contexts/LanguageContext';
 import { publicTheme } from '../../../utils/webTheme';
 
 const { Text, Title } = Typography;
 
-const signalItems = [
-  { label: 'Supplier response rate', value: 92, tone: publicTheme.primary },
-  { label: 'Learning completion', value: 76, tone: publicTheme.secondary },
-  { label: 'Service SLA health', value: 97, tone: publicTheme.success },
-];
-
-const workflowCards = [
-  { title: 'New RFQs', value: '14 open', text: 'Buyer requests waiting for supplier review and pricing confirmation.' },
-  { title: 'Service tickets', value: '5 active', text: 'Most issues relate to label stock, rack setup, and dock equipment.' },
-];
-
 const Sidebar = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  const signalItems = [
+    { label: t('supplier_response_rate', 'Supplier response rate'), value: 92, tone: publicTheme.primary },
+    { label: t('learning_completion', 'Learning completion'), value: 76, tone: publicTheme.secondary },
+    { label: t('service_sla_health', 'Service SLA health'), value: 97, tone: publicTheme.success },
+  ];
+
+  const workflowCards = [
+    {
+      title: t('new_rfqs', 'New RFQs'),
+      value: `14 ${t('open', 'open')}`,
+      text: t('new_rfqs_desc', 'Buyer requests waiting for supplier review and pricing confirmation.'),
+    },
+    {
+      title: t('service_tickets', 'Service tickets'),
+      value: `5 ${t('active', 'active')}`,
+      text: t('service_tickets_desc', 'Most issues relate to label stock, rack setup, and dock equipment.'),
+    },
+  ];
 
   return (
     <div style={{ position: 'sticky', top: 102 }}>
@@ -41,14 +51,14 @@ const Sidebar = () => {
         >
           <Space direction="vertical" size={18} style={{ width: '100%' }}>
             <Tag style={{ width: 'fit-content', borderRadius: 999, border: 'none', background: publicTheme.pill, color: publicTheme.primary, fontWeight: 700, padding: '6px 12px' }}>
-              Operations snapshot
+              {t('operations_snapshot', 'Operations snapshot')}
             </Tag>
             <div>
               <Title level={4} style={{ margin: 0, color: publicTheme.text }}>
-                Business Health
+                {t('business_health', 'Business Health')}
               </Title>
               <Text style={{ color: publicTheme.subtext }}>
-                Commercial, service, and learning activity stay aligned in one side panel.
+                {t('business_health_desc', 'Commercial, service, and learning activity stay aligned in one side panel.')}
               </Text>
             </div>
 
@@ -84,7 +94,7 @@ const Sidebar = () => {
           <Space direction="vertical" size={14} style={{ width: '100%' }}>
             <Space>
               <ClusterOutlined style={{ color: publicTheme.primary }} />
-              <Text strong style={{ color: publicTheme.text }}>Workflow Focus</Text>
+              <Text strong style={{ color: publicTheme.text }}>{t('workflow_focus', 'Workflow Focus')}</Text>
             </Space>
 
             {workflowCards.map((item) => (
@@ -123,17 +133,17 @@ const Sidebar = () => {
           <Space direction="vertical" size={14} style={{ width: '100%' }}>
             <Space>
               <AreaChartOutlined style={{ color: '#ffb03d' }} />
-              <Text strong style={{ color: 'white' }}>Coordination Layer</Text>
+              <Text strong style={{ color: 'white' }}>{t('coordination_layer', 'Coordination Layer')}</Text>
             </Space>
             <Text style={{ color: 'rgba(255,255,255,0.74)' }}>
-              Use the service and admin spaces to follow tickets, supplier follow-ups, and replenishment actions.
+              {t('coordination_layer_desc', 'Use the service and admin spaces to follow tickets, supplier follow-ups, and replenishment actions.')}
             </Text>
             <Flex gap={10} wrap="wrap">
               <Tag style={{ margin: 0, borderRadius: 999, background: 'rgba(255,255,255,0.12)', color: 'white', border: 'none', padding: '6px 12px' }}>
-                Orders monitored
+                {t('orders_monitored', 'Orders monitored')}
               </Tag>
               <Tag style={{ margin: 0, borderRadius: 999, background: 'rgba(255,255,255,0.12)', color: 'white', border: 'none', padding: '6px 12px' }}>
-                Teams trained
+                {t('teams_trained', 'Teams trained')}
               </Tag>
             </Flex>
             <Button
@@ -142,14 +152,14 @@ const Sidebar = () => {
               onClick={() => navigate('/admins/dashboard')}
               style={{ height: 44, borderRadius: 16, background: publicTheme.ribbon, border: 'none', fontWeight: 700 }}
             >
-              Open admin portal
+              {t('open_admin_portal', 'Open admin portal')}
             </Button>
             <Button
               icon={<BellOutlined />}
               onClick={() => navigate('/service')}
               style={{ height: 44, borderRadius: 16, background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.14)', color: 'white', fontWeight: 600 }}
             >
-              Review service updates
+              {t('review_service_updates', 'Review service updates')}
             </Button>
           </Space>
         </Card>

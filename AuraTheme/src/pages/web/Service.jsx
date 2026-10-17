@@ -24,6 +24,7 @@ import {
   ArrowRightOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { submitContact } from '../../utils/apiconfig';
 import { publicTheme } from '../../utils/webTheme';
 
@@ -293,6 +294,7 @@ const faqItems = [
 ];
 
 export default function Service() {
+  const { t } = useTranslation();
   const screens = useBreakpoint();
   const navigate = useNavigate();
 
@@ -430,7 +432,7 @@ Details: ${details}`;
                   textTransform: 'uppercase',
                 }}
               >
-                Enterprise Services Portfolio
+                {t('enterprise_services_portfolio', 'Enterprise Services Portfolio')}
               </span>
             </div>
 
@@ -446,8 +448,8 @@ Details: ${details}`;
                 marginBottom: 16,
               }}
             >
-              End-to-End <span style={{ color: publicTheme.primary }}>Hospitality</span> &amp;{' '}
-              <span style={{ color: publicTheme.accent }}>Supply</span> Solutions
+              {t('end_to_end', 'End-to-End')} <span style={{ color: publicTheme.primary }}>{t('hospitality', 'Hospitality')}</span> &amp;{' '}
+              <span style={{ color: publicTheme.accent }}>{t('supply', 'Supply')}</span> {t('solutions', 'Solutions')}
             </Title>
 
             {/* Subtitle Paragraph */}
@@ -460,8 +462,7 @@ Details: ${details}`;
                 marginBottom: 24,
               }}
             >
-              Select any service pillar below to view technical deliverables, turnaround times, and wholesale terms.
-              From contactless Telegram Mini App E-Menus to specialty coffee roastery sourcing, daily wholesale viennoiserie, and turnkey event catering.
+              {t('service_hero_subtitle', 'From contactless Telegram Mini App E-Menus to specialty coffee roastery sourcing, daily wholesale viennoiserie, and turnkey event catering.')}
             </Paragraph>
 
             {/* Action Buttons matching Home */}
@@ -484,7 +485,7 @@ Details: ${details}`;
                   boxShadow: '0 10px 24px rgba(47, 111, 237, 0.28)',
                 }}
               >
-                Request Service Proposal
+                {t('request_service_proposal', 'Request Service Proposal')}
               </Button>
               <Button
                 size="large"
@@ -502,7 +503,7 @@ Details: ${details}`;
                   paddingInline: 24,
                 }}
               >
-                Explore Live E-Menu
+                {t('explore_live_emenu', 'Explore Live E-Menu')}
               </Button>
             </div>
 
@@ -518,30 +519,30 @@ Details: ${details}`;
             >
               <div>
                 <div style={{ fontSize: screens.xs ? 18 : 22, fontWeight: 800, color: publicTheme.text }}>
-                  48 Hours
+                  48 {t('hours', 'Hours')}
                 </div>
-                <div style={{ fontSize: 11, color: publicTheme.subtext }}>Turnkey Setup</div>
+                <div style={{ fontSize: 11, color: publicTheme.subtext }}>{t('turnkey_setup', 'Turnkey Setup')}</div>
               </div>
               <div style={{ width: 1, height: 28, background: publicTheme.softBorder }} />
               <div>
                 <div style={{ fontSize: screens.xs ? 18 : 22, fontWeight: 800, color: publicTheme.primary }}>
                   84+ SCA
                 </div>
-                <div style={{ fontSize: 11, color: publicTheme.subtext }}>Specialty Cupping</div>
+                <div style={{ fontSize: 11, color: publicTheme.subtext }}>{t('specialty_cupping', 'Specialty Cupping')}</div>
               </div>
               <div style={{ width: 1, height: 28, background: publicTheme.softBorder }} />
               <div>
                 <div style={{ fontSize: screens.xs ? 18 : 22, fontWeight: 800, color: publicTheme.accent }}>
-                  72 Hours
+                  72 {t('hours', 'Hours')}
                 </div>
-                <div style={{ fontSize: 11, color: publicTheme.subtext }}>Cold Ferment Sourdough</div>
+                <div style={{ fontSize: 11, color: publicTheme.subtext }}>{t('cold_ferment_sourdough', 'Cold Ferment Sourdough')}</div>
               </div>
               <div style={{ width: 1, height: 28, background: publicTheme.softBorder }} />
               <div>
                 <div style={{ fontSize: screens.xs ? 18 : 22, fontWeight: 800, color: publicTheme.success }}>
                   99.9%
                 </div>
-                <div style={{ fontSize: 11, color: publicTheme.subtext }}>Ticket Dispatch SLA</div>
+                <div style={{ fontSize: 11, color: publicTheme.subtext }}>{t('ticket_dispatch_sla', 'Ticket Dispatch SLA')}</div>
               </div>
             </div>
           </Col>
@@ -665,7 +666,7 @@ Details: ${details}`;
                     fontWeight: 'bold',
                   }}
                 >
-                  <span>STATUS SUMMARY:</span>
+                  <span>{t('status_summary', 'STATUS SUMMARY:')}</span>
                   <span>{activeServiceObj.samplePreview.total}</span>
                 </div>
               </div>
@@ -684,7 +685,7 @@ Details: ${details}`;
                     fontSize: 12,
                   }}
                 >
-                  Book Consultation for {activeServiceObj.category}
+                  {t('book_consultation_for', 'Book Consultation for')} {activeServiceObj.category}
                 </Button>
               </div>
             </div>
@@ -718,7 +719,7 @@ Details: ${details}`;
                   textTransform: 'uppercase',
                 }}
               >
-                Enterprise Services Portfolio
+                {t('enterprise_services_portfolio', 'Enterprise Services Portfolio')}
               </span>
             </div>
             <Title
@@ -731,11 +732,11 @@ Details: ${details}`;
                 letterSpacing: '-0.01em',
               }}
             >
-              End-to-End Hospitality &amp; Supply Solutions
+              {t('modular_services_title', 'End-to-End Hospitality & Supply Solutions')}
             </Title>
           </div>
           <Text style={{ color: publicTheme.subtext, fontSize: 13, maxWidth: 540 }}>
-            Select any service pillar below to view technical deliverables, turnaround times, and wholesale terms.
+            {t('modular_services_subtitle', 'Select any service pillar below to view technical deliverables, turnaround times, and wholesale terms.')}
           </Text>
         </div>
 
@@ -951,7 +952,7 @@ Details: ${details}`;
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                     <SafetyCertificateFilled style={{ color: publicTheme.accent, fontSize: 18 }} />
                     <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', color: publicTheme.text }}>
-                      Service Guarantee
+                      {t('service_guarantee', 'Service Guarantee')}
                     </span>
                   </div>
 
@@ -971,16 +972,16 @@ Details: ${details}`;
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: publicTheme.subtext }}>Response SLA:</span>
-                      <span style={{ fontWeight: 700, color: publicTheme.text }}>Under 2 Hours</span>
+                      <span style={{ color: publicTheme.subtext }}>{t('response_sla', 'Response SLA:')}</span>
+                      <span style={{ fontWeight: 700, color: publicTheme.text }}>{t('under_2_hours', 'Under 2 Hours')}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: publicTheme.subtext }}>Initial Audit:</span>
-                      <span style={{ fontWeight: 700, color: publicTheme.success }}>Complimentary</span>
+                      <span style={{ color: publicTheme.subtext }}>{t('initial_audit', 'Initial Audit:')}</span>
+                      <span style={{ fontWeight: 700, color: publicTheme.success }}>{t('complimentary', 'Complimentary')}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: publicTheme.subtext }}>Support Channels:</span>
-                      <span style={{ fontWeight: 700, color: publicTheme.primary }}>Telegram Bot &amp; On-Site</span>
+                      <span style={{ color: publicTheme.subtext }}>{t('support_channels', 'Support Channels:')}</span>
+                      <span style={{ fontWeight: 700, color: publicTheme.primary }}>{t('telegram_bot_and_onsite', 'Telegram Bot & On-Site')}</span>
                     </div>
                   </div>
                 </div>
@@ -998,7 +999,7 @@ Details: ${details}`;
                     fontWeight: 700,
                   }}
                 >
-                  Book Initial Consultation
+                  {t('book_initial_consultation', 'Book Initial Consultation')}
                 </Button>
               </div>
             </Col>
@@ -1050,14 +1051,14 @@ Details: ${details}`;
                 textTransform: 'uppercase',
               }}
             >
-              Start Collaboration
+              {t('start_collaboration', 'Start Collaboration')}
             </span>
           </div>
           <Title level={2} style={{ fontSize: screens.xs ? 22 : 30, fontWeight: 800, color: publicTheme.text, margin: 0 }}>
-            Request a Hospitality Service Proposal
+            {t('request_proposal_title', 'Request a Hospitality Service Proposal')}
           </Title>
           <Paragraph style={{ color: publicTheme.subtext, fontSize: 14, marginTop: 6, margin: 0 }}>
-            Tell us about your café, bakery, or dining establishment. Our team will prepare a tailored proposal within one business day.
+            {t('request_proposal_subtitle', 'Tell us about your café, bakery, or dining establishment. Our team will prepare a tailored proposal within one business day.')}
           </Paragraph>
         </div>
 
@@ -1073,10 +1074,10 @@ Details: ${details}`;
           >
             <CheckCircleFilled style={{ color: publicTheme.success, fontSize: 44, marginBottom: 12 }} />
             <Title level={4} style={{ color: publicTheme.text, margin: 0 }}>
-              Inquiry Successfully Received!
+              {t('inquiry_received_title', 'Inquiry Successfully Received!')}
             </Title>
             <Paragraph style={{ color: publicTheme.subtext, fontSize: 14, margin: '8px auto 20px', maxWidth: 540 }}>
-              Our solutions manager has received your submission. We will reach out via email or Telegram shortly.
+              {t('inquiry_received_desc', 'Our solutions manager has received your submission. We will reach out via email or Telegram shortly.')}
             </Paragraph>
             <Button
               type="primary"
@@ -1087,7 +1088,7 @@ Details: ${details}`;
                 fontWeight: 700,
               }}
             >
-              Submit Another Request
+              {t('submit_another_request', 'Submit Another Request')}
             </Button>
           </div>
         ) : (
@@ -1099,7 +1100,7 @@ Details: ${details}`;
                 {/* Desired Service Selection */}
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
-                    Primary Service of Interest *
+                    {t('primary_service_interest', 'Primary Service of Interest *')}
                   </label>
                   <select
                     value={formService}
@@ -1121,7 +1122,7 @@ Details: ${details}`;
                       </option>
                     ))}
                     <option value="General Hospitality Operations">
-                      General Hospitality Operations Consultation
+                      {t('general_hospitality_consultation', 'General Hospitality Operations Consultation')}
                     </option>
                   </select>
                 </div>
@@ -1130,7 +1131,7 @@ Details: ${details}`;
                 <Row gutter={[16, 16]}>
                   <Col xs={24} sm={12}>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
-                      Business / Brand Name *
+                      {t('business_brand_name', 'Business / Brand Name *')}
                     </label>
                     <input
                       type="text"
@@ -1153,7 +1154,7 @@ Details: ${details}`;
 
                   <Col xs={24} sm={12}>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
-                      Contact Person Name *
+                      {t('contact_person_name', 'Contact Person Name *')}
                     </label>
                     <input
                       type="text"
@@ -1176,7 +1177,7 @@ Details: ${details}`;
 
                   <Col xs={24} sm={12}>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
-                      Email Address *
+                      {t('email_address', 'Email Address *')}
                     </label>
                     <input
                       type="email"
@@ -1199,7 +1200,7 @@ Details: ${details}`;
 
                   <Col xs={24} sm={12}>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
-                      Phone / Telegram Handle
+                      {t('phone_telegram_handle', 'Phone / Telegram Handle')}
                     </label>
                     <input
                       type="text"
@@ -1223,7 +1224,7 @@ Details: ${details}`;
                 {/* Branch Count Selector */}
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
-                    Number of Branches / Event Scale
+                    {t('number_of_branches', 'Number of Branches / Event Scale')}
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                     {['1 Branch', '2 - 4 Branches', '5+ Branches', 'Single Event'].map((cnt) => {
@@ -1255,13 +1256,13 @@ Details: ${details}`;
                 {/* Requirements */}
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
-                    Project Requirements &amp; Specific Goals
+                    {t('project_requirements', 'Project Requirements & Specific Goals')}
                   </label>
                   <textarea
                     rows={3}
                     value={details}
                     onChange={(e) => setDetails(e.target.value)}
-                    placeholder="Share details on your current setup, timeline, menu size, or specific roastery/bakery supply requirements..."
+                    placeholder={t('project_requirements_placeholder', 'Share details on your current setup, timeline, menu size, or specific roastery/bakery supply requirements...')}
                     style={{
                       width: '100%',
                       background: 'rgba(240, 244, 255, 0.6)',
@@ -1293,7 +1294,7 @@ Details: ${details}`;
                     marginTop: 4,
                   }}
                 >
-                  {submitting ? 'Submitting Request...' : 'Submit Service Proposal Request'}
+                  {submitting ? t('submitting_request', 'Submitting Request...') : t('submit_service_proposal', 'Submit Service Proposal Request')}
                 </Button>
               </form>
             </Col>
@@ -1317,7 +1318,7 @@ Details: ${details}`;
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                     <AuditOutlined style={{ color: publicTheme.primary, fontSize: 18 }} />
                     <span style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', color: publicTheme.text }}>
-                      What Happens Next?
+                      {t('what_happens_next', 'What Happens Next?')}
                     </span>
                   </div>
 
@@ -1342,10 +1343,10 @@ Details: ${details}`;
                       </div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: publicTheme.text }}>
-                          Discovery &amp; Menu Audit (&lt; 2 Hours)
+                          {t('step_1_title', 'Discovery & Menu Audit (< 2 Hours)')}
                         </div>
                         <div style={{ fontSize: 12, color: publicTheme.subtext, marginTop: 2 }}>
-                          A dedicated hospitality solutions architect contacts you to review menu specs, volume targets, and bot credentials.
+                          {t('step_1_desc', 'A dedicated hospitality solutions architect contacts you to review menu specs, volume targets, and bot credentials.')}
                         </div>
                       </div>
                     </div>
@@ -1370,10 +1371,10 @@ Details: ${details}`;
                       </div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: publicTheme.text }}>
-                          Tasting Box &amp; Staging Demo
+                          {t('step_2_title', 'Tasting Box & Staging Demo')}
                         </div>
                         <div style={{ fontSize: 12, color: publicTheme.subtext, marginTop: 2 }}>
-                          We ship complimentary roast samples or provide an interactive private test kitchen URL for your team to review.
+                          {t('step_2_desc', 'We ship complimentary roast samples or provide an interactive private test kitchen URL for your team to review.')}
                         </div>
                       </div>
                     </div>
@@ -1398,10 +1399,10 @@ Details: ${details}`;
                       </div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: publicTheme.text }}>
-                          Turnkey Go-Live (Within 48h)
+                          {t('step_3_title', 'Turnkey Go-Live (Within 48h)')}
                         </div>
                         <div style={{ fontSize: 12, color: publicTheme.subtext, marginTop: 2 }}>
-                          Full Telegram Mini App launch, table QR print standees delivered, and recurring wholesale roast/bakery standing routes active.
+                          {t('step_3_desc', 'Full Telegram Mini App launch, table QR print standees delivered, and recurring wholesale roast/bakery standing routes active.')}
                         </div>
                       </div>
                     </div>
@@ -1417,10 +1418,10 @@ Details: ${details}`;
                   }}
                 >
                   <div style={{ fontSize: 12, fontWeight: 700, color: publicTheme.text, marginBottom: 4 }}>
-                    Need urgent same-day support?
+                    {t('need_urgent_support', 'Need urgent same-day support?')}
                   </div>
                   <div style={{ fontSize: 12, color: publicTheme.subtext, marginBottom: 10 }}>
-                    Speak with our hospitality desk directly:
+                    {t('speak_with_desk', 'Speak with our hospitality desk directly:')}
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <a
@@ -1436,7 +1437,7 @@ Details: ${details}`;
                         gap: 4,
                       }}
                     >
-                      <SendOutlined /> Telegram Bot
+                      <SendOutlined /> {t('telegram_bot', 'Telegram Bot')}
                     </a>
                     <span style={{ color: publicTheme.softBorder }}>•</span>
                     <a
@@ -1503,14 +1504,14 @@ Details: ${details}`;
                 textTransform: 'uppercase',
               }}
             >
-              Clarity &amp; Answers
+              {t('clarity_and_answers', 'Clarity & Answers')}
             </span>
           </div>
           <Title level={2} style={{ fontSize: screens.xs ? 22 : 28, fontWeight: 800, color: publicTheme.text, margin: 0 }}>
-            Frequently Asked Questions
+            {t('faq_title', 'Frequently Asked Questions')}
           </Title>
           <Paragraph style={{ color: publicTheme.subtext, fontSize: 14, marginTop: 6, margin: 0 }}>
-            Common inquiries regarding deployment timelines, delivery radius, and standing orders.
+            {t('faq_subtitle', 'Common inquiries regarding deployment timelines, delivery radius, and standing orders.')}
           </Paragraph>
         </div>
 
@@ -1580,15 +1581,15 @@ Details: ${details}`;
               }}
             />
             <span style={{ fontSize: 11, fontWeight: 700, color: '#b7efe3' }}>
-              Hospitality Concierge Available
+              {t('hospitality_concierge_available', 'Hospitality Concierge Available')}
             </span>
           </div>
 
           <Title level={3} style={{ color: '#ffffff', margin: '0 0 8px', fontWeight: 800 }}>
-            Ready to Upgrade Your Dining or Supply Operations?
+            {t('ready_upgrade_operations', 'Ready to Upgrade Your Dining or Supply Operations?')}
           </Title>
           <Paragraph style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 14, margin: 0, lineHeight: 1.55 }}>
-            Chat directly with our solutions team on Telegram or visit our Daun Penh roastery and bakery test kitchen.
+            {t('chat_telegram_visit_roastery', 'Chat directly with our solutions team on Telegram or visit our Daun Penh roastery and bakery test kitchen.')}
           </Paragraph>
         </div>
 
@@ -1623,7 +1624,7 @@ Details: ${details}`;
             }}
           >
             <SendOutlined />
-            <span>Open Telegram Bot Desk</span>
+            <span>{t('open_telegram_bot_desk', 'Open Telegram Bot Desk')}</span>
           </a>
 
           <a
@@ -1645,7 +1646,7 @@ Details: ${details}`;
             }}
           >
             <PhoneOutlined />
-            <span>Call +855 12 345 678</span>
+            <span>{t('call_hotline', 'Call')} +855 12 345 678</span>
           </a>
         </div>
       </div>

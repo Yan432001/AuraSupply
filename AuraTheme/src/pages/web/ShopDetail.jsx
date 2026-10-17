@@ -36,6 +36,7 @@ import { fetchShopById, fetchProducts } from '../../utils/apiconfig';
 import { mapShop, mapProduct } from '../../utils/dataMappers';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { animateAddToCart } from '../../utils/helpers';
 import { publicTheme } from '../../utils/webTheme';
 
@@ -43,6 +44,7 @@ const { useBreakpoint } = Grid;
 const { Paragraph, Text, Title } = Typography;
 
 export default function ShopDetail() {
+  const { t } = useTranslation();
   const screens = useBreakpoint();
   const navigate = useNavigate();
   const { shopId } = useParams();
@@ -106,8 +108,8 @@ export default function ShopDetail() {
     });
     addToCart(product);
     notificationApi.success({
-      message: `${product.name} added to cart`,
-      description: `Wholesale procurement item recorded.`,
+      message: `${product.name} ${t('added_to_cart_success', 'added to cart')}`,
+      description: t('wholesale_item_recorded', 'Wholesale procurement item recorded.'),
       placement: 'bottomRight',
     });
   };
@@ -116,14 +118,14 @@ export default function ShopDetail() {
     const url = window.location.href;
     if (navigator.clipboard) {
       await navigator.clipboard.writeText(url);
-      messageApi.success('Storefront link copied!');
+      messageApi.success(t('storefront_link_copied', 'Storefront link copied!'));
     }
   };
 
   if (loading) {
     return (
       <div style={{ padding: '100px 20px', textAlign: 'center' }}>
-        <Spin size="large" tip="Loading supplier profile and catalog from database..." />
+        <Spin size="large" tip={t('loading_supplier_profile', 'Loading supplier profile and catalog from database...')} />
       </div>
     );
   }
@@ -131,8 +133,8 @@ export default function ShopDetail() {
   if (!shop) {
     return (
       <div style={{ padding: 40, textAlign: 'center' }}>
-        <Title level={3}>Supplier not found</Title>
-        <Button type="primary" onClick={() => navigate('/shops')}>Back to Suppliers</Button>
+        <Title level={3}>{t('supplier_not_found', 'Supplier not found')}</Title>
+        <Button type="primary" onClick={() => navigate('/shops')}>{t('back_to_suppliers', 'Back to Suppliers')}</Button>
       </div>
     );
   }
@@ -178,7 +180,7 @@ export default function ShopDetail() {
               fontWeight: 700,
             }}
           >
-            All Suppliers
+            {t('all_suppliers', 'All Suppliers')}
           </Button>
         </div>
 
@@ -205,7 +207,7 @@ export default function ShopDetail() {
                       {shop.name}
                     </Title>
                     <span className="verified-supplier-pill">
-                      <CheckCircleFilled /> Verified Factory Store
+                      <CheckCircleFilled /> {t('verified_factory_store', 'Verified Factory Store')}
                     </span>
                   </div>
                   <Text style={{ color: publicTheme.subtext, fontSize: 13 }}>
@@ -217,8 +219,8 @@ export default function ShopDetail() {
               {/* Meta stats */}
               <div style={{ display: 'flex', gap: 18, marginTop: 16, flexWrap: 'wrap', fontSize: 12.5, color: publicTheme.subtext }}>
                 <span><EnvironmentOutlined style={{ color: publicTheme.primary }} /> {shop.address || shop.branch || 'Phnom Penh'}</span>
-                <span><StarFilled style={{ color: '#f59e0b' }} /> <strong>{shop.rating || 4.9}</strong> ({shop.reviews || 140} reviews)</span>
-                <span><ClockCircleOutlined style={{ color: '#10b981' }} /> Response: {shop.responseTime || 'under 5 min'}</span>
+                <span><StarFilled style={{ color: '#f59e0b' }} /> <strong>{shop.rating || 4.9}</strong> ({shop.reviews || 140} {t('reviews', 'reviews')})</span>
+                <span><ClockCircleOutlined style={{ color: '#10b981' }} /> {t('response', 'Response')}: {shop.responseTime || t('under_5_min', 'under 5 min')}</span>
               </div>
             </Col>
 
@@ -236,7 +238,7 @@ export default function ShopDetail() {
                     border: 'none',
                   }}
                 >
-                  Telegram Mini App
+                  {t('telegram_mini_app', 'Telegram Mini App')}
                 </Button>
                 <Button
                   icon={<ShareAltOutlined />}
@@ -266,12 +268,12 @@ export default function ShopDetail() {
         }}
       >
         <div style={{ fontSize: 14, fontWeight: 800, color: publicTheme.text }}>
-          Supplier Products ({filteredProducts.length})
+          {t('supplier_products', 'Supplier Products')} ({filteredProducts.length})
         </div>
 
         <Input
           prefix={<SearchOutlined style={{ color: publicTheme.subtext }} />}
-          placeholder="Filter supplier catalog..."
+          placeholder={t('filter_supplier_catalog', 'Filter supplier catalog...')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           allowClear
@@ -284,15 +286,15 @@ export default function ShopDetail() {
         <Card style={{ borderRadius: 16, textAlign: 'center', padding: '60px 20px', border: `1px solid ${publicTheme.border}` }}>
           <ShopOutlined style={{ fontSize: 44, color: '#94a3b8', marginBottom: 12 }} />
           <Title level={4} style={{ color: publicTheme.text, marginBottom: 6 }}>
-            {search ? 'No products match your search keyword' : 'This store currently has no products published in its catalog.'}
+            {search ? t('no_products_match_search', 'No products match your search keyword') : t('no_products_published', 'This store currently has no products published in its catalog.')}
           </Title>
           <Text style={{ color: publicTheme.subtext, display: 'block', marginBottom: 16 }}>
-            {search ? 'Try clearing your search term to see other items.' : 'Check back later or browse other verified factory suppliers.'}
+            {search ? t('clear_search_hint', 'Try clearing your search term to see other items.') : t('check_back_later_hint', 'Check back later or browse other verified factory suppliers.')}
           </Text>
           {search ? (
-            <Button onClick={() => setSearch('')}>Clear Search</Button>
+            <Button onClick={() => setSearch('')}>{t('clear_search', 'Clear Search')}</Button>
           ) : (
-            <Button type="primary" onClick={() => navigate('/shops')}>Explore All Suppliers</Button>
+            <Button type="primary" onClick={() => navigate('/shops')}>{t('explore_all_suppliers', 'Explore All Suppliers')}</Button>
           )}
         </Card>
       ) : (

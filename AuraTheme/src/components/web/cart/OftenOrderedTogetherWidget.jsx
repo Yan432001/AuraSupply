@@ -10,6 +10,7 @@ import {
   GiftOutlined,
 } from '@ant-design/icons';
 import { useCart } from '../../../contexts/CartContext';
+import { useTranslation } from '../../../contexts/LanguageContext';
 import { fetchProducts } from '../../../utils/apiconfig';
 
 const { Text, Title } = Typography;
@@ -28,6 +29,7 @@ const categorySynergies = {
 };
 
 export default function OftenOrderedTogetherWidget({ className = '', style = {} }) {
+  const { t } = useTranslation();
   const { cart, addToCart } = useCart();
   const [availableProducts, setAvailableProducts] = useState([]);
   const [addedItemIds, setAddedItemIds] = useState(new Set());
@@ -131,7 +133,7 @@ export default function OftenOrderedTogetherWidget({ className = '', style = {} 
   const handleAddItem = (product) => {
     addToCart(product);
     setAddedItemIds((prev) => new Set([...prev, product.id]));
-    message.success(`Added ${product.name} to cart!`);
+    message.success(`${t('added', 'Added')} ${product.name} ${t('to_cart', 'to cart')}!`);
 
     // Reset button checkmark after 2.5 seconds
     setTimeout(() => {
@@ -149,7 +151,7 @@ export default function OftenOrderedTogetherWidget({ className = '', style = {} 
       addToCart(item);
       setAddedItemIds((prev) => new Set([...prev, item.id]));
     });
-    message.success(`Added ${recommendations.length} complementary items to cart!`);
+    message.success(`${t('added', 'Added')} ${recommendations.length} ${t('items_to_cart', 'items to cart')}!`);
     setTimeout(() => {
       setIsAddingAll(false);
     }, 1800);
@@ -211,7 +213,7 @@ export default function OftenOrderedTogetherWidget({ className = '', style = {} 
                 level={4}
                 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a' }}
               >
-                Often Ordered Together
+                {t('often_ordered_together', 'Often Ordered Together')}
               </Title>
               <Tag
                 color="orange"
@@ -223,11 +225,11 @@ export default function OftenOrderedTogetherWidget({ className = '', style = {} 
                   border: 'none',
                 }}
               >
-                RECOMMENDED
+                {t('recommended', 'RECOMMENDED')}
               </Tag>
             </div>
             <Text style={{ fontSize: 12.5, color: '#64748b' }}>
-              Frequently paired by buyers with items in your cart
+              {t('frequently_paired_desc', 'Frequently paired by buyers with items in your cart')}
             </Text>
           </div>
         </div>
@@ -250,7 +252,7 @@ export default function OftenOrderedTogetherWidget({ className = '', style = {} 
               padding: '0 14px',
             }}
           >
-            Add All 3 Items (${totalBundlePrice.toFixed(2)})
+            {t('add_all_items', 'Add All')} {recommendations.length} {t('items', 'Items')} (${totalBundlePrice.toFixed(2)})
           </Button>
         )}
       </div>
@@ -351,7 +353,7 @@ export default function OftenOrderedTogetherWidget({ className = '', style = {} 
 
                     {product.brand && (
                       <div style={{ fontSize: 10.5, color: '#64748b' }}>
-                        By {product.brand}
+                        {t('by_brand', 'By')} {product.brand}
                       </div>
                     )}
                   </div>
@@ -400,7 +402,7 @@ export default function OftenOrderedTogetherWidget({ className = '', style = {} 
                       boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                     }}
                   >
-                    {isAdded ? 'Added' : 'Add'}
+                    {isAdded ? t('added', 'Added') : t('add', 'Add')}
                   </Button>
                 </div>
               </div>
@@ -425,10 +427,10 @@ export default function OftenOrderedTogetherWidget({ className = '', style = {} 
         }}
       >
         <span style={{ fontSize: 11.5, color: '#1e40af', fontWeight: 600 }}>
-          💡 <strong>Pro Tip:</strong> Orders over $100 automatically qualify for Free Standard Delivery!
+          💡 <strong>{t('pro_tip', 'Pro Tip')}:</strong> {t('free_delivery_tip', 'Orders over $100 automatically qualify for Free Standard Delivery!')}
         </span>
         <span style={{ fontSize: 11, color: '#3b82f6', fontWeight: 700 }}>
-          Items ship together in 1 consolidated dispatch
+          {t('consolidated_dispatch', 'Items ship together in 1 consolidated dispatch')}
         </span>
       </div>
     </Card>

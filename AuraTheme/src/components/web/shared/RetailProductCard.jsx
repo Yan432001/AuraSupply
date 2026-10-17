@@ -10,6 +10,7 @@ import {
   ShoppingCartOutlined,
 } from '@ant-design/icons';
 import { formatCurrency, publicTheme } from '../../../utils/webTheme';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
 const { useBreakpoint } = Grid;
 const { Paragraph, Text, Title } = Typography;
@@ -27,6 +28,7 @@ const RetailProductCard = ({
   onShare,
   onOpenTelegram,
 }) => {
+  const { t } = useTranslation();
   const screens = useBreakpoint();
   const isPhone = !screens.sm;
   const isTablet = screens.sm && !screens.lg;
@@ -183,7 +185,7 @@ const RetailProductCard = ({
                 justifyContent: 'center',
                 border: 'none',
               }}
-              title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+              title={isWishlisted ? t('remove_from_wishlist', 'Remove from wishlist') : t('add_to_wishlist', 'Add to wishlist')}
             />
 
             {/* Quick View Button */}
@@ -209,7 +211,7 @@ const RetailProductCard = ({
                 justifyContent: 'center',
                 border: 'none',
               }}
-              title="Quick preview"
+              title={t('quick_preview', 'Quick preview')}
             />
           </div>
         </div>
@@ -234,7 +236,7 @@ const RetailProductCard = ({
               ✓ {product.shopName || product.brand || 'Aura Partner'}
             </Text>
             <span className="moq-pill" style={{ fontSize: 9.5, padding: '1px 6px' }}>
-              MOQ: {product.moq || (product.price > 100 ? '2' : '5')}
+              {t('moq_label', 'MOQ')}: {product.moq || (product.price > 100 ? '2' : '5')}
             </span>
           </div>
 
@@ -277,7 +279,7 @@ const RetailProductCard = ({
               >
                 {formatCurrency(product.price)}
               </Text>
-              <span style={{ fontSize: 10, color: publicTheme.subtext, fontWeight: 600 }}>/ unit</span>
+              <span style={{ fontSize: 10, color: publicTheme.subtext, fontWeight: 600 }}>{t('per_unit', '/ unit')}</span>
             </div>
 
             {product.originalPrice && product.originalPrice > product.price ? (
@@ -303,7 +305,7 @@ const RetailProductCard = ({
               </div>
             ) : (
               <div style={{ fontSize: 9.5, color: '#10b981', fontWeight: 700, marginTop: 2 }}>
-                Tier: Save 12% on 10+
+                {t('tier_save_bulk', 'Tier: Save 12% on 10+')}
               </div>
             )}
           </div>
@@ -320,7 +322,7 @@ const RetailProductCard = ({
               padding: isPhone ? '1px 6px' : '2px 8px',
             }}
           >
-            {product.inStock ? 'In Stock' : 'Lead Time 5d'}
+            {product.inStock ? t('in_stock', 'In Stock') : t('lead_time_days', 'Lead Time 5d')}
           </Tag>
         </Flex>
 
@@ -355,7 +357,7 @@ const RetailProductCard = ({
               padding: '0 8px',
             }}
           >
-            Order
+            {t('order', 'Order')}
           </Button>
 
           <Button
@@ -377,7 +379,7 @@ const RetailProductCard = ({
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            title="Telegram E-Menu"
+            title={t('telegram_emenu', 'Telegram E-Menu')}
           />
 
           <Button
@@ -404,7 +406,7 @@ const RetailProductCard = ({
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            title={isWishlisted ? t('remove_from_wishlist', 'Remove from wishlist') : t('add_to_wishlist', 'Add to wishlist')}
           />
 
           <Button
@@ -425,7 +427,7 @@ const RetailProductCard = ({
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            title="Like product"
+            title={t('like_product', 'Like product')}
           />
 
           <Button
@@ -446,7 +448,7 @@ const RetailProductCard = ({
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            title="Share product"
+            title={t('share_product', 'Share product')}
           />
         </div>
       </div>
