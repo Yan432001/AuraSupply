@@ -13,7 +13,7 @@ import {
 import { useLocation } from 'react-router-dom';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useLanguage, useTranslation } from '../../contexts/LanguageContext';
+import { useLanguage, useTranslation, SUPPORTED_LANGUAGES } from '../../contexts/LanguageContext';
 import { getMenuByKey, getModuleByKey } from '../../data/erpModules';
 import ThemeSettings from '../../contexts/ThemeSettings';
 import { WALLPAPER_PRESETS } from '../../utils/uiTheme';
@@ -60,7 +60,8 @@ const presetQuickList = [
 const SystemSettings = () => {
   const adminTheme = useAdminTheme();
   const { themeMode, setThemeMode, themePreset, changePreset, customSettings, updateTransparentSystem } = useTheme();
-  const { currentLanguage, setLanguage, activeLanguage, supportedLanguages, fetchTranslations, isLoadingTranslations } = useLanguage();
+  const { currentLanguage, setLanguage, activeLanguage, supportedLanguages: ctxLangs, languages: ctxLangs2, fetchTranslations, isLoadingTranslations } = useLanguage();
+  const supportedLanguages = Array.isArray(ctxLangs) && ctxLangs.length ? ctxLangs : (Array.isArray(ctxLangs2) && ctxLangs2.length ? ctxLangs2 : SUPPORTED_LANGUAGES);
   const { t } = useTranslation();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);

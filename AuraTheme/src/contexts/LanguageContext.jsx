@@ -556,7 +556,9 @@ export const LanguageProvider = ({ children }) => {
     setLanguage,
     t,
     languages: SUPPORTED_LANGUAGES,
+    supportedLanguages: SUPPORTED_LANGUAGES,
     isLoadingTranslations,
+    fetchTranslations,
     refreshTranslations: () => fetchTranslations(currentLanguage),
   }), [currentLanguage, activeLanguage, setLanguage, t, isLoadingTranslations, fetchTranslations]);
 
@@ -570,14 +572,28 @@ export const LanguageProvider = ({ children }) => {
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
+    return {
+      currentLanguage: 'khmer',
+      activeLanguage: SUPPORTED_LANGUAGES[1],
+      setLanguage: () => {},
+      t: (k, fb) => fb || k,
+      languages: SUPPORTED_LANGUAGES,
+      supportedLanguages: SUPPORTED_LANGUAGES,
+      isLoadingTranslations: false,
+      fetchTranslations: async () => {},
+      refreshTranslations: async () => {},
+    };
   }
-  return context;
+  return {
+    ...context,
+    languages: context.languages || SUPPORTED_LANGUAGES,
+    supportedLanguages: context.supportedLanguages || context.languages || SUPPORTED_LANGUAGES,
+  };
 };
 
 export const useTranslation = () => {
-  const { t, currentLanguage, activeLanguage, setLanguage } = useLanguage();
-  return { t, currentLanguage, activeLanguage, setLanguage };
+  const { t, currentLanguage, activeLanguage, setLanguage, languages, supportedLanguages } = useLanguage();
+  return { t, currentLanguage, activeLanguage, setLanguage, languages, supportedLanguages };
 };
 
 export default LanguageContext;

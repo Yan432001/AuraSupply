@@ -40,6 +40,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage, useTranslation, SUPPORTED_LANGUAGES } from '../../contexts/LanguageContext';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 
 const { Title, Text, Paragraph } = Typography;
@@ -47,6 +48,8 @@ const { Option } = Select;
 
 export default function AdminProfile() {
   const { user: authUser, login } = useAuth();
+  const { currentLanguage, setLanguage } = useLanguage();
+  const { t } = useTranslation();
   const adminTheme = useAdminTheme();
 
   const [loading, setLoading] = useState(true);
@@ -294,6 +297,13 @@ export default function AdminProfile() {
                       <Descriptions.Item label="Last Login IP">
                         {u.last_login_ip || '127.0.0.1'}
                       </Descriptions.Item>
+                      <Descriptions.Item label="System Language">
+                        <Tag color="cyan" style={{ fontSize: 12 }}>
+                          {SUPPORTED_LANGUAGES.find((l) => l.code === currentLanguage)?.flag}{' '}
+                          {SUPPORTED_LANGUAGES.find((l) => l.code === currentLanguage)?.native} (
+                          {SUPPORTED_LANGUAGES.find((l) => l.code === currentLanguage)?.name})
+                        </Tag>
+                      </Descriptions.Item>
                     </Descriptions>
                   </Card>
                 </Col>
@@ -530,6 +540,83 @@ export default function AdminProfile() {
                     </Button>
                   </Form.Item>
                 </Form>
+              </Card>
+            ),
+          },
+          {
+            key: 'language',
+            label: (
+              <span>
+                <GlobalOutlined /> System Language
+              </span>
+            ),
+            children: (
+              <Card
+                title={<strong>System Language & Regional Localization</strong>}
+                style={{ borderRadius: 12, maxWidth: 720, background: adminTheme.cardBg }}
+              >
+                <Paragraph type="secondary" style={{ fontSize: 13, marginBottom: 16 }}>
+                  Choose your preferred operating language across the Aura ERP administrative workspace. This setting applies immediately across all modules, submodules, and menus.
+                </Paragraph>
+
+                <Row gutter={[12, 12]}>
+                  {SUPPORTED_LANGUAGES.map((lang) => {
+                    const isSelected = currentLanguage === lang.code;
+                    return (
+                      <Col xs={24} sm={12} key={lang.code}>
+                        <div
+                          onClick={() => {
+                            setLanguage(lang.code);
+                            message.success(`Language updated to ${lang.native} (${lang.name})`);
+                          }}
+                          style={{
+                            padding: '14px 16px',
+                            borderRadius: 14,
+                            border: isSelected ? `2px solid ${adminTheme.primary}` : `1px solid ${adminTheme.border || 'rgba(0,0,0,0.1)'}`,
+                            background: isSelected
+                              ? (adminTheme.isDark ? `${adminTheme.primary}22` : `${adminTheme.primary}0d`)
+                              : (adminTheme.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'),
+                            cursor: 'pointer',
+                            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            boxShadow: isSelected ? `0 4px 14px ${adminTheme.primary}33` : 'none',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <span style={{ fontSize: 28 }}>{lang.flag}</span>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: 14, color: isSelected ? adminTheme.primary : adminTheme.text }}>
+                                {lang.native}
+                              </div>
+                              <div style={{ fontSize: 12, color: adminTheme.subtext }}>
+                                {lang.name} &bull; {lang.direction.toUpperCase()}
+                              </div>
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <div
+                              style={{
+                                width: 22,
+                                height: 22,
+                                borderRadius: '50%',
+                                background: adminTheme.primary,
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 11,
+                              }}
+                            >
+                              <CheckCircleOutlined />
+                            </div>
+                          )}
+                        </div>
+                      </Col>
+                    );
+                  })}
+                </Row>
               </Card>
             ),
           },

@@ -42,7 +42,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../../../contexts/CartContext';
 import { useWishlist } from '../../../contexts/WishlistContext';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useLanguage, useTranslation } from '../../../contexts/LanguageContext';
+import { useLanguage, useTranslation, SUPPORTED_LANGUAGES } from '../../../contexts/LanguageContext';
 import { fetchProducts, fetchShops } from '../../../utils/apiconfig';
 import { formatCurrency, publicTheme } from '../../../utils/webTheme';
 import OfflineWarningBanner from '../../common/OfflineWarningBanner';
@@ -87,7 +87,8 @@ const Header = ({ currentPage }) => {
   const { cartItemCount, cartTotal = 0 } = useCart();
   const { wishlistItemCount } = useWishlist();
   const { user, logout } = useAuth();
-  const { currentLanguage, setLanguage, activeLanguage, supportedLanguages } = useLanguage();
+  const { currentLanguage, setLanguage, activeLanguage, supportedLanguages: ctxLangs, languages: ctxLangs2 } = useLanguage();
+  const supportedLanguages = Array.isArray(ctxLangs) && ctxLangs.length ? ctxLangs : (Array.isArray(ctxLangs2) && ctxLangs2.length ? ctxLangs2 : SUPPORTED_LANGUAGES);
   const { t } = useTranslation();
   const navigate = useNavigate();
   const screens = useBreakpoint();

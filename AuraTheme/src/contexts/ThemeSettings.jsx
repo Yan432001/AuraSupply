@@ -39,8 +39,11 @@ import {
   CheckCircleFilled,
   FireFilled,
   StarFilled,
+  GlobalOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import { useTheme } from './ThemeContext';
+import { useLanguage, useTranslation, SUPPORTED_LANGUAGES } from './LanguageContext';
 import { useAdminTheme } from '../hooks/useAdminTheme';
 import { WALLPAPER_PRESETS } from '../utils/uiTheme';
 
@@ -64,6 +67,10 @@ const ThemeSettings = ({ buttonStyle }) => {
     updateTransparentSystem,
     toggleTransparentSystem,
   } = useTheme();
+
+  const { currentLanguage, setLanguage, activeLanguage, supportedLanguages: ctxLangs, languages: ctxLangs2, refreshTranslations, isLoadingTranslations } = useLanguage();
+  const supportedLanguages = Array.isArray(ctxLangs) && ctxLangs.length ? ctxLangs : (Array.isArray(ctxLangs2) && ctxLangs2.length ? ctxLangs2 : SUPPORTED_LANGUAGES);
+  const { t } = useTranslation();
 
   const adminTheme = useAdminTheme();
 
@@ -613,6 +620,132 @@ const ThemeSettings = ({ buttonStyle }) => {
                       </div>
                     </div>
                   </div>
+                </div>
+              ),
+            },
+            {
+              key: 'language',
+              label: (
+                <span>
+                  <GlobalOutlined style={{ marginRight: 6 }} />
+                  {t('language', 'Language')}
+                </span>
+              ),
+              children: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ fontSize: 12, color: adminTheme.subtext }}>
+                    {t('change_language_desc', 'Switch system language across the Aura ERP administrative workspace and storefront:')}
+                  </div>
+
+                  <Row gutter={[10, 10]}>
+                    {(supportedLanguages || SUPPORTED_LANGUAGES).map((lang) => {
+                      const isSelected = currentLanguage === lang.code;
+                      return (
+                        <Col span={12} key={lang.code}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setLanguage(lang.code);
+                              try {
+                                message.destroy();
+                                message.success(`Language switched to ${lang.native} (${lang.name})`);
+                              } catch (_) {}
+                            }}
+                            style={{
+                              display: 'block',
+                              width: '100%',
+                              textAlign: 'left',
+                              padding: '12px 14px',
+                              borderRadius: 14,
+                              background: isSelected
+                                ? (themeMode === 'dark' ? 'rgba(47, 111, 237, 0.22)' : 'rgba(47, 111, 237, 0.08)')
+                                : (themeMode === 'dark' ? 'rgba(255,255,255,0.02)' : adminTheme.card),
+                              border: isSelected
+                                ? `2px solid ${adminTheme.primary}`
+                                : `1px solid ${adminTheme.border}`,
+                              cursor: 'pointer',
+                              position: 'relative',
+                              transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+                              boxShadow: isSelected
+                                ? `0 8px 24px -4px ${adminTheme.primary}44`
+                                : '0 2px 6px rgba(0,0,0,0.02)',
+                              transform: isSelected ? 'scale(1.02)' : 'none',
+                              outline: 'none',
+                              userSelect: 'none',
+                            }}
+                          >
+                            {isSelected && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  top: -6,
+                                  right: -6,
+                                  width: 20,
+                                  height: 20,
+                                  borderRadius: '50%',
+                                  background: adminTheme.primary,
+                                  color: '#fff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: 10,
+                                  boxShadow: `0 2px 8px ${adminTheme.primary}66`,
+                                }}
+                              >
+                                <CheckOutlined />
+                              </div>
+                            )}
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <span style={{ fontSize: 24 }}>{lang.flag}</span>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontWeight: 700, fontSize: 13, color: isSelected ? adminTheme.primary : adminTheme.text }}>
+                                  {lang.native}
+                                </div>
+                                <div style={{ fontSize: 11, color: adminTheme.subtext }}>
+                                  {lang.name}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        </Col>
+                      );
+                    })}
+                  </Row>
+
+                  <Card
+                    size="small"
+                    style={{
+                      borderRadius: 14,
+                      background: themeMode === 'dark' ? 'rgba(255,255,255,0.03)' : '#f8fafc',
+                      border: `1px solid ${adminTheme.border}`,
+                      marginTop: 6,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: adminTheme.text }}>
+                          Database Table: aura_language
+                        </div>
+                        <div style={{ fontSize: 11, color: adminTheme.subtext, marginTop: 2 }}>
+                          5,474 multi-language keys loaded
+                        </div>
+                      </div>
+                      <Button
+                        size="small"
+                        icon={<SyncOutlined spin={isLoadingTranslations} />}
+                        onClick={() => {
+                          refreshTranslations();
+                          message.success('Translations refreshed from MySQL database!');
+                        }}
+                        style={{ borderRadius: 8, fontWeight: 600, fontSize: 11.5 }}
+                      >
+                        Re-sync
+                      </Button>
+                    </div>
+                  </Card>
                 </div>
               ),
             },

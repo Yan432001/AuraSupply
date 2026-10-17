@@ -1,5 +1,5 @@
 import React from 'react';
-import { Avatar, Badge, Button, Dropdown, Flex, Input, Layout, Modal, Tooltip, Typography } from 'antd';
+import { Avatar, Badge, Button, Dropdown, Flex, Input, Layout, Modal, Tooltip, Typography, message } from 'antd';
 import {
   BellOutlined,
   ExpandOutlined,
@@ -20,7 +20,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useLanguage, useTranslation } from '../../contexts/LanguageContext';
+import { useLanguage, useTranslation, SUPPORTED_LANGUAGES } from '../../contexts/LanguageContext';
 import ThemeSettings from '../../contexts/ThemeSettings';
 import { getModuleByKey } from '../../data/erpModules';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
@@ -96,17 +96,12 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
     }
   };
 
-  const userMenuItems = [
-    { key: 'profile', icon: <UserOutlined />, label: t('profile', 'My Profile') },
-    { key: 'settings', icon: <SettingOutlined />, label: t('settings', 'Settings') },
-    { type: 'divider' },
-    { key: 'logout', icon: <LogoutOutlined />, label: t('logout', 'Sign Out'), danger: true },
-  ];
+  const langList = Array.isArray(languages) && languages.length ? languages : SUPPORTED_LANGUAGES;
 
-  const languageMenuItems = languages.map((lang) => {
+  const languageMenuItems = langList.map((lang) => {
     const isSelected = lang.code === currentLanguage;
     return {
-      key: lang.code,
+      key: `lang-${lang.code}`,
       icon: <span style={{ fontSize: 16 }}>{lang.flag}</span>,
       label: (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, minWidth: 150, padding: '2px 0' }}>
@@ -121,9 +116,39 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
           {isSelected && <CheckOutlined style={{ color: adminTheme.primary, fontSize: 12 }} />}
         </div>
       ),
-      onClick: () => setLanguage(lang.code),
+      onClick: () => {
+        setLanguage(lang.code);
+        try {
+          message.destroy();
+          message.success(`Language switched to ${lang.native} (${lang.name})`);
+        } catch (_) {}
+      },
     };
   });
+
+  const userMenuItems = [
+    { key: 'profile', icon: <UserOutlined />, label: t('profile', 'My Profile') },
+    { key: 'settings', icon: <SettingOutlined />, label: t('settings', 'Settings') },
+    {
+      key: 'change_language_sub',
+      icon: <GlobalOutlined />,
+      label: t('change_language', 'Change Language'),
+      children: langList.map((l) => ({
+        key: `sub-lang-${l.code}`,
+        icon: <span style={{ fontSize: 14 }}>{l.flag}</span>,
+        label: `${l.native} (${l.name})`,
+        onClick: () => {
+          setLanguage(l.code);
+          try {
+            message.destroy();
+            message.success(`Language switched to ${l.native} (${l.name})`);
+          } catch (_) {}
+        },
+      })),
+    },
+    { type: 'divider' },
+    { key: 'logout', icon: <LogoutOutlined />, label: t('logout', 'Sign Out'), danger: true },
+  ];
 
   const branchMenuItems = [
     {
