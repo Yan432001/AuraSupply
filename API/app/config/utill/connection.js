@@ -15,7 +15,9 @@ const mockStore = {
       // bcrypt hash for "admin"
       password: "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
       group_id: 1,
-      active: 1
+      active: 1,
+      status: 'active',
+      allow_admin_login: 1
     }
   ],
   sales: [],
@@ -46,16 +48,15 @@ try {
     .then((conn) => {
       console.log(`[Database] Connected successfully to MySQL (${host}:${process.env.DB_PORT || 3306}/${dbName})`);
       conn.release();
+      useMock = false;
       const { bootstrapDatabase } = require("../../services/cmsDbBootstrap.service");
       bootstrapDatabase(realPool).catch(() => {});
     })
     .catch((err) => {
-      console.log(`[Database] Notice: MySQL not reachable at ${host} (${err.code || err.message}). Fallback layer engaged.`);
-      useMock = true;
+      console.log(`[Database] Notice: MySQL not immediately reachable at ${host} (${err.code || err.message}). Will retry on query.`);
     });
 } catch (err) {
-  console.log(`[Database] Pool initialization error: ${err.message}. Using fallback data layer.`);
-  useMock = true;
+  console.log(`[Database] Pool initialization error: ${err.message}.`);
 }
 
 async function handleMockQuery(sql, params = []) {
@@ -149,7 +150,11 @@ async function handleMockQuery(sql, params = []) {
   }
 
   if (queryStr.includes('aura_groups')) {
-    return [[{ id: 1, name: 'admin', description: 'Administrator' }, { id: 2, name: 'staff', description: 'Staff' }], []];
+    return [[
+      { id: 1, name: 'owner', description: 'Owner', level: 1, allow_admin_login: 1, allow_web_login: 1 },
+      { id: 2, name: 'admin', description: 'Administrator', level: 2, allow_admin_login: 1, allow_web_login: 1 },
+      { id: 3, name: 'staff', description: 'Staff', level: 10, allow_admin_login: 1, allow_web_login: 1 }
+    ], []];
   }
 
   if (queryStr.includes('aura_settings')) {
@@ -170,13 +175,14 @@ async function handleMockQuery(sql, params = []) {
 
 const poolWrapper = {
   async query(sql, params) {
-    if (realPool && !useMock) {
+    if (realPool) {
       try {
-        return await realPool.query(sql, params);
+        const result = await realPool.query(sql, params);
+        useMock = false;
+        return result;
       } catch (err) {
-        if (err.code === 'ECONNREFUSED' || err.code === 'PROTOCOL_CONNECTION_LOST') {
-          console.warn(`[Database] Connection lost (${err.code}), engaging fallback layer`);
-          useMock = true;
+        if (err.code === 'ECONNREFUSED' || err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ETIMEDOUT') {
+          console.warn(`[Database] Connection issue (${err.code}), temporarily using fallback`);
           return handleMockQuery(sql, params);
         }
         console.error(`[Database Query Error] ${err.message} in SQL: ${sql}`);
@@ -191,12 +197,13 @@ const poolWrapper = {
   },
 
   async getConnection() {
-    if (realPool && !useMock) {
+    if (realPool) {
       try {
         const conn = await realPool.getConnection();
+        useMock = false;
         return conn;
-      } catch {
-        useMock = true;
+      } catch (err) {
+        console.warn(`[Database] getConnection failed (${err.code}), using fallback`);
       }
     }
 
