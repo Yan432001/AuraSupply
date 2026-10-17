@@ -38,12 +38,14 @@ import {
   MobileOutlined,
 } from '@ant-design/icons';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
 export default function AdminQrCodeGenerator() {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const qrRef = useRef(null);
@@ -324,10 +326,10 @@ export default function AdminQrCodeGenerator() {
           <Col xs={24} md={16}>
             <Title level={3} style={{ color: '#ffffff', margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
               <QrcodeOutlined style={{ color: '#38bdf8' }} />
-              QR Code Generator & Table Stand Designer
+              {t('qr_generator_title', 'QR Code Generator & Table Stand Designer')}
             </Title>
             <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: '6px 0 0 0', fontSize: 14 }}>
-              Generate custom QR codes for specific store locations, tables, and counters. Customers can scan to instantly open the E-Menu and place orders directly to that exact seat.
+              {t('qr_generator_desc', 'Generate custom QR codes for specific store locations, tables, and counters. Customers can scan to instantly open the E-Menu and place orders directly to that exact seat.')}
             </Paragraph>
           </Col>
           <Col xs={24} md={8} style={{ textAlign: 'right' }}>
@@ -343,7 +345,7 @@ export default function AdminQrCodeGenerator() {
                   fontWeight: 600,
                 }}
               >
-                Download Stand Card
+                {t('download_stand_card', 'Download Stand Card')}
               </Button>
             </Space>
           </Col>
@@ -357,7 +359,7 @@ export default function AdminQrCodeGenerator() {
             key: 'single',
             label: (
               <span>
-                <QrcodeOutlined /> Single Table & Counter Generator
+                <QrcodeOutlined /> {t('single_table_generator', 'Single Table & Counter Generator')}
               </span>
             ),
             children: (
@@ -368,7 +370,7 @@ export default function AdminQrCodeGenerator() {
                     title={
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <ShopOutlined style={{ color: '#2563eb' }} />
-                        <span>Configure Store & Location</span>
+                        <span>{t('configure_store_location', 'Configure Store & Location')}</span>
                       </div>
                     }
                     bordered
@@ -381,7 +383,7 @@ export default function AdminQrCodeGenerator() {
                   >
                     <Form form={form} layout="vertical">
                       {/* 1. Store Selector */}
-                      <Form.Item label={<Text strong>Select Target Store / Biller</Text>} required>
+                      <Form.Item label={<Text strong>{t('select_target_store', 'Select Target Store / Biller')}</Text>} required>
                         <Select
                           size="large"
                           value={selectedStoreSlug}
@@ -411,17 +413,17 @@ export default function AdminQrCodeGenerator() {
                       {/* 2. Location Type & Number */}
                       <Row gutter={16}>
                         <Col xs={24} sm={12}>
-                          <Form.Item label={<Text strong>Location Type</Text>}>
+                          <Form.Item label={<Text strong>{t('location_type', 'Location Type')}</Text>}>
                             <Select
                               size="large"
                               value={locationType}
                               onChange={(val) => setLocationType(val)}
                               style={{ width: '100%' }}
                             >
-                              <Option value="table">Table (Dine-In)</Option>
-                              <Option value="counter">Counter (Takeaway / Pickup)</Option>
-                              <Option value="bar">Bar / Barista Station</Option>
-                              <Option value="room">Private Room / VIP Booth</Option>
+                              <Option value="table">{t('table_dine_in', 'Table (Dine-In)')}</Option>
+                              <Option value="counter">{t('counter_takeaway', 'Counter (Takeaway / Pickup)')}</Option>
+                              <Option value="bar">{t('bar_station', 'Bar / Barista Station')}</Option>
+                              <Option value="room">{t('vip_room', 'Private Room / VIP Booth')}</Option>
                             </Select>
                           </Form.Item>
                         </Col>
@@ -774,7 +776,7 @@ export default function AdminQrCodeGenerator() {
                           onClick={handleDownloadQrOnly}
                           style={{ borderRadius: 8 }}
                         >
-                          Save QR PNG
+                          {t('save_qr_png', 'Save QR PNG')}
                         </Button>
                         <Button
                           type="primary"
@@ -782,7 +784,7 @@ export default function AdminQrCodeGenerator() {
                           onClick={handleDownloadStandCard}
                           style={{ borderRadius: 8, background: '#2563eb' }}
                         >
-                          Download Table Stand Card
+                          {t('download_stand_card', 'Download Table Stand Card')}
                         </Button>
                       </Space>
                     </div>
@@ -795,12 +797,12 @@ export default function AdminQrCodeGenerator() {
             key: 'batch',
             label: (
               <span>
-                <AppstoreOutlined /> Batch Table Generator
+                <AppstoreOutlined /> {t('batch_table_generator', 'Batch Table Generator')}
               </span>
             ),
             children: (
               <Card
-                title="Batch Generate QR Codes for Multiple Tables / Counters"
+                title={t('batch_qr_title', 'Batch Generate QR Codes for Multiple Tables / Counters')}
                 bordered
                 style={{
                   borderRadius: 12,

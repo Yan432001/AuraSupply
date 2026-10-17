@@ -38,6 +38,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -65,6 +66,7 @@ const saveLiveProducts = (prods) => {
 
 export default function BpasAddProductPage({ onBack, editProduct = null }) {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [form] = Form.useForm();
 
@@ -300,17 +302,17 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
             }}
             style={{ fontWeight: 700 }}
           >
-            Back to Products
+            {t('back_to_products', 'Back to Products')}
           </Button>
           <h2 style={{ color: '#428bca', fontSize: 19, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
             <PlusOutlined style={{ fontSize: 16 }} />
-            {editProduct ? `Edit Product: ${editProduct.name}` : 'Add Product'}
+            {editProduct ? `${t('edit_product', 'Edit Product')}: ${editProduct.name}` : t('add_product', 'Add Product')}
           </h2>
         </div>
 
         <Space size={10}>
           <Button onClick={() => form.resetFields()}>
-            Reset Form
+            {t('reset_form', 'Reset Form')}
           </Button>
           <Button
             type="primary"
@@ -324,7 +326,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
               boxShadow: '0 2px 8px rgba(66, 139, 202, 0.3)',
             }}
           >
-            {editProduct ? 'Save Changes' : 'Add Product'}
+            {editProduct ? t('save_changes', 'Save Changes') : t('add_product', 'Add Product')}
           </Button>
         </Space>
       </div>
@@ -353,7 +355,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
               // TAB 1: REQUIRED
               {
                 key: 'required',
-                label: <span style={{ fontWeight: 700, padding: '0 4px' }}>Required *</span>,
+                label: <span style={{ fontWeight: 700, padding: '0 4px' }}>{t('required_fields', 'Required *')}</span>,
                 children: (
                   <div style={{ paddingTop: 12 }}>
                     <Row gutter={24}>
@@ -636,7 +638,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
               // TAB 2: DETAILS
               {
                 key: 'details',
-                label: <span style={{ fontWeight: 700, padding: '0 4px' }}>Details</span>,
+                label: <span style={{ fontWeight: 700, padding: '0 4px' }}>{t('details', 'Details')}</span>,
                 children: (
                   <div style={{ paddingTop: 12 }}>
                     <Row gutter={16}>
@@ -690,7 +692,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
               // TAB 3: ACCOUNTING
               {
                 key: 'accounting',
-                label: <span style={{ fontWeight: 700 }}>Accounting</span>,
+                label: <span style={{ fontWeight: 700 }}>{t('accounting', 'Accounting')}</span>,
                 children: (
                   <div style={{ paddingTop: 12 }}>
                     <Paragraph type="secondary">
@@ -698,7 +700,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                     </Paragraph>
                     <Row gutter={16}>
                       <Col xs={24} sm={12}>
-                        <Form.Item label="Sales / Revenue Account">
+                        <Form.Item label={t('sales_revenue_account', 'Sales / Revenue Account')}>
                           <Select defaultValue="411000">
                             <Option value="411000">411000 - Sales Revenue (Merchandise)</Option>
                             <Option value="412000">412000 - Service & Labor Income</Option>
@@ -706,7 +708,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                         </Form.Item>
                       </Col>
                       <Col xs={24} sm={12}>
-                        <Form.Item label="Cost of Goods Sold (COGS) Account">
+                        <Form.Item label={t('cogs_account', 'Cost of Goods Sold (COGS) Account')}>
                           <Select defaultValue="511000">
                             <Option value="511000">511000 - Cost of Goods Sold (COGS)</Option>
                             <Option value="512000">512000 - Direct Material Usage</Option>
@@ -716,7 +718,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                     </Row>
                     <Row gutter={16}>
                       <Col xs={24} sm={12}>
-                        <Form.Item label="Inventory Asset Account">
+                        <Form.Item label={t('inventory_asset_account', 'Inventory Asset Account')}>
                           <Select defaultValue="113000">
                             <Option value="113000">113000 - Finished Goods Inventory</Option>
                             <Option value="113100">113100 - Raw Materials & Ingredients</Option>
@@ -724,7 +726,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                         </Form.Item>
                       </Col>
                       <Col xs={24} sm={12}>
-                        <Form.Item label="Inventory Adjustment Account">
+                        <Form.Item label={t('inventory_adj_account', 'Inventory Adjustment Account')}>
                           <Select defaultValue="513000">
                             <Option value="513000">513000 - Inventory Adjustment Variance</Option>
                             <Option value="514000">514000 - Inventory Shrinkage & Loss</Option>
@@ -739,7 +741,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
               // TAB 4: VARIANTS
               {
                 key: 'variants',
-                label: <span style={{ fontWeight: 700 }}>Variants</span>,
+                label: <span style={{ fontWeight: 700 }}>{t('variants', 'Variants')}</span>,
                 children: (
                   <div style={{ paddingTop: 12 }}>
                     <Paragraph type="secondary">
@@ -754,7 +756,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                         style={{ width: 300 }}
                       />
                       <Button type="primary" icon={<PlusOutlined />} onClick={handleAddVariant}>
-                        Add Variant Row
+                        {t('add_variant_row', 'Add Variant Row')}
                       </Button>
                     </Space>
 
@@ -762,17 +764,17 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                       rowKey="id"
                       dataSource={variantRows}
                       columns={[
-                        { title: 'Variant Name', dataIndex: 'name', key: 'name', render: (t) => <strong>{t}</strong> },
-                        { title: 'Barcode', dataIndex: 'barcode', key: 'barcode', render: (b) => <Tag color="blue">{b}</Tag> },
+                        { title: t('variant_name', 'Variant Name'), dataIndex: 'name', key: 'name', render: (t) => <strong>{t}</strong> },
+                        { title: t('barcode', 'Barcode'), dataIndex: 'barcode', key: 'barcode', render: (b) => <Tag color="blue">{b}</Tag> },
                         {
-                          title: 'Price Addition ($)',
+                          title: t('price_addition', 'Price Addition ($)'),
                           dataIndex: 'priceAddition',
                           key: 'priceAddition',
                           render: (p) => <span style={{ color: '#16a34a', fontWeight: 700 }}>+{formatCurrency(p)}</span>,
                         },
-                        { title: 'Default Qty', dataIndex: 'quantity', key: 'quantity', align: 'right' },
+                        { title: t('default_qty', 'Default Qty'), dataIndex: 'quantity', key: 'quantity', align: 'right' },
                         {
-                          title: 'Action',
+                          title: t('action', 'Action'),
                           key: 'action',
                           width: 80,
                           align: 'center',
@@ -796,12 +798,12 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
               // TAB 5: SUPPLIER
               {
                 key: 'supplier',
-                label: <span style={{ fontWeight: 700 }}>Supplier</span>,
+                label: <span style={{ fontWeight: 700 }}>{t('supplier', 'Supplier')}</span>,
                 children: (
                   <div style={{ paddingTop: 12 }}>
                     <Row gutter={16}>
                       <Col xs={24} sm={12}>
-                        <Form.Item label="Primary Supplier">
+                        <Form.Item label={t('primary_supplier', 'Primary Supplier')}>
                           <Select defaultValue="1">
                             <Option value="1">Angkor Harvest Coffee Farm (Kampot)</Option>
                             <Option value="2">Mondulkiri Organic Co-op</Option>
@@ -810,12 +812,12 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                         </Form.Item>
                       </Col>
                       <Col xs={24} sm={6}>
-                        <Form.Item label="Supplier Part / Item No">
+                        <Form.Item label={t('supplier_part_no', 'Supplier Part / Item No')}>
                           <Input placeholder="e.g. SUP-COF-01" />
                         </Form.Item>
                       </Col>
                       <Col xs={24} sm={6}>
-                        <Form.Item label="Supplier Purchase Price ($)">
+                        <Form.Item label={t('supplier_purchase_price', 'Supplier Purchase Price ($)')}>
                           <InputNumber min={0} defaultValue={1.8} style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>
@@ -827,7 +829,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
               // TAB 6: PROMOTION
               {
                 key: 'promotion',
-                label: <span style={{ fontWeight: 700 }}>Promotion</span>,
+                label: <span style={{ fontWeight: 700 }}>{t('promotion', 'Promotion')}</span>,
                 children: (
                   <div style={{ paddingTop: 12 }}>
                     <Paragraph type="secondary">
@@ -835,17 +837,17 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                     </Paragraph>
                     <Row gutter={16} align="middle">
                       <Col xs={24} sm={8}>
-                        <Form.Item label="Promotional Discount Price ($)">
+                        <Form.Item label={t('promotional_price', 'Promotional Discount Price ($)')}>
                           <InputNumber min={0} placeholder="e.g. 2.99" style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} sm={8}>
-                        <Form.Item label="Promotion Start Date">
+                        <Form.Item label={t('promotion_start_date', 'Promotion Start Date')}>
                           <DatePicker style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} sm={8}>
-                        <Form.Item label="Promotion End Date">
+                        <Form.Item label={t('promotion_end_date', 'Promotion End Date')}>
                           <DatePicker style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>
@@ -857,23 +859,23 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
               // TAB 7: SHOP / WEB
               {
                 key: 'shop',
-                label: <span style={{ fontWeight: 700 }}>Shop</span>,
+                label: <span style={{ fontWeight: 700 }}>{t('shop', 'Shop')}</span>,
                 children: (
                   <div style={{ paddingTop: 12 }}>
                     <Row gutter={24}>
                       <Col xs={24} sm={8}>
-                        <Form.Item name="featured" label="Featured on Public Home Page" valuePropName="checked">
-                          <Switch checkedChildren="Featured" unCheckedChildren="Standard" />
+                        <Form.Item name="featured" label={t('featured_home', 'Featured on Public Home Page')} valuePropName="checked">
+                          <Switch checkedChildren={t('featured', 'Featured')} unCheckedChildren={t('standard', 'Standard')} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} sm={8}>
-                        <Form.Item name="hide_pos" label="Hide from Cashier POS Terminal" valuePropName="checked">
-                          <Switch checkedChildren="Hidden in POS" unCheckedChildren="Visible in POS" />
+                        <Form.Item name="hide_pos" label={t('hide_pos', 'Hide from Cashier POS Terminal')} valuePropName="checked">
+                          <Switch checkedChildren={t('hidden_in_pos', 'Hidden in POS')} unCheckedChildren={t('visible_in_pos', 'Visible in POS')} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} sm={8}>
-                        <Form.Item name="hide_shop" label="Hide from E-Menu & Public Web" valuePropName="checked">
-                          <Switch checkedChildren="Hidden Online" unCheckedChildren="Visible Online" />
+                        <Form.Item name="hide_shop" label={t('hide_shop', 'Hide from E-Menu & Public Web')} valuePropName="checked">
+                          <Switch checkedChildren={t('hidden_online', 'Hidden Online')} unCheckedChildren={t('visible_online', 'Visible Online')} />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -884,7 +886,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
               // TAB 8: ADD ON
               {
                 key: 'add_on',
-                label: <span style={{ fontWeight: 700 }}>Add On</span>,
+                label: <span style={{ fontWeight: 700 }}>{t('add_on', 'Add On')}</span>,
                 children: (
                   <div style={{ paddingTop: 12 }}>
                     <Paragraph type="secondary">

@@ -47,6 +47,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useBranchesAndBillers } from '../../hooks/useBranchesAndBillers';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -54,6 +55,7 @@ const { Option } = Select;
 const AdminBranchesManager = () => {
   const adminTheme = useAdminTheme();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const {
     branches,
     billers,
@@ -287,7 +289,7 @@ const AdminBranchesManager = () => {
   // Branch Table Columns
   const branchColumns = [
     {
-      title: 'Branch & Store Info',
+      title: t('branch_store_info', 'Branch & Store Info'),
       key: 'branch_info',
       render: (_, record) => {
         const linkedBiller = billers.find((bil) => bil.id === record.biller_id);
@@ -351,7 +353,7 @@ const AdminBranchesManager = () => {
       },
     },
     {
-      title: 'Location & Address',
+      title: t('location_address', 'Location & Address'),
       key: 'location',
       render: (_, record) => (
         <div>
@@ -371,7 +373,7 @@ const AdminBranchesManager = () => {
       ),
     },
     {
-      title: 'Contact & Manager',
+      title: t('contact_manager', 'Contact & Manager'),
       key: 'contact',
       render: (_, record) => (
         <div>
@@ -392,7 +394,7 @@ const AdminBranchesManager = () => {
       ),
     },
     {
-      title: 'POS & Operations',
+      title: t('pos_operations', 'POS & Operations'),
       key: 'pos_ops',
       render: (_, record) => (
         <div>
@@ -412,7 +414,7 @@ const AdminBranchesManager = () => {
       ),
     },
     {
-      title: 'Status',
+      title: t('status', 'Status'),
       key: 'status',
       width: 120,
       render: (_, record) => (
@@ -431,7 +433,7 @@ const AdminBranchesManager = () => {
       ),
     },
     {
-      title: 'Actions',
+      title: t('actions', 'Actions'),
       key: 'actions',
       width: 160,
       render: (_, record) => (
@@ -485,7 +487,7 @@ const AdminBranchesManager = () => {
   // Biller Table Columns
   const billerColumns = [
     {
-      title: 'Biller / Legal Entity',
+      title: t('biller_legal_entity', 'Biller / Legal Entity'),
       key: 'biller_info',
       render: (_, record) => {
         const linkedCount = branches.filter((b) => b.biller_id === record.id).length;
@@ -517,7 +519,7 @@ const AdminBranchesManager = () => {
       },
     },
     {
-      title: 'Tax & VAT Information',
+      title: t('tax_vat_info', 'Tax & VAT Information'),
       key: 'tax_info',
       render: (_, record) => (
         <div>
@@ -541,7 +543,7 @@ const AdminBranchesManager = () => {
       ),
     },
     {
-      title: 'Banking & Bakong KHQR',
+      title: t('settlement_accounts', 'Banking & Bakong KHQR'),
       key: 'banking',
       render: (_, record) => (
         <div>
@@ -563,7 +565,7 @@ const AdminBranchesManager = () => {
       ),
     },
     {
-      title: 'Currency & Exchange',
+      title: t('currency_exchange', 'Currency & Exchange'),
       key: 'currency',
       render: (_, record) => (
         <div>
@@ -577,7 +579,7 @@ const AdminBranchesManager = () => {
       ),
     },
     {
-      title: 'Status',
+      title: t('status', 'Status'),
       key: 'status',
       width: 110,
       render: (_, record) => (
@@ -591,7 +593,7 @@ const AdminBranchesManager = () => {
       ),
     },
     {
-      title: 'Actions',
+      title: t('actions', 'Actions'),
       key: 'actions',
       width: 140,
       render: (_, record) => (
@@ -638,14 +640,14 @@ const AdminBranchesManager = () => {
         <div>
           <Flex align="center" gap={10}>
             <Title level={3} style={{ margin: 0, color: adminTheme.text }}>
-              Multi-Shop &amp; Multiple Biller Management
+              {t('multi_shop_biller_title', 'Multi-Shop & Multiple Biller Management')}
             </Title>
             <Tag color="blue" style={{ borderRadius: 8, fontWeight: 700, padding: '2px 10px' }}>
               Multi-Tenant POS &amp; ERP
             </Tag>
           </Flex>
           <Text style={{ color: adminTheme.subtext, fontSize: 13, marginTop: 4, display: 'block' }}>
-            Control physical store branches, franchise shops, registers, and multiple corporate legal billers for invoicing, VAT taxation, and Bakong KHQR settlements.
+            {t('multi_shop_biller_desc', 'Control physical store branches, franchise shops, registers, and multiple corporate legal billers for invoicing, VAT taxation, and Bakong KHQR settlements.')}
           </Text>
         </div>
 
@@ -656,7 +658,7 @@ const AdminBranchesManager = () => {
             onClick={handleOpenCreateBranch}
             style={{ borderRadius: 10, fontWeight: 600, background: '#2563eb' }}
           >
-            + New Branch / Shop
+            {t('new_branch_shop', '+ New Branch / Shop')}
           </Button>
 
           <Button
@@ -664,7 +666,7 @@ const AdminBranchesManager = () => {
             onClick={handleOpenCreateBiller}
             style={{ borderRadius: 10, fontWeight: 600, borderColor: '#7c3aed', color: '#7c3aed' }}
           >
-            + New Biller Entity
+            {t('new_biller_entity', '+ New Biller Entity')}
           </Button>
 
           <Button
@@ -675,7 +677,7 @@ const AdminBranchesManager = () => {
             }}
             style={{ borderRadius: 10 }}
           >
-            Sync E-Menu Stores
+            {t('sync_emenu_stores', 'Sync E-Menu Stores')}
           </Button>
         </Space>
       </Flex>
@@ -685,14 +687,14 @@ const AdminBranchesManager = () => {
         <Col xs={12} sm={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
             <Flex justify="space-between" align="center">
-              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>Total Store Branches</Text>
+              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('total_store_branches', 'Total Store Branches')}</Text>
               <ShopOutlined style={{ color: '#2563eb', fontSize: 16 }} />
             </Flex>
             <Title level={2} style={{ margin: '4px 0 0', color: adminTheme.text }}>
               {branches.length}
             </Title>
             <Text style={{ color: '#16a34a', fontSize: 11.5 }}>
-              {branches.filter((b) => b.is_active).length} Active &bull; {branches.filter((b) => !b.is_active).length} Inactive
+              {branches.filter((b) => b.is_active).length} {t('active', 'Active')} &bull; {branches.filter((b) => !b.is_active).length} {t('inactive', 'Inactive')}
             </Text>
           </Card>
         </Col>
@@ -700,33 +702,33 @@ const AdminBranchesManager = () => {
         <Col xs={12} sm={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
             <Flex justify="space-between" align="center">
-              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>Corporate Billers</Text>
+              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('corporate_billers', 'Corporate Billers')}</Text>
               <BankOutlined style={{ color: '#7c3aed', fontSize: 16 }} />
             </Flex>
             <Title level={2} style={{ margin: '4px 0 0', color: '#7c3aed' }}>
               {billers.length}
             </Title>
-            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>Legal Invoicing Entities</Text>
+            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{t('legal_invoicing_entities', 'Legal Invoicing Entities')}</Text>
           </Card>
         </Col>
 
         <Col xs={12} sm={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
             <Flex justify="space-between" align="center">
-              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>POS Cashier Registers</Text>
+              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('pos_cashier_registers', 'POS Cashier Registers')}</Text>
               <CreditCardOutlined style={{ color: '#0284c7', fontSize: 16 }} />
             </Flex>
             <Title level={2} style={{ margin: '4px 0 0', color: '#0284c7' }}>
               {totalRegisters}
             </Title>
-            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>Configured Terminals</Text>
+            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{t('configured_terminals', 'Configured Terminals')}</Text>
           </Card>
         </Col>
 
         <Col xs={12} sm={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
             <Flex justify="space-between" align="center">
-              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>Today In-Store Revenue</Text>
+              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('today_instore_revenue', 'Today In-Store Revenue')}</Text>
               <DollarOutlined style={{ color: '#16a34a', fontSize: 16 }} />
             </Flex>
             <Title level={2} style={{ margin: '4px 0 0', color: '#16a34a' }}>
@@ -796,7 +798,7 @@ const AdminBranchesManager = () => {
               key: 'branches',
               label: (
                 <span style={{ fontWeight: 600, fontSize: 13.5 }}>
-                  <ShopOutlined /> Store Branches &amp; Shops ({branches.length})
+                  <ShopOutlined /> {t('branches', 'Store Branches & Shops')} ({branches.length})
                 </span>
               ),
               children: (
@@ -874,7 +876,7 @@ const AdminBranchesManager = () => {
               key: 'billers',
               label: (
                 <span style={{ fontWeight: 600, fontSize: 13.5 }}>
-                  <BankOutlined /> Multiple Billers &amp; Corporate Entities ({billers.length})
+                  <BankOutlined /> {t('billers', 'Corporate Invoicing Billers')} ({billers.length})
                 </span>
               ),
               children: (

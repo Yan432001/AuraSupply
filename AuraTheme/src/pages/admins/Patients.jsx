@@ -60,6 +60,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getMenuByKey, getModuleByKey, moduleHealthLabel } from '../../data/erpModules';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { fetchAdminCustomers } from '../../utils/apiconfig';
 import dayjs from 'dayjs';
 
@@ -75,8 +76,6 @@ const healthTone = {
   paused: { bg: '#f2f3f5', color: '#8a94a6' },
 };
 
-
-
 const statusColor = {
   Active: 'green',
   Pending: 'gold',
@@ -86,13 +85,15 @@ const statusColor = {
 
 const Patients = () => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(location.search);
   const moduleKey = searchParams.get('module') || 'clinic';
   const menuKey = searchParams.get('menu') || 'patients';
 
-  const module = useMemo(() => getModuleByKey(moduleKey), [moduleKey]);
+  const module = useMemo(() => getModuleByKey(moduleKey) || {}, [moduleKey]);
+  const menu = useMemo(() => getMenuByKey(moduleKey, menuKey) || {}, [moduleKey, menuKey]);
   const tone = useMemo(() => {
     const isDark = adminTheme.isDark;
     const tones = {
@@ -205,7 +206,7 @@ const Patients = () => {
   // Table columns
   const columns = [
     {
-      title: 'Patient ID',
+      title: t('patient_id', 'Patient ID'),
       dataIndex: 'id',
       key: 'id',
       render: (v) => <Text strong style={{ color: module.accent }}>{v}</Text>,
@@ -213,7 +214,7 @@ const Patients = () => {
       width: 120,
     },
     {
-      title: 'Patient',
+      title: t('patient', 'Patient'),
       dataIndex: 'name',
       key: 'name',
       render: (name, record) => (
@@ -237,7 +238,7 @@ const Patients = () => {
             <div>
               <Text type="secondary" style={{ fontSize: 12 }}>
                 {record.gender === 'Male' ? <ManOutlined /> : <WomanOutlined />} 
-                {' '}{record.age} yrs
+                {' '}{record.age} {t('years_old', 'yrs')}
               </Text>
             </div>
           </div>
@@ -247,7 +248,7 @@ const Patients = () => {
       width: 200,
     },
     {
-      title: 'Contact',
+      title: t('contact', 'Contact'),
       key: 'contact',
       render: (_, record) => (
         <Space direction="vertical" size={2}>
@@ -264,46 +265,46 @@ const Patients = () => {
       width: 200,
     },
     {
-      title: 'Department',
+      title: t('department', 'Department'),
       dataIndex: 'department',
       key: 'department',
       render: (v) => <Tag color="blue" style={{ borderRadius: 4 }}>{v}</Tag>,
       width: 130,
     },
     {
-      title: 'Doctor',
+      title: t('doctor', 'Doctor'),
       dataIndex: 'doctor',
       key: 'doctor',
       width: 120,
     },
     {
-      title: 'Status',
+      title: t('status', 'Status'),
       dataIndex: 'status',
       key: 'status',
       render: (v) => (
         <Tag color={statusColor[v]} style={{ borderRadius: 999 }}>
           <CheckCircleFilled style={{ marginRight: 4, fontSize: 11 }} />
-          {v}
+          {t(v.toLowerCase(), v)}
         </Tag>
       ),
       filters: [
-        { text: 'Active', value: 'Active' },
-        { text: 'Pending', value: 'Pending' },
-        { text: 'Review', value: 'Review' },
-        { text: 'Discharged', value: 'Discharged' },
+        { text: t('active', 'Active'), value: 'Active' },
+        { text: t('pending', 'Pending'), value: 'Pending' },
+        { text: t('review', 'Review'), value: 'Review' },
+        { text: t('discharged', 'Discharged'), value: 'Discharged' },
       ],
       onFilter: (value, record) => record.status === value,
       width: 120,
     },
     {
-      title: 'Last Visit',
+      title: t('last_visit', 'Last Visit'),
       dataIndex: 'lastVisit',
       key: 'lastVisit',
       sorter: (a, b) => a.lastVisit.localeCompare(b.lastVisit),
       width: 130,
     },
     {
-      title: 'Next Appointment',
+      title: t('next_appointment', 'Next Appointment'),
       dataIndex: 'nextAppointment',
       key: 'nextAppointment',
       render: (v) => (
@@ -315,13 +316,13 @@ const Patients = () => {
       width: 140,
     },
     {
-      title: 'Actions',
+      title: t('actions', 'Actions'),
       key: 'actions',
       width: 120,
       fixed: 'right',
       render: (_, record) => (
         <Space>
-          <Tooltip title="View Details">
+          <Tooltip title={t('view_details', 'View Details')}>
             <Button
               type="text"
               size="small"
@@ -330,7 +331,7 @@ const Patients = () => {
               style={{ color: adminTheme.primary }}
             />
           </Tooltip>
-          <Tooltip title="Edit">
+          <Tooltip title={t('edit', 'Edit')}>
             <Button
               type="text"
               size="small"
@@ -344,19 +345,19 @@ const Patients = () => {
               items: [
                 {
                   key: 'view',
-                  label: 'View Details',
+                  label: t('view_details', 'View Details'),
                   icon: <EyeOutlined />,
                   onClick: () => handleViewPatient(record),
                 },
                 {
                   key: 'edit',
-                  label: 'Edit Patient',
+                  label: t('edit_patient', 'Edit Patient'),
                   icon: <EditOutlined />,
                   onClick: () => handleEditPatient(record),
                 },
                 {
                   key: 'delete',
-                  label: 'Delete Patient',
+                  label: t('delete_patient', 'Delete Patient'),
                   icon: <DeleteOutlined />,
                   danger: true,
                   onClick: () => handleDeletePatient(record),
@@ -399,7 +400,7 @@ const Patients = () => {
   const handleModalOk = () => {
     if (modalMode === 'delete') {
       setPatients(patients.filter((p) => p.id !== selectedPatient.id));
-      message.success('Patient deleted successfully');
+      message.success(t('patient_deleted', 'Patient deleted successfully'));
       setIsModalVisible(false);
       setSelectedPatient(null);
     } else if (modalMode === 'edit') {
@@ -415,7 +416,7 @@ const Patients = () => {
             : p
         );
         setPatients(updatedPatients);
-        message.success('Patient updated successfully');
+        message.success(t('patient_updated', 'Patient updated successfully'));
         setIsModalVisible(false);
         setSelectedPatient(null);
         form.resetFields();
@@ -440,11 +441,11 @@ const Patients = () => {
   };
 
   const handleExport = () => {
-    message.success('Export started. File will be ready shortly.');
+    message.success(t('export_started', 'Export started. File will be ready shortly.'));
   };
 
   const handleRefresh = () => {
-    loadCustomers().then(() => message.success('Customer data refreshed from database'));
+    loadCustomers().then(() => message.success(t('data_refreshed', 'Customer data refreshed from database')));
   };
 
   const handlePrint = () => {
@@ -475,46 +476,46 @@ const Patients = () => {
                 <Text type="secondary">{selectedPatient.id}</Text>
               </div>
               <Tag color={statusColor[selectedPatient.status]} style={{ fontSize: 14, padding: '4px 12px' }}>
-                {selectedPatient.status}
+                {t(selectedPatient.status?.toLowerCase(), selectedPatient.status)}
               </Tag>
             </Flex>
             <Flex gap={16} style={{ marginTop: 8 }}>
-              <Text><UserOutlined /> {selectedPatient.gender}, {selectedPatient.age} years</Text>
-              <Text><CalendarOutlined /> DOB: {selectedPatient.dateOfBirth}</Text>
-              <Text><HeartOutlined /> Blood: {selectedPatient.bloodType}</Text>
+              <Text><UserOutlined /> {selectedPatient.gender}, {selectedPatient.age} {t('years_old', 'years')}</Text>
+              <Text><CalendarOutlined /> {t('dob', 'DOB')}: {selectedPatient.dateOfBirth}</Text>
+              <Text><HeartOutlined /> {t('blood', 'Blood')}: {selectedPatient.bloodType}</Text>
             </Flex>
           </div>
         </Flex>
 
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane tab="Overview" key="1">
+          <TabPane tab={t('overview', 'Overview')} key="1">
             <Row gutter={[16, 16]}>
               <Col span={24}>
-                <Card size="small" title="Contact Information">
+                <Card size="small" title={t('contact_info', 'Contact Information')}>
                   <Descriptions column={2} size="small">
-                    <Descriptions.Item label="Phone">{selectedPatient.phone}</Descriptions.Item>
-                    <Descriptions.Item label="Email">{selectedPatient.email}</Descriptions.Item>
-                    <Descriptions.Item label="Address" span={2}>{selectedPatient.address}</Descriptions.Item>
-                    <Descriptions.Item label="Insurance">{selectedPatient.insurance}</Descriptions.Item>
-                    <Descriptions.Item label="Emergency Contact">{selectedPatient.emergencyContact}</Descriptions.Item>
+                    <Descriptions.Item label={t('phone', 'Phone')}>{selectedPatient.phone}</Descriptions.Item>
+                    <Descriptions.Item label={t('email', 'Email')}>{selectedPatient.email}</Descriptions.Item>
+                    <Descriptions.Item label={t('address', 'Address')} span={2}>{selectedPatient.address}</Descriptions.Item>
+                    <Descriptions.Item label={t('insurance', 'Insurance')}>{selectedPatient.insurance}</Descriptions.Item>
+                    <Descriptions.Item label={t('emergency_contact', 'Emergency Contact')}>{selectedPatient.emergencyContact}</Descriptions.Item>
                   </Descriptions>
                 </Card>
               </Col>
               <Col span={12}>
-                <Card size="small" title="Medical Information">
+                <Card size="small" title={t('medical_info', 'Medical Information')}>
                   <Descriptions column={1} size="small">
-                    <Descriptions.Item label="Blood Type">{selectedPatient.bloodType}</Descriptions.Item>
-                    <Descriptions.Item label="Allergies">
-                      {selectedPatient.allergies?.join(', ') || 'None'}
+                    <Descriptions.Item label={t('blood_type', 'Blood Type')}>{selectedPatient.bloodType}</Descriptions.Item>
+                    <Descriptions.Item label={t('allergies', 'Allergies')}>
+                      {selectedPatient.allergies?.join(', ') || t('none', 'None')}
                     </Descriptions.Item>
-                    <Descriptions.Item label="Medical History">
-                      {selectedPatient.medicalHistory?.join(', ') || 'None'}
+                    <Descriptions.Item label={t('medical_history', 'Medical History')}>
+                      {selectedPatient.medicalHistory?.join(', ') || t('none', 'None')}
                     </Descriptions.Item>
                   </Descriptions>
                 </Card>
               </Col>
               <Col span={12}>
-                <Card size="small" title="Current Medications">
+                <Card size="small" title={t('current_medications', 'Current Medications')}>
                   <List
                     size="small"
                     dataSource={selectedPatient.currentMedications || []}
@@ -524,12 +525,12 @@ const Patients = () => {
                         {item}
                       </List.Item>
                     )}
-                    locale={{ emptyText: 'No medications prescribed' }}
+                    locale={{ emptyText: t('no_medications', 'No medications prescribed') }}
                   />
                 </Card>
               </Col>
               <Col span={24}>
-                <Card size="small" title="Visit History">
+                <Card size="small" title={t('visit_history', 'Visit History')}>
                   <Timeline
                     items={selectedPatient.visits?.map((visit) => ({
                       color: 'blue',
@@ -542,44 +543,44 @@ const Patients = () => {
                           <Text>{visit.notes}</Text>
                         </div>
                       ),
-                    })) || [{ children: 'No visits recorded' }]}
+                    })) || [{ children: t('no_visits_recorded', 'No visits recorded') }]}
                   />
                 </Card>
               </Col>
             </Row>
           </TabPane>
           
-          <TabPane tab="Medical History" key="2">
+          <TabPane tab={t('medical_history', 'Medical History')} key="2">
             <Card size="small">
               <Descriptions column={1} bordered>
-                <Descriptions.Item label="Blood Type">{selectedPatient.bloodType}</Descriptions.Item>
-                <Descriptions.Item label="Allergies">
-                  {selectedPatient.allergies?.join(', ') || 'None'}
+                <Descriptions.Item label={t('blood_type', 'Blood Type')}>{selectedPatient.bloodType}</Descriptions.Item>
+                <Descriptions.Item label={t('allergies', 'Allergies')}>
+                  {selectedPatient.allergies?.join(', ') || t('none', 'None')}
                 </Descriptions.Item>
-                <Descriptions.Item label="Medical History">
-                  {selectedPatient.medicalHistory?.join(', ') || 'None'}
+                <Descriptions.Item label={t('medical_history', 'Medical History')}>
+                  {selectedPatient.medicalHistory?.join(', ') || t('none', 'None')}
                 </Descriptions.Item>
-                <Descriptions.Item label="Current Medications">
-                  {selectedPatient.currentMedications?.join(', ') || 'None'}
+                <Descriptions.Item label={t('current_medications', 'Current Medications')}>
+                  {selectedPatient.currentMedications?.join(', ') || t('none', 'None')}
                 </Descriptions.Item>
-                <Descriptions.Item label="Notes">{selectedPatient.notes}</Descriptions.Item>
+                <Descriptions.Item label={t('notes', 'Notes')}>{selectedPatient.notes}</Descriptions.Item>
               </Descriptions>
             </Card>
           </TabPane>
           
-          <TabPane tab="Appointments" key="3">
+          <TabPane tab={t('appointments', 'Appointments')} key="3">
             <Card size="small">
               <Descriptions column={2}>
-                <Descriptions.Item label="Last Visit">{selectedPatient.lastVisit}</Descriptions.Item>
-                <Descriptions.Item label="Next Appointment">
+                <Descriptions.Item label={t('last_visit', 'Last Visit')}>{selectedPatient.lastVisit}</Descriptions.Item>
+                <Descriptions.Item label={t('next_appointment', 'Next Appointment')}>
                   <Tag color="blue">{selectedPatient.nextAppointment}</Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="Primary Doctor">{selectedPatient.doctor}</Descriptions.Item>
-                <Descriptions.Item label="Department">{selectedPatient.department}</Descriptions.Item>
+                <Descriptions.Item label={t('primary_doctor', 'Primary Doctor')}>{selectedPatient.doctor}</Descriptions.Item>
+                <Descriptions.Item label={t('department', 'Department')}>{selectedPatient.department}</Descriptions.Item>
               </Descriptions>
               
               <Divider />
-              <Title level={5}>Visit History</Title>
+              <Title level={5}>{t('visit_history', 'Visit History')}</Title>
               <Timeline
                 items={selectedPatient.visits?.map((visit) => ({
                   color: 'green',
@@ -592,7 +593,7 @@ const Patients = () => {
                       <Text>{visit.notes}</Text>
                     </div>
                   ),
-                })) || [{ children: 'No visits recorded' }]}
+                })) || [{ children: t('no_visits_recorded', 'No visits recorded') }]}
               />
             </Card>
           </TabPane>
@@ -607,12 +608,12 @@ const Patients = () => {
       return (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <DeleteOutlined style={{ fontSize: 48, color: '#ff4d4f', marginBottom: 16 }} />
-          <Title level={4}>Delete Patient</Title>
+          <Title level={4}>{t('delete_patient', 'Delete Patient')}</Title>
           <Text>
-            Are you sure you want to delete patient <strong>{selectedPatient?.name}</strong>?
+            {t('confirm_delete_patient', 'Are you sure you want to delete patient')} <strong>{selectedPatient?.name}</strong>?
             <br />
             <Text type="secondary" style={{ fontSize: 13 }}>
-              This action cannot be undone.
+              {t('action_cannot_undone', 'This action cannot be undone.')}
             </Text>
           </Text>
         </div>
@@ -630,41 +631,41 @@ const Patients = () => {
           <Col span={12}>
             <Form.Item
               name="name"
-              label="Full Name"
-              rules={[{ required: true, message: 'Please enter patient name' }]}
+              label={t('full_name', 'Full Name')}
+              rules={[{ required: true, message: t('enter_patient_name', 'Please enter patient name') }]}
             >
-              <Input placeholder="Enter patient name" prefix={<UserOutlined />} />
+              <Input placeholder={t('enter_patient_name', 'Enter patient name')} prefix={<UserOutlined />} />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="gender"
-              label="Gender"
-              rules={[{ required: true, message: 'Please select gender' }]}
+              label={t('gender', 'Gender')}
+              rules={[{ required: true, message: t('select_gender', 'Please select gender') }]}
             >
-              <Select placeholder="Select gender">
-                <Option value="Male"><ManOutlined /> Male</Option>
-                <Option value="Female"><WomanOutlined /> Female</Option>
-                <Option value="Other">Other</Option>
+              <Select placeholder={t('select_gender', 'Select gender')}>
+                <Option value="Male"><ManOutlined /> {t('male', 'Male')}</Option>
+                <Option value="Female"><WomanOutlined /> {t('female', 'Female')}</Option>
+                <Option value="Other">{t('other', 'Other')}</Option>
               </Select>
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="dateOfBirth"
-              label="Date of Birth"
-              rules={[{ required: true, message: 'Please select date of birth' }]}
+              label={t('dob', 'Date of Birth')}
+              rules={[{ required: true, message: t('select_dob', 'Please select date of birth') }]}
             >
-              <DatePicker style={{ width: '100%' }} placeholder="Select date" />
+              <DatePicker style={{ width: '100%' }} placeholder={t('select_date', 'Select date')} />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="bloodType"
-              label="Blood Type"
-              rules={[{ required: true, message: 'Please select blood type' }]}
+              label={t('blood_type', 'Blood Type')}
+              rules={[{ required: true, message: t('select_blood_type', 'Please select blood type') }]}
             >
-              <Select placeholder="Select blood type">
+              <Select placeholder={t('select_blood_type', 'Select blood type')}>
                 <Option value="A+">A+</Option>
                 <Option value="A-">A-</Option>
                 <Option value="B+">B+</Option>
@@ -679,40 +680,40 @@ const Patients = () => {
           <Col span={12}>
             <Form.Item
               name="phone"
-              label="Phone"
-              rules={[{ required: true, message: 'Please enter phone number' }]}
+              label={t('phone', 'Phone')}
+              rules={[{ required: true, message: t('enter_phone', 'Please enter phone number') }]}
             >
-              <Input placeholder="Enter phone number" prefix={<PhoneOutlined />} />
+              <Input placeholder={t('enter_phone', 'Enter phone number')} prefix={<PhoneOutlined />} />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="email"
-              label="Email"
+              label={t('email', 'Email')}
               rules={[
-                { required: true, message: 'Please enter email' },
-                { type: 'email', message: 'Please enter a valid email' },
+                { required: true, message: t('enter_email', 'Please enter email') },
+                { type: 'email', message: t('enter_valid_email', 'Please enter a valid email') },
               ]}
             >
-              <Input placeholder="Enter email address" prefix={<MailOutlined />} />
+              <Input placeholder={t('enter_email', 'Enter email address')} prefix={<MailOutlined />} />
             </Form.Item>
           </Col>
           <Col span={24}>
             <Form.Item
               name="address"
-              label="Address"
-              rules={[{ required: true, message: 'Please enter address' }]}
+              label={t('address', 'Address')}
+              rules={[{ required: true, message: t('enter_address', 'Please enter address') }]}
             >
-              <Input.TextArea placeholder="Enter address" rows={2} />
+              <Input.TextArea placeholder={t('enter_address', 'Enter address')} rows={2} />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="department"
-              label="Department"
-              rules={[{ required: true, message: 'Please select department' }]}
+              label={t('department', 'Department')}
+              rules={[{ required: true, message: t('select_department', 'Please select department') }]}
             >
-              <Select placeholder="Select department">
+              <Select placeholder={t('select_department', 'Select department')}>
                 <Option value="Cardiology">Cardiology</Option>
                 <Option value="Neurology">Neurology</Option>
                 <Option value="Pediatrics">Pediatrics</Option>
@@ -725,10 +726,10 @@ const Patients = () => {
           <Col span={12}>
             <Form.Item
               name="doctor"
-              label="Primary Doctor"
-              rules={[{ required: true, message: 'Please select doctor' }]}
+              label={t('primary_doctor', 'Primary Doctor')}
+              rules={[{ required: true, message: t('select_doctor', 'Please select doctor') }]}
             >
-              <Select placeholder="Select doctor">
+              <Select placeholder={t('select_doctor', 'Select doctor')}>
                 <Option value="Dr. Smith">Dr. Smith</Option>
                 <Option value="Dr. Johnson">Dr. Johnson</Option>
                 <Option value="Dr. Williams">Dr. Williams</Option>
@@ -743,29 +744,29 @@ const Patients = () => {
           <Col span={12}>
             <Form.Item
               name="status"
-              label="Status"
-              rules={[{ required: true, message: 'Please select status' }]}
+              label={t('status', 'Status')}
+              rules={[{ required: true, message: t('select_status', 'Please select status') }]}
             >
-              <Select placeholder="Select status">
-                <Option value="Active">Active</Option>
-                <Option value="Pending">Pending</Option>
-                <Option value="Review">Review</Option>
-                <Option value="Discharged">Discharged</Option>
+              <Select placeholder={t('select_status', 'Select status')}>
+                <Option value="Active">{t('active', 'Active')}</Option>
+                <Option value="Pending">{t('pending', 'Pending')}</Option>
+                <Option value="Review">{t('review', 'Review')}</Option>
+                <Option value="Discharged">{t('discharged', 'Discharged')}</Option>
               </Select>
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="insurance"
-              label="Insurance Provider"
+              label={t('insurance_provider', 'Insurance Provider')}
             >
-              <Input placeholder="Enter insurance provider" />
+              <Input placeholder={t('insurance_provider', 'Enter insurance provider')} />
             </Form.Item>
           </Col>
           <Col span={24}>
             <Form.Item
               name="emergencyContact"
-              label="Emergency Contact"
+              label={t('emergency_contact', 'Emergency Contact')}
             >
               <Input placeholder="Name - Phone number" />
             </Form.Item>
@@ -773,9 +774,9 @@ const Patients = () => {
           <Col span={12}>
             <Form.Item
               name="allergies"
-              label="Allergies"
+              label={t('allergies', 'Allergies')}
             >
-              <Select mode="tags" placeholder="Enter allergies (comma separated)">
+              <Select mode="tags" placeholder={t('allergies', 'Enter allergies (comma separated)')}>
                 <Option value="None">None</Option>
                 <Option value="Penicillin">Penicillin</Option>
                 <Option value="Sulfa Drugs">Sulfa Drugs</Option>
@@ -790,17 +791,17 @@ const Patients = () => {
           <Col span={12}>
             <Form.Item
               name="nextAppointment"
-              label="Next Appointment"
+              label={t('next_appointment', 'Next Appointment')}
             >
-              <DatePicker style={{ width: '100%' }} placeholder="Select date" />
+              <DatePicker style={{ width: '100%' }} placeholder={t('select_date', 'Select date')} />
             </Form.Item>
           </Col>
           <Col span={24}>
             <Form.Item
               name="notes"
-              label="Medical Notes"
+              label={t('medical_notes', 'Medical Notes')}
             >
-              <Input.TextArea placeholder="Enter medical notes" rows={3} />
+              <Input.TextArea placeholder={t('medical_notes', 'Enter medical notes')} rows={3} />
             </Form.Item>
           </Col>
         </Row>
@@ -814,11 +815,11 @@ const Patients = () => {
       <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
         <div>
           <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
-            {module.label}
-            {menu?.groupPath?.length ? ` / ${menu.groupPath.join(' / ')}` : ''}
+            {t(module.key || moduleKey, module.label || 'Clinic')}
+            {menu?.groupPath?.length ? ` / ${menu.groupPath.map(p => t(p, p)).join(' / ')}` : ''}
           </Text>
           <Title level={4} style={{ margin: '2px 0 0', color: adminTheme.text }}>
-            {menu?.label || module.label}
+            {t(menu?.key || menuKey, menu?.label || module.label || 'Patients')}
           </Title>
         </div>
         <Space>
@@ -828,7 +829,7 @@ const Patients = () => {
             style={{ borderRadius: 10, background: module.accent, border: 'none' }}
             onClick={handleAddPatient}
           >
-            New Patient
+            {t('new_patient', 'New Patient')}
           </Button>
         </Space>
       </Flex>
@@ -904,7 +905,7 @@ const Patients = () => {
         <Col xs={24} sm={12} md={6}>
           <Card style={{ borderRadius: 12, background: adminTheme.card }}>
             <Statistic
-              title="Total Patients"
+              title={t('total_patients', 'Total Patients')}
               value={stats.total}
               prefix={<TeamOutlined style={{ color: module.accent }} />}
               valueStyle={{ color: adminTheme.text }}
@@ -914,7 +915,7 @@ const Patients = () => {
         <Col xs={24} sm={12} md={6}>
           <Card style={{ borderRadius: 12, background: adminTheme.card }}>
             <Statistic
-              title="Active"
+              title={t('active', 'Active')}
               value={stats.active}
               valueStyle={{ color: '#52c41a' }}
               prefix={<CheckCircleFilled />}
@@ -924,7 +925,7 @@ const Patients = () => {
         <Col xs={24} sm={12} md={6}>
           <Card style={{ borderRadius: 12, background: adminTheme.card }}>
             <Statistic
-              title="Pending"
+              title={t('pending', 'Pending')}
               value={stats.pending}
               valueStyle={{ color: '#faad14' }}
               prefix={<ClockCircleOutlined />}
@@ -934,7 +935,7 @@ const Patients = () => {
         <Col xs={24} sm={12} md={6}>
           <Card style={{ borderRadius: 12, background: adminTheme.card }}>
             <Statistic
-              title="Under Review"
+              title={t('under_review', 'Under Review')}
               value={stats.review}
               valueStyle={{ color: '#1890ff' }}
               prefix={<FileTextOutlined />}
@@ -962,7 +963,7 @@ const Patients = () => {
         >
           <Flex gap={12} wrap="wrap" align="center">
             <Search
-              placeholder="Search patients..."
+              placeholder={t('search_patients_placeholder', 'Search patients...')}
               allowClear
               onChange={(e) => setSearchText(e.target.value)}
               style={{ width: 250 }}
@@ -972,39 +973,39 @@ const Patients = () => {
               value={filterStatus}
               onChange={setFilterStatus}
               style={{ width: 140 }}
-              placeholder="Status"
+              placeholder={t('status', 'Status')}
             >
-              <Option value="all">All Status</Option>
-              <Option value="Active">Active</Option>
-              <Option value="Pending">Pending</Option>
-              <Option value="Review">Review</Option>
-              <Option value="Discharged">Discharged</Option>
+              <Option value="all">{t('all_status', 'All Status')}</Option>
+              <Option value="Active">{t('active', 'Active')}</Option>
+              <Option value="Pending">{t('pending', 'Pending')}</Option>
+              <Option value="Review">{t('review', 'Review')}</Option>
+              <Option value="Discharged">{t('discharged', 'Discharged')}</Option>
             </Select>
             <Select
               value={filterDepartment}
               onChange={setFilterDepartment}
               style={{ width: 160 }}
-              placeholder="Department"
+              placeholder={t('department', 'Department')}
             >
-              <Option value="all">All Departments</Option>
+              <Option value="all">{t('all_departments', 'All Departments')}</Option>
               {departments.filter(d => d !== 'all').map(dept => (
                 <Option key={dept} value={dept}>{dept}</Option>
               ))}
             </Select>
             {selectedRowKeys.length > 0 && (
               <Text style={{ color: adminTheme.subtext, fontSize: 13 }}>
-                {selectedRowKeys.length} selected
+                {selectedRowKeys.length} {t('selected', 'selected')}
               </Text>
             )}
           </Flex>
           <Space>
-            <Tooltip title="Refresh">
+            <Tooltip title={t('refresh', 'Refresh')}>
               <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={loading} />
             </Tooltip>
-            <Tooltip title="Export">
+            <Tooltip title={t('export', 'Export')}>
               <Button icon={<DownloadOutlined />} onClick={handleExport} />
             </Tooltip>
-            <Tooltip title="Print">
+            <Tooltip title={t('print', 'Print')}>
               <Button icon={<PrinterOutlined />} onClick={handlePrint} />
             </Tooltip>
           </Space>
@@ -1022,7 +1023,7 @@ const Patients = () => {
               total: filteredPatients.length,
               showSizeChanger: true,
               showQuickJumper: true,
-              showTotal: (total) => `Total ${total} patients`,
+              showTotal: (total) => `${t('total', 'Total')} ${total} ${t('patients', 'patients')}`,
               pageSizeOptions: ['10', '20', '50', '100'],
               defaultPageSize: 10,
             }}
@@ -1033,7 +1034,7 @@ const Patients = () => {
           <Empty
             description={
               <span>
-                No patients found. <a onClick={handleAddPatient}>Add a new patient</a>
+                {t('no_patients_found', 'No patients found.')} <a onClick={handleAddPatient}>{t('add_new_patient', 'Add a new patient')}</a>
               </span>
             }
           />
@@ -1044,12 +1045,12 @@ const Patients = () => {
       <Modal
         title={
           modalMode === 'view'
-            ? 'Patient Details'
+            ? t('patient_details', 'Patient Details')
             : modalMode === 'delete'
-              ? 'Delete Patient'
+              ? t('delete_patient', 'Delete Patient')
               : selectedPatient
-                ? 'Edit Patient'
-                : 'Add New Patient'
+                ? t('edit_patient', 'Edit Patient')
+                : t('add_new_patient', 'Add New Patient')
         }
         open={isModalVisible}
         onOk={handleModalOk}
@@ -1057,10 +1058,10 @@ const Patients = () => {
         width={modalMode === 'view' ? 800 : 700}
         okText={
           modalMode === 'view'
-            ? 'Close'
+            ? t('close', 'Close')
             : modalMode === 'delete'
-              ? 'Delete'
-              : 'Save'
+              ? t('delete', 'Delete')
+              : t('save', 'Save')
         }
         okButtonProps={{
           danger: modalMode === 'delete',
@@ -1068,13 +1069,13 @@ const Patients = () => {
             ? { background: module.accent, borderColor: module.accent }
             : undefined,
         }}
-        cancelText={modalMode === 'view' ? 'Close' : 'Cancel'}
+        cancelText={modalMode === 'view' ? t('close', 'Close') : t('cancel', 'Cancel')}
         cancelButtonProps={{
           style: modalMode === 'view' ? { display: 'none' } : undefined,
         }}
         footer={modalMode === 'view' ? [
           <Button key="close" onClick={handleModalCancel}>
-            Close
+            {t('close', 'Close')}
           </Button>,
           <Button 
             key="edit" 
@@ -1089,7 +1090,7 @@ const Patients = () => {
               });
             }}
           >
-            Edit Patient
+            {t('edit_patient', 'Edit Patient')}
           </Button>,
         ] : undefined}
         styles={{

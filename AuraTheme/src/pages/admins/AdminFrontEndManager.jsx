@@ -150,6 +150,7 @@ const saveLiveProducts = (p) => {
   } catch (_) {}
 };
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { formatCurrency } from '../../utils/uiTheme';
 
 const { Title, Text, Paragraph } = Typography;
@@ -157,6 +158,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 export default function AdminFrontEndManager({ initialTab }) {
+  const { t } = useTranslation();
   const [shopCategories, setShopCategories] = useState([]);
   const [branches, setBranches] = useState([]);
 
@@ -683,19 +685,18 @@ export default function AdminFrontEndManager({ initialTab }) {
                 }}
               >
                 <CrownOutlined style={{ marginRight: 6 }} />
-                OWNER STOREFRONT CONTROL ROOM
+                {t('owner_storefront_control_room', 'OWNER STOREFRONT CONTROL ROOM')}
               </Tag>
               <Tag color="cyan" style={{ borderRadius: 20, padding: '2px 10px' }}>
                 <CheckCircleOutlined style={{ marginRight: 4 }} />
-                Live Website Sync Active
+                {t('live_website_sync_active', 'Live Website Sync Active')}
               </Tag>
             </Flex>
             <Title level={2} style={{ color: '#ffffff', margin: '4px 0 8px', fontWeight: 800 }}>
-              Front End Website &amp; Multi-Store Management
+              {t('frontend_website_management', 'Front End Website & Multi-Store Management')}
             </Title>
             <Paragraph style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, maxWidth: 640, margin: 0 }}>
-              Full master controller for the public customer website. Manage which stores appear on the storefront,
-              control products and prices per store, configure homepage hero sliders, announcement banners, and test live storefronts.
+              {t('frontend_website_desc', 'Full master controller for the public customer website. Manage which stores appear on the storefront, control products and prices per store, configure homepage hero sliders, announcement banners, and test live storefronts.')}
             </Paragraph>
           </Col>
 
@@ -715,7 +716,7 @@ export default function AdminFrontEndManager({ initialTab }) {
                   boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
                 }}
               >
-                Visit Public Website <ExportOutlined style={{ fontSize: 12 }} />
+                {t('visit_public_website', 'Visit Public Website')} <ExportOutlined style={{ fontSize: 12 }} />
               </Button>
             </Flex>
           </Col>
@@ -727,7 +728,7 @@ export default function AdminFrontEndManager({ initialTab }) {
         <Row gutter={[16, 16]}>
           <Col xs={12} sm={8} md={4}>
             <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: '12px 16px' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Total Stores</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>{t('total_stores', 'Total Stores')}</Text>
               <div style={{ fontSize: 22, fontWeight: 800, color: '#ffffff', marginTop: 4 }}>
                 {totalStoresCount}
               </div>
@@ -735,7 +736,7 @@ export default function AdminFrontEndManager({ initialTab }) {
           </Col>
           <Col xs={12} sm={8} md={4}>
             <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: '12px 16px' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Active on Web</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>{t('active_on_web', 'Active on Web')}</Text>
               <div style={{ fontSize: 22, fontWeight: 800, color: '#4ade80', marginTop: 4 }}>
                 {activeStoresCount} <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.6)' }}>/ {totalStoresCount}</span>
               </div>
@@ -743,7 +744,7 @@ export default function AdminFrontEndManager({ initialTab }) {
           </Col>
           <Col xs={12} sm={8} md={4}>
             <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: '12px 16px' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Featured Stores</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>{t('featured_stores', 'Featured Stores')}</Text>
               <div style={{ fontSize: 22, fontWeight: 800, color: '#fbbf24', marginTop: 4 }}>
                 {featuredStoresCount}
               </div>
@@ -751,7 +752,7 @@ export default function AdminFrontEndManager({ initialTab }) {
           </Col>
           <Col xs={12} sm={8} md={4}>
             <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: '12px 16px' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Catalog SKUs</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>{t('catalog_skus', 'Catalog SKUs')}</Text>
               <div style={{ fontSize: 22, fontWeight: 800, color: '#ffffff', marginTop: 4 }}>
                 {totalProductsCount}
               </div>
@@ -759,7 +760,7 @@ export default function AdminFrontEndManager({ initialTab }) {
           </Col>
           <Col xs={12} sm={8} md={4}>
             <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: '12px 16px' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Active Web SKUs</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>{t('active_web_skus', 'Active Web SKUs')}</Text>
               <div style={{ fontSize: 22, fontWeight: 800, color: '#60a5fa', marginTop: 4 }}>
                 {activeProductsCount}
               </div>
@@ -767,7 +768,7 @@ export default function AdminFrontEndManager({ initialTab }) {
           </Col>
           <Col xs={12} sm={8} md={4}>
             <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: '12px 16px' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Featured Products</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>{t('featured_products', 'Featured Products')}</Text>
               <div style={{ fontSize: 22, fontWeight: 800, color: '#f472b6', marginTop: 4 }}>
                 {featuredProductsCount}
               </div>
@@ -794,7 +795,7 @@ export default function AdminFrontEndManager({ initialTab }) {
             label: (
               <span>
                 <ShopOutlined style={{ marginRight: 6 }} />
-                Stores Controller ({stores.length})
+                {t('stores_controller', 'Stores Controller')} ({stores.length})
               </span>
             ),
             children: (
@@ -817,7 +818,7 @@ export default function AdminFrontEndManager({ initialTab }) {
             label: (
               <span>
                 <AppstoreOutlined style={{ marginRight: 6 }} />
-                Products of Store ({filteredProducts.length})
+                {t('products_of_store', 'Products of Store')} ({filteredProducts.length})
               </span>
             ),
             children: (
@@ -847,7 +848,7 @@ export default function AdminFrontEndManager({ initialTab }) {
             label: (
               <span>
                 <SendOutlined style={{ marginRight: 6, color: '#0284c7' }} />
-                Telegram Groups &amp; Bots ({telegramConfigs.length})
+                {t('telegram_groups_bots', 'Telegram Groups & Bots')} ({telegramConfigs.length})
               </span>
             ),
             children: (
@@ -864,7 +865,7 @@ export default function AdminFrontEndManager({ initialTab }) {
             label: (
               <span>
                 <BgColorsOutlined style={{ marginRight: 6 }} />
-                Website Display &amp; Themes
+                {t('website_display_themes', 'Website Display & Themes')}
               </span>
             ),
             children: (
@@ -881,7 +882,7 @@ export default function AdminFrontEndManager({ initialTab }) {
             label: (
               <span>
                 <PictureOutlined style={{ marginRight: 6 }} />
-                Hero Sliders &amp; Banners ({slides.length})
+                {t('hero_sliders_banners', 'Hero Sliders & Banners')} ({slides.length})
               </span>
             ),
             children: (
@@ -900,7 +901,7 @@ export default function AdminFrontEndManager({ initialTab }) {
             label: (
               <span>
                 <FileTextOutlined style={{ marginRight: 6 }} />
-                Website Pages &amp; Info ({pages.length})
+                {t('website_pages_info', 'Website Pages & Info')} ({pages.length})
               </span>
             ),
             children: (
@@ -1219,9 +1220,10 @@ function StoresControllerTab({
   onAddStore,
   adminTheme,
 }) {
+  const { t } = useTranslation();
   const columns = [
     {
-      title: 'Store / Brand',
+      title: t('store_brand', 'Store / Brand'),
       key: 'store',
       render: (_, record) => (
         <Flex align="center" gap={12}>
@@ -1258,7 +1260,7 @@ function StoresControllerTab({
       ),
     },
     {
-      title: 'Specialties & Tagline',
+      title: t('specialties_tagline', 'Specialties & Tagline'),
       key: 'summary',
       render: (_, record) => (
         <div>
@@ -1276,7 +1278,7 @@ function StoresControllerTab({
       ),
     },
     {
-      title: 'Hours & Bot',
+      title: t('hours_and_bot', 'Hours & Bot'),
       key: 'hours',
       render: (_, record) => (
         <div>
@@ -1290,30 +1292,30 @@ function StoresControllerTab({
       ),
     },
     {
-      title: 'Website Live Status',
+      title: t('website_live_status', 'Website Live Status'),
       key: 'activeOnWebsite',
       render: (_, record) => (
         <Space direction="vertical" size={2}>
           <Switch
             checked={record.activeOnWebsite !== false}
             onChange={(checked) => onToggleActive(record.id, checked)}
-            checkedChildren="Visible"
-            unCheckedChildren="Hidden"
+            checkedChildren={t('visible', 'Visible')}
+            unCheckedChildren={t('hidden', 'Hidden')}
             style={{
               background: record.activeOnWebsite !== false ? '#10b981' : undefined,
             }}
           />
           <Text style={{ fontSize: 11, color: adminTheme.subtext }}>
-            {record.activeOnWebsite !== false ? 'Live on /shops' : 'Hidden from public'}
+            {record.activeOnWebsite !== false ? t('live_on_shops', 'Live on /shops') : t('hidden_from_public', 'Hidden from public')}
           </Text>
         </Space>
       ),
     },
     {
-      title: 'Featured on Homepage',
+      title: t('featured_on_homepage', 'Featured on Homepage'),
       key: 'featuredOnHome',
       render: (_, record) => (
-        <Tooltip title="Toggle whether this store appears in the Homepage Featured Carousel">
+        <Tooltip title={t('toggle_featured_tooltip', 'Toggle whether this store appears in the Homepage Featured Carousel')}>
           <Button
             type={record.featuredOnHome ? 'primary' : 'default'}
             size="small"
@@ -1327,25 +1329,25 @@ function StoresControllerTab({
               color: record.featuredOnHome ? '#b45309' : undefined,
             }}
           >
-            {record.featuredOnHome ? 'Featured' : 'Standard'}
+            {record.featuredOnHome ? t('featured', 'Featured') : t('standard', 'Standard')}
           </Button>
         </Tooltip>
       ),
     },
     {
-      title: 'Actions',
+      title: t('actions', 'Actions'),
       key: 'actions',
       align: 'right',
       render: (_, record) => (
         <Space size={6}>
-          <Tooltip title="Manage catalog products specifically for this store">
+          <Tooltip title={t('manage_store_catalog', 'Manage catalog products specifically for this store')}>
             <Button
               size="small"
               icon={<AppstoreOutlined />}
               onClick={() => onInspectProducts(record.id)}
               style={{ borderRadius: 8, fontWeight: 600, color: '#2563eb', borderColor: '#93c5fd' }}
             >
-              Catalog
+              {t('catalog', 'Catalog')}
             </Button>
           </Tooltip>
 
@@ -1356,7 +1358,7 @@ function StoresControllerTab({
               onClick={() => window.open(`/shop/menu/${record.slug || record.id}`, '_blank')}
               style={{ borderRadius: 8, fontWeight: 600, color: '#A31D1D', borderColor: '#fca5a5' }}
             >
-              E-Menu
+              {t('e_menu', 'E-Menu')}
             </Button>
           </Tooltip>
 
@@ -1367,11 +1369,11 @@ function StoresControllerTab({
               onClick={() => window.open(`https://t.me/aura_emenu_order_bot/menu?startapp=shop_${record.slug || record.id}`, '_blank')}
               style={{ borderRadius: 8, fontWeight: 600, color: '#0284c7', borderColor: '#bae6fd' }}
             >
-              Telegram
+              {t('telegram', 'Telegram')}
             </Button>
           </Tooltip>
 
-          <Tooltip title="Direct link: Open store customer page in new tab">
+          <Tooltip title={t('open_store_new_tab', 'Direct link: Open store customer page in new tab')}>
             <Button
               size="small"
               icon={<ExportOutlined />}
@@ -1380,7 +1382,7 @@ function StoresControllerTab({
             />
           </Tooltip>
 
-          <Tooltip title="Edit store branding and settings">
+          <Tooltip title={t('edit_store_branding', 'Edit store branding and settings')}>
             <Button
               size="small"
               icon={<EditOutlined />}
@@ -1390,11 +1392,11 @@ function StoresControllerTab({
           </Tooltip>
 
           <Popconfirm
-            title="Remove store from website?"
-            description="This will remove the store showcase from the public directory."
+            title={t('remove_store_title', 'Remove store from website?')}
+            description={t('remove_store_desc', 'This will remove the store showcase from the public directory.')}
             onConfirm={() => onDeleteStore(record.id)}
-            okText="Delete"
-            cancelText="Cancel"
+            okText={t('delete', 'Delete')}
+            cancelText={t('cancel', 'Cancel')}
             okButtonProps={{ danger: true }}
           >
             <Button size="small" danger icon={<DeleteOutlined />} style={{ borderRadius: 8 }} />
@@ -1410,14 +1412,14 @@ function StoresControllerTab({
         <Flex align="center" gap={12}>
           <Input
             prefix={<SearchOutlined style={{ color: adminTheme.subtext }} />}
-            placeholder="Search stores by name, slug, specialty..."
+            placeholder={t('search_stores_placeholder', 'Search stores by name, slug, specialty...')}
             value={searchText}
             onChange={(e) => onSearchChange(e.target.value)}
             style={{ width: 320, borderRadius: 10 }}
             allowClear
           />
           <Text style={{ fontSize: 13, color: adminTheme.subtext }}>
-            Showing <b>{stores.length}</b> stores &amp; brand channels
+            {t('showing_stores_count', 'Showing {count} stores & brand channels').replace('{count}', stores.length)}
           </Text>
         </Flex>
 
@@ -1433,7 +1435,7 @@ function StoresControllerTab({
               fontWeight: 600,
             }}
           >
-            Add New Store Channel
+            {t('add_new_store_channel', 'Add New Store Channel')}
           </Button>
         </Space>
       </Flex>
@@ -1472,9 +1474,10 @@ function ProductsControllerTab({
   onAddProduct,
   adminTheme,
 }) {
+  const { t } = useTranslation();
   const columns = [
     {
-      title: 'Product Title & SKU',
+      title: t('product_title_sku', 'Product Title & SKU'),
       key: 'name',
       render: (_, record) => (
         <Flex align="center" gap={12}>
@@ -1503,7 +1506,7 @@ function ProductsControllerTab({
       ),
     },
     {
-      title: 'Assigned Store',
+      title: t('assigned_store', 'Assigned Store'),
       key: 'store',
       render: (_, record) => {
         const store = stores.find((s) => s.id === record.seller || s.id === record.shopId);
@@ -1511,17 +1514,17 @@ function ProductsControllerTab({
           <div>
             <Tag color="purple" style={{ fontSize: 12, borderRadius: 6, fontWeight: 600 }}>
               <ShopOutlined style={{ marginRight: 4 }} />
-              {store?.name || record.shopName || 'Global Catalog'}
+              {store?.name || record.shopName || t('global_catalog', 'Global Catalog')}
             </Tag>
             <div style={{ fontSize: 11, color: adminTheme.subtext, marginTop: 2 }}>
-              Category: <b>{record.category}</b>
+              {t('category', 'Category')}: <b>{record.category}</b>
             </div>
           </div>
         );
       },
     },
     {
-      title: 'Store Price',
+      title: t('store_price', 'Store Price'),
       key: 'price',
       render: (_, record) => (
         <div>
@@ -1537,23 +1540,23 @@ function ProductsControllerTab({
       ),
     },
     {
-      title: 'Storefront Visible',
+      title: t('storefront_visible', 'Storefront Visible'),
       key: 'visible',
       render: (_, record) => (
         <Switch
           checked={record.visibleOnWebsite !== false}
           onChange={(checked) => onToggleVisibility(record.id, checked)}
-          checkedChildren="Live"
-          unCheckedChildren="Hidden"
+          checkedChildren={t('live', 'Live')}
+          unCheckedChildren={t('hidden', 'Hidden')}
           size="small"
         />
       ),
     },
     {
-      title: 'Featured (Home)',
+      title: t('featured_home', 'Featured (Home)'),
       key: 'featured',
       render: (_, record) => (
-        <Tooltip title="Toggle feature on website homepage Trending / Deals rail">
+        <Tooltip title={t('toggle_trending_deals', 'Toggle feature on website homepage Trending / Deals rail')}>
           <Button
             type="text"
             icon={
@@ -1569,14 +1572,14 @@ function ProductsControllerTab({
       ),
     },
     {
-      title: 'Inventory Stock',
+      title: t('inventory_stock', 'Inventory Stock'),
       key: 'stock',
       render: (_, record) => (
         <Switch
           checked={record.inStock !== false}
           onChange={(checked) => onToggleStock(record.id, checked)}
-          checkedChildren="In Stock"
-          unCheckedChildren="Sold Out"
+          checkedChildren={t('in_stock', 'In Stock')}
+          unCheckedChildren={t('sold_out', 'Sold Out')}
           size="small"
           style={{
             background: record.inStock !== false ? '#10b981' : '#ef4444',
@@ -1585,12 +1588,12 @@ function ProductsControllerTab({
       ),
     },
     {
-      title: 'Actions',
+      title: t('actions', 'Actions'),
       key: 'actions',
       align: 'right',
       render: (_, record) => (
         <Space size={6}>
-          <Tooltip title="Edit price, badge, description">
+          <Tooltip title={t('edit_price_badge_desc', 'Edit price, badge, description')}>
             <Button
               size="small"
               icon={<EditOutlined />}
@@ -1600,10 +1603,10 @@ function ProductsControllerTab({
           </Tooltip>
 
           <Popconfirm
-            title="Delete product from store catalog?"
+            title={t('delete_product_confirm', 'Delete product from store catalog?')}
             onConfirm={() => onDeleteProduct(record.id)}
-            okText="Delete"
-            cancelText="Cancel"
+            okText={t('delete', 'Delete')}
+            cancelText={t('cancel', 'Cancel')}
             okButtonProps={{ danger: true }}
           >
             <Button size="small" danger icon={<DeleteOutlined />} style={{ borderRadius: 8 }} />
@@ -1627,14 +1630,14 @@ function ProductsControllerTab({
         <Row gutter={[16, 12]} align="middle">
           <Col xs={24} sm={12} md={6}>
             <Text style={{ fontSize: 12, color: adminTheme.subtext, display: 'block', marginBottom: 4 }}>
-              🏬 Filter by Store Channel:
+              {t('filter_by_store', '🏬 Filter by Store Channel:')}
             </Text>
             <Select
               value={selectedStoreFilter}
               onChange={onSelectStoreFilter}
               style={{ width: '100%' }}
             >
-              <Option value="all">🌟 All Stores ({products.length} Products)</Option>
+              <Option value="all">🌟 {t('all_stores_count', 'All Stores ({count} Products)').replace('{count}', products.length)}</Option>
               {stores.map((s) => (
                 <Option key={s.id} value={s.id}>
                   {s.name} ({products.filter((p) => p.seller === s.id || p.shopId === s.id).length})
@@ -1645,14 +1648,14 @@ function ProductsControllerTab({
 
           <Col xs={24} sm={12} md={5}>
             <Text style={{ fontSize: 12, color: adminTheme.subtext, display: 'block', marginBottom: 4 }}>
-              🏷️ Category:
+              {t('category_filter_label', '🏷️ Category:')}
             </Text>
             <Select
               value={selectedCategoryFilter}
               onChange={onSelectCategoryFilter}
               style={{ width: '100%' }}
             >
-              <Option value="all">All Categories</Option>
+              <Option value="all">{t('all_categories', 'All Categories')}</Option>
               {shopCategories.map((c) => (
                 <Option key={c.id} value={c.id}>
                   {c.name}
@@ -1663,27 +1666,27 @@ function ProductsControllerTab({
 
           <Col xs={24} sm={12} md={5}>
             <Text style={{ fontSize: 12, color: adminTheme.subtext, display: 'block', marginBottom: 4 }}>
-              📦 Stock Status:
+              {t('stock_status_label', '📦 Stock Status:')}
             </Text>
             <Select
               value={stockStatusFilter}
               onChange={onStockStatusFilterChange}
               style={{ width: '100%' }}
             >
-              <Option value="all">All Statuses</Option>
-              <Option value="in_stock">In Stock Only</Option>
-              <Option value="out_of_stock">Sold Out Only</Option>
+              <Option value="all">{t('all_statuses', 'All Statuses')}</Option>
+              <Option value="in_stock">{t('in_stock_only', 'In Stock Only')}</Option>
+              <Option value="out_of_stock">{t('sold_out_only', 'Sold Out Only')}</Option>
             </Select>
           </Col>
 
           <Col xs={24} sm={12} md={8}>
             <Text style={{ fontSize: 12, color: adminTheme.subtext, display: 'block', marginBottom: 4 }}>
-              🔍 Search Product:
+              {t('search_product_label', '🔍 Search Product:')}
             </Text>
             <Flex gap={8}>
               <Input
                 prefix={<SearchOutlined style={{ color: adminTheme.subtext }} />}
-                placeholder="Product title, SKU..."
+                placeholder={t('search_product_placeholder', 'Product title, SKU...')}
                 value={searchText}
                 onChange={(e) => onSearchChange(e.target.value)}
                 allowClear
@@ -1700,7 +1703,7 @@ function ProductsControllerTab({
                   whiteSpace: 'nowrap',
                 }}
               >
-                Add SKU
+                {t('add_sku', 'Add SKU')}
               </Button>
             </Flex>
           </Col>
@@ -1723,6 +1726,7 @@ function ProductsControllerTab({
 // TAB 3: WEBSITE DISPLAY & THEMES COMPONENT
 // ========================================================
 function WebsiteDisplayTab({ settings, setSettings, onSave, adminTheme }) {
+  const { t } = useTranslation();
   const handleAnnouncementChange = (key, value) => {
     setSettings((prev) => ({
       ...prev,
@@ -1760,15 +1764,15 @@ function WebsiteDisplayTab({ settings, setSettings, onSave, adminTheme }) {
         title={
           <Flex align="center" gap={8}>
             <ThunderboltOutlined style={{ color: '#f59e0b' }} />
-            <span>Website Header Announcement Banner</span>
+            <span>{t('website_header_announcement_banner', 'Website Header Announcement Banner')}</span>
           </Flex>
         }
         extra={
           <Switch
             checked={settings.announcement?.enabled !== false}
             onChange={(checked) => handleAnnouncementChange('enabled', checked)}
-            checkedChildren="Active"
-            unCheckedChildren="Disabled"
+            checkedChildren={t('active', 'Active')}
+            unCheckedChildren={t('disabled', 'Disabled')}
           />
         }
         style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}` }}
@@ -1776,7 +1780,7 @@ function WebsiteDisplayTab({ settings, setSettings, onSave, adminTheme }) {
         <Row gutter={[16, 16]}>
           <Col xs={24} md={14}>
             <Text style={{ fontSize: 13, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-              Announcement Message (Appears at the very top of customer website):
+              {t('announcement_message_desc', 'Announcement Message (Appears at the very top of customer website):')}
             </Text>
             <TextArea
               rows={2}
@@ -1788,7 +1792,7 @@ function WebsiteDisplayTab({ settings, setSettings, onSave, adminTheme }) {
 
           <Col xs={24} md={10}>
             <Text style={{ fontSize: 13, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-              Banner Background Color:
+              {t('banner_bg_color', 'Banner Background Color:')}
             </Text>
             <Space wrap>
               {[
@@ -1818,7 +1822,7 @@ function WebsiteDisplayTab({ settings, setSettings, onSave, adminTheme }) {
 
             <div style={{ marginTop: 12 }}>
               <Text style={{ fontSize: 12, color: adminTheme.subtext, display: 'block', marginBottom: 4 }}>
-                Target Link:
+                {t('target_link', 'Target Link:')}
               </Text>
               <Input
                 value={settings.announcement?.link || '/shops'}
@@ -1835,24 +1839,24 @@ function WebsiteDisplayTab({ settings, setSettings, onSave, adminTheme }) {
         title={
           <Flex align="center" gap={8}>
             <SlidersOutlined style={{ color: '#2563eb' }} />
-            <span>Homepage Section Visibility Controls</span>
+            <span>{t('homepage_visibility_controls', 'Homepage Section Visibility Controls')}</span>
           </Flex>
         }
         style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}` }}
       >
         <Text style={{ color: adminTheme.subtext, fontSize: 13, display: 'block', marginBottom: 16 }}>
-          Enable or disable specific content blocks on the customer homepage:
+          {t('enable_disable_content_blocks', 'Enable or disable specific content blocks on the customer homepage:')}
         </Text>
 
         <Row gutter={[20, 16]}>
           {[
-            { key: 'heroSlider', label: 'Hero Slides & Promo Carousel', desc: 'Top rotating banners with CTA buttons' },
-            { key: 'featuredStores', label: 'Featured Multi-Store Showcase', desc: 'Horizontal cards of flagship cafes & stores' },
-            { key: 'popularCategories', label: 'Popular Categories Rail', desc: 'Coffee, Bakery, Dining, Tech gadgets' },
-            { key: 'trendingProducts', label: 'Trending Store Products', desc: 'Featured SKUs from across all stores' },
-            { key: 'telegramBanner', label: 'Telegram Mini App Bar', desc: 'Direct QR code and 1-click bot ordering launch' },
-            { key: 'customerReviews', label: 'Customer Testimonials', desc: 'Verified customer feedback and star ratings' },
-            { key: 'branchLocations', label: 'Multi-Branch Map & Locations', desc: 'Store opening hours and physical addresses' },
+            { key: 'heroSlider', label: t('hero_slider_label', 'Hero Slides & Promo Carousel'), desc: t('hero_slider_desc', 'Top rotating banners with CTA buttons') },
+            { key: 'featuredStores', label: t('featured_stores_label', 'Featured Multi-Store Showcase'), desc: t('featured_stores_desc', 'Horizontal cards of flagship cafes & stores') },
+            { key: 'popularCategories', label: t('popular_categories_label', 'Popular Categories Rail'), desc: t('popular_categories_desc', 'Coffee, Bakery, Dining, Tech gadgets') },
+            { key: 'trendingProducts', label: t('trending_products_label', 'Trending Store Products'), desc: t('trending_products_desc', 'Featured SKUs from across all stores') },
+            { key: 'telegramBanner', label: t('telegram_banner_label', 'Telegram Mini App Bar'), desc: t('telegram_banner_desc', 'Direct QR code and 1-click bot ordering launch') },
+            { key: 'customerReviews', label: t('customer_reviews_label', 'Customer Testimonials'), desc: t('customer_reviews_desc', 'Verified customer feedback and star ratings') },
+            { key: 'branchLocations', label: t('branch_locations_label', 'Multi-Branch Map & Locations'), desc: t('branch_locations_desc', 'Store opening hours and physical addresses') },
           ].map((sec) => (
             <Col xs={24} sm={12} key={sec.key}>
               <div
@@ -1885,7 +1889,7 @@ function WebsiteDisplayTab({ settings, setSettings, onSave, adminTheme }) {
         title={
           <Flex align="center" gap={8}>
             <SettingOutlined style={{ color: '#10b981' }} />
-            <span>Storefront Layout, Currency &amp; Ordering Preferences</span>
+            <span>{t('storefront_layout_currency', 'Storefront Layout, Currency & Ordering Preferences')}</span>
           </Flex>
         }
         style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}` }}
@@ -1893,21 +1897,21 @@ function WebsiteDisplayTab({ settings, setSettings, onSave, adminTheme }) {
         <Row gutter={[20, 16]}>
           <Col xs={24} md={8}>
             <Text style={{ fontSize: 13, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-              Default Products Grid Mode:
+              {t('default_products_grid_mode', 'Default Products Grid Mode:')}
             </Text>
             <Radio.Group
               value={settings.theme?.layoutMode || 'grid'}
               onChange={(e) => handleThemeChange('layoutMode', e.target.value)}
               buttonStyle="solid"
             >
-              <Radio.Button value="grid">Grid (4 Columns)</Radio.Button>
-              <Radio.Button value="compact">Compact List</Radio.Button>
+              <Radio.Button value="grid">{t('grid_4_col', 'Grid (4 Columns)')}</Radio.Button>
+              <Radio.Button value="compact">{t('compact_list', 'Compact List')}</Radio.Button>
             </Radio.Group>
           </Col>
 
           <Col xs={24} md={8}>
             <Text style={{ fontSize: 13, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-              Currency Display:
+              {t('currency_display', 'Currency Display:')}
             </Text>
             <Radio.Group
               value={settings.theme?.currency || 'USD'}
@@ -1922,16 +1926,16 @@ function WebsiteDisplayTab({ settings, setSettings, onSave, adminTheme }) {
 
           <Col xs={24} md={8}>
             <Text style={{ fontSize: 13, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-              Direct Telegram Bot Ordering:
+              {t('direct_telegram_ordering', 'Direct Telegram Bot Ordering:')}
             </Text>
             <Switch
               checked={settings.theme?.directTelegramOrder !== false}
               onChange={(checked) => handleThemeChange('directTelegramOrder', checked)}
-              checkedChildren="Enabled"
-              unCheckedChildren="Disabled"
+              checkedChildren={t('enabled', 'Enabled')}
+              unCheckedChildren={t('disabled', 'Disabled')}
             />
             <Text style={{ fontSize: 11, color: adminTheme.subtext, display: 'block', marginTop: 4 }}>
-              Direct checkout redirects cart to Telegram Bot
+              {t('direct_checkout_redirects', 'Direct checkout redirects cart to Telegram Bot')}
             </Text>
           </Col>
         </Row>
@@ -1953,7 +1957,7 @@ function WebsiteDisplayTab({ settings, setSettings, onSave, adminTheme }) {
             padding: '0 24px',
           }}
         >
-          Save All Display Settings
+          {t('save_all_display_settings', 'Save All Display Settings')}
         </Button>
       </Flex>
     </Space>
@@ -1971,9 +1975,10 @@ function HeroSlidersTab({
   onAddSlide,
   adminTheme,
 }) {
+  const { t } = useTranslation();
   const columns = [
     {
-      title: 'Slide Preview & Title',
+      title: t('slide_preview_title', 'Slide Preview & Title'),
       key: 'title',
       render: (_, record) => (
         <Flex align="center" gap={14}>
@@ -2003,7 +2008,7 @@ function HeroSlidersTab({
       ),
     },
     {
-      title: 'Call to Action',
+      title: t('call_to_action', 'Call to Action'),
       key: 'cta',
       render: (_, record) => (
         <div>
@@ -2017,20 +2022,20 @@ function HeroSlidersTab({
       ),
     },
     {
-      title: 'Active Status',
+      title: t('active_status', 'Active Status'),
       key: 'active',
       render: (_, record) => (
         <Switch
           checked={record.active !== false}
           onChange={(checked) => onToggleActive(record.id, checked)}
-          checkedChildren="Live"
-          unCheckedChildren="Draft"
+          checkedChildren={t('live', 'Live')}
+          unCheckedChildren={t('draft', 'Draft')}
           size="small"
         />
       ),
     },
     {
-      title: 'Actions',
+      title: t('actions', 'Actions'),
       key: 'actions',
       align: 'right',
       render: (_, record) => (
@@ -2042,10 +2047,10 @@ function HeroSlidersTab({
             style={{ borderRadius: 8 }}
           />
           <Popconfirm
-            title="Delete slide from hero carousel?"
+            title={t('delete_slide_confirm', 'Delete slide from hero carousel?')}
             onConfirm={() => onDeleteSlide(record.id)}
-            okText="Delete"
-            cancelText="Cancel"
+            okText={t('delete', 'Delete')}
+            cancelText={t('cancel', 'Cancel')}
             okButtonProps={{ danger: true }}
           >
             <Button size="small" danger icon={<DeleteOutlined />} style={{ borderRadius: 8 }} />
@@ -2059,7 +2064,7 @@ function HeroSlidersTab({
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
         <Text style={{ color: adminTheme.subtext, fontSize: 13 }}>
-          Manage dynamic hero slider carousels and promotional campaign banners on the website homepage.
+          {t('manage_hero_sliders_desc', 'Manage dynamic hero slider carousels and promotional campaign banners on the website homepage.')}
         </Text>
         <Button
           type="primary"
@@ -2072,7 +2077,7 @@ function HeroSlidersTab({
             fontWeight: 600,
           }}
         >
-          Add Hero Slide
+          {t('add_hero_slide', 'Add Hero Slide')}
         </Button>
       </Flex>
 
@@ -2091,6 +2096,7 @@ function HeroSlidersTab({
 // TAB 5: WEBSITE PAGES COMPONENT
 // ========================================================
 function WebsitePagesTab({ pages, setPages, adminTheme }) {
+  const { t } = useTranslation();
   const [editingPage, setEditingPage] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [form] = Form.useForm();
@@ -2108,14 +2114,14 @@ function WebsitePagesTab({ pages, setPages, adminTheme }) {
       );
       setPages(updated);
       savePublicPages(updated);
-      message.success('Page saved');
+      message.success(t('page_saved', 'Page saved'));
       setModalVisible(false);
     });
   };
 
   const columns = [
     {
-      title: 'Page Title & Slug',
+      title: t('page_title_slug', 'Page Title & Slug'),
       key: 'title',
       render: (_, record) => (
         <div>
@@ -2129,13 +2135,13 @@ function WebsitePagesTab({ pages, setPages, adminTheme }) {
       ),
     },
     {
-      title: 'Category',
+      title: t('category', 'Category'),
       dataIndex: 'category',
       key: 'category',
       render: (v) => <Tag color="blue">{v}</Tag>,
     },
     {
-      title: 'Status',
+      title: t('status', 'Status'),
       dataIndex: 'status',
       key: 'status',
       render: (v) => (
@@ -2145,18 +2151,18 @@ function WebsitePagesTab({ pages, setPages, adminTheme }) {
       ),
     },
     {
-      title: 'Views',
+      title: t('views', 'Views'),
       dataIndex: 'views',
       key: 'views',
       render: (v) => <Text style={{ fontWeight: 600 }}>{v?.toLocaleString() || 0}</Text>,
     },
     {
-      title: 'Last Updated',
+      title: t('last_updated', 'Last Updated'),
       dataIndex: 'lastUpdated',
       key: 'lastUpdated',
     },
     {
-      title: 'Actions',
+      title: t('actions', 'Actions'),
       key: 'actions',
       align: 'right',
       render: (_, record) => (
@@ -2167,7 +2173,7 @@ function WebsitePagesTab({ pages, setPages, adminTheme }) {
             onClick={() => handleEdit(record)}
             style={{ borderRadius: 8 }}
           >
-            Edit
+            {t('edit', 'Edit')}
           </Button>
           <Button
             size="small"
@@ -2185,23 +2191,23 @@ function WebsitePagesTab({ pages, setPages, adminTheme }) {
       <Table columns={columns} dataSource={pages} rowKey="id" pagination={false} size="middle" />
 
       <Modal
-        title="Edit Content Page"
+        title={t('edit_content_page', 'Edit Content Page')}
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         onOk={handleSave}
         destroyOnHidden={false}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="title" label="Page Title" rules={[{ required: true }]}>
+          <Form.Item name="title" label={t('page_title', 'Page Title')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="slug" label="URL Slug" rules={[{ required: true }]}>
+          <Form.Item name="slug" label={t('url_slug', 'URL Slug')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="category" label="Category">
+          <Form.Item name="category" label={t('category', 'Category')}>
             <Input />
           </Form.Item>
-          <Form.Item name="summary" label="Summary / Excerpt">
+          <Form.Item name="summary" label={t('summary_excerpt', 'Summary / Excerpt')}>
             <TextArea rows={3} />
           </Form.Item>
         </Form>
@@ -2214,6 +2220,7 @@ function WebsitePagesTab({ pages, setPages, adminTheme }) {
 // TAB: TELEGRAM MULTI-STORE GROUP MANAGEMENT & BOT PERMISSIONS
 // ========================================================
 function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, adminTheme }) {
+  const { t } = useTranslation();
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingConfig, setEditingConfig] = useState(null);
   const [modalTestResult, setModalTestResult] = useState(null);
@@ -2334,7 +2341,7 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
 
   const columns = [
     {
-      title: 'Store Channel',
+      title: t('store_channel', 'Store Channel'),
       key: 'store',
       render: (_, record) => (
         <Flex align="center" gap={12}>
@@ -2359,9 +2366,9 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
                 {record.storeName}
               </Text>
               {record.telegram_enabled === false ? (
-                <Tag color="default" style={{ fontSize: 10, margin: 0 }}>Disabled</Tag>
+                <Tag color="default" style={{ fontSize: 10, margin: 0 }}>{t('disabled', 'Disabled')}</Tag>
               ) : (
-                <Tag color="success" style={{ fontSize: 10, margin: 0 }}>Active</Tag>
+                <Tag color="success" style={{ fontSize: 10, margin: 0 }}>{t('active', 'Active')}</Tag>
               )}
             </Flex>
             <Text style={{ fontSize: 11.5, color: adminTheme.subtext, display: 'block', marginTop: 2 }}>
@@ -2373,7 +2380,7 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
       ),
     },
     {
-      title: 'Dedicated Telegram Group Chat',
+      title: t('dedicated_telegram_group_chat', 'Dedicated Telegram Group Chat'),
       key: 'group',
       render: (_, record) => (
         <div>
@@ -2396,7 +2403,7 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
             >
               ID: {record.groupId || record.telegram_group_chat_id || 'Not Set'}
             </Tag>
-            <Tooltip title="Copy Group ID">
+            <Tooltip title={t('copy_group_id', 'Copy Group ID')}>
               <Button
                 type="text"
                 size="small"
@@ -2412,7 +2419,7 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
       ),
     },
     {
-      title: 'Dedicated Bot & Status',
+      title: t('dedicated_bot_status', 'Dedicated Bot & Status'),
       key: 'bot',
       render: (_, record) => {
         const isConnected = record.status === 'connected' || record.botStatus === 'connected';
@@ -2429,12 +2436,12 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
                 {isConnected ? (
                   <>
                     <CheckCircleOutlined style={{ marginRight: 4 }} />
-                    Connected
+                    {t('connected', 'Connected')}
                   </>
                 ) : (
                   <>
                     <CloseCircleOutlined style={{ marginRight: 4 }} />
-                    Connection Error
+                    {t('connection_error', 'Connection Error')}
                   </>
                 )}
               </Tag>
@@ -2449,7 +2456,7 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
       },
     },
     {
-      title: 'Bot Permissions',
+      title: t('bot_permissions', 'Bot Permissions'),
       key: 'permissions',
       render: (_, record) => (
         <Space direction="vertical" size={2}>
@@ -2466,7 +2473,7 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
       ),
     },
     {
-      title: 'Orders Routed',
+      title: t('orders_routed', 'Orders Routed'),
       key: 'stats',
       render: (_, record) => (
         <div>
@@ -2480,12 +2487,12 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
       ),
     },
     {
-      title: 'Actions',
+      title: t('actions', 'Actions'),
       key: 'actions',
       align: 'right',
       render: (_, record) => (
         <Space size={6}>
-          <Tooltip title="Send a verification test message to this store's Telegram Group">
+          <Tooltip title={t('send_verification_test', "Send a verification test message to this store's Telegram Group")}>
             <Button
               size="small"
               icon={<ThunderboltFilled style={{ color: '#0284c7' }} />}
@@ -2493,7 +2500,7 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
               onClick={() => handleSendTest(record.storeSlug)}
               style={{ borderRadius: 8, fontWeight: 600 }}
             >
-              Test Connection
+              {t('test_connection', 'Test Connection')}
             </Button>
           </Tooltip>
 
@@ -2504,7 +2511,7 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
             onClick={() => handleOpenEdit(record)}
             style={{ borderRadius: 8, fontWeight: 600, background: '#2563eb' }}
           >
-            Settings
+            {t('settings', 'Settings')}
           </Button>
 
           <Tooltip title="Open bot in Telegram">
@@ -2540,14 +2547,13 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
         <Row gutter={[20, 16]} align="middle" justify="space-between">
           <Col xs={24} md={16}>
             <Tag color="gold" style={{ fontWeight: 800, borderRadius: 20, padding: '2px 10px', marginBottom: 8 }}>
-              DEDICATED TELEGRAM BOTS &amp; MULTI-GROUP ROUTING
+              {t('dedicated_telegram_bots_title', 'DEDICATED TELEGRAM BOTS & MULTI-GROUP ROUTING')}
             </Tag>
             <Title level={3} style={{ color: '#ffffff', margin: '4px 0 6px', fontWeight: 800 }}>
-              Independent Store Bots &amp; Groups
+              {t('independent_store_bots', 'Independent Store Bots & Groups')}
             </Title>
             <Paragraph style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13.5, margin: 0, maxWidth: 720 }}>
-              Each store has its own dedicated Telegram Bot token and dedicated Telegram staff Group Chat.
-              When a customer submits an order, THAT store&apos;s bot dispatches the itemized invoice to the store group and directly to the customer.
+              {t('independent_store_bots_desc', 'Each store has its own dedicated Telegram Bot token and dedicated Telegram staff Group Chat. When a customer submits an order, THAT store\'s bot dispatches the itemized invoice to the store group and directly to the customer.')}
             </Paragraph>
           </Col>
 
@@ -2567,7 +2573,7 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
                   boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 }}
               >
-                Create Bot on @BotFather
+                {t('create_bot_father', 'Create Bot on @BotFather')}
               </Button>
             </Flex>
           </Col>
@@ -2589,12 +2595,12 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
         title={
           <Flex align="center" gap={8}>
             <ThunderboltFilled style={{ color: '#10b981' }} />
-            <span>Recent Telegram Order Invoice Activity</span>
+            <span>{t('recent_telegram_invoice_activity', 'Recent Telegram Order Invoice Activity')}</span>
           </Flex>
         }
         extra={
           <Button size="small" icon={<ReloadOutlined />} onClick={onRefreshConfigs}>
-            Refresh Logs
+            {t('refresh_logs', 'Refresh Logs')}
           </Button>
         }
         style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}` }}

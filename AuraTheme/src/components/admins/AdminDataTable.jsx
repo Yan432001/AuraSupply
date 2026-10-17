@@ -46,6 +46,7 @@ import {
   InfoCircleOutlined,
 } from '@ant-design/icons';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Text, Title, Paragraph } = Typography;
 const { Dragger } = Upload;
@@ -324,6 +325,7 @@ export default function AdminDataTable({
   renderCustomViewDetails,
 }) {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
 
   let antdApp = null;
   try {
@@ -597,20 +599,20 @@ export default function AdminDataTable({
     {
       key: 'displayed',
       icon: <DownloadOutlined />,
-      label: `Export Displayed Table Data (${filteredData.length} records)`,
+      label: `${t('export_displayed', 'Export Displayed Table Data')} (${filteredData.length} ${t('records', 'records')})`,
       onClick: handleBulkExportDisplayed,
     },
     {
       key: 'selected',
       icon: <CheckSquareOutlined />,
-      label: `Export Selected Rows (${selectedRowKeys.length} selected)`,
+      label: `${t('export_selected', 'Export Selected Rows')} (${selectedRowKeys.length} ${t('selected', 'selected')})`,
       disabled: selectedRowKeys.length === 0,
       onClick: handleBulkExportSelected,
     },
     {
       key: 'all',
       icon: <FileTextOutlined />,
-      label: `Export All Database Records (${dataSource.length} total)`,
+      label: `${t('export_all', 'Export All Database Records')} (${dataSource.length} ${t('total', 'total')})`,
       onClick: handleBulkExportAll,
     },
   ];
@@ -628,10 +630,10 @@ export default function AdminDataTable({
         }}
       >
         <Text strong style={{ fontSize: 13 }}>
-          Columns
+          {t('columns', 'Columns')}
         </Text>
         <Button type="link" size="small" style={{ padding: 0 }} onClick={resetColumnVisibility}>
-          Show All
+          {t('show_all', 'Show All')}
         </Button>
       </div>
       <Space direction="vertical" style={{ width: '100%' }}>
@@ -672,7 +674,7 @@ export default function AdminDataTable({
             >
               {title}
               <Tag color="blue" style={{ borderRadius: 12, padding: '1px 8px', fontSize: 12 }}>
-                {filteredData.length} records
+                {filteredData.length} {t('records', 'records')}
               </Tag>
             </Title>
           )}
@@ -701,7 +703,7 @@ export default function AdminDataTable({
                   background: adminTheme.isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5',
                 }}
               >
-                Bulk Import CSV
+                {t('bulk_import_csv', 'Bulk Import CSV')}
               </Button>
             )}
 
@@ -718,14 +720,14 @@ export default function AdminDataTable({
                     background: adminTheme.isDark ? 'rgba(37, 99, 235, 0.12)' : 'transparent',
                   }}
                 >
-                  Export CSV {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : ''}
+                  {t('export_csv', 'Export CSV')} {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : ''}
                 </Button>
               </Dropdown>
             )}
 
             {/* Refresh Data */}
             {onRefresh && (
-              <Tooltip title="Refresh Table Data">
+              <Tooltip title={t('refresh', 'Refresh Table Data')}>
                 <Button
                   icon={<ReloadOutlined spin={loading} />}
                   onClick={onRefresh}
@@ -819,7 +821,7 @@ export default function AdminDataTable({
               }}
               style={{ borderRadius: 8, width: '100%' }}
             >
-              Clear
+              {t('clear', 'Clear')}
             </Button>
           </Col>
         )}
@@ -830,9 +832,9 @@ export default function AdminDataTable({
         {/* Columns Visibility Popover */}
         <Col>
           <Popover content={columnVisibilityContent} trigger="click" placement="bottomRight">
-            <Tooltip title="Customize Columns">
+            <Tooltip title={t('customize_columns', 'Customize Columns')}>
               <Button icon={<SettingOutlined />} style={{ borderRadius: 8 }}>
-                Columns
+                {t('columns', 'Columns')}
               </Button>
             </Tooltip>
           </Popover>
@@ -855,7 +857,7 @@ export default function AdminDataTable({
             <Row justify="space-between" align="middle" style={{ width: '100%' }}>
               <Col>
                 <Text strong style={{ color: adminTheme.isDark ? '#93c5fd' : '#1e40af' }}>
-                  {selectedRowKeys.length} {selectedRowKeys.length === 1 ? 'record' : 'records'} selected
+                  {selectedRowKeys.length} {t('records_selected', 'records selected')}
                 </Text>
               </Col>
               <Col>
@@ -869,7 +871,7 @@ export default function AdminDataTable({
                       onClick={handleBulkExportSelected}
                       style={{ background: '#2563eb', borderRadius: 6 }}
                     >
-                      Export CSV ({selectedRowKeys.length})
+                      {t('export_csv', 'Export CSV')} ({selectedRowKeys.length})
                     </Button>
                   )}
 
@@ -880,19 +882,19 @@ export default function AdminDataTable({
                         items: [
                           {
                             key: 'active',
-                            label: 'Set as Active / Published',
+                            label: t('set_active_published', 'Set as Active / Published'),
                             onClick: () => onBulkStatusChange(selectedRowKeys, 'active'),
                           },
                           {
                             key: 'inactive',
-                            label: 'Set as Inactive / Draft',
+                            label: t('set_inactive_draft', 'Set as Inactive / Draft'),
                             onClick: () => onBulkStatusChange(selectedRowKeys, 'inactive'),
                           },
                         ],
                       }}
                     >
                       <Button size="small" style={{ borderRadius: 6 }}>
-                        Bulk Status
+                        {t('bulk_status', 'Bulk Status')}
                       </Button>
                     </Dropdown>
                   )}
@@ -900,15 +902,15 @@ export default function AdminDataTable({
                   {/* Bulk Delete */}
                   {onBulkDelete && (
                     <Popconfirm
-                      title="Bulk Delete"
-                      description={`Are you sure you want to permanently delete these ${selectedRowKeys.length} records?`}
-                      okText="Yes, Delete All"
-                      cancelText="Cancel"
+                      title={t('bulk_delete', 'Bulk Delete')}
+                      description={t('confirm_bulk_delete', `Are you sure you want to permanently delete these ${selectedRowKeys.length} records?`)}
+                      okText={t('yes_delete_all', 'Yes, Delete All')}
+                      cancelText={t('cancel', 'Cancel')}
                       okButtonProps={{ danger: true }}
                       onConfirm={handleConfirmBulkDelete}
                     >
                       <Button size="small" danger icon={<DeleteOutlined />} style={{ borderRadius: 6 }}>
-                        Delete Selected
+                        {t('delete_selected', 'Delete Selected')}
                       </Button>
                     </Popconfirm>
                   )}
@@ -919,7 +921,7 @@ export default function AdminDataTable({
                     onClick={handleClearSelection}
                     style={{ color: adminTheme.subtext }}
                   >
-                    Deselect All
+                    {t('deselect_all', 'Deselect All')}
                   </Button>
                 </Space>
               </Col>
@@ -942,7 +944,7 @@ export default function AdminDataTable({
           showQuickJumper: true,
           showTotal: (total, range) => (
             <span style={{ color: adminTheme.subtext, fontSize: 13 }}>
-              Showing {range[0]}-{range[1]} of {total} records
+              {t('showing', 'Showing')} {range[0]}-{range[1]} {t('of', 'of')} {total} {t('records', 'records')}
             </span>
           ),
         }}
@@ -953,7 +955,7 @@ export default function AdminDataTable({
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={
                 <span>
-                  {searchText ? 'No matching records found' : 'No data records available yet'}
+                  {searchText ? t('no_matching_records', 'No matching records found') : t('no_data_available', 'No data records available yet')}
                 </span>
               }
             >
@@ -965,7 +967,7 @@ export default function AdminDataTable({
                   onClick={onAdd}
                   style={{ background: '#2563eb' }}
                 >
-                  {addLabel}
+                  {addLabel || t('add_record', 'Add Record')}
                 </Button>
               )}
             </Empty>

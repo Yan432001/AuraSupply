@@ -56,6 +56,7 @@ import axios from 'axios';
 import { getMenuByKey, getModuleByKey } from '../../data/erpModules';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -182,6 +183,7 @@ const MODULE_DEFAULT_ENTITY_MAP = {
 
 const BpasUnifiedModuleWorkspace = () => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(location.search);
@@ -342,7 +344,7 @@ const BpasUnifiedModuleWorkspace = () => {
   const columns = useMemo(() => {
     const base = [
       {
-        title: 'Reference / ID',
+        title: t('reference_no', 'Reference / ID'),
         dataIndex: 'reference_no',
         key: 'reference_no',
         width: 170,
@@ -358,13 +360,13 @@ const BpasUnifiedModuleWorkspace = () => {
               {ref || record.do_reference_no || `#${record.id}`}
             </a>
             <Text type="secondary" style={{ fontSize: 11 }}>
-              {record.date ? String(record.date).substring(0, 10) : 'Active'}
+              {record.date ? String(record.date).substring(0, 10) : t('active', 'Active')}
             </Text>
           </Space>
         )
       },
       {
-        title: 'Partner / Customer / Staff',
+        title: t('customer', 'Partner / Customer / Staff'),
         key: 'partner',
         render: (_, record) => {
           const partnerName = record.supplier || record.customer || record.name || record.employee_name || record.first_name || 'Commercial Partner';
@@ -378,7 +380,7 @@ const BpasUnifiedModuleWorkspace = () => {
         }
       },
       {
-        title: 'Branch / Location',
+        title: t('branches', 'Branch / Location'),
         dataIndex: 'biller',
         key: 'biller',
         render: (biller, record) => (
@@ -388,7 +390,7 @@ const BpasUnifiedModuleWorkspace = () => {
         )
       },
       {
-        title: 'Grand Total',
+        title: t('grand_total', 'Grand Total'),
         key: 'grand_total',
         align: 'right',
         render: (_, record) => {
@@ -401,7 +403,7 @@ const BpasUnifiedModuleWorkspace = () => {
               </Text>
               {record.paid !== undefined && (
                 <div style={{ fontSize: 11, color: '#16a34a' }}>
-                  Paid: {formatCurrency(paid)}
+                  {t('paid', 'Paid')}: {formatCurrency(paid)}
                 </div>
               )}
             </div>
@@ -409,14 +411,14 @@ const BpasUnifiedModuleWorkspace = () => {
         }
       },
       {
-        title: 'Status',
+        title: t('status', 'Status'),
         dataIndex: 'status',
         key: 'status',
         align: 'center',
         render: (status, record) => renderStatusTag(status || record.sale_status || record.payment_status)
       },
       {
-        title: 'Actions',
+        title: t('actions', 'Actions'),
         key: 'actions',
         align: 'center',
         width: 140,
@@ -425,7 +427,7 @@ const BpasUnifiedModuleWorkspace = () => {
             {
               key: 'view',
               icon: <EyeOutlined />,
-              label: 'View Details',
+              label: t('view', 'View Details'),
               onClick: () => {
                 setSelectedRecord(record);
                 setViewModalVisible(true);
@@ -434,13 +436,13 @@ const BpasUnifiedModuleWorkspace = () => {
             {
               key: 'approve',
               icon: <CheckCircleOutlined style={{ color: '#16a34a' }} />,
-              label: 'Mark Approved / Paid',
+              label: t('completed', 'Mark Approved / Paid'),
               onClick: () => handleStatusUpdate(record.id, 'completed')
             },
             {
               key: 'pending',
               icon: <WarningOutlined style={{ color: '#ea580c' }} />,
-              label: 'Mark Pending',
+              label: t('pending', 'Mark Pending'),
               onClick: () => handleStatusUpdate(record.id, 'pending')
             },
             {
@@ -450,7 +452,7 @@ const BpasUnifiedModuleWorkspace = () => {
               key: 'delete',
               icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
               danger: true,
-              label: 'Delete Record',
+              label: t('delete', 'Delete Record'),
               onClick: () => handleDelete(record.id)
             }
           ];
@@ -476,10 +478,11 @@ const BpasUnifiedModuleWorkspace = () => {
     ];
 
     return base;
-  }, [entityName]);
+  }, [entityName, t]);
 
-  const displayTitle = menuConfig?.label || moduleConfig?.label || entityName.replace(/_/g, ' ').toUpperCase();
-  const displayDesc = menuConfig?.description || moduleConfig?.description || 'Manage enterprise database records in real-time.';
+  const rawTitle = menuConfig?.label || moduleConfig?.label || entityName.replace(/_/g, ' ').toUpperCase();
+  const displayTitle = t(menuKey, t(moduleKey, rawTitle));
+  const displayDesc = t(`${menuKey}_desc`, menuConfig?.description) || t(`${moduleKey}_desc`, moduleConfig?.description) || 'Manage enterprise database records in real-time.';
 
   return (
     <div style={{ padding: '20px 24px', minHeight: '100vh', background: adminTheme.isDark ? '#0f172a' : '#f8fafc' }}>
@@ -517,7 +520,7 @@ const BpasUnifiedModuleWorkspace = () => {
                     {displayTitle}
                   </Title>
                   <Text type="secondary" style={{ fontSize: 13 }}>
-                    BPAS ERP Module: <Tag color="blue">{moduleConfig.label || moduleKey}</Tag> &bull; Active Data Layer
+                    {t('modules', 'ERP Module')}: <Tag color="blue">{t(moduleConfig.key || moduleKey, moduleConfig.label || moduleKey)}</Tag> &bull; {t('overview', 'Active Data Layer')}
                   </Text>
                 </div>
               </Flex>
@@ -532,25 +535,25 @@ const BpasUnifiedModuleWorkspace = () => {
             <Row gutter={12} justify="end">
               <Col span={6}>
                 <Card size="small" style={{ borderRadius: 10, background: adminTheme.isDark ? '#334155' : '#f1f5f9', border: 'none', textAlign: 'center' }}>
-                  <Text type="secondary" style={{ fontSize: 11 }}>TOTAL VOLUME</Text>
+                  <Text type="secondary" style={{ fontSize: 11 }}>{t('total', 'TOTAL VOLUME')}</Text>
                   <div style={{ fontSize: 18, fontWeight: 800, color: '#2563eb' }}>{metrics.totalCount}</div>
                 </Card>
               </Col>
               <Col span={7}>
                 <Card size="small" style={{ borderRadius: 10, background: adminTheme.isDark ? '#334155' : '#f1f5f9', border: 'none', textAlign: 'center' }}>
-                  <Text type="secondary" style={{ fontSize: 11 }}>TOTAL VALUE</Text>
+                  <Text type="secondary" style={{ fontSize: 11 }}>{t('grand_total', 'TOTAL VALUE')}</Text>
                   <div style={{ fontSize: 18, fontWeight: 800, color: '#059669' }}>{formatCurrency(metrics.totalAmount)}</div>
                 </Card>
               </Col>
               <Col span={5}>
                 <Card size="small" style={{ borderRadius: 10, background: adminTheme.isDark ? '#334155' : '#f1f5f9', border: 'none', textAlign: 'center' }}>
-                  <Text type="secondary" style={{ fontSize: 11 }}>ACTIVE</Text>
+                  <Text type="secondary" style={{ fontSize: 11 }}>{t('active', 'ACTIVE')}</Text>
                   <div style={{ fontSize: 18, fontWeight: 800, color: '#16a34a' }}>{metrics.completedCount}</div>
                 </Card>
               </Col>
               <Col span={6}>
                 <Card size="small" style={{ borderRadius: 10, background: adminTheme.isDark ? '#334155' : '#f1f5f9', border: 'none', textAlign: 'center' }}>
-                  <Text type="secondary" style={{ fontSize: 11 }}>PENDING / DUE</Text>
+                  <Text type="secondary" style={{ fontSize: 11 }}>{t('pending', 'PENDING / DUE')}</Text>
                   <div style={{ fontSize: 18, fontWeight: 800, color: '#ea580c' }}>{metrics.pendingCount}</div>
                 </Card>
               </Col>
@@ -574,7 +577,7 @@ const BpasUnifiedModuleWorkspace = () => {
           <Col xs={24} lg={14}>
             <Flex wrap="wrap" gap={10} align="center">
               <Input
-                placeholder={`Search ${displayTitle}...`}
+                placeholder={`${t('search', 'Search')} ${displayTitle}...`}
                 prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -586,23 +589,23 @@ const BpasUnifiedModuleWorkspace = () => {
                 value={statusFilter}
                 onChange={setStatusFilter}
                 style={{ width: 150 }}
-                placeholder="Status"
+                placeholder={t('status', 'Status')}
               >
-                <Option value="all">All Statuses</Option>
-                <Option value="completed">Completed / Active</Option>
-                <Option value="received">Received / Stocked</Option>
-                <Option value="pending">Pending / Draft</Option>
-                <Option value="paid">Paid</Option>
-                <Option value="due">Due / Overdue</Option>
+                <Option value="all">{t('all', 'All Statuses')}</Option>
+                <Option value="completed">{t('completed', 'Completed / Active')}</Option>
+                <Option value="received">{t('stock_received', 'Received / Stocked')}</Option>
+                <Option value="pending">{t('pending', 'Pending / Draft')}</Option>
+                <Option value="paid">{t('paid', 'Paid')}</Option>
+                <Option value="due">{t('balance', 'Due / Overdue')}</Option>
               </Select>
 
               <Select
                 value={billerFilter}
                 onChange={setBillerFilter}
                 style={{ width: 170 }}
-                placeholder="Branch / Biller"
+                placeholder={t('branches', 'Branch / Biller')}
               >
-                <Option value="all">All Branches (HQ & Stores)</Option>
+                <Option value="all">{t('branches', 'All Branches')}</Option>
                 <Option value="1">Aura Global HQ</Option>
                 <Option value="2">SBC Solutions Store</Option>
               </Select>
@@ -613,7 +616,7 @@ const BpasUnifiedModuleWorkspace = () => {
                 loading={loading}
                 style={{ borderRadius: 8 }}
               >
-                Sync
+                {t('refresh', 'Sync')}
               </Button>
             </Flex>
           </Col>
@@ -625,7 +628,7 @@ const BpasUnifiedModuleWorkspace = () => {
                 onClick={handleExportCSV}
                 style={{ borderRadius: 8 }}
               >
-                Export CSV
+                {t('export', 'Export CSV')}
               </Button>
               <Button
                 type="primary"
@@ -640,7 +643,7 @@ const BpasUnifiedModuleWorkspace = () => {
                   fontWeight: 600
                 }}
               >
-                Add {displayTitle}
+                {t('add', 'Add')} {displayTitle}
               </Button>
             </Space>
           </Col>
@@ -680,7 +683,7 @@ const BpasUnifiedModuleWorkspace = () => {
 
       {/* 4. Add Record Modal */}
       <Modal
-        title={`Create New ${displayTitle}`}
+        title={`${t('create_new', 'Create New')} ${displayTitle}`}
         open={createModalVisible}
         onCancel={() => setCreateModalVisible(false)}
         footer={null}
@@ -703,26 +706,26 @@ const BpasUnifiedModuleWorkspace = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="Partner / Customer / Supplier / Staff Name"
+                label={t('partner_customer_staff_name', 'Partner / Customer / Supplier / Staff Name')}
                 name="name"
-                rules={[{ required: true, message: 'Please enter name' }]}
+                rules={[{ required: true, message: t('enter_name', 'Please enter name') }]}
               >
                 <Input placeholder="e.g. SBC Solutions Partner" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="Reference Code"
+                label={t('reference_code', 'Reference Code')}
                 name="reference_no"
               >
-                <Input placeholder="Auto-generated if left empty" />
+                <Input placeholder={t('auto_generated_empty', 'Auto-generated if left empty')} />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="Branch / Biller" name="biller">
+              <Form.Item label={t('branch_biller', 'Branch / Biller')} name="biller">
                 <Select>
                   <Option value="Aura Global HQ">Aura Global HQ</Option>
                   <Option value="SBC Storefront">SBC Storefront</Option>
@@ -731,12 +734,12 @@ const BpasUnifiedModuleWorkspace = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="Transaction Status" name="status">
+              <Form.Item label={t('transaction_status', 'Transaction Status')} name="status">
                 <Select>
-                  <Option value="completed">Completed / Active</Option>
-                  <Option value="received">Received</Option>
-                  <Option value="pending">Pending</Option>
-                  <Option value="paid">Paid</Option>
+                  <Option value="completed">{t('completed', 'Completed / Active')}</Option>
+                  <Option value="received">{t('received', 'Received')}</Option>
+                  <Option value="pending">{t('pending', 'Pending')}</Option>
+                  <Option value="paid">{t('paid', 'Paid')}</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -745,28 +748,28 @@ const BpasUnifiedModuleWorkspace = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="Amount / Value ($)"
+                label={t('amount_value', 'Amount / Value ($)')}
                 name="grand_total"
-                rules={[{ required: true, message: 'Please enter amount' }]}
+                rules={[{ required: true, message: t('enter_amount', 'Please enter amount') }]}
               >
                 <InputNumber style={{ width: '100%' }} min={0} precision={2} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="Date" name="date">
+              <Form.Item label={t('date', 'Date')} name="date">
                 <Input type="date" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item label="Operational Notes / Description" name="note">
-            <Input.TextArea rows={3} placeholder="Notes, terms, payment details..." />
+          <Form.Item label={t('operational_notes', 'Operational Notes / Description')} name="note">
+            <Input.TextArea rows={3} placeholder={t('notes_terms_placeholder', 'Notes, terms, payment details...')} />
           </Form.Item>
 
           <Flex justify="end" gap={10} style={{ marginTop: 20 }}>
-            <Button onClick={() => setCreateModalVisible(false)}>Cancel</Button>
+            <Button onClick={() => setCreateModalVisible(false)}>{t('cancel', 'Cancel')}</Button>
             <Button type="primary" htmlType="submit" loading={submitting} style={{ background: '#2563eb' }}>
-              Save Record
+              {t('save_record', 'Save Record')}
             </Button>
           </Flex>
         </Form>
@@ -777,15 +780,15 @@ const BpasUnifiedModuleWorkspace = () => {
         title={
           <Space>
             <FileTextOutlined style={{ color: '#2563eb' }} />
-            <span>Document Details &bull; {selectedRecord?.reference_no || `#${selectedRecord?.id}`}</span>
+            <span>{t('document_details', 'Document Details')} &bull; {selectedRecord?.reference_no || `#${selectedRecord?.id}`}</span>
           </Space>
         }
         open={viewModalVisible}
         onCancel={() => setViewModalVisible(false)}
         footer={[
-          <Button key="close" onClick={() => setViewModalVisible(false)}>Close</Button>,
+          <Button key="close" onClick={() => setViewModalVisible(false)}>{t('close', 'Close')}</Button>,
           <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={() => window.print()}>
-            Print Document
+            {t('print_document', 'Print Document')}
           </Button>
         ]}
         width={680}
@@ -795,25 +798,25 @@ const BpasUnifiedModuleWorkspace = () => {
           <div style={{ padding: '10px 0' }}>
             <Row gutter={[16, 16]}>
               <Col span={12}>
-                <Text type="secondary" style={{ fontSize: 12 }}>DOCUMENT TYPE</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{t('document_type', 'DOCUMENT TYPE')}</Text>
                 <div style={{ fontSize: 15, fontWeight: 700 }}>{displayTitle}</div>
               </Col>
               <Col span={12} style={{ textAlign: 'right' }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>STATUS</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{t('status', 'STATUS')}</Text>
                 <div>{renderStatusTag(selectedRecord.status || selectedRecord.sale_status)}</div>
               </Col>
 
               <Divider style={{ margin: '8px 0' }} />
 
               <Col span={12}>
-                <Text type="secondary" style={{ fontSize: 12 }}>PARTNER / BENEFICIARY</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{t('partner_beneficiary', 'PARTNER / BENEFICIARY')}</Text>
                 <div style={{ fontSize: 15, fontWeight: 600 }}>
                   {selectedRecord.supplier || selectedRecord.customer || selectedRecord.name || selectedRecord.employee_name || 'General Enterprise'}
                 </div>
                 <Text type="secondary">{selectedRecord.phone || selectedRecord.email || ''}</Text>
               </Col>
               <Col span={12} style={{ textAlign: 'right' }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>BRANCH / WAREHOUSE</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{t('branch_warehouse', 'BRANCH / WAREHOUSE')}</Text>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>
                   {selectedRecord.biller || selectedRecord.warehouse_name || 'HQ Location'}
                 </div>
@@ -822,19 +825,19 @@ const BpasUnifiedModuleWorkspace = () => {
               <Divider style={{ margin: '8px 0' }} />
 
               <Col span={8}>
-                <Text type="secondary" style={{ fontSize: 12 }}>TOTAL VALUE</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{t('total_value', 'TOTAL VALUE')}</Text>
                 <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>
                   {formatCurrency(selectedRecord.grand_total || selectedRecord.amount || selectedRecord.price || 0)}
                 </div>
               </Col>
               <Col span={8}>
-                <Text type="secondary" style={{ fontSize: 12 }}>PAID AMOUNT</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{t('paid_amount', 'PAID AMOUNT')}</Text>
                 <div style={{ fontSize: 18, fontWeight: 800, color: '#16a34a' }}>
                   {formatCurrency(selectedRecord.paid || 0)}
                 </div>
               </Col>
               <Col span={8}>
-                <Text type="secondary" style={{ fontSize: 12 }}>BALANCE DUE</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{t('balance_due', 'BALANCE DUE')}</Text>
                 <div style={{ fontSize: 18, fontWeight: 800, color: '#ea580c' }}>
                   {formatCurrency((selectedRecord.grand_total || selectedRecord.amount || 0) - (selectedRecord.paid || 0))}
                 </div>
@@ -843,9 +846,9 @@ const BpasUnifiedModuleWorkspace = () => {
               <Divider style={{ margin: '8px 0' }} />
 
               <Col span={24}>
-                <Text type="secondary" style={{ fontSize: 12 }}>TRANSACTION NOTES / OBSERVATIONS</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{t('transaction_notes', 'TRANSACTION NOTES / OBSERVATIONS')}</Text>
                 <div style={{ background: adminTheme.isDark ? '#334155' : '#f8fafc', padding: 12, borderRadius: 8, marginTop: 4 }}>
-                  {selectedRecord.note || 'No additional remarks attached to this record.'}
+                  {selectedRecord.note || t('no_remarks_attached', 'No additional remarks attached to this record.')}
                 </div>
               </Col>
             </Row>

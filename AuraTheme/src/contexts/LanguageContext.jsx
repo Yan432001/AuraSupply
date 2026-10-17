@@ -504,6 +504,12 @@ export const LanguageProvider = ({ children }) => {
     try {
       localStorage.setItem('aura-language', valid.code);
       document.cookie = `aura_language=${valid.code}; path=/; max-age=31536000; SameSite=Lax`;
+
+      // Instantly load cached translations so the entire UI updates synchronously without delay
+      const cached = localStorage.getItem(`aura_lang_cache_${valid.code}`);
+      if (cached) {
+        setDynamicDictionary(JSON.parse(cached));
+      }
     } catch (_) {}
 
     // Persist to backend user account if authenticated
@@ -512,25 +518,46 @@ export const LanguageProvider = ({ children }) => {
 
   // Primary translation lookup function
   const t = useCallback((key, fallback = null) => {
-    if (!key) return '';
-    const cleanKey = String(key).trim();
+    if (!key && !fallback) return '';
+    const cleanKey = String(key || fallback).trim();
     const lowerKey = cleanKey.toLowerCase();
+    const underscoreKey = lowerKey.replace(/[-\s]+/g, '_');
+    const dashKey = lowerKey.replace(/[_\s]+/g, '-');
+    const cleanFallback = fallback ? String(fallback).trim() : '';
+    const lowerFallback = cleanFallback.toLowerCase();
+    const underscoreFallback = lowerFallback.replace(/[-\s]+/g, '_');
+    const dashFallback = lowerFallback.replace(/[_\s]+/g, '-');
 
     // 1. Check dynamic dictionary from MySQL table aura_language
     if (dynamicDictionary[cleanKey]) return dynamicDictionary[cleanKey];
     if (dynamicDictionary[lowerKey]) return dynamicDictionary[lowerKey];
+    if (dynamicDictionary[underscoreKey]) return dynamicDictionary[underscoreKey];
+    if (dynamicDictionary[dashKey]) return dynamicDictionary[dashKey];
+
+    if (cleanFallback) {
+      if (dynamicDictionary[cleanFallback]) return dynamicDictionary[cleanFallback];
+      if (dynamicDictionary[lowerFallback]) return dynamicDictionary[lowerFallback];
+      if (dynamicDictionary[underscoreFallback]) return dynamicDictionary[underscoreFallback];
+      if (dynamicDictionary[dashFallback]) return dynamicDictionary[dashFallback];
+    }
 
     // 2. Check bundled core vocabulary
     const currentCore = CORE_VOCABULARY[currentLanguage];
     if (currentCore) {
       if (currentCore[cleanKey]) return currentCore[cleanKey];
       if (currentCore[lowerKey]) return currentCore[lowerKey];
+      if (currentCore[underscoreKey]) return currentCore[underscoreKey];
+      if (currentCore[dashKey]) return currentCore[dashKey];
+      if (cleanFallback && currentCore[cleanFallback]) return currentCore[cleanFallback];
+      if (lowerFallback && currentCore[lowerFallback]) return currentCore[lowerFallback];
     }
 
     // 3. Fallback to English core vocabulary if available
     if (currentLanguage !== 'english' && CORE_VOCABULARY.english) {
       if (CORE_VOCABULARY.english[cleanKey]) return CORE_VOCABULARY.english[cleanKey];
       if (CORE_VOCABULARY.english[lowerKey]) return CORE_VOCABULARY.english[lowerKey];
+      if (CORE_VOCABULARY.english[underscoreKey]) return CORE_VOCABULARY.english[underscoreKey];
+      if (cleanFallback && CORE_VOCABULARY.english[cleanFallback]) return CORE_VOCABULARY.english[cleanFallback];
     }
 
     // 4. Return provided fallback or original key formatted

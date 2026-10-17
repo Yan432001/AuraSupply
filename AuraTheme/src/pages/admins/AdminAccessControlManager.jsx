@@ -52,6 +52,7 @@ import {
 import axios from 'axios';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -60,6 +61,7 @@ const { Panel } = Collapse;
 export default function AdminAccessControlManager({ initialTab = 'groups' }) {
   const adminTheme = useAdminTheme();
   const { user: currentUser } = useAuth();
+  const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [loading, setLoading] = useState(false);
@@ -525,10 +527,10 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
             </div>
             <div>
               <Title level={3} style={{ margin: 0, color: adminTheme.text, fontWeight: 700 }}>
-                Access Control & Role Governance
+                {t('access_control_governance', 'Access Control & Role Governance')}
               </Title>
               <Text style={{ color: adminTheme.subtext, fontSize: 13 }}>
-                Multi-tier privilege matrix &bull; Single-source <Tag color="blue" style={{ margin: '0 4px', fontSize: 11 }}>aura_users</Tag> &bull; Strict branch scoping &bull; Real-time audit trails
+                {t('access_control_desc', 'Multi-tier privilege matrix • Single-source aura_users • Strict branch scoping • Real-time audit trails')}
               </Text>
             </div>
           </Flex>
@@ -540,7 +542,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
             onClick={refreshAll}
             style={{ borderRadius: 8 }}
           >
-            Refresh Telemetry
+            {t('refresh_telemetry', 'Refresh Telemetry')}
           </Button>
         </Space>
       </Flex>
@@ -605,7 +607,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
               label: (
                 <Space>
                   <UsergroupAddOutlined />
-                  <span>Roles & Group Policies</span>
+                  <span>{t('roles_group_policies', 'Roles & Group Policies')}</span>
                   <Badge count={groups.length} style={{ backgroundColor: '#6366f1' }} />
                 </Space>
               ),
@@ -614,10 +616,10 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                   <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
                     <div>
                       <Title level={5} style={{ margin: 0, color: adminTheme.text }}>
-                        Defined System Roles & Ingress Rules
+                        {t('defined_system_roles_title', 'Defined System Roles & Ingress Rules')}
                       </Title>
                       <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>
-                        Control which user roles may access the Administrative ERP (/admins) vs Customer Web Portal (/shop), and registration approval policies.
+                        {t('defined_system_roles_desc', 'Control which user roles may access the Administrative ERP (/admins) vs Customer Web Portal (/shop), and registration approval policies.')}
                       </Text>
                     </div>
                   </Flex>
@@ -629,29 +631,29 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                     bordered
                     columns={[
                       {
-                        title: 'Role ID & Name',
+                        title: t('role_id_name', 'Role ID & Name'),
                         key: 'name',
                         width: 200,
                         render: (_, record) => (
                           <Flex vertical>
                             <Flex align="center" gap={6}>
                               <Text strong style={{ color: adminTheme.text, textTransform: 'capitalize' }}>
-                                {record.name}
+                                {t(record.name?.toLowerCase(), record.name)}
                               </Text>
                               {record.level === 1 && (
-                                <Tooltip title="Enterprise Owner - Bypasses all permissions">
+                                <Tooltip title={t('owner_bypass_tooltip', 'Enterprise Owner - Bypasses all permissions')}>
                                   <CrownOutlined style={{ color: '#f59e0b' }} />
                                 </Tooltip>
                               )}
                             </Flex>
                             <Text style={{ color: adminTheme.subtext, fontSize: 11 }}>
-                              {record.description || 'System defined role'}
+                              {record.description || t('system_defined_role', 'System defined role')}
                             </Text>
                           </Flex>
                         )
                       },
                       {
-                        title: 'Privilege Level',
+                        title: t('privilege_level', 'Privilege Level'),
                         dataIndex: 'level',
                         key: 'level',
                         width: 140,
@@ -660,13 +662,13 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                           const color = lvl === 1 ? 'purple' : lvl === 2 ? 'blue' : lvl === 3 ? 'cyan' : lvl === 4 ? 'orange' : 'green';
                           return (
                             <Tag color={color} style={{ fontWeight: 700, borderRadius: 6, fontSize: 11 }}>
-                              LEVEL {lvl} {lvl === 1 ? '(OWNER)' : ''}
+                              {t('level', 'LEVEL')} {lvl} {lvl === 1 ? `(${t('owner', 'OWNER')})` : ''}
                             </Tag>
                           );
                         }
                       },
                       {
-                        title: 'Admin Login (/admins)',
+                        title: t('admin_login_perm', 'Admin Login (/admins)'),
                         key: 'allow_admin_login',
                         width: 180,
                         align: 'center',
@@ -678,13 +680,13 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                               onChange={(val) => handleToggleGroupSwitch(record, 'allow_admin_login', val)}
                             />
                             <Text style={{ fontSize: 11, color: record.allow_admin_login ? '#16a34a' : '#94a3b8', fontWeight: 600 }}>
-                              {record.allow_admin_login ? 'Allowed' : 'Blocked'}
+                              {record.allow_admin_login ? t('allowed', 'Allowed') : t('blocked', 'Blocked')}
                             </Text>
                           </Flex>
                         )
                       },
                       {
-                        title: 'Web Login (/shop)',
+                        title: t('web_login_perm', 'Web Login (/shop)'),
                         key: 'allow_web_login',
                         width: 170,
                         align: 'center',
@@ -695,13 +697,13 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                               onChange={(val) => handleToggleGroupSwitch(record, 'allow_web_login', val)}
                             />
                             <Text style={{ fontSize: 11, color: record.allow_web_login ? '#16a34a' : '#94a3b8', fontWeight: 600 }}>
-                              {record.allow_web_login ? 'Allowed' : 'Blocked'}
+                              {record.allow_web_login ? t('allowed', 'Allowed') : t('blocked', 'Blocked')}
                             </Text>
                           </Flex>
                         )
                       },
                       {
-                        title: 'Public Register',
+                        title: t('public_register', 'Public Register'),
                         key: 'allow_web_register',
                         width: 160,
                         align: 'center',
@@ -712,13 +714,13 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                               onChange={(val) => handleToggleGroupSwitch(record, 'allow_web_register', val)}
                             />
                             <Text style={{ fontSize: 11, color: record.allow_web_register ? '#16a34a' : '#94a3b8', fontWeight: 600 }}>
-                              {record.allow_web_register ? 'Public' : 'Closed'}
+                              {record.allow_web_register ? t('public', 'Public') : t('closed', 'Closed')}
                             </Text>
                           </Flex>
                         )
                       },
                       {
-                        title: 'Requires Approval',
+                        title: t('requires_approval', 'Requires Approval'),
                         key: 'requires_approval',
                         width: 170,
                         align: 'center',
@@ -729,25 +731,25 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                               onChange={(val) => handleToggleGroupSwitch(record, 'requires_approval', val)}
                             />
                             <Text style={{ fontSize: 11, color: record.requires_approval ? '#ea580c' : '#94a3b8', fontWeight: 600 }}>
-                              {record.requires_approval ? 'Required' : 'Auto-Active'}
+                              {record.requires_approval ? t('required', 'Required') : t('auto_active', 'Auto-Active')}
                             </Text>
                           </Flex>
                         )
                       },
                       {
-                        title: 'Active Users',
+                        title: t('active_users', 'Active Users'),
                         dataIndex: 'user_count',
                         key: 'user_count',
                         width: 120,
                         align: 'center',
                         render: (cnt) => (
                           <Tag style={{ borderRadius: 6, fontWeight: 700 }}>
-                            {cnt || 0} Users
+                            {cnt || 0} {t('users', 'Users')}
                           </Tag>
                         )
                       },
                       {
-                        title: 'Actions',
+                        title: t('actions', 'Actions'),
                         key: 'actions',
                         width: 220,
                         align: 'center',
@@ -762,7 +764,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                               }}
                               style={{ borderRadius: 6 }}
                             >
-                              Permissions
+                              {t('permissions', 'Permissions')}
                             </Button>
                             <Button
                               size="small"
@@ -770,7 +772,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                               onClick={() => handleOpenEditGroup(record)}
                               style={{ borderRadius: 6 }}
                             >
-                              Policy
+                              {t('policy', 'Policy')}
                             </Button>
                           </Space>
                         )
@@ -785,7 +787,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
               label: (
                 <Space>
                   <KeyOutlined />
-                  <span>Permission Matrix (777 Keys)</span>
+                  <span>{t('permission_matrix', 'Permission Matrix (777 Keys)')}</span>
                   {hasUnsavedMatrixChanges && (
                     <Badge dot style={{ backgroundColor: '#f59e0b' }} />
                   )}
@@ -1002,7 +1004,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
               label: (
                 <Space>
                   <ShopOutlined />
-                  <span>Pending Supplier Approvals</span>
+                  <span>{t('supplier_approvals', 'Pending Supplier Approvals')}</span>
                   {pendingSuppliers.length > 0 && (
                     <Badge count={pendingSuppliers.length} style={{ backgroundColor: '#ef4444' }} />
                   )}
@@ -1013,10 +1015,10 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                   <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
                     <div>
                       <Title level={5} style={{ margin: 0, color: adminTheme.text }}>
-                        Supplier Verification Queue
+                        {t('supplier_verification_queue', 'Supplier Verification Queue')}
                       </Title>
                       <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>
-                        New suppliers registered via the B2B web portal are held in pending status until approved by an administrator in accordance with security policies.
+                        {t('supplier_verification_desc', 'New suppliers registered via the B2B web portal are held in pending status until approved by an administrator in accordance with security policies.')}
                       </Text>
                     </div>
                   </Flex>
@@ -1024,7 +1026,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                   {pendingSuppliers.length === 0 ? (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      description="No suppliers currently awaiting review. All supplier accounts are verified!"
+                      description={t('no_suppliers_awaiting_review', 'No suppliers currently awaiting review. All supplier accounts are verified!')}
                     />
                   ) : (
                     <Table
@@ -1034,7 +1036,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                       pagination={{ pageSize: 10 }}
                       columns={[
                         {
-                          title: 'Applicant / Supplier',
+                          title: t('applicant_supplier', 'Applicant / Supplier'),
                           key: 'applicant',
                           render: (_, record) => (
                             <Flex vertical>
@@ -1048,47 +1050,47 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                           )
                         },
                         {
-                          title: 'Company / Business',
+                          title: t('company_business', 'Company / Business'),
                           dataIndex: 'company',
                           key: 'company',
                           render: (comp) => (
                             <Text strong style={{ color: '#2563eb' }}>
-                              {comp || 'Independent Vendor'}
+                              {comp || t('independent_vendor', 'Independent Vendor')}
                             </Text>
                           )
                         },
                         {
-                          title: 'Contact Details',
+                          title: t('contact_details', 'Contact Details'),
                           key: 'contact',
                           render: (_, record) => (
                             <Flex vertical>
                               <Text style={{ fontSize: 12 }}>{record.email}</Text>
-                              <Text style={{ fontSize: 11, color: adminTheme.subtext }}>{record.phone || 'No phone provided'}</Text>
+                              <Text style={{ fontSize: 11, color: adminTheme.subtext }}>{record.phone || t('no_phone_provided', 'No phone provided')}</Text>
                             </Flex>
                           )
                         },
                         {
-                          title: 'Registered At',
+                          title: t('registered_at', 'Registered At'),
                           dataIndex: 'created_at',
                           key: 'created_at',
                           render: (dt) => (
                             <Text style={{ fontSize: 12 }}>
-                              {dt ? new Date(dt).toLocaleString() : 'Recent'}
+                              {dt ? new Date(dt).toLocaleString() : t('recent', 'Recent')}
                             </Text>
                           )
                         },
                         {
-                          title: 'Status',
+                          title: t('status', 'Status'),
                           dataIndex: 'status',
                           key: 'status',
                           render: (st) => (
                             <Tag color="volcano" style={{ fontWeight: 700, borderRadius: 6 }}>
-                              PENDING APPROVAL
+                              {t('pending_approval', 'PENDING APPROVAL')}
                             </Tag>
                           )
                         },
                         {
-                          title: 'Decision Action',
+                          title: t('decision_action', 'Decision Action'),
                           key: 'actions',
                           align: 'center',
                           render: (_, record) => (
@@ -1101,14 +1103,14 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                                 onClick={() => handleApproveSupplier(record.id, record.username)}
                                 style={{ background: '#16a34a', borderColor: '#16a34a', borderRadius: 6 }}
                               >
-                                Approve
+                                {t('approve', 'Approve')}
                               </Button>
                               <Popconfirm
-                                title="Reject Supplier"
-                                description="Are you sure you want to decline this supplier's application?"
+                                title={t('reject_supplier', 'Reject Supplier')}
+                                description={t('confirm_reject_supplier', "Are you sure you want to decline this supplier's application?")}
                                 onConfirm={() => handleRejectSupplier(record.id, record.username)}
-                                okText="Yes, Reject"
-                                cancelText="Cancel"
+                                okText={t('yes_reject', 'Yes, Reject')}
+                                cancelText={t('cancel', 'Cancel')}
                               >
                                 <Button
                                   danger
@@ -1117,7 +1119,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                                   loading={actionLoadingId === record.id}
                                   style={{ borderRadius: 6 }}
                                 >
-                                  Reject
+                                  {t('reject', 'Reject')}
                                 </Button>
                               </Popconfirm>
                             </Space>
@@ -1134,7 +1136,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
               label: (
                 <Space>
                   <ApartmentOutlined />
-                  <span>Branch Assignment & Per-User Overrides</span>
+                  <span>{t('branch_scoping', 'Branch Assignment & Per-User Overrides')}</span>
                 </Space>
               ),
               children: (
@@ -1142,7 +1144,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                   <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
                     <div>
                       <Title level={5} style={{ margin: 0, color: adminTheme.text }}>
-                        User Branch Boundaries & Individual Permission Overrides
+                        {t('user_branch_boundaries_title', 'User Branch Boundaries & Individual Permission Overrides')}
                       </Title>
                       <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>
                         Assign which branch stores (<Tag color="blue">aura_user_billers</Tag>) an operator may transact in, or set granular per-user overrides (<Tag color="cyan">aura_user_permissions</Tag> where deny wins).
@@ -1250,7 +1252,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
               label: (
                 <Space>
                   <HistoryOutlined />
-                  <span>Security Telemetry & Audit Logs</span>
+                  <span>{t('audit_trails', 'Security Telemetry & Audit Logs')}</span>
                 </Space>
               ),
               children: (

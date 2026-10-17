@@ -63,6 +63,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 import BpasAddProductPage from './BpasAddProductPage';
 import BpasImportExcelPage from './BpasImportExcelPage';
 import BpasPrintBarcodesPage from './BpasPrintBarcodesPage';
@@ -93,6 +94,7 @@ const saveLiveProducts = (prods) => {
 
 export default function BpasInventoryWorkspace() {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(location.search);
@@ -531,7 +533,7 @@ export default function BpasInventoryWorkspace() {
       ),
     },
     {
-      title: 'Code',
+      title: t('code', 'Code'),
       dataIndex: 'code',
       key: 'code',
       width: 120,
@@ -543,7 +545,7 @@ export default function BpasInventoryWorkspace() {
       ),
     },
     {
-      title: 'Name',
+      title: t('name', 'Name'),
       dataIndex: 'name',
       key: 'name',
       width: 240,
@@ -568,25 +570,25 @@ export default function BpasInventoryWorkspace() {
       ),
     },
     {
-      title: 'Type',
+      title: t('type', 'Type'),
       dataIndex: 'type',
       key: 'type',
       width: 100,
       render: (type) => {
-        const t = (type || 'standard').toLowerCase();
-        const color = t === 'combo' ? 'purple' : t === 'service' ? 'orange' : t === 'digital' ? 'cyan' : 'blue';
-        return <Tag color={color} style={{ textTransform: 'capitalize', fontWeight: 600 }}>{t}</Tag>;
+        const typeStr = (type || 'standard').toLowerCase();
+        const color = typeStr === 'combo' ? 'purple' : typeStr === 'service' ? 'orange' : typeStr === 'digital' ? 'cyan' : 'blue';
+        return <Tag color={color} style={{ textTransform: 'capitalize', fontWeight: 600 }}>{typeStr}</Tag>;
       },
     },
     {
-      title: 'Category',
+      title: t('category', 'Category'),
       dataIndex: 'category',
       key: 'category',
       width: 130,
       render: (cat) => <span style={{ fontWeight: 600 }}>{cat || 'General'}</span>,
     },
     {
-      title: 'Unit',
+      title: t('unit', 'Unit'),
       dataIndex: 'unit',
       key: 'unit',
       width: 80,
@@ -594,7 +596,7 @@ export default function BpasInventoryWorkspace() {
       render: (unit) => <Tag style={{ borderRadius: 4 }}>{unit || 'Pcs'}</Tag>,
     },
     {
-      title: 'Cost',
+      title: t('cost', 'Cost'),
       dataIndex: 'cost',
       key: 'cost',
       width: 100,
@@ -607,7 +609,7 @@ export default function BpasInventoryWorkspace() {
       ),
     },
     {
-      title: 'Price',
+      title: t('price', 'Price'),
       dataIndex: 'price',
       key: 'price',
       width: 110,
@@ -620,7 +622,7 @@ export default function BpasInventoryWorkspace() {
       ),
     },
     {
-      title: 'Warehouse Breakdown',
+      title: t('warehouses', 'Warehouse Breakdown'),
       key: 'warehouse_breakdown',
       width: 180,
       render: (_, record) => {
@@ -638,7 +640,7 @@ export default function BpasInventoryWorkspace() {
       },
     },
     {
-      title: 'Quantity',
+      title: t('quantity', 'Quantity'),
       dataIndex: 'stockCount',
       key: 'stockCount',
       width: 110,
@@ -680,7 +682,7 @@ export default function BpasInventoryWorkspace() {
       render: (rack) => <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{rack || 'A-01'}</span>,
     },
     {
-      title: 'Alert Qty',
+      title: t('alert_quantity', 'Alert Qty'),
       dataIndex: 'alertQuantity',
       key: 'alertQuantity',
       width: 90,
@@ -688,7 +690,7 @@ export default function BpasInventoryWorkspace() {
       render: (alert) => <Tag color="warning" style={{ borderRadius: 4 }}>{alert ?? 10}</Tag>,
     },
     {
-      title: 'Actions',
+      title: t('actions', 'Actions'),
       key: 'actions',
       width: 90,
       align: 'center',
@@ -749,37 +751,37 @@ export default function BpasInventoryWorkspace() {
     {
       key: 'add',
       icon: <PlusOutlined style={{ color: '#16a34a' }} />,
-      label: 'Add Product',
+      label: t('add_product', 'Add Product'),
       onClick: handleOpenAddProduct,
     },
     {
       key: 'import_excel',
       icon: <UploadOutlined style={{ color: '#059669' }} />,
-      label: 'Import Products (Excel/CSV)',
+      label: t('import_products', 'Import Products (Excel/CSV)'),
       onClick: () => setPageMode('import'),
     },
     {
       key: 'update_price',
       icon: <FileExcelOutlined style={{ color: '#2563eb' }} />,
-      label: 'Update Price (Bulk)',
+      label: t('update_price_bulk', 'Update Price (Bulk)'),
       onClick: () => setIsBulkPriceModalOpen(true),
     },
     {
       key: 'print_barcodes',
       icon: <PrinterOutlined style={{ color: '#0284c7' }} />,
-      label: 'Print Barcode Label',
+      label: t('print_barcodes', 'Print Barcode Label'),
       onClick: () => handleOpenBarcodePrint(),
     },
     {
       key: 'price_list',
       icon: <DollarOutlined style={{ color: '#f59e0b' }} />,
-      label: 'Price List',
+      label: t('price_list', 'Price List'),
       onClick: () => window.print(),
     },
     {
       key: 'export_excel',
       icon: <FileExcelOutlined style={{ color: '#16a34a' }} />,
-      label: 'Export to Excel (CSV)',
+      label: t('export_excel', 'Export to Excel (CSV)'),
       onClick: handleExportExcel,
     },
     {
@@ -789,7 +791,7 @@ export default function BpasInventoryWorkspace() {
       key: 'delete_bulk',
       icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
       danger: true,
-      label: 'Delete Selected Products',
+      label: t('delete_selected_products', 'Delete Selected Products'),
       onClick: handleBulkDelete,
     },
   ];
@@ -799,7 +801,7 @@ export default function BpasInventoryWorkspace() {
     {
       key: 'all',
       icon: <ApartmentOutlined />,
-      label: 'All Warehouses',
+      label: t('all_warehouses', 'All Warehouses'),
       onClick: () => setFilterWarehouse('all'),
     },
     { type: 'divider' },
@@ -860,7 +862,7 @@ export default function BpasInventoryWorkspace() {
             styles={{ body: { padding: '16px 20px' } }}
           >
             <Statistic
-              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>TOTAL CATALOG ITEMS</span>}
+              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>{t('total_catalog_items', 'TOTAL CATALOG ITEMS')}</span>}
               value={metrics.total}
               prefix={<BarcodeOutlined style={{ color: '#2563eb' }} />}
               suffix={<span style={{ fontSize: 13, color: adminTheme.subtext }}>SKUs</span>}
@@ -875,10 +877,10 @@ export default function BpasInventoryWorkspace() {
             styles={{ body: { padding: '16px 20px' } }}
           >
             <Statistic
-              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>AVAILABLE IN STOCK</span>}
+              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>{t('available_in_stock', 'AVAILABLE IN STOCK')}</span>}
               value={metrics.inStock}
               prefix={<CheckCircleOutlined style={{ color: '#16a34a' }} />}
-              suffix={<span style={{ fontSize: 13, color: '#16a34a' }}>Active</span>}
+              suffix={<span style={{ fontSize: 13, color: '#16a34a' }}>{t('active', 'Active')}</span>}
               valueStyle={{ fontWeight: 900, color: '#16a34a' }}
             />
           </Card>
@@ -890,10 +892,10 @@ export default function BpasInventoryWorkspace() {
             styles={{ body: { padding: '16px 20px' } }}
           >
             <Statistic
-              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>LOW STOCK WARNINGS</span>}
+              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>{t('low_stock_warnings', 'LOW STOCK WARNINGS')}</span>}
               value={metrics.lowStock}
               prefix={<WarningOutlined style={{ color: '#ea580c' }} />}
-              suffix={<span style={{ fontSize: 13, color: '#ea580c' }}>Under Alert</span>}
+              suffix={<span style={{ fontSize: 13, color: '#ea580c' }}>{t('alert', 'Under Alert')}</span>}
               valueStyle={{ fontWeight: 900, color: '#ea580c' }}
             />
           </Card>
@@ -905,7 +907,7 @@ export default function BpasInventoryWorkspace() {
             styles={{ body: { padding: '16px 20px' } }}
           >
             <Statistic
-              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>TOTAL STOCK VALUATION</span>}
+              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>{t('total_stock_valuation', 'TOTAL STOCK VALUATION')}</span>}
               value={metrics.totalValuation}
               formatter={(v) => formatCurrency(v)}
               prefix={<DollarOutlined style={{ color: '#059669' }} />}
@@ -931,7 +933,7 @@ export default function BpasInventoryWorkspace() {
               }}
               style={{ fontWeight: 700 }}
             >
-              List Products
+              {t('products', 'List Products')}
             </Button>
             <Button
               type="default"
@@ -939,7 +941,7 @@ export default function BpasInventoryWorkspace() {
               onClick={handleOpenAddProduct}
               style={{ fontWeight: 700, borderColor: '#16a34a', color: '#16a34a' }}
             >
-              Add Product
+              {t('add_product', 'Add Product')}
             </Button>
             <Button
               type="default"
@@ -947,7 +949,7 @@ export default function BpasInventoryWorkspace() {
               onClick={() => setPageMode('import')}
               style={{ fontWeight: 700 }}
             >
-              Import Products
+              {t('import_products', 'Import Products')}
             </Button>
             <Button
               type="default"
@@ -955,7 +957,7 @@ export default function BpasInventoryWorkspace() {
               onClick={() => handleOpenBarcodePrint()}
               style={{ fontWeight: 700 }}
             >
-              Print Barcode Label
+              {t('print_barcodes', 'Print Barcode Label')}
             </Button>
             <Button
               type={activeTab === 'stock-counts' ? 'primary' : 'default'}
@@ -966,7 +968,7 @@ export default function BpasInventoryWorkspace() {
               }}
               style={{ fontWeight: 700 }}
             >
-              Stock Counts
+              {t('stock_counts', 'Stock Counts')}
             </Button>
             <Button
               type={activeTab === 'quantity-adjustments' ? 'primary' : 'default'}
@@ -974,7 +976,7 @@ export default function BpasInventoryWorkspace() {
               onClick={() => setActiveTab('quantity-adjustments')}
               style={{ fontWeight: 700 }}
             >
-              Quantity Adjustments
+              {t('quantity_adjustments', 'Quantity Adjustments')}
             </Button>
             <Button
               type={activeTab === 'cost-adjustments' ? 'primary' : 'default'}
@@ -982,7 +984,7 @@ export default function BpasInventoryWorkspace() {
               onClick={() => setActiveTab('cost-adjustments')}
               style={{ fontWeight: 700 }}
             >
-              Cost Adjustments
+              {t('cost_adjustments', 'Cost Adjustments')}
             </Button>
             <Button
               type={activeTab === 'using-stock' ? 'primary' : 'default'}
@@ -990,7 +992,7 @@ export default function BpasInventoryWorkspace() {
               onClick={() => setActiveTab('using-stock')}
               style={{ fontWeight: 700 }}
             >
-              Stock Using
+              {t('using_stock', 'Stock Using')}
             </Button>
             <Button
               type={activeTab === 'transfers' ? 'primary' : 'default'}
@@ -998,7 +1000,7 @@ export default function BpasInventoryWorkspace() {
               onClick={() => setActiveTab('transfers')}
               style={{ fontWeight: 700 }}
             >
-              Transfers
+              {t('transfers', 'Transfers')}
             </Button>
             <Button
               type={activeTab === 'consignments' ? 'primary' : 'default'}
@@ -1006,7 +1008,7 @@ export default function BpasInventoryWorkspace() {
               onClick={() => setActiveTab('consignments')}
               style={{ fontWeight: 700 }}
             >
-              Consignments
+              {t('consignments', 'Consignments')}
             </Button>
           </Space>
 
@@ -1016,14 +1018,14 @@ export default function BpasInventoryWorkspace() {
               onClick={fetchLiveProducts}
               style={{ fontWeight: 700 }}
             >
-              Sync DB
+              {t('sync_db', 'Sync DB')}
             </Button>
             <Button
               icon={<PrinterOutlined />}
               onClick={() => handleOpenBarcodePrint()}
               style={{ fontWeight: 700 }}
             >
-              Barcodes
+              {t('barcodes', 'Barcodes')}
             </Button>
           </Space>
         </Flex>
@@ -1050,14 +1052,14 @@ export default function BpasInventoryWorkspace() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <BarcodeOutlined style={{ color: '#2563eb', fontSize: 20 }} />
             <span style={{ fontSize: 17, fontWeight: 800, color: '#2563eb' }}>
-              Products ({filterWarehouse === 'all' ? 'All Warehouses' : warehousesList.find((w) => String(w.id) === filterWarehouse)?.name || 'Selected Warehouse'})
+              {t('products', 'Products')} ({filterWarehouse === 'all' ? t('all_warehouses', 'All Warehouses') : warehousesList.find((w) => String(w.id) === filterWarehouse)?.name || t('selected_warehouse', 'Selected Warehouse')})
             </span>
           </div>
         }
         extra={
           <Space size={10}>
             {/* Toggle Search Filter Button (toggle_up / toggle_down in BPAS) */}
-            <Tooltip title={showFilterDrawer ? 'Hide Filters' : 'Show Advanced Filters'}>
+            <Tooltip title={showFilterDrawer ? t('hide_filters', 'Hide Filters') : t('show_advanced_filters', 'Show Advanced Filters')}>
               <Button
                 type="text"
                 icon={showFilterDrawer ? <UpOutlined /> : <DownOutlined />}
@@ -1069,14 +1071,14 @@ export default function BpasInventoryWorkspace() {
                   borderRadius: 8,
                 }}
               >
-                {showFilterDrawer ? 'Collapse Filters' : 'Filter Products'}
+                {showFilterDrawer ? t('collapse_filters', 'Collapse Filters') : t('filter_products', 'Filter Products')}
               </Button>
             </Tooltip>
 
             {/* Warehouse Dropdown Selector */}
             <Dropdown menu={{ items: warehouseMenuItems }} trigger={['click']}>
               <Button style={{ fontWeight: 700, borderRadius: 8 }} icon={<ApartmentOutlined />}>
-                Warehouses <DownOutlined style={{ fontSize: 10 }} />
+                {t('warehouses', 'Warehouses')} <DownOutlined style={{ fontSize: 10 }} />
               </Button>
             </Dropdown>
 
@@ -1091,7 +1093,7 @@ export default function BpasInventoryWorkspace() {
                 }}
                 icon={<SettingOutlined />}
               >
-                Actions <DownOutlined style={{ fontSize: 10 }} />
+                {t('actions', 'Actions')} <DownOutlined style={{ fontSize: 10 }} />
               </Button>
             </Dropdown>
           </Space>
@@ -1112,10 +1114,10 @@ export default function BpasInventoryWorkspace() {
               <Col xs={24} sm={12} md={6}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-                    Product Name / Code:
+                    {t('product_name_code', 'Product Name / Code:')}
                   </label>
                   <Input
-                    placeholder="Search by code or title..."
+                    placeholder={t('search_by_code_title', 'Search by code or title...')}
                     prefix={<SearchOutlined />}
                     value={filterSearch}
                     onChange={(e) => setFilterSearch(e.target.value)}
@@ -1126,14 +1128,14 @@ export default function BpasInventoryWorkspace() {
               <Col xs={24} sm={12} md={6}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-                    Category:
+                    {t('category', 'Category:')}
                   </label>
                   <Select
                     value={filterCategory}
                     onChange={setFilterCategory}
                     style={{ width: '100%' }}
                   >
-                    <Option value="all">All Categories</Option>
+                    <Option value="all">{t('all_categories', 'All Categories')}</Option>
                     {categoriesList.map((cat) => (
                       <Option key={cat.id || cat.name} value={cat.name || cat.id}>
                         {cat.name}
@@ -1145,37 +1147,37 @@ export default function BpasInventoryWorkspace() {
               <Col xs={24} sm={12} md={6}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-                    Product Type:
+                    {t('product_type', 'Product Type:')}
                   </label>
                   <Select
                     value={filterType}
                     onChange={setFilterType}
                     style={{ width: '100%' }}
                   >
-                    <Option value="all">All Types</Option>
-                    <Option value="standard">Standard</Option>
-                    <Option value="combo">Combo</Option>
-                    <Option value="digital">Digital</Option>
-                    <Option value="service">Service</Option>
-                    <Option value="active">Active (In Stock)</Option>
-                    <Option value="inactive">Inactive</Option>
+                    <Option value="all">{t('all_types', 'All Types')}</Option>
+                    <Option value="standard">{t('standard', 'Standard')}</Option>
+                    <Option value="combo">{t('combo', 'Combo')}</Option>
+                    <Option value="digital">{t('digital', 'Digital')}</Option>
+                    <Option value="service">{t('service', 'Service')}</Option>
+                    <Option value="active">{t('active_in_stock', 'Active (In Stock)')}</Option>
+                    <Option value="inactive">{t('inactive', 'Inactive')}</Option>
                   </Select>
                 </div>
               </Col>
               <Col xs={24} sm={12} md={6}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-                    Stock Status:
+                    {t('stock_status', 'Stock Status:')}
                   </label>
                   <Select
                     value={filterStockStatus}
                     onChange={setFilterStockStatus}
                     style={{ width: '100%' }}
                   >
-                    <Option value="all">All Inventory</Option>
-                    <Option value="in_stock">Healthy Stock</Option>
-                    <Option value="low_stock">Low Stock (Under Alert)</Option>
-                    <Option value="out_of_stock">Out of Stock</Option>
+                    <Option value="all">{t('all_inventory', 'All Inventory')}</Option>
+                    <Option value="in_stock">{t('healthy_stock', 'Healthy Stock')}</Option>
+                    <Option value="low_stock">{t('low_stock', 'Low Stock (Under Alert)')}</Option>
+                    <Option value="out_of_stock">{t('out_of_stock', 'Out of Stock')}</Option>
                   </Select>
                 </div>
               </Col>
@@ -1191,7 +1193,7 @@ export default function BpasInventoryWorkspace() {
                   setFilterStockStatus('all');
                 }}
               >
-                Reset Filters
+                {t('reset_filters', 'Reset Filters')}
               </Button>
               <Button
                 type="primary"
@@ -1199,7 +1201,7 @@ export default function BpasInventoryWorkspace() {
                 onClick={() => setShowFilterDrawer(false)}
                 style={{ fontWeight: 700 }}
               >
-                Apply Filters ({filteredProducts.length} Results)
+                {t('apply_filters', 'Apply Filters')} ({filteredProducts.length} {t('results', 'Results')})
               </Button>
             </Flex>
           </div>
@@ -1210,8 +1212,8 @@ export default function BpasInventoryWorkspace() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <span style={{ fontSize: 13, color: adminTheme.subtext }}>
-                Showing <strong>{filteredProducts.length}</strong> products in catalog
-                {selectedRowKeys.length > 0 && ` (${selectedRowKeys.length} selected)`}
+                {t('showing', 'Showing')} <strong>{filteredProducts.length}</strong> {t('products_in_catalog', 'products in catalog')}
+                {selectedRowKeys.length > 0 && ` (${selectedRowKeys.length} ${t('selected', 'selected')})`}
               </span>
 
               {selectedRowKeys.length > 0 && (
@@ -1221,24 +1223,24 @@ export default function BpasInventoryWorkspace() {
                     icon={<PrinterOutlined />}
                     onClick={() => handleOpenBarcodePrint()}
                   >
-                    Print Labels ({selectedRowKeys.length})
+                    {t('print_labels', 'Print Labels')} ({selectedRowKeys.length})
                   </Button>
                   <Button
                     size="small"
                     icon={<FileExcelOutlined />}
                     onClick={handleExportExcel}
                   >
-                    Export Selected
+                    {t('export_selected', 'Export Selected')}
                   </Button>
                   <Popconfirm
-                    title="Delete selected products?"
+                    title={t('delete_selected_confirm', 'Delete selected products?')}
                     onConfirm={handleBulkDelete}
-                    okText="Yes, delete"
-                    cancelText="Cancel"
+                    okText={t('yes_delete', 'Yes, delete')}
+                    cancelText={t('cancel', 'Cancel')}
                     okButtonProps={{ danger: true }}
                   >
                     <Button size="small" danger icon={<DeleteOutlined />}>
-                      Delete ({selectedRowKeys.length})
+                      {t('delete', 'Delete')} ({selectedRowKeys.length})
                     </Button>
                   </Popconfirm>
                 </Space>
@@ -1269,24 +1271,24 @@ export default function BpasInventoryWorkspace() {
         {activeTab === 'stock-counts' && (
           <div>
             <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>Stock Counts (Physical Inventory Audits)</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => message.info('Initiating new stock count batch...')}>
-                Start New Stock Count
+              <Title level={4} style={{ margin: 0 }}>{t('stock_counts_title', 'Stock Counts (Physical Inventory Audits)')}</Title>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => message.info(t('initiating_stock_count', 'Initiating new stock count batch...'))}>
+                {t('start_new_stock_count', 'Start New Stock Count')}
               </Button>
             </Flex>
             <Table
               rowKey="id"
               dataSource={stockCountsList}
               columns={[
-                { title: 'Date', dataIndex: 'date', key: 'date', width: 120 },
-                { title: 'Reference No', dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: 'Warehouse', dataIndex: 'warehouse', key: 'warehouse', width: 180 },
-                { title: 'Count Type', dataIndex: 'type', key: 'type', width: 160 },
-                { title: 'Counted By', dataIndex: 'counted_by', key: 'counted_by', width: 160 },
-                { title: 'Variance', dataIndex: 'variance', key: 'variance', width: 120, render: (v) => <Tag color={v === '0 items' ? 'green' : 'orange'}>{v}</Tag> },
-                { title: 'Status', dataIndex: 'status', key: 'status', width: 130, render: (s) => <Tag color={s === 'Finalized' ? 'blue' : 'warning'}>{s}</Tag> },
+                { title: t('date', 'Date'), dataIndex: 'date', key: 'date', width: 120 },
+                { title: t('reference_no', 'Reference No'), dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
+                { title: t('warehouse', 'Warehouse'), dataIndex: 'warehouse', key: 'warehouse', width: 180 },
+                { title: t('count_type', 'Count Type'), dataIndex: 'type', key: 'type', width: 160 },
+                { title: t('counted_by', 'Counted By'), dataIndex: 'counted_by', key: 'counted_by', width: 160 },
+                { title: t('variance', 'Variance'), dataIndex: 'variance', key: 'variance', width: 120, render: (v) => <Tag color={v === '0 items' ? 'green' : 'orange'}>{v}</Tag> },
+                { title: t('status', 'Status'), dataIndex: 'status', key: 'status', width: 130, render: (s) => <Tag color={s === 'Finalized' ? 'blue' : 'warning'}>{s}</Tag> },
                 {
-                  title: 'Actions',
+                  title: t('actions', 'Actions'),
                   key: 'actions',
                   width: 120,
                   render: () => (
@@ -1306,24 +1308,24 @@ export default function BpasInventoryWorkspace() {
         {activeTab === 'quantity-adjustments' && (
           <div>
             <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>Quantity Adjustments (Damage, Loss, Surplus)</Title>
+              <Title level={4} style={{ margin: 0 }}>{t('quantity_adjustments_title', 'Quantity Adjustments (Damage, Loss, Surplus)')}</Title>
               <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenAdjustment()}>
-                Add Quantity Adjustment
+                {t('add_quantity_adjustment', 'Add Quantity Adjustment')}
               </Button>
             </Flex>
             <Table
               rowKey="id"
               dataSource={adjustmentsList}
               columns={[
-                { title: 'Date', dataIndex: 'date', key: 'date', width: 120 },
-                { title: 'Reference No', dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: 'Warehouse', dataIndex: 'warehouse', key: 'warehouse', width: 180 },
-                { title: 'Adjustment Type', dataIndex: 'type', key: 'type', width: 140, render: (t) => <Tag color={t === 'Addition' ? 'green' : 'red'}>{t}</Tag> },
-                { title: 'Reason', dataIndex: 'reason', key: 'reason', width: 220 },
-                { title: 'Items Affected', dataIndex: 'items_count', key: 'items_count', width: 120, align: 'right' },
-                { title: 'Created By', dataIndex: 'created_by', key: 'created_by', width: 140 },
+                { title: t('date', 'Date'), dataIndex: 'date', key: 'date', width: 120 },
+                { title: t('reference_no', 'Reference No'), dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
+                { title: t('warehouse', 'Warehouse'), dataIndex: 'warehouse', key: 'warehouse', width: 180 },
+                { title: t('adjustment_type', 'Adjustment Type'), dataIndex: 'type', key: 'type', width: 140, render: (t) => <Tag color={t === 'Addition' ? 'green' : 'red'}>{t}</Tag> },
+                { title: t('reason', 'Reason'), dataIndex: 'reason', key: 'reason', width: 220 },
+                { title: t('items_affected', 'Items Affected'), dataIndex: 'items_count', key: 'items_count', width: 120, align: 'right' },
+                { title: t('created_by', 'Created By'), dataIndex: 'created_by', key: 'created_by', width: 140 },
                 {
-                  title: 'Actions',
+                  title: t('actions', 'Actions'),
                   key: 'actions',
                   width: 100,
                   render: () => <Button size="small" type="text" icon={<EyeOutlined />} />,
@@ -1338,9 +1340,9 @@ export default function BpasInventoryWorkspace() {
         {activeTab === 'cost-adjustments' && (
           <div>
             <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>Cost Adjustments & Revaluation</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => message.info('Opening cost revaluation form...')}>
-                Add Cost Adjustment
+              <Title level={4} style={{ margin: 0 }}>{t('cost_adjustments_title', 'Cost Adjustments & Revaluation')}</Title>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => message.info(t('opening_cost_revaluation', 'Opening cost revaluation form...'))}>
+                {t('add_cost_adjustment', 'Add Cost Adjustment')}
               </Button>
             </Flex>
             <Table
@@ -1350,12 +1352,12 @@ export default function BpasInventoryWorkspace() {
                 { id: 2, date: '2026-10-15', reference: 'CADJ-2026-002', product: 'Takeaway Cup 16oz (Pack of 50)', old_cost: '$2.10', new_cost: '$1.95', reason: 'Bulk vendor volume rebate' },
               ]}
               columns={[
-                { title: 'Date', dataIndex: 'date', key: 'date', width: 120 },
-                { title: 'Reference No', dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: 'Product', dataIndex: 'product', key: 'product', width: 260 },
-                { title: 'Previous Cost', dataIndex: 'old_cost', key: 'old_cost', width: 130 },
-                { title: 'New Unit Cost', dataIndex: 'new_cost', key: 'new_cost', width: 130, render: (c) => <strong style={{ color: '#16a34a' }}>{c}</strong> },
-                { title: 'Reason / Note', dataIndex: 'reason', key: 'reason' },
+                { title: t('date', 'Date'), dataIndex: 'date', key: 'date', width: 120 },
+                { title: t('reference_no', 'Reference No'), dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
+                { title: t('product', 'Product'), dataIndex: 'product', key: 'product', width: 260 },
+                { title: t('previous_cost', 'Previous Cost'), dataIndex: 'old_cost', key: 'old_cost', width: 130 },
+                { title: t('new_unit_cost', 'New Unit Cost'), dataIndex: 'new_cost', key: 'new_cost', width: 130, render: (c) => <strong style={{ color: '#16a34a' }}>{c}</strong> },
+                { title: t('reason_note', 'Reason / Note'), dataIndex: 'reason', key: 'reason' },
               ]}
               pagination={false}
             />
@@ -1366,22 +1368,22 @@ export default function BpasInventoryWorkspace() {
         {activeTab === 'using-stock' && (
           <div>
             <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>Stock Using (Internal Store Operational Consumption)</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => message.info('Opening stock using requisition...')}>
-                Add Stock Using Entry
+              <Title level={4} style={{ margin: 0 }}>{t('stock_using_title', 'Stock Using (Internal Store Operational Consumption)')}</Title>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => message.info(t('opening_stock_using', 'Opening stock using requisition...'))}>
+                {t('add_stock_using_entry', 'Add Stock Using Entry')}
               </Button>
             </Flex>
             <Table
               rowKey="id"
               dataSource={usingStockList}
               columns={[
-                { title: 'Date', dataIndex: 'date', key: 'date', width: 120 },
-                { title: 'Reference No', dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: 'Warehouse', dataIndex: 'warehouse', key: 'warehouse', width: 160 },
-                { title: 'Department', dataIndex: 'department', key: 'department', width: 160 },
-                { title: 'Employee', dataIndex: 'employee', key: 'employee', width: 160 },
-                { title: 'Items Qty', dataIndex: 'items_count', key: 'items_count', width: 100, align: 'right' },
-                { title: 'Operational Purpose / Note', dataIndex: 'note', key: 'note' },
+                { title: t('date', 'Date'), dataIndex: 'date', key: 'date', width: 120 },
+                { title: t('reference_no', 'Reference No'), dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
+                { title: t('warehouse', 'Warehouse'), dataIndex: 'warehouse', key: 'warehouse', width: 160 },
+                { title: t('department', 'Department'), dataIndex: 'department', key: 'department', width: 160 },
+                { title: t('employee', 'Employee'), dataIndex: 'employee', key: 'employee', width: 160 },
+                { title: t('items_qty', 'Items Qty'), dataIndex: 'items_count', key: 'items_count', width: 100, align: 'right' },
+                { title: t('operational_purpose_note', 'Operational Purpose / Note'), dataIndex: 'note', key: 'note' },
               ]}
               pagination={false}
             />
@@ -1392,24 +1394,24 @@ export default function BpasInventoryWorkspace() {
         {activeTab === 'transfers' && (
           <div>
             <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>Warehouse Transfers</Title>
+              <Title level={4} style={{ margin: 0 }}>{t('warehouse_transfers_title', 'Warehouse Transfers')}</Title>
               <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenTransfer}>
-                Create Transfer
+                {t('create_transfer', 'Create Transfer')}
               </Button>
             </Flex>
             <Table
               rowKey="id"
               dataSource={transfersList}
               columns={[
-                { title: 'Date', dataIndex: 'date', key: 'date', width: 120 },
-                { title: 'Transfer No', dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: 'From Warehouse', dataIndex: 'from_warehouse', key: 'from_warehouse', width: 180 },
-                { title: 'To Warehouse', dataIndex: 'to_warehouse', key: 'to_warehouse', width: 180 },
-                { title: 'Total Items', dataIndex: 'items_count', key: 'items_count', width: 120, align: 'right' },
-                { title: 'Shipping Charge', dataIndex: 'shipping', key: 'shipping', width: 130, align: 'right' },
-                { title: 'Status', dataIndex: 'status', key: 'status', width: 130, render: (s) => <Tag color={s === 'Completed' ? 'green' : 'orange'}>{s}</Tag> },
+                { title: t('date', 'Date'), dataIndex: 'date', key: 'date', width: 120 },
+                { title: t('transfer_no', 'Transfer No'), dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
+                { title: t('from_warehouse', 'From Warehouse'), dataIndex: 'from_warehouse', key: 'from_warehouse', width: 180 },
+                { title: t('to_warehouse', 'To Warehouse'), dataIndex: 'to_warehouse', key: 'to_warehouse', width: 180 },
+                { title: t('total_items', 'Total Items'), dataIndex: 'items_count', key: 'items_count', width: 120, align: 'right' },
+                { title: t('shipping_charge', 'Shipping Charge'), dataIndex: 'shipping', key: 'shipping', width: 130, align: 'right' },
+                { title: t('status', 'Status'), dataIndex: 'status', key: 'status', width: 130, render: (s) => <Tag color={s === 'Completed' ? 'green' : 'orange'}>{s}</Tag> },
                 {
-                  title: 'Actions',
+                  title: t('actions', 'Actions'),
                   key: 'actions',
                   width: 100,
                   render: () => <Button size="small" type="text" icon={<EyeOutlined />} />,
@@ -1424,23 +1426,23 @@ export default function BpasInventoryWorkspace() {
         {activeTab === 'consignments' && (
           <div>
             <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>Consignments (Supplier & Customer)</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => message.info('Opening consignment agreement entry...')}>
-                Add Consignment
+              <Title level={4} style={{ margin: 0 }}>{t('consignments_title', 'Consignments (Supplier & Customer)')}</Title>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => message.info(t('opening_consignment_entry', 'Opening consignment agreement entry...'))}>
+                {t('create_consignment', 'Create Consignment')}
               </Button>
             </Flex>
             <Table
               rowKey="id"
               dataSource={consignmentsList}
               columns={[
-                { title: 'Date', dataIndex: 'date', key: 'date', width: 120 },
-                { title: 'Reference No', dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: 'Party / Partner', dataIndex: 'party', key: 'party', width: 240 },
-                { title: 'Agreement Type', dataIndex: 'type', key: 'type', width: 150, render: (t) => <Tag color={t === 'Consignment In' ? 'blue' : 'purple'}>{t}</Tag> },
-                { title: 'Consigned Qty', dataIndex: 'total_qty', key: 'total_qty', width: 120, align: 'right' },
-                { title: 'Sold / Reconciled', dataIndex: 'sold_qty', key: 'sold_qty', width: 130, align: 'right' },
-                { title: 'Current Balance', dataIndex: 'balance_qty', key: 'balance_qty', width: 130, align: 'right', render: (b) => <strong style={{ color: '#2563eb' }}>{b}</strong> },
-                { title: 'Status', dataIndex: 'status', key: 'status', width: 100, render: (s) => <Tag color="green">{s}</Tag> },
+                { title: t('date', 'Date'), dataIndex: 'date', key: 'date', width: 120 },
+                { title: t('reference_no', 'Reference No'), dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
+                { title: t('partner', 'Party / Partner'), dataIndex: 'party', key: 'party', width: 240 },
+                { title: t('agreement_type', 'Agreement Type'), dataIndex: 'type', key: 'type', width: 150, render: (t) => <Tag color={t === 'Consignment In' ? 'blue' : 'purple'}>{t}</Tag> },
+                { title: t('consigned_qty', 'Consigned Qty'), dataIndex: 'total_qty', key: 'total_qty', width: 120, align: 'right' },
+                { title: t('sold_qty', 'Sold / Reconciled'), dataIndex: 'sold_qty', key: 'sold_qty', width: 130, align: 'right' },
+                { title: t('current_balance', 'Current Balance'), dataIndex: 'balance_qty', key: 'balance_qty', width: 130, align: 'right', render: (b) => <strong style={{ color: '#2563eb' }}>{b}</strong> },
+                { title: t('status', 'Status'), dataIndex: 'status', key: 'status', width: 100, render: (s) => <Tag color="green">{s}</Tag> },
               ]}
               pagination={false}
             />
@@ -1454,7 +1456,7 @@ export default function BpasInventoryWorkspace() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <BarcodeOutlined style={{ color: '#2563eb', fontSize: 20 }} />
             <span style={{ fontSize: 17, fontWeight: 800 }}>
-              {isEditingMode ? `Edit Product: ${currentEditRecord?.name}` : 'Add New Product'}
+              {isEditingMode ? `${t('edit_product', 'Edit Product')}: ${currentEditRecord?.name}` : t('add_new_product', 'Add New Product')}
             </span>
           </div>
         }
@@ -1463,10 +1465,10 @@ export default function BpasInventoryWorkspace() {
         width={850}
         footer={[
           <Button key="cancel" onClick={() => setIsProductModalOpen(false)}>
-            Cancel
+            {t('cancel', 'Cancel')}
           </Button>,
           <Button key="save" type="primary" onClick={handleSaveProduct} style={{ fontWeight: 800 }}>
-            {isEditingMode ? 'Save Changes' : 'Create Product'}
+            {isEditingMode ? t('save_changes', 'Save Changes') : t('create_product', 'Create Product')}
           </Button>,
         ]}
       >
@@ -1476,22 +1478,22 @@ export default function BpasInventoryWorkspace() {
           items={[
             {
               key: 'required',
-              label: 'Required Fields',
+              label: t('required_fields', 'Required Fields'),
               children: (
                 <Form form={productForm} layout="vertical">
                   <Row gutter={16}>
                     <Col span={12}>
-                      <Form.Item name="type" label="Product Type" rules={[{ required: true }]}>
+                      <Form.Item name="type" label={t('product_type', 'Product Type')} rules={[{ required: true }]}>
                         <Select>
-                          <Option value="standard">Standard</Option>
-                          <Option value="combo">Combo</Option>
-                          <Option value="digital">Digital</Option>
-                          <Option value="service">Service</Option>
+                          <Option value="standard">{t('standard', 'Standard')}</Option>
+                          <Option value="combo">{t('combo', 'Combo')}</Option>
+                          <Option value="digital">{t('digital', 'Digital')}</Option>
+                          <Option value="service">{t('service', 'Service')}</Option>
                         </Select>
                       </Form.Item>
                     </Col>
                     <Col span={12}>
-                      <Form.Item name="name" label="Product Name" rules={[{ required: true, message: 'Please enter product name' }]}>
+                      <Form.Item name="name" label={t('product_name', 'Product Name')} rules={[{ required: true, message: t('enter_product_name', 'Please enter product name') }]}>
                         <Input placeholder="e.g. Specialty Roasted Coffee" />
                       </Form.Item>
                     </Col>

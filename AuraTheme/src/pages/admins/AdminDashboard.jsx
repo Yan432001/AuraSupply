@@ -64,6 +64,7 @@ import {
 } from 'recharts';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useAdminModules } from '../../hooks/useAdminModules';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { erpModules } from '../../data/erpModules';
 
 const { Text, Title } = Typography;
@@ -180,6 +181,7 @@ const MiniBars = ({ data, color }) => (
 
 const AdminDashboard = () => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const screens = useBreakpoint();
   const isMobile = !screens.md;
@@ -271,10 +273,10 @@ const AdminDashboard = () => {
       <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
         <div>
           <Title level={4} style={{ margin: 0, color: adminTheme.text }}>
-            Aura ERP Command Center &amp; Module Analytics
+            {t('erp_command_center_title', 'Aura ERP Command Center & Module Analytics')}
           </Title>
           <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
-            Live telemetry &bull; {activeModulesCount} of {totalModulesCount} Modules Active
+            {t('live_telemetry_modules_active', 'Live telemetry • {active} of {total} Modules Active').replace('{active}', activeModulesCount).replace('{total}', totalModulesCount)}
           </Text>
         </div>
 
@@ -292,7 +294,7 @@ const AdminDashboard = () => {
               boxShadow: `0 2px 10px ${adminTheme.primary}44`,
             }}
           >
-            Modules Switchboard ({activeModulesCount}/{totalModulesCount})
+            {t('modules_switchboard', 'Modules Switchboard')} ({activeModulesCount}/{totalModulesCount})
           </Button>
 
           <Button
@@ -300,7 +302,7 @@ const AdminDashboard = () => {
             onClick={() => navigate('/admins?module=data&section=dashboard')}
             style={{ fontWeight: 600, borderRadius: 10 }}
           >
-            Website CMS
+            {t('website_cms', 'Website CMS')}
           </Button>
 
           <Button
@@ -308,7 +310,7 @@ const AdminDashboard = () => {
             onClick={() => navigate('/admins?module=data&section=qrcode')}
             style={{ fontWeight: 600, borderRadius: 10, borderColor: '#0284c7', color: '#0284c7' }}
           >
-            Store QR
+            {t('store_qr', 'Store QR')}
           </Button>
 
           <Tag
@@ -323,7 +325,7 @@ const AdminDashboard = () => {
               fontWeight: 700,
             }}
           >
-            All Systems Healthy
+            {t('all_systems_healthy', 'All Systems Healthy')}
           </Tag>
         </Space>
       </Flex>
@@ -337,18 +339,18 @@ const AdminDashboard = () => {
           message={
             <Flex justify="space-between" align="center" wrap="wrap" gap={10}>
               <div>
-                <strong>{closedModules.length} Module(s) Deactivated: </strong>
+                <strong>{closedModules.length} {t('modules_deactivated', 'Module(s) Deactivated:')} </strong>
                 {closedModules.map((m) => (
                   <Tag
                     key={m.key}
                     color="orange"
                     style={{ borderRadius: 6, fontWeight: 600, margin: '0 4px' }}
                   >
-                    {m.label} ({m.key})
+                    {t(m.label, m.label)} ({m.key})
                   </Tag>
                 ))}
                 <span style={{ fontSize: 12, color: adminTheme.subtext }}>
-                  — These modules are hidden from the sidebar menu and their charts are excluded from the dashboard.
+                  — {t('modules_hidden_from_sidebar_desc', 'These modules are hidden from the sidebar menu and their charts are excluded from the dashboard.')}
                 </span>
               </div>
 
@@ -361,7 +363,7 @@ const AdminDashboard = () => {
                     style={{ background: '#16a34a', borderColor: '#16a34a', borderRadius: 6, fontSize: 11.5 }}
                     onClick={() => toggleModule(m.key, true)}
                   >
-                    Re-open {m.label}
+                    {t('reopen', 'Re-open')} {t(m.label, m.label)}
                   </Button>
                 ))}
                 <Button
@@ -370,7 +372,7 @@ const AdminDashboard = () => {
                   onClick={() => navigate('/admins/modules')}
                   style={{ borderRadius: 6, fontSize: 11.5 }}
                 >
-                  Manage Modules
+                  {t('manage_modules', 'Manage Modules')}
                 </Button>
               </Space>
             </Flex>
@@ -382,17 +384,17 @@ const AdminDashboard = () => {
       {/* 3. Top System KPI Cards */}
       <Row gutter={[16, 16]}>
         {baseKpiCards.map((item, idx) => {
-          const displayVal = idx === 2 ? `${activeModulesCount} / ${totalModulesCount}` : item.value;
+          const displayVal = idx === 2 ? `${activeModulesCount} / ${totalModulesCount}` : (idx === 1 || idx === 3 ? t(item.value, item.value) : item.value);
           return (
             <Col xs={12} lg={6} key={item.title}>
               <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
                 <Flex justify="space-between" align="flex-start">
                   <div>
-                    <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>{item.title}</Text>
+                    <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>{t(item.title, item.title)}</Text>
                     <Title level={3} style={{ margin: '4px 0 2px', color: adminTheme.text }}>
                       {displayVal}
                     </Title>
-                    <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{item.sub}</Text>
+                    <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{t(item.sub, item.sub)}</Text>
                   </div>
                   <div
                     style={{
@@ -424,10 +426,10 @@ const AdminDashboard = () => {
         <Flex justify="space-between" align="center" wrap="wrap" gap={12} style={{ marginBottom: 18 }}>
           <div>
             <Title level={5} style={{ margin: 0, color: adminTheme.text, fontWeight: 700 }}>
-              📊 Live ERP Telemetry &amp; Performance
+              📊 {t('live_erp_telemetry_performance', 'Live ERP Telemetry & Performance')}
             </Title>
             <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
-              Centralized operational data aggregated solely across MySQL tables (Single source: <code>aura_users</code>)
+              {t('centralized_operational_data_desc', 'Centralized operational data aggregated solely across MySQL tables (Single source: aura_users)')}
             </Text>
           </div>
 
@@ -435,10 +437,10 @@ const AdminDashboard = () => {
             {/* Date-Range Preset Filter */}
             <Space size={4}>
               {[
-                { key: 'today', label: 'Today' },
-                { key: '7d', label: '7 Days' },
-                { key: 'month', label: 'This Month' },
-                { key: 'all', label: 'All Time' },
+                { key: 'today', label: t('today', 'Today') },
+                { key: '7d', label: t('7_days', '7 Days') },
+                { key: 'month', label: t('this_month', 'This Month') },
+                { key: 'all', label: t('all_time', 'All Time') },
               ].map(p => (
                 <Button
                   key={p.key}
@@ -464,7 +466,7 @@ const AdminDashboard = () => {
               onClick={fetchStats}
               style={{ borderRadius: 8, fontSize: 12 }}
             >
-              Refresh
+              {t('refresh', 'Refresh')}
             </Button>
           </Flex>
         </Flex>
@@ -473,7 +475,7 @@ const AdminDashboard = () => {
         <div style={{ marginBottom: 18, padding: '10px 14px', background: adminTheme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(15,23,42,0.02)', borderRadius: 12, border: `1px solid ${adminTheme.border}` }}>
           <Flex align="center" justify="space-between" wrap="wrap" gap={10}>
             <Text style={{ fontSize: 12, fontWeight: 600, color: adminTheme.subtext }}>
-              ⚡ Quick Actions:
+              ⚡ {t('quick_actions', 'Quick Actions')}:
             </Text>
             <Space size={8} wrap>
               <Button
@@ -483,7 +485,7 @@ const AdminDashboard = () => {
                 onClick={() => navigate('/admins/orders')}
                 style={{ background: '#2563eb', borderRadius: 8, fontSize: 12, fontWeight: 600 }}
               >
-                + New Sale
+                + {t('new_sale', 'New Sale')}
               </Button>
               <Button
                 size="small"
@@ -491,7 +493,7 @@ const AdminDashboard = () => {
                 onClick={() => navigate('/admins?module=procurement')}
                 style={{ borderRadius: 8, fontSize: 12, fontWeight: 600 }}
               >
-                + New Purchase
+                + {t('new_purchase', 'New Purchase')}
               </Button>
               <Button
                 size="small"
@@ -499,7 +501,7 @@ const AdminDashboard = () => {
                 onClick={() => navigate('/admins/products')}
                 style={{ borderRadius: 8, fontSize: 12, fontWeight: 600 }}
               >
-                + Add Product
+                + {t('add_product', 'Add Product')}
               </Button>
               <Button
                 size="small"
@@ -507,7 +509,7 @@ const AdminDashboard = () => {
                 onClick={() => navigate('/admins/settings/users')}
                 style={{ borderRadius: 8, fontSize: 12, fontWeight: 600 }}
               >
-                + Add User
+                + {t('add_user', 'Add User')}
               </Button>
             </Space>
           </Flex>
@@ -525,14 +527,14 @@ const AdminDashboard = () => {
               boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                <Text style={{ color: '#15803d', fontSize: 12, fontWeight: 600 }}>Sales Revenue</Text>
+                <Text style={{ color: '#15803d', fontSize: 12, fontWeight: 600 }}>{t('sales', 'Sales Revenue')}</Text>
                 <Tag color="green" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>+14.2%</Tag>
               </Flex>
               <Title level={3} style={{ margin: '2px 0 4px', color: '#16a34a', fontWeight: 800 }}>
                 {formatCurrency(liveStats?.revenue?.value || liveStats?.totalRevenue || 117000)}
               </Title>
               <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
-                {liveStats?.orders?.value || liveStats?.totalSales || 384} wholesale orders
+                {liveStats?.orders?.value || liveStats?.totalSales || 384} {t('orders', 'wholesale orders')}
               </Text>
             </div>
           </Col>
@@ -547,14 +549,14 @@ const AdminDashboard = () => {
               boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                <Text style={{ color: '#0369a1', fontSize: 12, fontWeight: 600 }}>Procurement Spend</Text>
+                <Text style={{ color: '#0369a1', fontSize: 12, fontWeight: 600 }}>{t('purchases', 'Procurement Spend')}</Text>
                 <Tag color="blue" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>-3.8%</Tag>
               </Flex>
               <Title level={3} style={{ margin: '2px 0 4px', color: '#0284c7', fontWeight: 800 }}>
                 {formatCurrency(liveStats?.purchases?.value || 61000)}
               </Title>
               <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
-                Supplier purchase settlements
+                {t('suppliers', 'Supplier purchase settlements')}
               </Text>
             </div>
           </Col>
@@ -569,14 +571,14 @@ const AdminDashboard = () => {
               boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                <Text style={{ color: '#6d28d9', fontSize: 12, fontWeight: 600 }}>B2B Network</Text>
-                <Tag color="purple" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>Live</Tag>
+                <Text style={{ color: '#6d28d9', fontSize: 12, fontWeight: 600 }}>{t('customers', 'B2B Network')}</Text>
+                <Tag color="purple" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>{t('active', 'Live')}</Tag>
               </Flex>
               <Title level={3} style={{ margin: '2px 0 4px', color: '#7c3aed', fontWeight: 800 }}>
                 {liveStats?.customers?.value || 35} / {liveStats?.suppliers?.value || 9}
               </Title>
               <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
-                {liveStats?.customers?.value || 35} Buyers &bull; {liveStats?.suppliers?.value || 9} Suppliers
+                {liveStats?.customers?.value || 35} {t('customers', 'Buyers')} &bull; {liveStats?.suppliers?.value || 9} {t('suppliers', 'Suppliers')}
               </Text>
             </div>
           </Col>
@@ -591,14 +593,14 @@ const AdminDashboard = () => {
               boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                <Text style={{ color: '#c2410c', fontSize: 12, fontWeight: 600 }}>Stock Valuation</Text>
+                <Text style={{ color: '#c2410c', fontSize: 12, fontWeight: 600 }}>{t('inventory', 'Stock Valuation')}</Text>
                 <Tag color="orange" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>12.4K Units</Tag>
               </Flex>
               <Title level={3} style={{ margin: '2px 0 4px', color: '#ea580c', fontWeight: 800 }}>
                 {formatCurrency(liveStats?.stockValuation?.value || 665000)}
               </Title>
               <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
-                {liveStats?.products?.value || liveStats?.totalProducts || 12450} Catalog SKUs
+                {liveStats?.products?.value || liveStats?.totalProducts || 12450} {t('products', 'Catalog SKUs')}
               </Text>
             </div>
           </Col>
@@ -610,16 +612,16 @@ const AdminDashboard = () => {
         <Flex justify="space-between" align="center" wrap="wrap" gap={10}>
           <Flex align="center" gap={8}>
             <Text strong style={{ color: adminTheme.text, fontSize: 13 }}>
-              Filter Module Charts:
+              {t('filter', 'Filter Module Charts')}:
             </Text>
             <Space size={6} wrap>
               {[
-                { key: 'all', label: `All Active (${activeModulesCount})` },
-                { key: 'operations', label: 'Operations & Assets' },
-                { key: 'commerce', label: 'Commerce & POS' },
-                { key: 'health', label: 'Clinic OPD' },
-                { key: 'finance', label: 'Finance & Accounting' },
-                { key: 'content', label: 'Digital CMS' },
+                { key: 'all', label: `${t('all', 'All Active')} (${activeModulesCount})` },
+                { key: 'operations', label: t('operations', 'Operations & Assets') },
+                { key: 'commerce', label: t('pos', 'Commerce & POS') },
+                { key: 'health', label: t('clinic', 'Clinic OPD') },
+                { key: 'finance', label: t('finance_banking', 'Finance & Accounting') },
+                { key: 'content', label: t('cms', 'Digital CMS') },
               ].map((f) => (
                 <Button
                   key={f.key}

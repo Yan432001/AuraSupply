@@ -11,6 +11,7 @@ import { useAdminTheme } from '../hooks/useAdminTheme';
 import { useAdminModules } from '../hooks/useAdminModules';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 const { Content } = Layout;
 const MOBILE_BREAKPOINT = 992;
@@ -25,6 +26,7 @@ const NO_SIDEBAR_ROUTES = [
 
 const AdminLayout = () => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const { themeMode, themePreset } = useTheme();
   const location = useLocation();
   const { moduleState, toggleModule } = useAdminModules();
@@ -143,7 +145,7 @@ const AdminLayout = () => {
       >
         <Spin size="large" />
         <span style={{ color: adminTheme.subtext, fontSize: 13, fontWeight: 500 }}>
-          Authenticating Aura ERP session...
+          {t('authenticating_session', 'Authenticating Aura ERP session...')}
         </span>
       </div>
     );

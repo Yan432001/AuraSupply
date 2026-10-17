@@ -12,6 +12,7 @@ import AdminModulesManager from './AdminModulesManager';
 import AdminBranchesManager from './AdminBranchesManager';
 import AdminFrontEndManager from './AdminFrontEndManager';
 import { useAdminModules } from '../../hooks/useAdminModules';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { Result, Button } from 'antd';
 import { LockOutlined, ControlOutlined } from '@ant-design/icons';
 import { getModuleByKey } from '../../data/erpModules';
@@ -26,6 +27,7 @@ import SalesReport from './SalesReport';
 import AdminErrorBoundary from '../../components/common/AdminErrorBoundary';
 
 const AdminDashboardRouter = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const hasModule = searchParams.has('module');
@@ -102,8 +104,8 @@ const AdminDashboardRouter = () => {
         <Result
           status="warning"
           icon={<LockOutlined style={{ color: '#ea580c' }} />}
-          title={`Module "${modConfig?.label || moduleKey}" is Currently Closed`}
-          subTitle={`This module has been deactivated in the ERP Modules Switchboard. Its sidebar menu and dashboard widgets are hidden.`}
+          title={t('module_closed_title', `Module "${t(moduleKey, modConfig?.label || moduleKey)}" is Currently Closed`)}
+          subTitle={t('module_closed_desc', 'This module has been deactivated in the ERP Modules Switchboard. Its sidebar menu and dashboard widgets are hidden.')}
           extra={[
             <Button
               type="primary"
@@ -111,7 +113,7 @@ const AdminDashboardRouter = () => {
               style={{ background: '#16a34a', borderColor: '#16a34a' }}
               onClick={() => toggleModule(moduleKey, true)}
             >
-              Re-open {modConfig?.label || moduleKey} Module
+              {t('reopen_module', `Re-open ${t(moduleKey, modConfig?.label || moduleKey)} Module`)}
             </Button>,
             <Button
               key="manage"
@@ -122,7 +124,7 @@ const AdminDashboardRouter = () => {
                 window.location.search = params.toString();
               }}
             >
-              Open Module Switchboard
+              {t('open_module_switchboard', 'Open Module Switchboard')}
             </Button>,
           ]}
         />

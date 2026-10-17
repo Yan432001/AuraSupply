@@ -58,6 +58,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 import { exportSingleOrderPdf, exportOrderHistoryPdf } from '../../utils/orderPdfExporter';
 import OrderReceiptModal from '../../components/common/OrderReceiptModal';
 
@@ -75,6 +76,7 @@ const statusColor = {
 const OrdersManagement = () => {
   const navigate = useNavigate();
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const cardStyle = {
     borderRadius: 16,
     border: `1px solid ${adminTheme.border}`,
@@ -471,19 +473,19 @@ const OrdersManagement = () => {
   };
 
   const stats = [
-    { label: 'Total Orders', value: orders.length },
+    { label: t('orders', 'Total Orders'), value: orders.length },
     {
-      label: 'Pending',
+      label: t('pending', 'Pending'),
       value: orders.filter((o) => (o.status || '').toLowerCase() === 'pending').length
     },
     {
-      label: 'Preparing / Ready',
+      label: t('active', 'Preparing / Ready'),
       value: orders.filter((o) =>
         ['preparing', 'ready', 'confirmed'].includes((o.status || '').toLowerCase())
       ).length
     },
     {
-      label: 'Total Value',
+      label: t('grand_total', 'Total Value'),
       value: formatCurrency(orders.reduce((a, o) => a + Number(o.grandTotal || 0), 0))
     }
   ];
@@ -533,7 +535,7 @@ const OrdersManagement = () => {
 
   const columns = [
     {
-      title: 'Order Ref',
+      title: t('reference_no', 'Order Ref'),
       dataIndex: 'referenceNo',
       key: 'referenceNo',
       render: (ref, record) => (
@@ -548,7 +550,7 @@ const OrdersManagement = () => {
       )
     },
     {
-      title: 'Store',
+      title: t('shops', 'Store'),
       dataIndex: 'store_name',
       key: 'store_name',
       render: (storeName, record) => (
@@ -561,7 +563,7 @@ const OrdersManagement = () => {
       )
     },
     {
-      title: 'Customer',
+      title: t('customer', 'Customer'),
       key: 'customer',
       render: (_, record) => {
         const cust = record.customer || {};
@@ -579,7 +581,7 @@ const OrdersManagement = () => {
       }
     },
     {
-      title: 'Items',
+      title: t('products', 'Items'),
       key: 'items',
       render: (_, record) => (
         <Text style={{ color: adminTheme.text }}>
@@ -588,7 +590,7 @@ const OrdersManagement = () => {
       )
     },
     {
-      title: 'Total',
+      title: t('total', 'Total'),
       dataIndex: 'grandTotal',
       key: 'grandTotal',
       render: (total) => (
@@ -598,7 +600,7 @@ const OrdersManagement = () => {
       )
     },
     {
-      title: 'Status',
+      title: t('status', 'Status'),
       dataIndex: 'status',
       key: 'status',
       render: (status, record) => (
@@ -608,18 +610,18 @@ const OrdersManagement = () => {
           style={{ width: 125 }}
           size="small"
           options={[
-            { label: 'Pending', value: 'Pending' },
-            { label: 'Confirmed', value: 'Confirmed' },
-            { label: 'Preparing', value: 'Preparing' },
-            { label: 'Ready', value: 'Ready' },
-            { label: 'Completed', value: 'Completed' },
-            { label: 'Cancelled', value: 'Cancelled' }
+            { label: t('pending', 'Pending'), value: 'Pending' },
+            { label: t('confirmed', 'Confirmed'), value: 'Confirmed' },
+            { label: t('preparing', 'Preparing'), value: 'Preparing' },
+            { label: t('ready', 'Ready'), value: 'Ready' },
+            { label: t('completed', 'Completed'), value: 'Completed' },
+            { label: t('cancelled', 'Cancelled'), value: 'Cancelled' }
           ]}
         />
       )
     },
     {
-      title: 'Customer Rating',
+      title: t('customer_rating', 'Customer Rating'),
       key: 'customer_rating',
       width: 140,
       render: (_, record) => {
@@ -628,7 +630,7 @@ const OrdersManagement = () => {
         if (!rev) {
           return record.status === 'Completed' ? (
             <Tag color="gold" style={{ borderRadius: 6, fontSize: 10 }}>
-              ★ Rate Order
+              ★ {t('rate_order', 'Rate Order')}
             </Tag>
           ) : (
             <Text style={{ fontSize: 11, color: '#94a3b8' }}>—</Text>
@@ -650,7 +652,7 @@ const OrdersManagement = () => {
       },
     },
     {
-      title: 'Telegram Dispatch',
+      title: t('telegram_dispatch', 'Telegram Dispatch'),
       key: 'notification',
       render: (_, record) => {
         const notifStatus = record.store_notification || record.dispatchInfo?.notification_status;
@@ -658,7 +660,7 @@ const OrdersManagement = () => {
         return (
           <Space size={6}>
             <Tag color={isSuccess ? 'green' : 'orange'} style={{ margin: 0, borderRadius: 8 }}>
-              {isSuccess ? 'Dispatched' : 'Failed'}
+              {isSuccess ? t('dispatched', 'Dispatched') : t('failed', 'Failed')}
             </Tag>
             {!isSuccess && (
               <Button
@@ -666,7 +668,7 @@ const OrdersManagement = () => {
                 size="small"
                 icon={<ReloadOutlined spin={retryingId === (record.referenceNo || record.id)} />}
                 onClick={() => handleRetryNotification(record.referenceNo || record.id)}
-                title="Retry Telegram Notification"
+                title={t('retry_telegram_notif', 'Retry Telegram Notification')}
               />
             )}
           </Space>
@@ -674,7 +676,7 @@ const OrdersManagement = () => {
       }
     },
     {
-      title: 'Action',
+      title: t('actions', 'Actions'),
       key: 'action',
       width: 195,
       render: (_, record) => (
@@ -687,7 +689,7 @@ const OrdersManagement = () => {
             style={{ fontWeight: 600, color: '#0d9488' }}
             title="Open Order Receipt (Print-Friendly Breakdown)"
           >
-            Receipt
+            {t('receipt', 'Receipt')}
           </Button>
           <Button
             type="link"
@@ -698,7 +700,7 @@ const OrdersManagement = () => {
               setDetailModalOpen(true);
             }}
           >
-            View
+            {t('view', 'View')}
           </Button>
           <Button
             type="link"
@@ -722,10 +724,10 @@ const OrdersManagement = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <Title level={4} style={{ margin: 0, color: adminTheme.text }}>
-            Multi-Store Telegram Orders
+            {t('orders_title', 'Multi-Store Telegram Orders')}
           </Title>
           <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
-            Real-time pipeline, status updates, and Telegram store dispatches
+            {t('orders_subtitle', 'Real-time pipeline, status updates, and Telegram store dispatches')}
           </Text>
         </div>
 
@@ -735,7 +737,7 @@ const OrdersManagement = () => {
             onChange={setSelectedStore}
             style={{ width: 220 }}
             options={[
-              { label: 'All Stores & Concepts', value: 'all' },
+              { label: t('all_stores_concepts', 'All Stores & Concepts'), value: 'all' },
               ...stores.map((s) => ({ label: s.name, value: s.slug }))
             ]}
           />
@@ -745,18 +747,18 @@ const OrdersManagement = () => {
             onChange={setSelectedStatus}
             style={{ width: 140 }}
             options={[
-              { label: 'All Statuses', value: 'all' },
-              { label: 'Pending', value: 'Pending' },
-              { label: 'Confirmed', value: 'Confirmed' },
-              { label: 'Preparing', value: 'Preparing' },
-              { label: 'Ready', value: 'Ready' },
-              { label: 'Completed', value: 'Completed' },
-              { label: 'Cancelled', value: 'Cancelled' }
+              { label: t('all_statuses', 'All Statuses'), value: 'all' },
+              { label: t('pending', 'Pending'), value: 'Pending' },
+              { label: t('confirmed', 'Confirmed'), value: 'Confirmed' },
+              { label: t('preparing', 'Preparing'), value: 'Preparing' },
+              { label: t('ready', 'Ready'), value: 'Ready' },
+              { label: t('completed', 'Completed'), value: 'Completed' },
+              { label: t('cancelled', 'Cancelled'), value: 'Cancelled' }
             ]}
           />
 
           <Button icon={<ReloadOutlined />} onClick={fetchOrders} loading={loading}>
-            Refresh
+            {t('refresh', 'Refresh')}
           </Button>
 
           <Button
@@ -769,7 +771,7 @@ const OrdersManagement = () => {
               fontWeight: 600,
             }}
           >
-            Table & Counter QR
+            {t('table_counter_qr', 'Table & Counter QR')}
           </Button>
 
           <Button
@@ -786,7 +788,7 @@ const OrdersManagement = () => {
               fontWeight: 600,
             }}
           >
-            Export History PDF
+            {t('export_history_pdf', 'Export History PDF')}
           </Button>
 
           {/* Sound Alert Toggle */}

@@ -57,6 +57,7 @@ import axios from 'axios';
 import { erpModules } from '../../data/erpModules';
 import { useAdminModules } from '../../hooks/useAdminModules';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -125,6 +126,7 @@ const categoryColors = {
 const AdminModulesManager = () => {
   const adminTheme = useAdminTheme();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const {
     moduleState,
     isModuleOpen,
@@ -351,14 +353,14 @@ const AdminModulesManager = () => {
         <div>
           <Flex align="center" gap={10}>
             <Title level={3} style={{ margin: 0, color: adminTheme.text, fontWeight: 700 }}>
-              ERP Modules &amp; Feature Switchboard
+              {t('erp_modules_switchboard', 'ERP Modules & Feature Switchboard')}
             </Title>
             <Tag style={{ borderRadius: 8, fontWeight: 700, padding: '2px 10px', color: adminTheme.primary, background: `${adminTheme.primary}18`, borderColor: `${adminTheme.primary}33` }}>
-              Single Users Database &bull; Real-time Sync
+              {t('single_users_db_sync', 'Single Users Database • Real-time Sync')}
             </Tag>
           </Flex>
           <Text style={{ color: adminTheme.subtext, fontSize: 13, marginTop: 4, display: 'block' }}>
-            Configure active ERP modules, assign sub-module capabilities, and monitor your enterprise platform license. Changes synchronize instantly to the left navigation bar and operational dashboards.
+            {t('erp_modules_subtitle', 'Configure active ERP modules, assign sub-module capabilities, and monitor your enterprise platform license. Changes synchronize instantly to the left navigation bar and operational dashboards.')}
           </Text>
         </div>
 
@@ -368,7 +370,7 @@ const AdminModulesManager = () => {
             onClick={() => navigate('/admins/dashboard')}
             style={{ borderRadius: 10, fontWeight: 600 }}
           >
-            Dashboard
+            {t('dashboard', 'Dashboard')}
           </Button>
           <Button
             type="primary"
@@ -376,7 +378,7 @@ const AdminModulesManager = () => {
             onClick={enableAllModules}
             style={{ borderRadius: 10, fontWeight: 600, background: '#16a34a', borderColor: '#16a34a' }}
           >
-            Enable All Modules
+            {t('enable_all_modules', 'Enable All Modules')}
           </Button>
           <Button
             danger
@@ -384,7 +386,7 @@ const AdminModulesManager = () => {
             onClick={disableAllModules}
             style={{ borderRadius: 10, fontWeight: 600 }}
           >
-            Disable Non-Core
+            {t('disable_non_core', 'Disable Non-Core')}
           </Button>
           <Button
             icon={<ReloadOutlined />}
@@ -395,7 +397,7 @@ const AdminModulesManager = () => {
             loading={loading}
             style={{ borderRadius: 10 }}
           >
-            Refresh
+            {t('refresh', 'Refresh')}
           </Button>
         </Space>
       </Flex>
@@ -436,14 +438,14 @@ const AdminModulesManager = () => {
                     {licenseData?.license_name || 'Aura Enterprise Supply B2B'}
                   </Text>
                   <Tag color="success" style={{ borderRadius: 8, fontWeight: 700, padding: '2px 8px' }}>
-                    ACTIVE ENTERPRISE
+                    {t('active_enterprise', 'ACTIVE ENTERPRISE')}
                   </Tag>
                   <Tag style={{ borderRadius: 8, fontWeight: 600, color: adminTheme.primary, background: `${adminTheme.primary}18`, borderColor: `${adminTheme.primary}33` }}>
                     {licenseData?.domain || 'aurasupply.biz'}
                   </Tag>
                 </Flex>
                 <Text style={{ color: adminTheme.subtext, fontSize: 12.5, display: 'block', marginTop: 3 }}>
-                  License Key: <code>{licenseData?.license_key || 'AURA-ENT-2026-X892-PRO'}</code> &bull; Unlimited Users &amp; Unlimited Multi-warehouses
+                  {t('license_key', 'License Key')}: <code>{licenseData?.license_key || 'AURA-ENT-2026-X892-PRO'}</code> &bull; {t('unlimited_users_warehouses', 'Unlimited Users & Unlimited Multi-warehouses')}
                 </Text>
               </div>
             </Flex>
@@ -452,9 +454,9 @@ const AdminModulesManager = () => {
           <Col xs={24} md={10} style={{ textAlign: 'right' }}>
             <Flex justify="flex-end" align="center" gap={16} wrap="wrap">
               <div style={{ textAlign: 'right' }}>
-                <Text style={{ fontSize: 11, color: adminTheme.subtext, display: 'block' }}>VALIDITY PERIOD</Text>
+                <Text style={{ fontSize: 11, color: adminTheme.subtext, display: 'block' }}>{t('validity_period', 'VALIDITY PERIOD')}</Text>
                 <Text strong style={{ fontSize: 14, color: adminTheme.text }}>
-                  Until Dec 31, 2030 ({licenseData?.days_remaining || 1700} days left)
+                  {t('until_date_days_left', 'Until Dec 31, 2030 ({days} days left)').replace('{days}', licenseData?.days_remaining || 1700)}
                 </Text>
               </div>
               <Button
@@ -473,7 +475,7 @@ const AdminModulesManager = () => {
                   color: adminTheme.primary
                 }}
               >
-                Update License
+                {t('update_license', 'Update License')}
               </Button>
             </Flex>
           </Col>
@@ -484,47 +486,47 @@ const AdminModulesManager = () => {
       <Row gutter={[16, 16]}>
         <Col xs={12} sm={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
-            <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>Total ERP Modules</Text>
+            <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('total_erp_modules', 'Total ERP Modules')}</Text>
             <Title level={2} style={{ margin: '4px 0 0', color: adminTheme.text }}>
               {totalModulesCount}
             </Title>
-            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>Available business modules</Text>
+            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{t('available_business_modules', 'Available business modules')}</Text>
           </Card>
         </Col>
 
         <Col xs={12} sm={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
             <Flex justify="space-between" align="center">
-              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>Active &amp; Operational</Text>
+              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('active_and_operational', 'Active & Operational')}</Text>
               <EyeOutlined style={{ color: '#16a34a', fontSize: 16 }} />
             </Flex>
             <Title level={2} style={{ margin: '4px 0 0', color: '#16a34a' }}>
               {activeModulesCount}
             </Title>
-            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>Visible in navigation &amp; APIs</Text>
+            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{t('visible_in_nav_apis', 'Visible in navigation & APIs')}</Text>
           </Card>
         </Col>
 
         <Col xs={12} sm={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
             <Flex justify="space-between" align="center">
-              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>Disabled / Dormant</Text>
+              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('disabled_dormant', 'Disabled / Dormant')}</Text>
               <EyeInvisibleOutlined style={{ color: '#ea580c', fontSize: 16 }} />
             </Flex>
             <Title level={2} style={{ margin: '4px 0 0', color: totalModulesCount - activeModulesCount > 0 ? '#ea580c' : adminTheme.subtext }}>
               {totalModulesCount - activeModulesCount}
             </Title>
-            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>Excluded from sidebar</Text>
+            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{t('excluded_from_sidebar', 'Excluded from sidebar')}</Text>
           </Card>
         </Col>
 
         <Col xs={12} sm={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
-            <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>Active System Footprint</Text>
+            <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('active_system_footprint', 'Active System Footprint')}</Text>
             <Title level={2} style={{ margin: '4px 0 0', color: '#2563eb' }}>
               {Math.round((activeModulesCount / totalModulesCount) * 100)}%
             </Title>
-            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>Operating capacity</Text>
+            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{t('operating_capacity', 'Operating capacity')}</Text>
           </Card>
         </Col>
       </Row>
@@ -535,7 +537,7 @@ const AdminModulesManager = () => {
           <Col xs={24} md={8}>
             <Input
               prefix={<SearchOutlined style={{ color: adminTheme.subtext }} />}
-              placeholder="Search modules (e.g. Sales, Inventory, POS, Clinic)..."
+              placeholder={t('search_modules_placeholder', 'Search modules (e.g. Sales, Inventory, POS, Clinic)...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               allowClear
@@ -550,7 +552,7 @@ const AdminModulesManager = () => {
                 onClick={() => setSelectedFilter('all')}
                 style={{ borderRadius: 8, fontSize: 12.5 }}
               >
-                All ({totalModulesCount})
+                {t('all', 'All')} ({totalModulesCount})
               </Button>
               <Button
                 type={selectedFilter === 'open' ? 'primary' : 'default'}
@@ -561,7 +563,7 @@ const AdminModulesManager = () => {
                   ...(selectedFilter === 'open' ? { background: '#16a34a', borderColor: '#16a34a' } : {})
                 }}
               >
-                Active ({activeModulesCount})
+                {t('active', 'Active')} ({activeModulesCount})
               </Button>
               <Button
                 type={selectedFilter === 'closed' ? 'primary' : 'default'}
@@ -572,7 +574,7 @@ const AdminModulesManager = () => {
                   ...(selectedFilter === 'closed' ? { background: '#ea580c', borderColor: '#ea580c' } : {})
                 }}
               >
-                Disabled ({totalModulesCount - activeModulesCount})
+                {t('disabled', 'Disabled')} ({totalModulesCount - activeModulesCount})
               </Button>
             </Flex>
           </Col>
@@ -584,7 +586,7 @@ const AdminModulesManager = () => {
                 onChange={() => setSelectedCategory('all')}
                 style={{ borderRadius: 8, fontSize: 12, padding: '3px 10px' }}
               >
-                ALL CATEGORIES
+                {t('all_categories', 'ALL CATEGORIES')}
               </Tag.CheckableTag>
               {categoryOrder.map((cat) => (
                 <Tag.CheckableTag
@@ -593,7 +595,7 @@ const AdminModulesManager = () => {
                   onChange={() => setSelectedCategory(cat)}
                   style={{ borderRadius: 8, fontSize: 12, padding: '3px 10px' }}
                 >
-                  {cat}
+                  {t(cat, cat)}
                 </Tag.CheckableTag>
               ))}
             </Flex>
@@ -628,10 +630,10 @@ const AdminModulesManager = () => {
             >
               <ApartmentOutlined style={{ color: primary, fontSize: 16 }} />
               <Text strong style={{ color: catHeaderColor, fontSize: 14 }}>
-                {catName}
+                {t(catName, catName)}
               </Text>
               <Tag style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11, background: `${primary}18`, color: primary, border: `1px solid ${primary}33` }}>
-                {catModules.length} module{catModules.length > 1 ? 's' : ''}
+                {catModules.length} {t('modules', 'modules')}
               </Tag>
             </div>
 
@@ -685,7 +687,7 @@ const AdminModulesManager = () => {
 
                           <div>
                             <Title level={5} style={{ margin: 0, color: adminTheme.text }}>
-                              {m.label}
+                              {t(m.label, m.label)}
                             </Title>
                             <Tag
                               color={isOpen ? 'green' : 'default'}
@@ -697,7 +699,7 @@ const AdminModulesManager = () => {
                                 fontWeight: 600
                               }}
                             >
-                              {isOpen ? 'ACTIVE / OPEN' : 'DISABLED / HIDDEN'}
+                              {isOpen ? t('active_open', 'ACTIVE / OPEN') : t('disabled_hidden', 'DISABLED / HIDDEN')}
                             </Tag>
                           </div>
                         </Flex>
@@ -726,7 +728,7 @@ const AdminModulesManager = () => {
                         }}
                         ellipsis={{ rows: 2 }}
                       >
-                        {m.description || 'Enterprise module managing core business functions and operations.'}
+                        {t(m.description, m.description || 'Enterprise module managing core business functions and operations.')}
                       </Paragraph>
 
                       {/* Collapsible Sub-modules Section */}
@@ -741,7 +743,7 @@ const AdminModulesManager = () => {
                               label: (
                                 <Flex justify="space-between" align="center" style={{ width: '100%', paddingRight: 8 }}>
                                   <Text style={{ fontSize: 12, color: adminTheme.text, fontWeight: 600 }}>
-                                    Sub-modules &amp; Capabilities ({m.submodules.length})
+                                    {t('submodules_and_capabilities', 'Sub-modules & Capabilities')} ({m.submodules.length})
                                   </Text>
                                   <Badge count={m.submodules.filter((s) => submoduleStates[s.key] !== false).length} style={{ backgroundColor: primary }} />
                                 </Flex>
@@ -754,11 +756,11 @@ const AdminModulesManager = () => {
                                       <Flex orientation="horizontal" key={sub.key} justify="space-between" align="center">
                                         <div style={{ paddingRight: 8 }}>
                                           <Text style={{ fontSize: 12, fontWeight: 500, color: adminTheme.text, display: 'block' }}>
-                                            {sub.label}
+                                            {t(sub.label, sub.label)}
                                           </Text>
                                           {sub.description && (
                                             <Text style={{ fontSize: 11, color: adminTheme.subtext }}>
-                                              {sub.description}
+                                              {t(sub.description, sub.description)}
                                             </Text>
                                           )}
                                         </div>
@@ -782,7 +784,7 @@ const AdminModulesManager = () => {
                       <Divider style={{ margin: '10px 0' }} />
                       <Flex justify="space-between" align="center">
                         <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
-                          Key: <code>{m.key}</code>
+                          {t('key', 'Key')}: <code>{m.key}</code>
                         </Text>
                         {isOpen ? (
                           <Button
@@ -792,11 +794,11 @@ const AdminModulesManager = () => {
                             onClick={() => navigate(`/admins?module=${m.key}`)}
                             style={{ padding: 0, fontWeight: 600, color: primary }}
                           >
-                            Explore Module
+                            {t('explore_module', 'Explore Module')}
                           </Button>
                         ) : (
                           <Text type="secondary" style={{ fontSize: 11.5, fontStyle: 'italic' }}>
-                            Inactive in Sidebar
+                            {t('inactive_in_sidebar', 'Inactive in Sidebar')}
                           </Text>
                         )}
                       </Flex>
@@ -814,7 +816,7 @@ const AdminModulesManager = () => {
         title={
           <Flex align="center" gap={8} style={{ color: '#dc2626' }}>
             <ExclamationCircleOutlined />
-            <span>Confirm Module Deactivation</span>
+            <span>{t('confirm_module_deactivation', 'Confirm Module Deactivation')}</span>
           </Flex>
         }
         open={confirmModalOpen}
@@ -823,8 +825,8 @@ const AdminModulesManager = () => {
           setConfirmModalOpen(false);
           setPendingDisableModule(null);
         }}
-        okText="Yes, Deactivate Module"
-        cancelText="Keep Enabled"
+        okText={t('yes_deactivate_module', 'Yes, Deactivate Module')}
+        cancelText={t('keep_enabled', 'Keep Enabled')}
         okButtonProps={{ danger: true }}
       >
         {pendingDisableModule && (
@@ -834,28 +836,28 @@ const AdminModulesManager = () => {
               showIcon
               message={
                 <span>
-                  You are about to turn off <strong>{pendingDisableModule.label}</strong> (<code>{pendingDisableModule.key}</code>).
+                  {t('about_to_turn_off', 'You are about to turn off')} <strong>{t(pendingDisableModule.label, pendingDisableModule.label)}</strong> (<code>{pendingDisableModule.key}</code>).
                 </span>
               }
-              description="Deactivating this module will immediately hide its navigation menus from all non-superadmin users and exclude its analytical widgets from the Admin Dashboard."
+              description={t('deactivate_module_desc', 'Deactivating this module will immediately hide its navigation menus from all non-superadmin users and exclude its analytical widgets from the Admin Dashboard.')}
             />
 
             {pendingDisableModule.submodules && pendingDisableModule.submodules.length > 0 && (
               <div>
                 <Text strong style={{ fontSize: 12.5, display: 'block', marginBottom: 6 }}>
-                  Affected Sub-modules ({pendingDisableModule.submodules.length}):
+                  {t('affected_submodules', 'Affected Sub-modules')} ({pendingDisableModule.submodules.length}):
                 </Text>
                 <div style={{ maxHeight: 120, overflowY: 'auto', background: adminTheme.cardMuted, padding: '8px 12px', borderRadius: 8 }}>
                   {pendingDisableModule.submodules.map((s) => (
                     <Text key={s.key} style={{ fontSize: 12, color: adminTheme.subtext, display: 'block' }}>
-                      &bull; {s.label} (<code>{s.key}</code>)
+                      &bull; {t(s.label, s.label)} (<code>{s.key}</code>)
                     </Text>
                   ))}
                 </div>
               </div>
             )}
             <Text style={{ fontSize: 12, color: adminTheme.subtext }}>
-              You can re-enable this module at any time from this switchboard.
+              {t('can_reenable_anytime', 'You can re-enable this module at any time from this switchboard.')}
             </Text>
           </Space>
         )}
@@ -866,28 +868,28 @@ const AdminModulesManager = () => {
         title={
           <Flex align="center" gap={8}>
             <SafetyCertificateOutlined style={{ color: '#2563eb' }} />
-            <span>Update Aura Enterprise License</span>
+            <span>{t('update_aura_enterprise_license', 'Update Aura Enterprise License')}</span>
           </Flex>
         }
         open={licenseModalOpen}
         onOk={handleLicenseSubmit}
         onCancel={() => setLicenseModalOpen(false)}
-        okText="Verify &amp; Activate License"
+        okText={t('verify_and_activate_license', 'Verify & Activate License')}
         destroyOnClose
       >
         <Form form={licenseForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
             name="license_key"
-            label="License Activation Key"
-            rules={[{ required: true, message: 'Please enter enterprise license key' }]}
+            label={t('license_activation_key', 'License Activation Key')}
+            rules={[{ required: true, message: t('enter_license_key_msg', 'Please enter enterprise license key') }]}
           >
             <Input prefix={<KeyOutlined />} placeholder="e.g. AURA-ENT-2026-X892-PRO" />
           </Form.Item>
 
           <Form.Item
             name="license_name"
-            label="Licensed Organization Name"
-            rules={[{ required: true, message: 'Please enter organization name' }]}
+            label={t('licensed_organization_name', 'Licensed Organization Name')}
+            rules={[{ required: true, message: t('enter_org_name_msg', 'Please enter organization name') }]}
           >
             <Input placeholder="e.g. Aura Supply B2B Group" />
           </Form.Item>
@@ -895,8 +897,8 @@ const AdminModulesManager = () => {
           <Alert
             type="info"
             showIcon
-            message="Enterprise License Benefits"
-            description="Active license unlocks all 16 business modules, unlimited multi-warehouse instances, real-time audit logs, and priority security patches through 2030."
+            message={t('enterprise_license_benefits', 'Enterprise License Benefits')}
+            description={t('license_benefits_desc', 'Active license unlocks all 16 business modules, unlimited multi-warehouse instances, real-time audit logs, and priority security patches through 2030.')}
           />
         </Form>
       </Modal>

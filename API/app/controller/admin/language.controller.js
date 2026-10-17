@@ -103,7 +103,22 @@ exports.getTranslations = async (req, res) => {
       const val = (r[lang] && String(r[lang]).trim())
         ? String(r[lang]).trim()
         : (r.english && String(r.english).trim() ? String(r.english).trim() : r.code);
-      dict[r.code] = val;
+
+      const code = String(r.code).trim();
+      dict[code] = val;
+      dict[code.toLowerCase()] = val;
+      dict[code.replace(/-/g, '_')] = val;
+      dict[code.replace(/_/g, '-')] = val;
+      dict[code.toLowerCase().replace(/-/g, '_')] = val;
+      dict[code.toLowerCase().replace(/_/g, '-')] = val;
+
+      if (r.english && typeof r.english === 'string' && r.english.trim()) {
+        const eng = r.english.trim();
+        dict[eng] = val;
+        dict[eng.toLowerCase()] = val;
+        dict[eng.toLowerCase().replace(/[\s-]+/g, '_')] = val;
+        dict[eng.toLowerCase().replace(/[\s_]+/g, '-')] = val;
+      }
     }
 
     translationCache.set(cacheKey, { timestamp: Date.now(), data: dict });

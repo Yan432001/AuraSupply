@@ -1,12 +1,14 @@
 import React from 'react';
 import { Layout, Typography, Space, Divider } from "antd";
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Footer } = Layout;
 const { Text, Link } = Typography;
 
 const FooterDefault = () => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   
   const footerStyle = {
     textAlign: 'center',
@@ -24,13 +26,13 @@ const FooterDefault = () => {
           2014-2026 © Aura ERP
         </Text>
         <Link href="/privacy" style={{ fontSize: 12.5, color: adminTheme.primary }}>
-          Privacy Policy
+          {t('privacy_policy', 'Privacy Policy')}
         </Link>
         <Link href="/terms" style={{ fontSize: 12.5, color: adminTheme.primary }}>
-          Terms of Service
+          {t('terms_of_service', 'Terms of Service')}
         </Link>
         <Link href="/support" style={{ fontSize: 12.5, color: adminTheme.primary }}>
-          Support
+          {t('support', 'Support')}
         </Link>
       </Space>
     </Footer>

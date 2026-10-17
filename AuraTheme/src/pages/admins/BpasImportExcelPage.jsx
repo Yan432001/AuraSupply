@@ -22,12 +22,14 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Title, Paragraph, Text } = Typography;
 const { Dragger } = Upload;
 
 export default function BpasImportExcelPage({ onBack }) {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -160,12 +162,12 @@ export default function BpasImportExcelPage({ onBack }) {
             }}
             style={{ fontWeight: 700 }}
           >
-            Back to Products
+            {t('back_to_products', 'Back to Products')}
           </Button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <FileExcelOutlined style={{ color: '#16a34a', fontSize: 18 }} />
             <span style={{ fontSize: 18, fontWeight: 800, color: '#2563eb' }}>
-              Import Products by Excel / CSV
+              {t('import_products_excel', 'Import Products by Excel / CSV')}
             </span>
           </div>
         </div>
@@ -180,7 +182,7 @@ export default function BpasImportExcelPage({ onBack }) {
             borderColor: '#16a34a',
           }}
         >
-          Download Sample Template
+          {t('download_sample_template', 'Download Sample Template')}
         </Button>
       </div>
 
@@ -199,15 +201,15 @@ export default function BpasImportExcelPage({ onBack }) {
           }}
         >
           <Title level={5} style={{ margin: 0, color: '#0f172a' }}>
-            Instructions for Importing Products:
+            {t('import_instructions', 'Instructions for Importing Products:')}
           </Title>
           <Paragraph style={{ marginTop: 8, fontSize: 13, color: adminTheme.subtext }}>
-            1. The first line of the downloaded CSV or Excel file MUST remain as the column headers. Do not alter or rename columns.<br />
-            2. Required columns include: <strong>name, code, category_code, unit_code, cost, price</strong>.<br />
-            3. If product code already exists in catalog, the system will automatically update pricing and cost.<br />
-            4. Image filenames should match assets uploaded into the system uploads folder.
+            1. {t('import_rule_1', 'The first line of the downloaded CSV or Excel file MUST remain as the column headers. Do not alter or rename columns.')}<br />
+            2. {t('import_rule_2', 'Required columns include: name, code, category_code, unit_code, cost, price.')}<br />
+            3. {t('import_rule_3', 'If product code already exists in catalog, the system will automatically update pricing and cost.')}<br />
+            4. {t('import_rule_4', 'Image filenames should match assets uploaded into the system uploads folder.')}
           </Paragraph>
-          <Tag color="blue">File formats supported: .CSV, .XLS, .XLSX (UTF-8 Encoded)</Tag>
+          <Tag color="blue">{t('import_formats_supported', 'File formats supported: .CSV, .XLS, .XLSX (UTF-8 Encoded)')}</Tag>
         </div>
 
         {/* Upload Dragger Zone */}
@@ -218,7 +220,7 @@ export default function BpasImportExcelPage({ onBack }) {
             accept=".csv, .xls, .xlsx"
             beforeUpload={(file) => {
               setUploadedFiles([file]);
-              message.success(`File "${file.name}" ready for processing`);
+              message.success(`${t('file', 'File')} "${file.name}" ${t('ready_for_processing', 'ready for processing')}`);
               return false;
             }}
             onRemove={() => setUploadedFiles([])}
@@ -228,10 +230,10 @@ export default function BpasImportExcelPage({ onBack }) {
               <InboxOutlined style={{ color: '#2563eb', fontSize: 48 }} />
             </p>
             <p className="ant-upload-text" style={{ fontWeight: 700, fontSize: 16 }}>
-              Click or drag spreadsheet file to this area to upload
+              {t('click_or_drag_file', 'Click or drag spreadsheet file to this area to upload')}
             </p>
             <p className="ant-upload-hint" style={{ color: adminTheme.subtext }}>
-              Support for single CSV or Excel batch upload. Max file size: 10MB.
+              {t('upload_batch_hint', 'Support for single CSV or Excel batch upload. Max file size: 10MB.')}
             </p>
           </Dragger>
         </div>
@@ -239,8 +241,8 @@ export default function BpasImportExcelPage({ onBack }) {
         {/* Results summary alert if finished */}
         {importSummary && (
           <Alert
-            message="Import Completed Successfully"
-            description={`Processed ${importSummary.total} rows: ${importSummary.success} created/updated with 0 errors.`}
+            message={t('import_completed_success', 'Import Completed Successfully')}
+            description={`${t('processed', 'Processed')} ${importSummary.total} ${t('rows', 'rows')}: ${importSummary.success} ${t('created_updated', 'created/updated with 0 errors.')}`}
             type="success"
             showIcon
             style={{ marginBottom: 20 }}
@@ -257,7 +259,7 @@ export default function BpasImportExcelPage({ onBack }) {
               else navigate('/admins/products');
             }}
           >
-            Cancel
+            {t('cancel', 'Cancel')}
           </Button>
 
           <Button
@@ -273,7 +275,7 @@ export default function BpasImportExcelPage({ onBack }) {
               height: 40,
             }}
           >
-            Import Products
+            {t('import_products', 'Import Products')}
           </Button>
         </Flex>
       </Card>

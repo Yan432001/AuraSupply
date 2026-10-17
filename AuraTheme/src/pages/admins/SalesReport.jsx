@@ -5,6 +5,7 @@ import axios from 'axios';
 import GenericReportPage from './reports/GenericReportPage';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Text } = Typography;
 
@@ -18,6 +19,7 @@ const statusColor = {
 
 const SalesReport = () => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [metrics, setMetrics] = useState({ totalOrders: 0, totalRevenue: 0 });
@@ -60,37 +62,37 @@ const SalesReport = () => {
   });
 
   const columns = [
-    { title: 'Reference', dataIndex: 'orderId', key: 'orderId', render: (v) => <Text strong style={{ color: adminTheme.primary }}>{v}</Text> },
-    { title: 'Customer', dataIndex: 'customer', key: 'customer' },
-    { title: 'Biller / Store', dataIndex: 'store', key: 'store' },
-    { title: 'Items', dataIndex: 'itemsCount', key: 'itemsCount' },
-    { title: 'Total Amount', dataIndex: 'total', key: 'total', sorter: (a, b) => a.total - b.total, render: formatCurrency },
+    { title: t('reference', 'Reference'), dataIndex: 'orderId', key: 'orderId', render: (v) => <Text strong style={{ color: adminTheme.primary }}>{v}</Text> },
+    { title: t('customer', 'Customer'), dataIndex: 'customer', key: 'customer' },
+    { title: t('biller_store', 'Biller / Store'), dataIndex: 'store', key: 'store' },
+    { title: t('items', 'Items'), dataIndex: 'itemsCount', key: 'itemsCount' },
+    { title: t('total_amount', 'Total Amount'), dataIndex: 'total', key: 'total', sorter: (a, b) => a.total - b.total, render: formatCurrency },
     {
-      title: 'Payment',
+      title: t('payment', 'Payment'),
       dataIndex: 'paymentStatus',
       key: 'paymentStatus',
-      render: (v) => <Tag color={v === 'paid' ? 'green' : 'orange'} style={{ textTransform: 'uppercase', fontSize: 11 }}>{v}</Tag>
+      render: (v) => <Tag color={v === 'paid' ? 'green' : 'orange'} style={{ textTransform: 'uppercase', fontSize: 11 }}>{t(v, v)}</Tag>
     },
     {
-      title: 'Status',
+      title: t('status', 'Status'),
       dataIndex: 'status',
       key: 'status',
-      render: (v) => <Tag color={statusColor[v] || 'default'} style={{ borderRadius: 999, fontWeight: 700 }}>{v}</Tag>,
+      render: (v) => <Tag color={statusColor[v] || 'default'} style={{ borderRadius: 999, fontWeight: 700 }}>{t(v, v)}</Tag>,
     },
-    { title: 'Date', dataIndex: 'date', key: 'date' },
+    { title: t('date', 'Date'), dataIndex: 'date', key: 'date' },
   ];
 
   return (
     <GenericReportPage
-      title="Live Sales & Revenue Performance Report"
-      subtitle={`Recorded sales orders from MySQL aura_sales • Total Revenue: ${formatCurrency(metrics.totalRevenue || 0)}`}
+      title={t('sales_report_title', 'Live Sales & Revenue Performance Report')}
+      subtitle={t('sales_report_subtitle', 'Recorded sales orders from MySQL aura_sales • Total Revenue: {revenue}').replace('{revenue}', formatCurrency(metrics.totalRevenue || 0))}
       accent={adminTheme.primary}
       columns={columns}
       rows={rows}
       loading={loading}
       extra={
         <Button icon={<ReloadOutlined />} onClick={fetchSalesReport} loading={loading}>
-          Refresh Report
+          {t('refresh_report', 'Refresh Report')}
         </Button>
       }
     />

@@ -154,7 +154,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
     {
       key: 'header',
       type: 'group',
-      label: 'Switch Store Branch & Biller Context',
+      label: t('switch_branch_context', 'Switch Store Branch & Biller Context'),
     },
     ...branches.map((b) => {
       const linkedBiller = billers.find((bil) => bil.id === b.biller_id);
@@ -168,7 +168,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
               {b.name}
             </div>
             <div style={{ fontSize: 11, color: adminTheme.subtext }}>
-              Biller: {linkedBiller?.trading_name || linkedBiller?.company_name || 'Central'} &bull; {b.city}
+              {t('biller', 'Biller')}: {linkedBiller?.trading_name || linkedBiller?.company_name || 'Central'} &bull; {b.city}
             </div>
           </div>
         ),
@@ -179,7 +179,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
     {
       key: 'manage-branches',
       icon: <SettingOutlined />,
-      label: <span style={{ fontWeight: 600 }}>Manage All Branches &amp; Billers</span>,
+      label: <span style={{ fontWeight: 600 }}>{t('manage_all_branches_billers', 'Manage All Branches & Billers')}</span>,
       onClick: () => navigate('/admins/settings/branches'),
     },
   ];
@@ -318,7 +318,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                   Ctrl /
                 </kbd>
               }
-              placeholder="Search Aura ERP modules & records..."
+              placeholder={t('search_aura_erp_placeholder', 'Search Aura ERP modules & records...')}
               style={{
                 flex: 1,
                 maxWidth: 340,
@@ -335,7 +335,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
           {/* Right Action Rail */}
           <Flex align="center" gap={7}>
             {/* Live Storefront Button (Sophisticated Glass Look) */}
-            <Tooltip title="Open Live Storefront (Base URL)">
+            <Tooltip title={t('open_live_storefront', 'Open Live Storefront (Base URL)')}>
               <Button
                 type="text"
                 onClick={() => window.open('/', '_blank')}
@@ -366,7 +366,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                     flexShrink: 0,
                   }}
                 />
-                {!isMobile && <span>Storefront</span>}
+                {!isMobile && <span>{t('storefront', 'Storefront')}</span>}
                 <ExportOutlined style={{ fontSize: 10, opacity: 0.8 }} />
               </Button>
             </Tooltip>
@@ -401,7 +401,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                   <ShopOutlined style={{ color: adminTheme.primary, fontSize: 11 }} />
                 </div>
                 <span style={{ fontWeight: 600, fontSize: 12, maxWidth: isMobile ? 110 : 150, color: headerTextColor }} className="truncate">
-                  {activeBranch?.name || 'Select Branch'}
+                  {activeBranch?.name || t('select_branch', 'Select Branch')}
                 </span>
                 <DownOutlined style={{ fontSize: 8.5, opacity: 0.6, color: headerTextColor }} />
               </Button>
@@ -409,12 +409,12 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
 
             {/* Utility Icons */}
             {!isMobile && (
-              <Tooltip title="Fullscreen">
+              <Tooltip title={t('fullscreen', 'Fullscreen')}>
                 <Button type="text" icon={<ExpandOutlined style={{ fontSize: 14 }} />} onClick={handleFullscreen} style={iconButtonStyle} />
               </Tooltip>
             )}
 
-            <Tooltip title={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+            <Tooltip title={themeMode === 'dark' ? t('switch_to_light_mode', 'Switch to light mode') : t('switch_to_dark_mode', 'Switch to dark mode')}>
               <Button
                 type="text"
                 icon={themeMode === 'dark' ? <SunOutlined style={{ fontSize: 14 }} /> : <MoonOutlined style={{ fontSize: 14 }} />}

@@ -3,11 +3,13 @@ import { Card, Col, Flex, Row, Space, Tag, Typography } from 'antd';
 import { ArrowUpOutlined } from '@ant-design/icons';
 import { Area, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
 const { Text, Title } = Typography;
 
 const GenericAnalyticsPage = ({ title, subtitle, accent, kpis, chartData, chartKey, chartLabel }) => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const cardStyle = {
     borderRadius: 18,
     border: `1px solid ${adminTheme.border}`,
@@ -18,7 +20,7 @@ const GenericAnalyticsPage = ({ title, subtitle, accent, kpis, chartData, chartK
   return (
   <Space direction="vertical" size={18} style={{ width: '100%' }}>
     <div>
-      <Title level={4} style={{ margin: 0, color: adminTheme.text }}>{title}</Title>
+      <Title level={4} style={{ margin: 0, color: adminTheme.text }}>{t(title?.toLowerCase().replace(/[\s&]+/g, '_'), title)}</Title>
       <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>{subtitle}</Text>
     </div>
 
@@ -26,7 +28,7 @@ const GenericAnalyticsPage = ({ title, subtitle, accent, kpis, chartData, chartK
       {kpis.map((kpi) => (
         <Col xs={12} md={6} key={kpi.label}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
-            <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>{kpi.label}</Text>
+            <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>{t(kpi.label?.toLowerCase().replace(/[\s&.]+/g, '_'), kpi.label)}</Text>
             <Title level={3} style={{ margin: '4px 0 6px', color: adminTheme.text }}>{kpi.value}</Title>
             <Tag
               icon={<ArrowUpOutlined style={{ fontSize: 10 }} />}
@@ -41,8 +43,8 @@ const GenericAnalyticsPage = ({ title, subtitle, accent, kpis, chartData, chartK
 
     <Card style={cardStyle} styles={{ body: { padding: 20 } }}>
       <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-        <Title level={5} style={{ margin: 0, color: adminTheme.text }}>{chartLabel}</Title>
-        <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>Last 12 months</Text>
+        <Title level={5} style={{ margin: 0, color: adminTheme.text }}>{t(chartLabel?.toLowerCase().replace(/[\s&]+/g, '_'), chartLabel)}</Title>
+        <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('last_12_months', 'Last 12 months')}</Text>
       </Flex>
       <ResponsiveContainer width="100%" height={300}>
         <ComposedChart data={chartData} margin={{ left: -20, right: 10 }}>

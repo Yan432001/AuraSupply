@@ -61,6 +61,7 @@ const saveWebsiteData = (d) => {
   } catch (_) {}
 };
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -68,6 +69,7 @@ const { Option } = Select;
 
 export default function AdminSimpleDataManager() {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -315,13 +317,13 @@ export default function AdminSimpleDataManager() {
     const totalComments = dataStore.comments?.length || 0;
 
     const quickActionItems = [
-      { label: 'Add New Post', icon: <FileTextOutlined />, color: '#2563eb', action: () => openCreateModal('post') },
-      { label: 'QR Generator', icon: <QrcodeOutlined />, color: '#0284c7', action: () => handleTabChange('qrcode') },
-      { label: 'Upload Media', icon: <PictureOutlined />, color: '#10b981', action: () => openCreateModal('media') },
-      { label: 'Add Story', icon: <VideoCameraOutlined />, color: '#8b5cf6', action: () => openCreateModal('story') },
-      { label: 'New Category', icon: <AppstoreOutlined />, color: '#f59e0b', action: () => openCreateModal('category') },
-      { label: 'Add User', icon: <UserOutlined />, color: '#ec4899', action: () => openCreateModal('user') },
-      { label: 'Export All CSV', icon: <DownloadOutlined />, color: '#06b6d4', action: handleExportAllCmsData },
+      { label: t('add_new_post', 'Add New Post'), icon: <FileTextOutlined />, color: '#2563eb', action: () => openCreateModal('post') },
+      { label: t('qr_generator', 'QR Generator'), icon: <QrcodeOutlined />, color: '#0284c7', action: () => handleTabChange('qrcode') },
+      { label: t('upload_media', 'Upload Media'), icon: <PictureOutlined />, color: '#10b981', action: () => openCreateModal('media') },
+      { label: t('add_story', 'Add Story'), icon: <VideoCameraOutlined />, color: '#8b5cf6', action: () => openCreateModal('story') },
+      { label: t('new_category', 'New Category'), icon: <AppstoreOutlined />, color: '#f59e0b', action: () => openCreateModal('category') },
+      { label: t('add_user', 'Add User'), icon: <UserOutlined />, color: '#ec4899', action: () => openCreateModal('user') },
+      { label: t('export_all_csv', 'Export All CSV'), icon: <DownloadOutlined />, color: '#06b6d4', action: handleExportAllCmsData },
     ];
 
     return (
@@ -331,67 +333,67 @@ export default function AdminSimpleDataManager() {
           <Col xs={12} sm={8} lg={4}>
             <Card hoverable onClick={() => handleTabChange('users')} style={{ borderRadius: 12, borderTop: '4px solid #2563eb' }}>
               <Statistic
-                title={<span style={{ fontWeight: 600 }}>Total Users</span>}
+                title={<span style={{ fontWeight: 600 }}>{t('total_users', 'Total Users')}</span>}
                 value={totalUsers}
                 prefix={<UserOutlined style={{ color: '#2563eb', marginRight: 6 }} />}
               />
-              <Text type="secondary" style={{ fontSize: 12 }}>3 Admins / {totalUsers} Total</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>3 {t('admins', 'Admins')} / {totalUsers} {t('total', 'Total')}</Text>
             </Card>
           </Col>
           <Col xs={12} sm={8} lg={4}>
             <Card hoverable onClick={() => handleTabChange('posts')} style={{ borderRadius: 12, borderTop: '4px solid #10b981' }}>
               <Statistic
-                title={<span style={{ fontWeight: 600 }}>Total Posts</span>}
+                title={<span style={{ fontWeight: 600 }}>{t('total_posts', 'Total Posts')}</span>}
                 value={totalPosts}
                 prefix={<FileTextOutlined style={{ color: '#10b981', marginRight: 6 }} />}
               />
-              <Text type="secondary" style={{ fontSize: 12 }}>Articles & Guides</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>{t('articles_guides', 'Articles & Guides')}</Text>
             </Card>
           </Col>
           <Col xs={12} sm={8} lg={4}>
             <Card hoverable onClick={() => handleTabChange('stories')} style={{ borderRadius: 12, borderTop: '4px solid #8b5cf6' }}>
               <Statistic
-                title={<span style={{ fontWeight: 600 }}>Total Stories</span>}
+                title={<span style={{ fontWeight: 600 }}>{t('total_stories', 'Total Stories')}</span>}
                 value={totalStories}
                 prefix={<VideoCameraOutlined style={{ color: '#8b5cf6', marginRight: 6 }} />}
               />
-              <Text type="secondary" style={{ fontSize: 12 }}>Active Visual Clips</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>{t('active_visual_clips', 'Active Visual Clips')}</Text>
             </Card>
           </Col>
           <Col xs={12} sm={8} lg={4}>
             <Card hoverable onClick={() => handleTabChange('media')} style={{ borderRadius: 12, borderTop: '4px solid #f59e0b' }}>
               <Statistic
-                title={<span style={{ fontWeight: 600 }}>Images / Media</span>}
+                title={<span style={{ fontWeight: 600 }}>{t('images_media', 'Images / Media')}</span>}
                 value={totalMedia}
                 prefix={<PictureOutlined style={{ color: '#f59e0b', marginRight: 6 }} />}
               />
-              <Text type="secondary" style={{ fontSize: 12 }}>Assets in Library</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>{t('assets_in_library', 'Assets in Library')}</Text>
             </Card>
           </Col>
           <Col xs={12} sm={8} lg={4}>
             <Card hoverable onClick={() => handleTabChange('categories')} style={{ borderRadius: 12, borderTop: '4px solid #06b6d4' }}>
               <Statistic
-                title={<span style={{ fontWeight: 600 }}>Total Categories</span>}
+                title={<span style={{ fontWeight: 600 }}>{t('total_categories', 'Total Categories')}</span>}
                 value={totalCategories}
                 prefix={<AppstoreOutlined style={{ color: '#06b6d4', marginRight: 6 }} />}
               />
-              <Text type="secondary" style={{ fontSize: 12 }}>Content Taxonomies</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>{t('content_taxonomies', 'Content Taxonomies')}</Text>
             </Card>
           </Col>
           <Col xs={12} sm={8} lg={4}>
             <Card hoverable onClick={() => handleTabChange('comments')} style={{ borderRadius: 12, borderTop: '4px solid #ec4899' }}>
               <Statistic
-                title={<span style={{ fontWeight: 600 }}>Total Comments</span>}
+                title={<span style={{ fontWeight: 600 }}>{t('total_comments', 'Total Comments')}</span>}
                 value={totalComments}
                 prefix={<CommentOutlined style={{ color: '#ec4899', marginRight: 6 }} />}
               />
-              <Text type="secondary" style={{ fontSize: 12 }}>Reader Feedback</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>{t('reader_feedback', 'Reader Feedback')}</Text>
             </Card>
           </Col>
         </Row>
 
         {/* Quick Actions Bar */}
-        <Card title={<span><FireOutlined style={{ color: '#f59e0b', marginRight: 8 }} /> Quick Actions</span>} style={{ borderRadius: 12 }}>
+        <Card title={<span><FireOutlined style={{ color: '#f59e0b', marginRight: 8 }} /> {t('quick_actions', 'Quick Actions')}</span>} style={{ borderRadius: 12 }}>
           <Row gutter={[12, 12]}>
             {quickActionItems.map((qa, index) => (
               <Col xs={12} sm={8} md={4} key={index}>
@@ -420,9 +422,9 @@ export default function AdminSimpleDataManager() {
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={14}>
             <Card
-              title={<span><ClockCircleOutlined style={{ marginRight: 8, color: '#2563eb' }} /> Recent Activity</span>}
+              title={<span><ClockCircleOutlined style={{ marginRight: 8, color: '#2563eb' }} /> {t('recent_activity', 'Recent Activity')}</span>}
               style={{ borderRadius: 12, height: '100%' }}
-              extra={<Button type="link" onClick={() => handleTabChange('posts')}>View All</Button>}
+              extra={<Button type="link" onClick={() => handleTabChange('posts')}>{t('view_all', 'View All')}</Button>}
             >
               <Space orientation="vertical" direction="vertical" style={{ width: '100%' }} size="middle">
                 {(dataStore.posts || []).slice(0, 4).map((post) => (
@@ -1057,17 +1059,17 @@ export default function AdminSimpleDataManager() {
   // MASTER TABS CONFIG
   // --------------------------------------------------------------------------
   const tabsItems = [
-    { key: 'dashboard', label: <span><DashboardOutlined /> Dashboard</span>, children: renderDashboardTab() },
-    { key: 'users', label: <span><UserOutlined /> Users ({dataStore.users?.length || 0})</span>, children: renderUsersTable() },
-    { key: 'posts', label: <span><FileTextOutlined /> Posts ({dataStore.posts?.length || 0})</span>, children: renderPostsTable() },
-    { key: 'stories', label: <span><VideoCameraOutlined /> Stories ({dataStore.stories?.length || 0})</span>, children: renderStoriesTable() },
-    { key: 'media', label: <span><PictureOutlined /> Media ({dataStore.media?.length || 0})</span>, children: renderMediaTable() },
-    { key: 'categories', label: <span><AppstoreOutlined /> Categories ({dataStore.categories?.length || 0})</span>, children: renderCategoriesTable() },
-    { key: 'comments', label: <span><CommentOutlined /> Comments ({dataStore.comments?.length || 0})</span>, children: renderCommentsTable() },
-    { key: 'saved', label: <span><BookOutlined /> Saved Items ({dataStore.savedItems?.length || 0})</span>, children: renderSavedItemsTable() },
-    { key: 'reports', label: <span><BarChartOutlined /> Reports ({dataStore.reports?.length || 0})</span>, children: renderReportsTable() },
-    { key: 'qrcode', label: <span><QrcodeOutlined /> QR Code Generator</span>, children: <AdminQrCodeGenerator /> },
-    { key: 'settings', label: <span><SettingOutlined /> Website Settings</span>, children: renderSettingsTab() },
+    { key: 'dashboard', label: <span><DashboardOutlined /> {t('dashboard', 'Dashboard')}</span>, children: renderDashboardTab() },
+    { key: 'users', label: <span><UserOutlined /> {t('users', 'Users')} ({dataStore.users?.length || 0})</span>, children: renderUsersTable() },
+    { key: 'posts', label: <span><FileTextOutlined /> {t('posts', 'Posts')} ({dataStore.posts?.length || 0})</span>, children: renderPostsTable() },
+    { key: 'stories', label: <span><VideoCameraOutlined /> {t('stories', 'Stories')} ({dataStore.stories?.length || 0})</span>, children: renderStoriesTable() },
+    { key: 'media', label: <span><PictureOutlined /> {t('media', 'Media')} ({dataStore.media?.length || 0})</span>, children: renderMediaTable() },
+    { key: 'categories', label: <span><AppstoreOutlined /> {t('categories', 'Categories')} ({dataStore.categories?.length || 0})</span>, children: renderCategoriesTable() },
+    { key: 'comments', label: <span><CommentOutlined /> {t('comments', 'Comments')} ({dataStore.comments?.length || 0})</span>, children: renderCommentsTable() },
+    { key: 'saved', label: <span><BookOutlined /> {t('saved_items', 'Saved Items')} ({dataStore.savedItems?.length || 0})</span>, children: renderSavedItemsTable() },
+    { key: 'reports', label: <span><BarChartOutlined /> {t('reports', 'Reports')} ({dataStore.reports?.length || 0})</span>, children: renderReportsTable() },
+    { key: 'qrcode', label: <span><QrcodeOutlined /> {t('qr_code_generator', 'QR Code Generator')}</span>, children: <AdminQrCodeGenerator /> },
+    { key: 'settings', label: <span><SettingOutlined /> {t('website_settings', 'Website Settings')}</span>, children: renderSettingsTab() },
   ];
 
   return (
@@ -1086,10 +1088,10 @@ export default function AdminSimpleDataManager() {
         <Row justify="space-between" align="middle" gutter={[16, 16]}>
           <Col xs={24} md={16}>
             <Title level={3} style={{ color: '#ffffff', margin: 0, fontWeight: 700 }}>
-              Website Data Management Panel
+              {t('website_data_mgmt', 'Website Data Management Panel')}
             </Title>
             <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: '6px 0 0 0', fontSize: 14 }}>
-              Centralized interface for viewing, filtering, editing, and bulk exporting all website data across Users, Posts, Stories, Media, and Categories.
+              {t('website_data_mgmt_desc', 'Centralized interface for viewing, filtering, editing, and bulk exporting all website data across Users, Posts, Stories, Media, and Categories.')}
             </Paragraph>
           </Col>
           <Col xs={24} md={8} style={{ textAlign: 'right' }}>
@@ -1105,7 +1107,7 @@ export default function AdminSimpleDataManager() {
                   fontWeight: 600,
                 }}
               >
-                QR Code Tool
+                {t('qr_code_tool', 'QR Code Tool')}
               </Button>
               <Button
                 icon={<DownloadOutlined />}
@@ -1118,7 +1120,7 @@ export default function AdminSimpleDataManager() {
                   fontWeight: 500,
                 }}
               >
-                Export All (CSV)
+                {t('export_all_csv', 'Export All (CSV)')}
               </Button>
             </Space>
           </Col>

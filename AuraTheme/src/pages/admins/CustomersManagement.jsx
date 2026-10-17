@@ -29,6 +29,7 @@ import {
 import axios from 'axios';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Text, Title } = Typography;
 
@@ -36,6 +37,7 @@ const tierColor = { Gold: 'gold', Silver: 'blue', Bronze: 'orange' };
 
 const CustomersManagement = () => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const cardStyle = {
     borderRadius: 16,
     border: `1px solid ${adminTheme.border}`,
@@ -142,15 +144,15 @@ const CustomersManagement = () => {
   };
 
   const stats = [
-    { label: 'Total Customers', value: (metrics.totalCustomers || customers.length).toLocaleString() },
-    { label: 'Gold Tier Accounts', value: metrics.goldCount || customers.filter((c) => c.tier === 'Gold').length },
-    { label: 'Avg. Lifetime Spend', value: formatCurrency(metrics.avgSpend || 0) },
-    { label: 'Total Customer Spend', value: formatCurrency(metrics.totalSpend || 0) }
+    { label: t('total_customers', 'Total Customers'), value: (metrics.totalCustomers || customers.length).toLocaleString() },
+    { label: t('gold_tier_accounts', 'Gold Tier Accounts'), value: metrics.goldCount || customers.filter((c) => c.tier === 'Gold').length },
+    { label: t('avg_lifetime_spend', 'Avg. Lifetime Spend'), value: formatCurrency(metrics.avgSpend || 0) },
+    { label: t('total_customer_spend', 'Total Customer Spend'), value: formatCurrency(metrics.totalSpend || 0) }
   ];
 
   const columns = [
     {
-      title: 'Customer',
+      title: t('customer', 'Customer'),
       dataIndex: 'name',
       key: 'name',
       render: (name, record) => (
@@ -173,7 +175,7 @@ const CustomersManagement = () => {
       ),
     },
     {
-      title: 'Contact',
+      title: t('contact', 'Contact'),
       key: 'contact',
       render: (_, r) => (
         <div>
@@ -192,32 +194,32 @@ const CustomersManagement = () => {
       )
     },
     {
-      title: 'Orders',
+      title: t('orders', 'Orders'),
       dataIndex: 'orders',
       key: 'orders',
       sorter: (a, b) => a.orders - b.orders,
-      render: (v) => <Tag color="blue">{v} orders</Tag>
+      render: (v) => <Tag color="blue">{v} {t('orders', 'orders')}</Tag>
     },
     {
-      title: 'Lifetime Spend',
+      title: t('lifetime_spend', 'Lifetime Spend'),
       dataIndex: 'spend',
       key: 'spend',
       sorter: (a, b) => a.spend - b.spend,
       render: formatCurrency
     },
     {
-      title: 'Tier',
+      title: t('tier', 'Tier'),
       dataIndex: 'tier',
       key: 'tier',
       render: (v) => <Tag color={tierColor[v] || 'default'} style={{ borderRadius: 999, fontWeight: 700 }}>{v}</Tag>,
     },
     {
-      title: 'Actions',
+      title: t('actions', 'Actions'),
       key: 'actions',
       width: 110,
       render: (_, record) => (
         <Space size={6}>
-          <Tooltip title="Edit Customer">
+          <Tooltip title={t('edit_customer', 'Edit Customer')}>
             <Button
               type="text"
               size="small"
@@ -226,14 +228,14 @@ const CustomersManagement = () => {
             />
           </Tooltip>
           <Popconfirm
-            title="Delete Customer"
-            description="Are you sure you want to remove this customer record?"
+            title={t('delete_customer', 'Delete Customer')}
+            description={t('confirm_delete_customer', 'Are you sure you want to remove this customer record?')}
             onConfirm={() => handleDelete(record.id)}
-            okText="Yes, Delete"
-            cancelText="Cancel"
+            okText={t('yes_delete', 'Yes, Delete')}
+            cancelText={t('cancel', 'Cancel')}
             okButtonProps={{ danger: true }}
           >
-            <Tooltip title="Delete">
+            <Tooltip title={t('delete', 'Delete')}>
               <Button type="text" size="small" danger icon={<DeleteOutlined />} />
             </Tooltip>
           </Popconfirm>
@@ -246,12 +248,12 @@ const CustomersManagement = () => {
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <Title level={4} style={{ margin: 0, color: adminTheme.text }}>Customers Management</Title>
-          <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>Real-time customer directory and sales volume from MySQL database</Text>
+          <Title level={4} style={{ margin: 0, color: adminTheme.text }}>{t('customers_management', 'Customers Management')}</Title>
+          <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>{t('customers_directory_desc', 'Real-time customer directory and sales volume from MySQL database')}</Text>
         </div>
         <Space size={8}>
           <Button icon={<ReloadOutlined />} onClick={fetchCustomers} loading={loading}>
-            Refresh
+            {t('refresh', 'Refresh')}
           </Button>
           <Button
             type="primary"
@@ -259,7 +261,7 @@ const CustomersManagement = () => {
             onClick={handleOpenCreate}
             style={{ borderRadius: 10, background: '#16a34a', borderColor: '#16a34a' }}
           >
-            New Customer
+            {t('new_customer', 'New Customer')}
           </Button>
         </Space>
       </div>
@@ -278,7 +280,7 @@ const CustomersManagement = () => {
       <Card style={cardStyle} styles={{ body: { padding: 20 } }}>
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <Input
-            placeholder="Search customers by name, company, email, or phone..."
+            placeholder={t('search_customers_placeholder', 'Search customers by name, company, email, or phone...')}
             prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
             allowClear
             value={searchText}
@@ -286,7 +288,7 @@ const CustomersManagement = () => {
             style={{ maxWidth: 360, borderRadius: 10 }}
           />
           <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>
-            Showing {customers.length} customer records
+            {t('showing', 'Showing')} {customers.length} {t('customer_records', 'customer records')}
           </Text>
         </div>
 
@@ -302,34 +304,35 @@ const CustomersManagement = () => {
 
       {/* Customer Form Modal */}
       <Modal
-        title={editingCustomer ? `Edit Customer #${editingCustomer.id}` : 'Create New Customer'}
+        title={editingCustomer ? `${t('edit_customer', 'Edit Customer')} #${editingCustomer.id}` : t('create_new_customer', 'Create New Customer')}
         open={isModalOpen}
         onOk={handleSave}
         onCancel={() => setIsModalOpen(false)}
-        okText={editingCustomer ? 'Save Changes' : 'Create Customer'}
+        okText={editingCustomer ? t('save_changes', 'Save Changes') : t('create_customer', 'Create Customer')}
+        cancelText={t('cancel', 'Cancel')}
         destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
             name="name"
-            label="Customer Name"
-            rules={[{ required: true, message: 'Please enter customer name' }]}
+            label={t('customer_name', 'Customer Name')}
+            rules={[{ required: true, message: t('enter_customer_name', 'Please enter customer name') }]}
           >
-            <Input placeholder="Full Name or Business Name" />
+            <Input placeholder={t('customer_name_placeholder', 'Full Name or Business Name')} />
           </Form.Item>
 
-          <Form.Item name="company" label="Company / Entity">
-            <Input placeholder="Company Name" />
+          <Form.Item name="company" label={t('company_entity', 'Company / Entity')}>
+            <Input placeholder={t('company_placeholder', 'Company Name')} />
           </Form.Item>
 
           <Row gutter={12}>
             <Col span={12}>
-              <Form.Item name="email" label="Email Address">
+              <Form.Item name="email" label={t('email_address', 'Email Address')}>
                 <Input placeholder="customer@domain.com" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="phone" label="Phone Number">
+              <Form.Item name="phone" label={t('phone_number', 'Phone Number')}>
                 <Input placeholder="e.g. 012 345 678" />
               </Form.Item>
             </Col>
@@ -337,13 +340,13 @@ const CustomersManagement = () => {
 
           <Row gutter={12}>
             <Col span={12}>
-              <Form.Item name="city" label="City">
+              <Form.Item name="city" label={t('city', 'City')}>
                 <Input placeholder="Phnom Penh" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="address" label="Street / Address">
-                <Input placeholder="Street address" />
+              <Form.Item name="address" label={t('street_address', 'Street / Address')}>
+                <Input placeholder={t('street_address', 'Street address')} />
               </Form.Item>
             </Col>
           </Row>

@@ -36,6 +36,7 @@ import {
 import { request } from '../../utils/helpers';
 import { useNotification } from './NotificationContext';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -43,6 +44,7 @@ const { Option } = Select;
 
 const CategoriesPage = () => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const isTablet = !screens.lg;
@@ -239,7 +241,7 @@ const CategoriesPage = () => {
 
   const columns = [
     { 
-      title: 'ID', 
+      title: t('id', 'ID'), 
       dataIndex: 'id', 
       key: 'id', 
       width: 80,
@@ -247,7 +249,7 @@ const CategoriesPage = () => {
       sorter: (a, b) => a.id - b.id,
     },
     { 
-      title: 'Code', 
+      title: t('code', 'Code'), 
       dataIndex: 'code', 
       key: 'code', 
       width: 120,
@@ -259,7 +261,7 @@ const CategoriesPage = () => {
       )
     },
     { 
-      title: 'Name', 
+      title: t('name', 'Name'), 
       dataIndex: 'name', 
       key: 'name',
       width: 200,
@@ -271,7 +273,7 @@ const CategoriesPage = () => {
           {record.parent_id && record.parent_id !== 0 && (
             <div>
               <Text type="secondary" style={{ fontSize: isMobile ? '11px' : '12px' }}>
-                Parent: {getParentName(record.parent_id)}
+                {t('parent', 'Parent')}: {getParentName(record.parent_id)}
               </Text>
             </div>
           )}
@@ -279,7 +281,7 @@ const CategoriesPage = () => {
       )
     },
     { 
-      title: 'Order', 
+      title: t('order', 'Order'), 
       dataIndex: 'order_number', 
       key: 'order_number', 
       width: 100,
@@ -304,14 +306,14 @@ const CategoriesPage = () => {
       )
     },
     {
-      title: 'Status',
+      title: t('status', 'Status'),
       dataIndex: 'status',
       key: 'status',
       width: 100,
       responsive: ['sm'],
       filters: [
-        { text: 'Show', value: 'Show' },
-        { text: 'Hide', value: 'Hide' }
+        { text: t('show', 'Show'), value: 'Show' },
+        { text: t('hide', 'Hide'), value: 'Hide' }
       ],
       onFilter: (value, record) => record.status === value,
       render: (status, record) => (
@@ -327,19 +329,19 @@ const CategoriesPage = () => {
             onClick={() => onToggleStatus(record)}
             icon={status === "Show" ? <EyeOutlined /> : <EyeInvisibleOutlined />}
           >
-            {isMobile ? (status === "Show" ? 'S' : 'H') : status}
+            {isMobile ? (status === "Show" ? 'S' : 'H') : (status === "Show" ? t('show', 'Show') : t('hide', 'Hide'))}
           </Tag>
         </Tooltip>
       )
     },
     {
-      title: 'Actions',
+      title: t('actions', 'Actions'),
       key: 'actions',
       width: isMobile ? 120 : 180,
       fixed: isMobile ? 'right' : false,
       render: (_, record) => (
         <Space size={isMobile ? 4 : 8}>
-          <Tooltip title="print">
+          <Tooltip title={t('print', 'Print')}>
             <Button 
               type="default" 
               size={isMobile ? "small" : "middle"}
@@ -348,7 +350,7 @@ const CategoriesPage = () => {
               style={{ minWidth: isMobile ? 32 : 40 }}
             />
           </Tooltip>
-          <Tooltip title="Edit">
+          <Tooltip title={t('edit', 'Edit')}>
             <Button 
               type="default" 
               size={isMobile ? "small" : "middle"}
@@ -359,21 +361,21 @@ const CategoriesPage = () => {
           </Tooltip>
           
           <Popconfirm
-            title="Delete Category"
+            title={t('delete_category', 'Delete Category')}
             description={
               <div>
-                <p>Are you sure you want to delete this category?</p>
+                <p>{t('confirm_delete_category', 'Are you sure you want to delete this category?')}</p>
                 <p><strong>{record.name}</strong></p>
-                <Text type="danger">This action cannot be undone.</Text>
+                <Text type="danger">{t('action_cannot_undone', 'This action cannot be undone.')}</Text>
               </div>
             }
             onConfirm={() => onDeleteCategory(record)}
-            okText="Delete"
+            okText={t('delete', 'Delete')}
             okType="danger"
-            cancelText="Cancel"
+            cancelText={t('cancel', 'Cancel')}
             placement="topRight"
           >
-            <Tooltip title="Delete">
+            <Tooltip title={t('delete', 'Delete')}>
               <Button 
                 danger 
                 type="default" 
@@ -390,7 +392,7 @@ const CategoriesPage = () => {
 
   const mobileColumns = [
     {
-      title: 'Category',
+      title: t('category', 'Category'),
       key: 'category',
       render: (_, record) => (
         <div style={{ padding: '8px 0' }}>
@@ -407,12 +409,12 @@ const CategoriesPage = () => {
                   color={record.status === "Show" ? "green" : "red"}
                   style={{ fontSize: '11px', margin: 0 }}
                 >
-                  {record.status}
+                  {record.status === 'Show' ? t('show', 'Show') : t('hide', 'Hide')}
                 </Tag>
               </Space>
               {record.parent_id && record.parent_id !== 0 && (
                 <Text type="secondary" style={{ fontSize: '11px', display: 'block', marginTop: 4 }}>
-                  Parent: {getParentName(record.parent_id)}
+                  {t('parent_category', 'Parent')}: {getParentName(record.parent_id)}
                 </Text>
               )}
             </div>
@@ -424,12 +426,12 @@ const CategoriesPage = () => {
                 onClick={() => onEditCategory(record)}
               />
               <Popconfirm
-                title="Delete Category"
-                description="Are you sure?"
+                title={t('delete_category', 'Delete Category')}
+                description={t('confirm_delete', 'Are you sure?')}
                 onConfirm={() => onDeleteCategory(record)}
-                okText="Delete"
+                okText={t('delete', 'Delete')}
                 okType="danger"
-                cancelText="Cancel"
+                cancelText={t('cancel', 'Cancel')}
               >
                 <Button 
                   danger 
@@ -465,10 +467,10 @@ const CategoriesPage = () => {
           <Col xs={24} md={12}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <Title level={isMobile ? 4 : 2} style={{ margin: 0, color: adminTheme.text }}>
-                Categories Management
+                {t('categories_management', 'Categories Management')}
               </Title>
               <Tag color="blue" style={{ fontSize: isMobile ? '11px' : '12px' }}>
-                {filteredCategories.length} categories
+                {filteredCategories.length} {t('categories', 'categories')}
               </Tag>
             </div>
           </Col>
@@ -476,7 +478,7 @@ const CategoriesPage = () => {
           <Col xs={24} md={12}>
             <Space direction={isMobile ? "vertical" : "horizontal"} style={{ width: '100%', justifyContent: isMobile ? 'stretch' : 'flex-end' }}>
               <Input
-                placeholder="Search categories..."
+                placeholder={t('search_categories', 'Search categories...')}
                 prefix={<SearchOutlined style={{ color: adminTheme.subtext }} />}
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
@@ -492,7 +494,7 @@ const CategoriesPage = () => {
                   size="middle"
                   style={{ width: '100%' }}
                 >
-                  Filters
+                  {t('filters', 'Filters')}
                 </Button>
               )}
               
@@ -503,7 +505,7 @@ const CategoriesPage = () => {
                 size={isMobile ? "middle" : "large"}
                 style={isMobile ? { width: '100%' } : {}}
               >
-                {isMobile ? 'Add New' : 'Add Category'}
+                {isMobile ? t('add_new', 'Add New') : t('add_category', 'Add Category')}
               </Button>
             </Space>
           </Col>
@@ -513,7 +515,7 @@ const CategoriesPage = () => {
       {/* Filter Drawer for Mobile */}
       {isMobile && (
         <Drawer
-          title="Filter Categories"
+          title={t('filter_categories', 'Filter Categories')}
           placement="right"
           onClose={() => setFilterDrawerOpen(false)}
           open={filterDrawerOpen}
@@ -521,30 +523,30 @@ const CategoriesPage = () => {
         >
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <div>
-              <Text strong style={{ color: adminTheme.text }}>Status</Text>
+              <Text strong style={{ color: adminTheme.text }}>{t('status', 'Status')}</Text>
               <Select
                 value={selectedStatus}
                 onChange={setSelectedStatus}
                 style={{ width: '100%', marginTop: 8 }}
                 size="middle"
               >
-                <Option value="all">All Status</Option>
-                <Option value="Show">Show</Option>
-                <Option value="Hide">Hide</Option>
+                <Option value="all">{t('all_status', 'All Status')}</Option>
+                <Option value="Show">{t('show', 'Show')}</Option>
+                <Option value="Hide">{t('hide', 'Hide')}</Option>
               </Select>
             </div>
             
             <Divider style={{ borderColor: adminTheme.border }} />
             
             <div>
-              <Text strong style={{ color: adminTheme.text }}>Order By</Text>
+              <Text strong style={{ color: adminTheme.text }}>{t('order_by', 'Order By')}</Text>
               <Select
                 defaultValue="name"
                 style={{ width: '100%', marginTop: 8 }}
                 size="middle"
               >
-                <Option value="name">Name (A-Z)</Option>
-                <Option value="order_number">Display Order</Option>
+                <Option value="name">{t('name_az', 'Name (A-Z)')}</Option>
+                <Option value="order_number">{t('display_order', 'Display Order')}</Option>
                 <Option value="id">ID</Option>
               </Select>
             </div>
@@ -557,7 +559,7 @@ const CategoriesPage = () => {
               }}
               style={{ width: '100%', marginTop: 16 }}
             >
-              Clear Filters
+              {t('clear_filters', 'Clear Filters')}
             </Button>
           </Space>
         </Drawer>
@@ -703,12 +705,12 @@ const CategoriesPage = () => {
             {editingId ? (
               <>
                 <EditOutlined style={{ marginRight: 8, color: '#fa8c16' }} />
-                Edit Category
+                {t('edit_category', 'Edit Category')}
               </>
             ) : (
               <>
                 <PlusOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-                Add New Category
+                {t('add_new_category', 'Add New Category')}
               </>
             )}
           </Title>
@@ -730,11 +732,11 @@ const CategoriesPage = () => {
           <Row gutter={[16, 16]}>
             <Col span={24}>
               <Form.Item
-                label="Category Name"
+                label={t('category_name', 'Category Name')}
                 name="name"
                 rules={[
-                  { required: true, message: "Please enter category name" },
-                  { min: 2, message: "Name must be at least 2 characters" }
+                  { required: true, message: t('enter_category_name', 'Please enter category name') },
+                  { min: 2, message: t('category_name_min_chars', 'Name must be at least 2 characters') }
                 ]}
               >
                 <Input 
@@ -749,15 +751,15 @@ const CategoriesPage = () => {
               <Form.Item
                 label={
                   <span>
-                    Category Code 
+                    {t('category_code', 'Category Code')} 
                     <Text type="secondary" style={{ fontSize: 12, marginLeft: 4 }}>
-                      (Unique)
+                      ({t('unique', 'Unique')})
                     </Text>
                   </span>
                 }
                 name="code"
                 rules={[
-                  { required: true, message: "Please enter category code" },
+                  { required: true, message: t('enter_category_code', 'Please enter category code') },
                   { pattern: /^[A-Z0-9_]+$/, message: "Only uppercase letters, numbers and underscore" }
                 ]}
               >
@@ -772,11 +774,11 @@ const CategoriesPage = () => {
 
             <Col xs={24} sm={12}>
               <Form.Item 
-                label="Display Order" 
+                label={t('display_order', 'Display Order')} 
                 name="order_number"
                 rules={[{ 
                   required: true, 
-                  message: "Please enter display order number" 
+                  message: t('enter_display_order', 'Please enter display order number') 
                 }]}
               >
                 <InputNumber 
@@ -790,12 +792,12 @@ const CategoriesPage = () => {
 
             <Col span={24}>
               <Form.Item 
-                label="Parent Category" 
+                label={t('parent_category', 'Parent Category')} 
                 name="parent"
-                tooltip="Leave as 'None' for top-level category"
+                tooltip={t('leave_none_top_level', "Leave as 'None' for top-level category")}
               >
                 <Select 
-                  placeholder="Select parent category" 
+                  placeholder={t('select_parent_category', 'Select parent category')} 
                   allowClear
                   size={isMobile ? "middle" : "large"}
                   showSearch
@@ -805,7 +807,7 @@ const CategoriesPage = () => {
                   }
                 >
                   <Option value={0}>
-                    <Text type="secondary">None (Top Level)</Text>
+                    <Text type="secondary">{t('none_top_level', 'None (Top Level)')}</Text>
                   </Option>
                   {categories
                     .filter(cat => !editingId || cat.id !== editingId)
@@ -820,18 +822,18 @@ const CategoriesPage = () => {
             </Col>
 
             <Col span={24}>
-              <Form.Item label="Status" name="status">
+              <Form.Item label={t('status', 'Status')} name="status">
                 <Select size={isMobile ? "middle" : "large"}>
                   <Option value="Show">
                     <Space>
                       <EyeOutlined />
-                      Show (Visible to users)
+                      {t('show_visible_users', 'Show (Visible to users)')}
                     </Space>
                   </Option>
                   <Option value="Hide">
                     <Space>
                       <EyeInvisibleOutlined />
-                      Hide (Hidden from users)
+                      {t('hide_hidden_users', 'Hide (Hidden from users)')}
                     </Space>
                   </Option>
                 </Select>
@@ -853,7 +855,7 @@ const CategoriesPage = () => {
               onClick={onCloseModal}
               size={isMobile ? "middle" : "large"}
             >
-              Cancel
+              {t('cancel', 'Cancel')}
             </Button>
             <Button 
               type="primary" 
@@ -861,7 +863,7 @@ const CategoriesPage = () => {
               loading={modalLoading}
               size={isMobile ? "middle" : "large"}
             >
-              {editingId ? "Update Category" : "Create Category"}
+              {editingId ? t('update_category', 'Update Category') : t('create_category', 'Create Category')}
             </Button>
           </Space>
         </Form>

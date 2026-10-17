@@ -11,6 +11,7 @@ import {
   Modal,
   Tag,
   Divider,
+  Dropdown,
   message
 } from 'antd';
 import {
@@ -31,6 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
+import { useLanguage, useTranslation, SUPPORTED_LANGUAGES } from '../../../contexts/LanguageContext';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -38,54 +40,31 @@ const ModernAuraLogin = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const adminTheme = useAdminTheme();
+  const { currentLanguage, setLanguage, activeLanguage, languages } = useLanguage();
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
-  const [lang, setLang] = useState('en'); // 'en' | 'kh'
   const [forgotModalVisible, setForgotModalVisible] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState(null);
 
-  const t = {
-    en: {
-      badge: 'AURA B2B ERP & SOURCING PLATFORM',
-      heading: 'Enterprise Operations Hub',
-      subheading: 'Centralized procurement, inventory telemetry, and unified user access control.',
-      cardTitle: 'Sign In to Aura ERP',
-      cardSub: 'Enter your credentials to access the administrative portal',
-      usernamePlaceholder: 'Username or Email',
-      passwordPlaceholder: 'Password',
-      rememberMe: 'Remember this device',
-      forgotPass: 'Forgot password?',
-      signInBtn: 'Sign In to Command Center',
-      demoPill: 'Quick Demo Sign In: admin / admin',
-      invoicesLabel: 'Invoices & Sales',
-      purchasesLabel: 'Purchases & Sourcing',
-      posLabel: 'Quick POS Register',
-      adjustmentsLabel: 'Stock Adjustments',
-      accountsLabel: 'Financial Accounts',
-      reportsLabel: 'Analytics & Reports'
-    },
-    kh: {
-      badge: 'ប្រព័ន្ធគ្រប់គ្រងអាជីវកម្ម AURA B2B ERP',
-      heading: 'មជ្ឈមណ្ឌលប្រតិបត្តិការសហគ្រាស',
-      subheading: 'ការគ្រប់គ្រងការទិញ-លក់ ស្តុកទំនិញ និងសិទ្ធិអ្នកប្រើប្រាស់រួមតែមួយ។',
-      cardTitle: 'ចូលប្រើប្រព័ន្ធ Aura ERP',
-      cardSub: 'សូមបញ្ចូលព័ត៌មានគណនីរបស់អ្នកដើម្បីចូលកាន់ផ្ទាំងគ្រប់គ្រង',
-      usernamePlaceholder: 'ឈ្មោះអ្នកប្រើ ឬ អ៊ីមែល',
-      passwordPlaceholder: 'ពាក្យសម្ងាត់',
-      rememberMe: 'ចងចាំឧបករណ៍នេះ',
-      forgotPass: 'ភ្លេចពាក្យសម្ងាត់?',
-      signInBtn: 'ចូលទៅកាន់ផ្ទាំងបញ្ជាការ',
-      demoPill: 'គណនីសាកល្បងរហ័ស: admin / admin',
-      invoicesLabel: 'វិក្កយបត្រ & ការលក់',
-      purchasesLabel: 'ការបញ្ជាទិញ & ផ្គត់ផ្គង់',
-      posLabel: 'កន្លែងគិតប្រាក់រហ័ស POS',
-      adjustmentsLabel: 'ការកែតម្រូវស្តុក',
-      accountsLabel: 'គណនេយ្យ & ហិរញ្ញវត្ថុ',
-      reportsLabel: 'របាយការណ៍ & វិភាគ'
-    }
-  }[lang];
+  const langList = Array.isArray(languages) && languages.length ? languages : SUPPORTED_LANGUAGES;
+  const languageMenuItems = langList.map((lang) => {
+    const isSelected = lang.code === currentLanguage;
+    return {
+      key: `login-lang-${lang.code}`,
+      icon: <span style={{ fontSize: 16 }}>{lang.flag}</span>,
+      label: (
+        <span style={{ fontWeight: isSelected ? 700 : 500, color: isSelected ? '#2563eb' : undefined }}>
+          {lang.native} ({lang.name})
+        </span>
+      ),
+      onClick: () => {
+        setLanguage(lang.code);
+      },
+    };
+  });
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -237,7 +216,7 @@ const ModernAuraLogin = () => {
                 letterSpacing: '0.05em'
               }}
             >
-              <SafetyCertificateOutlined /> {t.badge}
+              <SafetyCertificateOutlined /> {t('login_badge', 'AURA B2B ERP & SOURCING PLATFORM')}
             </span>
           </div>
 
@@ -251,7 +230,7 @@ const ModernAuraLogin = () => {
               marginBottom: 12
             }}
           >
-            {t.heading}
+            {t('enterprise_operations_hub', 'Enterprise Operations Hub')}
           </Title>
           <Paragraph
             style={{
@@ -262,7 +241,7 @@ const ModernAuraLogin = () => {
               marginBottom: 32
             }}
           >
-            {t.subheading}
+            {t('enterprise_operations_hub_desc', 'Centralized procurement, inventory telemetry, and unified user access control.')}
           </Paragraph>
 
           {/* SVG Orbiting Module Hub Illustration */}
@@ -308,7 +287,7 @@ const ModernAuraLogin = () => {
                 <ShoppingCartOutlined />
               </div>
               <span style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
-                {t.invoicesLabel}
+                {t('invoices_sales', 'Invoices & Sales')}
               </span>
             </div>
 
@@ -318,7 +297,7 @@ const ModernAuraLogin = () => {
                 <ReconciliationOutlined />
               </div>
               <span style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
-                {t.purchasesLabel}
+                {t('purchases_sourcing', 'Purchases & Sourcing')}
               </span>
             </div>
 
@@ -328,7 +307,7 @@ const ModernAuraLogin = () => {
                 <CreditCardOutlined />
               </div>
               <span style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
-                {t.posLabel}
+                {t('pos_register', 'Quick POS Register')}
               </span>
             </div>
 
@@ -367,7 +346,7 @@ const ModernAuraLogin = () => {
                 <AppstoreOutlined />
               </div>
               <span style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
-                {t.adjustmentsLabel}
+                {t('stock_adjustments', 'Stock Adjustments')}
               </span>
             </div>
 
@@ -377,7 +356,7 @@ const ModernAuraLogin = () => {
                 <BankOutlined />
               </div>
               <span style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
-                {t.accountsLabel}
+                {t('financial_accounts', 'Financial Accounts')}
               </span>
             </div>
 
@@ -387,7 +366,7 @@ const ModernAuraLogin = () => {
                 <BarChartOutlined />
               </div>
               <span style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
-                {t.reportsLabel}
+                {t('analytics_reports', 'Analytics & Reports')}
               </span>
             </div>
           </div>
@@ -417,27 +396,31 @@ const ModernAuraLogin = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
               <div>
                 <Title level={2} style={{ margin: 0, color: '#0f172a', fontWeight: 700, fontSize: 24 }}>
-                  {t.cardTitle}
+                  {t('sign_in_aura_erp', 'Sign In to Aura ERP')}
                 </Title>
                 <Text type="secondary" style={{ fontSize: 14 }}>
-                  {t.cardSub}
+                  {t('sign_in_credentials_desc', 'Enter your credentials to access the administrative portal')}
                 </Text>
               </div>
 
               {/* Language Switcher */}
-              <Button
-                size="small"
-                shape="round"
-                icon={<GlobalOutlined />}
-                onClick={() => setLang(lang === 'en' ? 'kh' : 'en')}
-                style={{
-                  fontSize: 12,
-                  borderColor: '#cbd5e1',
-                  color: '#475569'
-                }}
-              >
-                {lang === 'en' ? 'ភាសាខ្មែរ' : 'English'}
-              </Button>
+              <Dropdown menu={{ items: languageMenuItems }} trigger={['click']} placement="bottomRight">
+                <Button
+                  size="small"
+                  shape="round"
+                  icon={<span style={{ fontSize: 14 }}>{activeLanguage?.flag || '🌐'}</span>}
+                  style={{
+                    fontSize: 12,
+                    borderColor: '#cbd5e1',
+                    color: '#475569',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}
+                >
+                  {activeLanguage?.native || activeLanguage?.name || 'Language'}
+                </Button>
+              </Dropdown>
             </div>
 
             {/* Error Message Alert */}
@@ -461,34 +444,34 @@ const ModernAuraLogin = () => {
               requiredMark={false}
             >
               <Form.Item
-                label={<span style={{ fontWeight: 600, color: '#334155' }}>Username or Email</span>}
+                label={<span style={{ fontWeight: 600, color: '#334155' }}>{t('username_or_email', 'Username or Email')}</span>}
                 name="username"
-                rules={[{ required: true, message: 'Please enter your username' }]}
+                rules={[{ required: true, message: t('enter_username', 'Please enter your username') }]}
               >
                 <Input
                   size="large"
                   prefix={<UserOutlined style={{ color: '#94a3b8' }} />}
-                  placeholder={t.usernamePlaceholder}
+                  placeholder={t('username_or_email', 'Username or Email')}
                   style={{ borderRadius: 10 }}
                 />
               </Form.Item>
 
               <Form.Item
-                label={<span style={{ fontWeight: 600, color: '#334155' }}>Password</span>}
+                label={<span style={{ fontWeight: 600, color: '#334155' }}>{t('password', 'Password')}</span>}
                 name="password"
-                rules={[{ required: true, message: 'Please enter your password' }]}
+                rules={[{ required: true, message: t('enter_password', 'Please enter your password') }]}
               >
                 <Input.Password
                   size="large"
                   prefix={<LockOutlined style={{ color: '#94a3b8' }} />}
-                  placeholder={t.passwordPlaceholder}
+                  placeholder={t('password', 'Password')}
                   style={{ borderRadius: 10 }}
                 />
               </Form.Item>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <Form.Item name="remember_me" valuePropName="checked" noStyle>
-                  <Checkbox style={{ color: '#64748b', fontSize: 13 }}>{t.rememberMe}</Checkbox>
+                  <Checkbox style={{ color: '#64748b', fontSize: 13 }}>{t('remember_device', 'Remember this device')}</Checkbox>
                 </Form.Item>
 
                 <Button
@@ -496,7 +479,7 @@ const ModernAuraLogin = () => {
                   onClick={() => setForgotModalVisible(true)}
                   style={{ padding: 0, fontSize: 13, color: '#2563eb' }}
                 >
-                  {t.forgotPass}
+                  {t('forgot_password', 'Forgot password?')}
                 </Button>
               </div>
 
@@ -517,13 +500,13 @@ const ModernAuraLogin = () => {
                     boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)'
                   }}
                 >
-                  {t.signInBtn}
+                  {t('sign_in_command_center', 'Sign In to Command Center')}
                 </Button>
               </Form.Item>
             </Form>
 
             <Divider style={{ margin: '20px 0 16px', borderColor: '#f1f5f9' }}>
-              <span style={{ fontSize: 12, color: '#94a3b8' }}>DEMO CREDENTIALS</span>
+              <span style={{ fontSize: 12, color: '#94a3b8' }}>{t('demo_credentials', 'DEMO CREDENTIALS')}</span>
             </Divider>
 
             {/* Quick 1-Click Demo Fill */}
@@ -540,7 +523,7 @@ const ModernAuraLogin = () => {
                   background: '#eff6ff'
                 }}
               >
-                ⚡ {t.demoPill}
+                ⚡ {t('demo_sign_in_pill', 'Quick Demo Sign In: admin / admin')}
               </Button>
             </div>
           </Card>
@@ -549,18 +532,18 @@ const ModernAuraLogin = () => {
 
       {/* Forgot Password Modal */}
       <Modal
-        title="Reset Password"
+        title={t('reset_password', 'Reset Password')}
         open={forgotModalVisible}
         onCancel={() => {
           setForgotModalVisible(false);
           setForgotSuccess(null);
         }}
         onOk={handleForgotSubmit}
-        okText="Send Reset Code"
+        okText={t('send_reset_code', 'Send Reset Code')}
         okButtonProps={{ style: { background: '#2563eb' } }}
       >
         <Paragraph type="secondary" style={{ fontSize: 13, marginTop: 12 }}>
-          Enter the registered email associated with your user account. We will issue a verification code.
+          {t('reset_password_desc', 'Enter the registered email associated with your user account. We will issue a verification code.')}
         </Paragraph>
         {forgotSuccess ? (
           <Alert type="success" message={forgotSuccess} showIcon />

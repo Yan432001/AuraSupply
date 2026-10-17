@@ -80,11 +80,11 @@ const SystemSettings = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
-            {module?.label || 'Settings'}
-            {menu?.groupPath?.length ? ` / ${menu.groupPath.join(' / ')}` : ''}
+            {t(module?.label || 'Settings', module?.label || 'Settings')}
+            {menu?.groupPath?.length ? ` / ${menu.groupPath.map(p => t(p, p)).join(' / ')}` : ''}
           </Text>
           <Title level={4} style={{ margin: '2px 0 0', color: adminTheme.text }}>
-            System Settings & Platform Appearance
+            {t('system_settings_appearance', 'System Settings & Platform Appearance')}
           </Title>
         </div>
 
@@ -128,10 +128,10 @@ const SystemSettings = () => {
               </div>
               <div>
                 <Title level={5} style={{ margin: 0, color: adminTheme.text, fontWeight: 800 }}>
-                  Aura Theme & Visual Style
+                  {t('aura_theme_visual_style', 'Aura Theme & Visual Style')}
                 </Title>
                 <Text style={{ fontSize: 12, color: adminTheme.subtext }}>
-                  Concept website colors, card curvature & typography
+                  {t('theme_visual_subtitle', 'Concept website colors, card curvature & typography')}
                 </Text>
               </div>
             </div>
@@ -141,8 +141,8 @@ const SystemSettings = () => {
                 value={themeMode}
                 onChange={(val) => setThemeMode(val)}
                 options={[
-                  { label: 'Light Mode', value: 'light', icon: <SunOutlined /> },
-                  { label: 'Dark Mode', value: 'dark', icon: <MoonOutlined /> },
+                  { label: t('light_mode', 'Light Mode'), value: 'light', icon: <SunOutlined /> },
+                  { label: t('dark_mode', 'Dark Mode'), value: 'dark', icon: <MoonOutlined /> },
                 ]}
                 style={{
                   borderRadius: 10,
@@ -160,7 +160,7 @@ const SystemSettings = () => {
           {/* Quick Palette Selector */}
           <Col xs={24} lg={16}>
             <div style={{ fontSize: 12, fontWeight: 700, color: adminTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>
-              Active Brand Color Concept
+              {t('active_brand_color_concept', 'Active Brand Color Concept')}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
@@ -251,10 +251,10 @@ const SystemSettings = () => {
               </div>
               <div>
                 <Title level={5} style={{ margin: 0, color: adminTheme.text, fontWeight: 800 }}>
-                  Transparent Background &amp; Glass Engine
+                  {t('transparent_bg_glass_engine', 'Transparent Background & Glass Engine')}
                 </Title>
                 <Text style={{ fontSize: 12, color: adminTheme.subtext }}>
-                  Dynamic ambient wallpapers, acrylic cards &amp; frosted blur
+                  {t('dynamic_wallpapers_frosted_blur', 'Dynamic ambient wallpapers, acrylic cards & frosted blur')}
                 </Text>
               </div>
             </div>
@@ -264,28 +264,28 @@ const SystemSettings = () => {
                 checked={Boolean(customSettings?.transparentSystem?.enabled)}
                 onChange={(val) => {
                   updateTransparentSystem({ enabled: val });
-                  message.success(val ? 'Transparent Glass Background Enabled!' : 'Reverted to Solid Background');
+                  message.success(val ? t('glass_bg_enabled', 'Transparent Glass Background Enabled!') : t('solid_bg_reverted', 'Reverted to Solid Background'));
                 }}
               />
               <Tag
                 color={customSettings?.transparentSystem?.enabled ? 'success' : 'default'}
                 style={{ borderRadius: 6, fontWeight: 700, margin: 0 }}
               >
-                {customSettings?.transparentSystem?.enabled ? 'ACTIVE GLASS' : 'SOLID OPAQUE'}
+                {customSettings?.transparentSystem?.enabled ? t('active_glass', 'ACTIVE GLASS') : t('solid_opaque', 'SOLID OPAQUE')}
               </Tag>
             </div>
 
             {/* Quick Presets */}
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: adminTheme.subtext, textTransform: 'uppercase', marginBottom: 6 }}>
-                Glass Presets
+                {t('glass_presets', 'Glass Presets')}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {[
-                  { key: 'frosted', label: '❄️ Frosted', config: { enabled: true, preset: 'frosted', surfaceOpacity: 78, blurRadius: 20 } },
-                  { key: 'crystal', label: '💎 Crystal', config: { enabled: true, preset: 'crystal', surfaceOpacity: 55, blurRadius: 24 } },
-                  { key: 'acrylic', label: '🔮 Acrylic', config: { enabled: true, preset: 'acrylic', surfaceOpacity: 85, blurRadius: 16 } },
-                  { key: 'solid', label: '🏢 Solid', config: { enabled: false, preset: 'solid', surfaceOpacity: 100, blurRadius: 0 } },
+                  { key: 'frosted', label: t('frosted', '❄️ Frosted'), config: { enabled: true, preset: 'frosted', surfaceOpacity: 78, blurRadius: 20 } },
+                  { key: 'crystal', label: t('crystal', '💎 Crystal'), config: { enabled: true, preset: 'crystal', surfaceOpacity: 55, blurRadius: 24 } },
+                  { key: 'acrylic', label: t('acrylic', '🔮 Acrylic'), config: { enabled: true, preset: 'acrylic', surfaceOpacity: 85, blurRadius: 16 } },
+                  { key: 'solid', label: t('solid', '🏢 Solid'), config: { enabled: false, preset: 'solid', surfaceOpacity: 100, blurRadius: 0 } },
                 ].map((p) => {
                   const isActive =
                     (p.key === 'solid' && !customSettings?.transparentSystem?.enabled) ||
@@ -315,7 +315,7 @@ const SystemSettings = () => {
           {/* Wallpaper Grid */}
           <Col xs={24} lg={10}>
             <div style={{ fontSize: 12, fontWeight: 700, color: adminTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>
-              Dynamic Ambient Wallpapers
+              {t('dynamic_ambient_wallpapers', 'Dynamic Ambient Wallpapers')}
             </div>
 
             <Row gutter={[8, 8]}>
@@ -326,7 +326,7 @@ const SystemSettings = () => {
                     <div
                       onClick={() => {
                         updateTransparentSystem({ wallpaper: wp.key, enabled: true });
-                        message.success(`Applied ${wp.name} wallpaper!`);
+                        message.success(t('applied_wallpaper', `Applied ${wp.name} wallpaper!`));
                       }}
                       style={{
                         borderRadius: 10,
@@ -377,7 +377,7 @@ const SystemSettings = () => {
           <Col xs={24} lg={6}>
             <div style={{ padding: '0 4px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, fontWeight: 700, color: adminTheme.text }}>
-                <span>Surface Opacity</span>
+                <span>{t('surface_opacity', 'Surface Opacity')}</span>
                 <span>{customSettings?.transparentSystem?.surfaceOpacity ?? 78}%</span>
               </div>
               <Slider
@@ -390,7 +390,7 @@ const SystemSettings = () => {
               />
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, fontWeight: 700, color: adminTheme.text }}>
-                <span>Backdrop Blur</span>
+                <span>{t('backdrop_blur', 'Backdrop Blur')}</span>
                 <span>{customSettings?.transparentSystem?.blurRadius ?? 20}px</span>
               </div>
               <Slider
@@ -439,28 +439,28 @@ const SystemSettings = () => {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Title level={5} style={{ margin: 0, color: adminTheme.text, fontWeight: 800 }}>
-                  {t('language', 'Language & Regional Localization')}
+                  {t('language_and_localization', 'Language & Regional Localization')}
                 </Title>
                 <Tag color="cyan" style={{ borderRadius: 6, fontWeight: 700, fontSize: 11 }}>
-                  AURA_v1 Multi-Lingual Core
+                  {t('multilingual_core', 'AURA_v1 Multi-Lingual Core')}
                 </Tag>
               </div>
               <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
-                Configure active system dialect, POS strings, and synchronized MySQL translation database.
+                {t('language_config_desc', 'Configure active system dialect, POS strings, and synchronized MySQL translation database.')}
               </Text>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Tag color="green" style={{ borderRadius: 999, padding: '2px 10px', fontSize: 11.5, fontWeight: 600 }}>
-              5,112 Clean Unicode Keys Active
+              {t('clean_unicode_keys_active', '5,112 Clean Unicode Keys Active')}
             </Tag>
             <Button
               size="small"
               icon={<SyncOutlined spin={isLoadingTranslations} />}
               onClick={() => {
                 fetchTranslations(currentLanguage);
-                message.success('Translations re-synchronized from database table aura_language');
+                message.success(t('sync_db_success', 'Translations re-synchronized from database table aura_language'));
               }}
               style={{
                 borderRadius: 8,
@@ -468,7 +468,7 @@ const SystemSettings = () => {
                 fontSize: 11.5,
               }}
             >
-              Sync DB
+              {t('sync_db', 'Sync DB')}
             </Button>
           </div>
         </div>
@@ -481,7 +481,7 @@ const SystemSettings = () => {
                 <div
                   onClick={() => {
                     setLanguage(lang.code);
-                    message.success(`Language switched to ${lang.native} (${lang.name})`);
+                    message.success(`${t('language_switched_to', 'Language switched to')} ${lang.native} (${lang.name})`);
                   }}
                   style={{
                     padding: '12px 14px',
@@ -551,17 +551,17 @@ const SystemSettings = () => {
               styles={{ body: { padding: 20 } }}
             >
               <Title level={5} style={{ margin: '0 0 14px', color: adminTheme.text, fontWeight: 800 }}>
-                {group.title}
+                {t(group.title, group.title)}
               </Title>
               <Space direction="vertical" size={16} style={{ width: '100%' }}>
                 {group.items.map((item) => (
                   <Flex key={item.key} justify="space-between" align="center">
                     <div style={{ maxWidth: '80%' }}>
                       <Text strong style={{ display: 'block', color: adminTheme.text, fontSize: 13 }}>
-                        {item.label}
+                        {t(item.label, item.label)}
                       </Text>
                       <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>
-                        {item.desc}
+                        {t(item.desc, item.desc)}
                       </Text>
                     </div>
                     <Switch

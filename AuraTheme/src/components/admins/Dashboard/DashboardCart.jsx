@@ -2,11 +2,13 @@ import React from 'react';
 import { Card, Statistic, Typography, Flex } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
 const { Text } = Typography;
 
 const DashboardCard = ({ title, prefixIcon, trend, trendValue, trendColor, valueColor, total }) => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
 
   return (
     <Card
@@ -21,7 +23,7 @@ const DashboardCard = ({ title, prefixIcon, trend, trendValue, trendColor, value
     >
       <Flex justify="space-between" align="center" gap="small">
         <Statistic
-          title={<Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>{title}</Text>}
+          title={<Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>{typeof title === 'string' ? t(title.toLowerCase().replace(/[\s&]+/g, '_'), title) : title}</Text>}
           value={total}
           prefix={prefixIcon}
           valueStyle={{ color: valueColor || adminTheme.text, fontWeight: 'bold' }}
@@ -31,7 +33,7 @@ const DashboardCard = ({ title, prefixIcon, trend, trendValue, trendColor, value
             {trend === 'up' ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {trendValue}
           </Text>
           <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
-            vs last month
+            {t('vs_last_month', 'vs last month')}
           </Text>
         </Flex>
       </Flex>

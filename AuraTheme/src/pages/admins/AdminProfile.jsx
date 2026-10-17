@@ -78,7 +78,7 @@ export default function AdminProfile() {
       }
     } catch (err) {
       console.error('Error fetching admin profile:', err);
-      message.error(err.response?.data?.message || 'Failed to fetch user profile');
+      message.error(err.response?.data?.message || t('failed_to_fetch_profile', 'Failed to fetch user profile'));
     } finally {
       setLoading(false);
     }
@@ -93,17 +93,17 @@ export default function AdminProfile() {
     try {
       const res = await axios.put('/api/admin/auth/profile', values);
       if (res.data?.success) {
-        message.success('Profile details updated successfully!');
+        message.success(t('profile_details_updated', 'Profile details updated successfully!'));
         const updated = res.data.data?.user || res.data.data?.profile || res.data.data;
         setProfileData(updated);
         // Refresh local session context
         login({ user: updated });
       } else {
-        message.error(res.data?.message || 'Failed to update profile');
+        message.error(res.data?.message || t('failed_to_update_profile', 'Failed to update profile'));
       }
     } catch (err) {
       console.error('Error updating profile:', err);
-      message.error(err.response?.data?.message || 'Failed to update profile');
+      message.error(err.response?.data?.message || t('failed_to_update_profile', 'Failed to update profile'));
     } finally {
       setUpdatingProfile(false);
     }
@@ -114,14 +114,14 @@ export default function AdminProfile() {
     try {
       const res = await axios.post('/api/admin/auth/change-password', values);
       if (res.data?.success) {
-        message.success('Password changed successfully!');
+        message.success(t('password_changed_success', 'Password changed successfully!'));
         passwordForm.resetFields();
       } else {
-        message.error(res.data?.message || 'Failed to change password');
+        message.error(res.data?.message || t('failed_to_change_password', 'Failed to change password'));
       }
     } catch (err) {
       console.error('Error changing password:', err);
-      message.error(err.response?.data?.message || 'Failed to change password');
+      message.error(err.response?.data?.message || t('failed_to_change_password', 'Failed to change password'));
     } finally {
       setUpdatingPassword(false);
     }
@@ -130,7 +130,7 @@ export default function AdminProfile() {
   if (loading) {
     return (
       <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Spin size="large" tip="Loading user profile..." />
+        <Spin size="large" tip={t('loading_user_profile', 'Loading user profile...')} />
       </div>
     );
   }
@@ -192,10 +192,10 @@ export default function AdminProfile() {
                     icon={isOwner ? <CrownOutlined /> : <SafetyCertificateOutlined />}
                     style={{ fontWeight: 700, padding: '2px 10px', borderRadius: 6, fontSize: 12 }}
                   >
-                    {roleName} (Level {u.level ?? 1})
+                    {t(roleName.toLowerCase(), roleName)} ({t('level', 'Level')} {u.level ?? 1})
                   </Tag>
                   <Tag color="success" style={{ fontWeight: 600, borderRadius: 6 }}>
-                    ACTIVE ACCOUNT
+                    {t('active_account', 'ACTIVE ACCOUNT')}
                   </Tag>
                 </div>
                 <Text type="secondary" style={{ display: 'block', marginTop: 4, fontSize: 13 }}>
@@ -204,11 +204,11 @@ export default function AdminProfile() {
                 <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
                   <Text style={{ fontSize: 12, color: adminTheme.subtext }}>
                     <ShopOutlined style={{ marginRight: 5, color: '#f97316' }} />
-                    Store: <strong>{u.biller_name || 'All Stores / Central'}</strong>
+                    {t('store', 'Store')}: <strong>{u.biller_name || t('all_stores_central', 'All Stores / Central')}</strong>
                   </Text>
                   <Text style={{ fontSize: 12, color: adminTheme.subtext }}>
                     <DatabaseOutlined style={{ marginRight: 5, color: '#0ea5e9' }} />
-                    Warehouse: <strong>{u.warehouse_name || 'Central Warehouse'}</strong>
+                    {t('warehouse', 'Warehouse')}: <strong>{u.warehouse_name || t('central_warehouse', 'Central Warehouse')}</strong>
                   </Text>
                 </div>
               </div>
@@ -227,7 +227,7 @@ export default function AdminProfile() {
                     textAlign: 'center',
                   }}
                 >
-                  <Text style={{ fontSize: 11, color: adminTheme.subtext, display: 'block' }}>ACCOUNT ID</Text>
+                  <Text style={{ fontSize: 11, color: adminTheme.subtext, display: 'block' }}>{t('account_id', 'ACCOUNT ID')}</Text>
                   <Title level={4} style={{ margin: '4px 0 0', color: adminTheme.text }}>
                     #{u.id || u.user_id}
                   </Title>
@@ -243,9 +243,9 @@ export default function AdminProfile() {
                     textAlign: 'center',
                   }}
                 >
-                  <Text style={{ fontSize: 11, color: adminTheme.subtext, display: 'block' }}>ROLE LEVEL</Text>
+                  <Text style={{ fontSize: 11, color: adminTheme.subtext, display: 'block' }}>{t('role_level', 'ROLE LEVEL')}</Text>
                   <Title level={4} style={{ margin: '4px 0 0', color: '#f97316' }}>
-                    Level {u.level ?? 1}
+                    {t('level', 'Level')} {u.level ?? 1}
                   </Title>
                 </div>
               </Col>
@@ -263,7 +263,7 @@ export default function AdminProfile() {
             key: 'overview',
             label: (
               <span>
-                <UserOutlined /> Account Overview
+                <UserOutlined /> {t('account_overview', 'Account Overview')}
               </span>
             ),
             children: (
@@ -271,33 +271,33 @@ export default function AdminProfile() {
                 {/* Account Details */}
                 <Col xs={24} lg={14}>
                   <Card
-                    title={<strong>Personal & Contact Information</strong>}
+                    title={<strong>{t('personal_contact_information', 'Personal & Contact Information')}</strong>}
                     style={{ borderRadius: 12, background: adminTheme.cardBg }}
                   >
                     <Descriptions column={{ xs: 1, sm: 2 }} bordered size="small">
-                      <Descriptions.Item label="Username">{u.username}</Descriptions.Item>
-                      <Descriptions.Item label="Email Address">{u.email}</Descriptions.Item>
-                      <Descriptions.Item label="First Name">{u.first_name || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="Last Name">{u.last_name || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="Phone Number">{u.phone || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="Gender">
+                      <Descriptions.Item label={t('username', 'Username')}>{u.username}</Descriptions.Item>
+                      <Descriptions.Item label={t('email_address', 'Email Address')}>{u.email}</Descriptions.Item>
+                      <Descriptions.Item label={t('first_name', 'First Name')}>{u.first_name || '-'}</Descriptions.Item>
+                      <Descriptions.Item label={t('last_name', 'Last Name')}>{u.last_name || '-'}</Descriptions.Item>
+                      <Descriptions.Item label={t('phone_number', 'Phone Number')}>{u.phone || '-'}</Descriptions.Item>
+                      <Descriptions.Item label={t('gender', 'Gender')}>
                         <Tag color={u.gender === 'female' ? 'magenta' : 'blue'}>
-                          {(u.gender || 'male').toUpperCase()}
+                          {t(u.gender || 'male', (u.gender || 'male').toUpperCase())}
                         </Tag>
                       </Descriptions.Item>
-                      <Descriptions.Item label="Store Context (Biller)">
-                        {u.biller_name || 'All Billers (Central)'}
+                      <Descriptions.Item label={t('store_biller', 'Store Context (Biller)')}>
+                        {u.biller_name || t('all_billers_central', 'All Billers (Central)')}
                       </Descriptions.Item>
-                      <Descriptions.Item label="Default Warehouse">
-                        {u.warehouse_name || 'Central Warehouse'}
+                      <Descriptions.Item label={t('default_warehouse', 'Default Warehouse')}>
+                        {u.warehouse_name || t('central_warehouse', 'Central Warehouse')}
                       </Descriptions.Item>
-                      <Descriptions.Item label="Last Login Time">
-                        {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'Just now'}
+                      <Descriptions.Item label={t('last_login_time', 'Last Login Time')}>
+                        {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : t('just_now', 'Just now')}
                       </Descriptions.Item>
-                      <Descriptions.Item label="Last Login IP">
+                      <Descriptions.Item label={t('last_login_ip', 'Last Login IP')}>
                         {u.last_login_ip || '127.0.0.1'}
                       </Descriptions.Item>
-                      <Descriptions.Item label="System Language">
+                      <Descriptions.Item label={t('system_language', 'System Language')}>
                         <Tag color="cyan" style={{ fontSize: 12 }}>
                           {SUPPORTED_LANGUAGES.find((l) => l.code === currentLanguage)?.flag}{' '}
                           {SUPPORTED_LANGUAGES.find((l) => l.code === currentLanguage)?.native} (
@@ -311,7 +311,7 @@ export default function AdminProfile() {
                 {/* Permissions & CI3 Rights Summary */}
                 <Col xs={24} lg={10}>
                   <Card
-                    title={<strong>Access Rights & ERP Permissions</strong>}
+                    title={<strong>{t('access_rights_permissions', 'Access Rights & ERP Permissions')}</strong>}
                     style={{ borderRadius: 12, background: adminTheme.cardBg }}
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -327,13 +327,13 @@ export default function AdminProfile() {
                         }}
                       >
                         <div>
-                          <Text strong style={{ display: 'block' }}>View Right (Scope)</Text>
+                          <Text strong style={{ display: 'block' }}>{t('view_right_scope', 'View Right (Scope)')}</Text>
                           <Text type="secondary" style={{ fontSize: 11 }}>
-                            {u.view_right == 1 ? 'Can view all documents company-wide' : 'Restricted to own records only'}
+                            {u.view_right == 1 ? t('view_all_documents_desc', 'Can view all documents company-wide') : t('restricted_own_desc', 'Restricted to own records only')}
                           </Text>
                         </div>
                         <Tag color={u.view_right == 1 || isOwner || isAdmin ? 'green' : 'orange'}>
-                          {u.view_right == 1 || isOwner || isAdmin ? 'ALL DOCUMENTS' : 'OWN ONLY'}
+                          {u.view_right == 1 || isOwner || isAdmin ? t('all_documents', 'ALL DOCUMENTS') : t('own_only', 'OWN ONLY')}
                         </Tag>
                       </div>
 
@@ -349,13 +349,13 @@ export default function AdminProfile() {
                         }}
                       >
                         <div>
-                          <Text strong style={{ display: 'block' }}>Edit Right (Scope)</Text>
+                          <Text strong style={{ display: 'block' }}>{t('edit_right_scope', 'Edit Right (Scope)')}</Text>
                           <Text type="secondary" style={{ fontSize: 11 }}>
-                            {u.edit_right == 1 ? 'Can edit records company-wide' : 'Can only edit own records'}
+                            {u.edit_right == 1 ? t('edit_all_records_desc', 'Can edit records company-wide') : t('edit_own_records_desc', 'Can only edit own records')}
                           </Text>
                         </div>
                         <Tag color={u.edit_right == 1 || isOwner || isAdmin ? 'green' : 'orange'}>
-                          {u.edit_right == 1 || isOwner || isAdmin ? 'ALL DOCUMENTS' : 'OWN ONLY'}
+                          {u.edit_right == 1 || isOwner || isAdmin ? t('all_documents', 'ALL DOCUMENTS') : t('own_only', 'OWN ONLY')}
                         </Tag>
                       </div>
 
@@ -371,13 +371,13 @@ export default function AdminProfile() {
                         }}
                       >
                         <div>
-                          <Text strong style={{ display: 'block' }}>Show Cost / Buying Price</Text>
+                          <Text strong style={{ display: 'block' }}>{t('show_cost_buying_price', 'Show Cost / Buying Price')}</Text>
                           <Text type="secondary" style={{ fontSize: 11 }}>
-                            Controls cost visibility on products & purchases
+                            {t('controls_cost_visibility_desc', 'Controls cost visibility on products & purchases')}
                           </Text>
                         </div>
                         <Tag color={u.show_cost == 1 || isOwner || isAdmin ? 'green' : 'default'}>
-                          {u.show_cost == 1 || isOwner || isAdmin ? 'VISIBLE' : 'HIDDEN'}
+                          {u.show_cost == 1 || isOwner || isAdmin ? t('visible', 'VISIBLE') : t('hidden', 'HIDDEN')}
                         </Tag>
                       </div>
 
@@ -393,13 +393,13 @@ export default function AdminProfile() {
                         }}
                       >
                         <div>
-                          <Text strong style={{ display: 'block' }}>Show Selling Price</Text>
+                          <Text strong style={{ display: 'block' }}>{t('show_selling_price', 'Show Selling Price')}</Text>
                           <Text type="secondary" style={{ fontSize: 11 }}>
-                            Controls price visibility across catalogs
+                            {t('controls_price_visibility_desc', 'Controls price visibility across catalogs')}
                           </Text>
                         </div>
                         <Tag color={u.show_price == 1 || isOwner || isAdmin ? 'green' : 'default'}>
-                          {u.show_price == 1 || isOwner || isAdmin ? 'VISIBLE' : 'HIDDEN'}
+                          {u.show_price == 1 || isOwner || isAdmin ? t('visible', 'VISIBLE') : t('hidden', 'HIDDEN')}
                         </Tag>
                       </div>
                     </div>
@@ -412,12 +412,12 @@ export default function AdminProfile() {
             key: 'edit',
             label: (
               <span>
-                <EditOutlined /> Edit Profile
+                <EditOutlined /> {t('edit_profile', 'Edit Profile')}
               </span>
             ),
             children: (
               <Card
-                title={<strong>Update Account Details</strong>}
+                title={<strong>{t('update_account_details', 'Update Account Details')}</strong>}
                 style={{ borderRadius: 12, maxWidth: 720, background: adminTheme.cardBg }}
               >
                 <Form
@@ -434,41 +434,41 @@ export default function AdminProfile() {
                 >
                   <Row gutter={16}>
                     <Col xs={24} sm={12}>
-                      <Form.Item label="First Name" name="first_name">
-                        <Input placeholder="Enter first name" />
+                      <Form.Item label={t('first_name', 'First Name')} name="first_name">
+                        <Input placeholder={t('enter_first_name', 'Enter first name')} />
                       </Form.Item>
                     </Col>
                     <Col xs={24} sm={12}>
-                      <Form.Item label="Last Name" name="last_name">
-                        <Input placeholder="Enter last name" />
+                      <Form.Item label={t('last_name', 'Last Name')} name="last_name">
+                        <Input placeholder={t('enter_last_name', 'Enter last name')} />
                       </Form.Item>
                     </Col>
                   </Row>
 
                   <Row gutter={16}>
                     <Col xs={24} sm={12}>
-                      <Form.Item label="Phone Number" name="phone">
+                      <Form.Item label={t('phone_number', 'Phone Number')} name="phone">
                         <Input placeholder="e.g. 012 345 678" prefix={<PhoneOutlined />} />
                       </Form.Item>
                     </Col>
                     <Col xs={24} sm={12}>
-                      <Form.Item label="Gender" name="gender">
+                      <Form.Item label={t('gender', 'Gender')} name="gender">
                         <Select>
-                          <Option value="male">Male</Option>
-                          <Option value="female">Female</Option>
-                          <Option value="other">Other</Option>
+                          <Option value="male">{t('male', 'Male')}</Option>
+                          <Option value="female">{t('female', 'Female')}</Option>
+                          <Option value="other">{t('other', 'Other')}</Option>
                         </Select>
                       </Form.Item>
                     </Col>
                   </Row>
 
-                  <Form.Item label="Avatar Image URL" name="avatar" extra="Provide an image URL or leave empty for default avatar">
+                  <Form.Item label={t('avatar_image_url', 'Avatar Image URL')} name="avatar" extra={t('avatar_help', 'Provide an image URL or leave empty for default avatar')}>
                     <Input placeholder="https://example.com/avatar.png" prefix={<UserOutlined />} />
                   </Form.Item>
 
                   <Form.Item style={{ marginBottom: 0 }}>
                     <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={updatingProfile}>
-                      Save Profile Changes
+                      {t('save_profile_changes', 'Save Profile Changes')}
                     </Button>
                   </Form.Item>
                 </Form>
@@ -479,64 +479,64 @@ export default function AdminProfile() {
             key: 'security',
             label: (
               <span>
-                <KeyOutlined /> Change Password
+                <KeyOutlined /> {t('change_password', 'Change Password')}
               </span>
             ),
             children: (
               <Card
-                title={<strong>Security & Password Update</strong>}
+                title={<strong>{t('security_password_update', 'Security & Password Update')}</strong>}
                 style={{ borderRadius: 12, maxWidth: 600, background: adminTheme.cardBg }}
               >
                 <Alert
                   type="info"
                   showIcon
-                  message="Secure Bcrypt Password Upgrade"
-                  description="When you change your password, it will be automatically hashed with high-security Bcrypt with salt rounds."
+                  message={t('secure_bcrypt_upgrade', 'Secure Bcrypt Password Upgrade')}
+                  description={t('secure_bcrypt_desc', 'When you change your password, it will be automatically hashed with high-security Bcrypt with salt rounds.')}
                   style={{ marginBottom: 20, borderRadius: 8 }}
                 />
 
                 <Form form={passwordForm} layout="vertical" onFinish={handleChangePassword}>
                   <Form.Item
-                    label="Current Password"
+                    label={t('current_password', 'Current Password')}
                     name="current_password"
-                    rules={[{ required: true, message: 'Please enter your current password' }]}
+                    rules={[{ required: true, message: t('enter_current_password', 'Please enter your current password') }]}
                   >
-                    <Input.Password prefix={<LockOutlined />} placeholder="Enter current password" />
+                    <Input.Password prefix={<LockOutlined />} placeholder={t('enter_current_password', 'Enter current password')} />
                   </Form.Item>
 
                   <Form.Item
-                    label="New Password"
+                    label={t('new_password', 'New Password')}
                     name="new_password"
                     rules={[
-                      { required: true, message: 'Please enter a new password' },
-                      { min: 6, message: 'Password must be at least 6 characters' },
+                      { required: true, message: t('enter_new_password', 'Please enter a new password') },
+                      { min: 6, message: t('password_min_6', 'Password must be at least 6 characters') },
                     ]}
                   >
-                    <Input.Password prefix={<KeyOutlined />} placeholder="Enter new password (min. 6 characters)" />
+                    <Input.Password prefix={<KeyOutlined />} placeholder={t('enter_new_password_placeholder', 'Enter new password (min. 6 characters)')} />
                   </Form.Item>
 
                   <Form.Item
-                    label="Confirm New Password"
+                    label={t('confirm_new_password', 'Confirm New Password')}
                     name="confirm_password"
                     dependencies={['new_password']}
                     rules={[
-                      { required: true, message: 'Please confirm your new password' },
+                      { required: true, message: t('confirm_password_required', 'Please confirm your new password') },
                       ({ getFieldValue }) => ({
                         validator(_, value) {
                           if (!value || getFieldValue('new_password') === value) {
                             return Promise.resolve();
                           }
-                          return Promise.reject(new Error('The two passwords do not match!'));
+                          return Promise.reject(new Error(t('passwords_do_not_match', 'The two passwords do not match!')));
                         },
                       }),
                     ]}
                   >
-                    <Input.Password prefix={<LockOutlined />} placeholder="Confirm new password" />
+                    <Input.Password prefix={<LockOutlined />} placeholder={t('confirm_new_password', 'Confirm new password')} />
                   </Form.Item>
 
                   <Form.Item style={{ marginBottom: 0 }}>
                     <Button type="primary" danger htmlType="submit" icon={<KeyOutlined />} loading={updatingPassword}>
-                      Update Password
+                      {t('update_password', 'Update Password')}
                     </Button>
                   </Form.Item>
                 </Form>
@@ -547,16 +547,16 @@ export default function AdminProfile() {
             key: 'language',
             label: (
               <span>
-                <GlobalOutlined /> System Language
+                <GlobalOutlined /> {t('system_language', 'System Language')}
               </span>
             ),
             children: (
               <Card
-                title={<strong>System Language & Regional Localization</strong>}
+                title={<strong>{t('system_language_regional', 'System Language & Regional Localization')}</strong>}
                 style={{ borderRadius: 12, maxWidth: 720, background: adminTheme.cardBg }}
               >
                 <Paragraph type="secondary" style={{ fontSize: 13, marginBottom: 16 }}>
-                  Choose your preferred operating language across the Aura ERP administrative workspace. This setting applies immediately across all modules, submodules, and menus.
+                  {t('language_preference_desc', 'Choose your preferred operating language across the Aura ERP administrative workspace. This setting applies immediately across all modules, submodules, and menus.')}
                 </Paragraph>
 
                 <Row gutter={[12, 12]}>
@@ -567,7 +567,7 @@ export default function AdminProfile() {
                         <div
                           onClick={() => {
                             setLanguage(lang.code);
-                            message.success(`Language updated to ${lang.native} (${lang.name})`);
+                            message.success(`${t('language_updated_to', 'Language updated to')} ${lang.native} (${lang.name})`);
                           }}
                           style={{
                             padding: '14px 16px',

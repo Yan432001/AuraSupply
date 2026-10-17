@@ -47,6 +47,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -153,6 +154,7 @@ const getDefaultPermissionsForRole = (roleKey) => {
 
 const UserManagement = () => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -394,7 +396,7 @@ const UserManagement = () => {
 
   const columns = [
     {
-      title: 'User / Account',
+      title: t('user_account', 'User / Account'),
       key: 'account',
       render: (_, record) => {
         const fullName = [record.first_name, record.last_name].filter(Boolean).join(' ');
@@ -425,7 +427,7 @@ const UserManagement = () => {
       }
     },
     {
-      title: 'Role & Privilege Level',
+      title: t('role_level', 'Role & Privilege Level'),
       dataIndex: 'role',
       key: 'role',
       render: (roleKey, record) => {
@@ -444,7 +446,7 @@ const UserManagement = () => {
       }
     },
     {
-      title: 'Contact / Phone',
+      title: t('contact_phone', 'Contact / Phone'),
       dataIndex: 'phone',
       key: 'phone',
       render: (phone) => (
@@ -454,7 +456,7 @@ const UserManagement = () => {
       )
     },
     {
-      title: 'Status',
+      title: t('status', 'Status'),
       key: 'status',
       width: 140,
       render: (_, record) => {
@@ -468,30 +470,30 @@ const UserManagement = () => {
               style={{ background: isActive ? '#16a34a' : '#94a3b8' }}
             />
             <Text style={{ fontSize: 12, fontWeight: 600, color: isActive ? '#16a34a' : '#94a3b8' }}>
-              {isActive ? 'ACTIVE' : 'SUSPENDED'}
+              {isActive ? t('active', 'ACTIVE') : t('inactive', 'SUSPENDED')}
             </Text>
           </Space>
         );
       }
     },
     {
-      title: 'Actions & Permissions',
+      title: t('actions', 'Actions & Permissions'),
       key: 'actions',
       width: 220,
       render: (_, record) => (
         <Space orientation="horizontal" size={4}>
-          <Tooltip title="Configure Permission Matrix">
+          <Tooltip title={t('configure_permissions', 'Configure Permission Matrix')}>
             <Button
               type="text"
               size="small"
               icon={<SafetyCertificateOutlined style={{ color: '#7c3aed' }} />}
               onClick={() => handleOpenMatrix(record)}
             >
-              Matrix
+              {t('matrix', 'Matrix')}
             </Button>
           </Tooltip>
 
-          <Tooltip title="View User Activity Audit">
+          <Tooltip title={t('view_audit', 'View User Activity Audit')}>
             <Button
               type="text"
               size="small"
@@ -500,7 +502,7 @@ const UserManagement = () => {
             />
           </Tooltip>
 
-          <Tooltip title="Edit Details & Password">
+          <Tooltip title={t('edit_details_password', 'Edit Details & Password')}>
             <Button
               type="text"
               size="small"
@@ -509,27 +511,27 @@ const UserManagement = () => {
             />
           </Tooltip>
 
-          <Tooltip title="Force Terminate Session">
+          <Tooltip title={t('force_terminate_session', 'Force Terminate Session')}>
             <Popconfirm
-              title="Force Logout"
-              description={`Revoke active token and force @${record.username} to log in again?`}
+              title={t('force_logout', 'Force Logout')}
+              description={t('force_logout_desc', 'Revoke active token and force @{username} to log in again?').replace('{username}', record.username)}
               onConfirm={() => handleForceLogout(record)}
-              okText="Force Logout"
-              cancelText="Cancel"
+              okText={t('force_logout', 'Force Logout')}
+              cancelText={t('cancel', 'Cancel')}
             >
               <Button type="text" size="small" icon={<PoweroffOutlined style={{ color: '#ea580c' }} />} />
             </Popconfirm>
           </Tooltip>
 
           <Popconfirm
-            title="Delete User Account"
-            description={`Permanently delete @${record.username}? Soft-delete will mark as deleted_at.`}
+            title={t('delete_user_account', 'Delete User Account')}
+            description={t('delete_user_desc', 'Permanently delete @{username}? Soft-delete will mark as deleted_at.').replace('{username}', record.username)}
             onConfirm={() => handleDeleteUser(record.id, record.username)}
-            okText="Delete"
-            cancelText="Cancel"
+            okText={t('delete', 'Delete')}
+            cancelText={t('cancel', 'Cancel')}
             okButtonProps={{ danger: true }}
           >
-            <Tooltip title="Delete Account">
+            <Tooltip title={t('delete_account', 'Delete Account')}>
               <Button type="text" size="small" danger icon={<DeleteOutlined />} />
             </Tooltip>
           </Popconfirm>
@@ -544,23 +546,23 @@ const UserManagement = () => {
       <Flex orientation="horizontal" justify="space-between" align="flex-start" wrap="wrap" gap={12}>
         <div>
           <Title level={3} style={{ margin: 0, color: adminTheme.text, fontWeight: 700 }}>
-            User Accounts &amp; Access Control
+            {t('users_access_control', 'User Accounts & Access Control')}
           </Title>
           <Text style={{ color: adminTheme.subtext, fontSize: 13, marginTop: 4, display: 'block' }}>
-            Single Source of Truth: <code>aura_users</code> table. All role levels, authentication sessions, and granular module permissions are governed exclusively through this directory.
+            {t('users_directory_desc', 'Single Source of Truth: aura_users table. All role levels, authentication sessions, and granular module permissions are governed exclusively through this directory.')}
           </Text>
         </div>
 
         <Space orientation="horizontal" size={10} wrap>
           <Button icon={<ReloadOutlined />} onClick={fetchUsers} loading={loading} style={{ borderRadius: 10 }}>
-            Refresh
+            {t('refresh', 'Refresh')}
           </Button>
           <Button
             icon={<SafetyCertificateOutlined />}
             onClick={() => window.location.href = '/admins/access-control'}
             style={{ borderRadius: 10, borderColor: '#7c3aed', color: '#7c3aed', fontWeight: 600 }}
           >
-            Role Governance & Matrix
+            {t('role_governance_matrix', 'Role Governance & Matrix')}
           </Button>
           <Button
             type="primary"
@@ -568,7 +570,7 @@ const UserManagement = () => {
             onClick={handleOpenCreate}
             style={{ borderRadius: 10, background: '#2563eb', borderColor: '#2563eb', fontWeight: 600 }}
           >
-            Invite User
+            {t('add_user', 'Invite User')}
           </Button>
         </Space>
       </Flex>
@@ -578,7 +580,7 @@ const UserManagement = () => {
         <Row gutter={[16, 16]} align="middle">
           <Col xs={24} md={10}>
             <Input
-              placeholder="Search by username, full name, email, or phone..."
+              placeholder={t('search_users_placeholder', 'Search by username, full name, email, or phone...')}
               prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
               allowClear
               value={searchText}
@@ -593,12 +595,12 @@ const UserManagement = () => {
                 value={selectedRole}
                 onChange={setSelectedRole}
                 style={{ width: 170 }}
-                placeholder="Filter Role"
+                placeholder={t('filter_role', 'Filter Role')}
               >
-                <Option value="all">All Roles ({ROLE_PRESETS.length})</Option>
+                <Option value="all">{t('all_roles', 'All Roles')} ({ROLE_PRESETS.length})</Option>
                 {ROLE_PRESETS.map((r) => (
                   <Option key={r.key} value={r.key}>
-                    {r.label} ({r.badge})
+                    {t(r.key, r.label)} ({r.badge})
                   </Option>
                 ))}
               </Select>
@@ -607,18 +609,18 @@ const UserManagement = () => {
                 value={selectedStatus}
                 onChange={setSelectedStatus}
                 style={{ width: 130 }}
-                placeholder="Status"
+                placeholder={t('status', 'Status')}
               >
-                <Option value="all">All Status</Option>
-                <Option value="active">Active</Option>
-                <Option value="inactive">Suspended</Option>
+                <Option value="all">{t('all_status', 'All Status')}</Option>
+                <Option value="active">{t('active', 'Active')}</Option>
+                <Option value="inactive">{t('inactive', 'Suspended')}</Option>
               </Select>
             </Space>
           </Col>
 
           <Col xs={24} md={6} style={{ textAlign: 'right' }}>
             <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
-              <strong>{users.length}</strong> operator accounts found
+              <strong>{users.length}</strong> {t('operator_accounts_found', 'operator accounts found')}
             </Text>
           </Col>
         </Row>
@@ -642,13 +644,14 @@ const UserManagement = () => {
         title={
           <Flex orientation="horizontal" align="center" gap={8}>
             <UserOutlined style={{ color: '#2563eb' }} />
-            <span>{editingUser ? `Edit Account: @${editingUser.username}` : 'Invite New Operator Account'}</span>
+            <span>{editingUser ? `${t('edit_account', 'Edit Account')}: @${editingUser.username}` : t('invite_new_operator', 'Invite New Operator Account')}</span>
           </Flex>
         }
         open={isModalOpen}
         onOk={handleSaveUser}
         onCancel={() => setIsModalOpen(false)}
-        okText={editingUser ? 'Save Changes' : 'Create User'}
+        okText={editingUser ? t('save_changes', 'Save Changes') : t('create_user', 'Create User')}
+        cancelText={t('cancel', 'Cancel')}
         destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ marginTop: 14 }}>
@@ -656,8 +659,8 @@ const UserManagement = () => {
             <Col span={12}>
               <Form.Item
                 name="username"
-                label="Username"
-                rules={[{ required: true, message: 'Please enter username' }]}
+                label={t('username', 'Username')}
+                rules={[{ required: true, message: t('please_enter_username', 'Please enter username') }]}
               >
                 <Input placeholder="e.g. john.doe" disabled={Boolean(editingUser)} />
               </Form.Item>
@@ -665,10 +668,10 @@ const UserManagement = () => {
             <Col span={12}>
               <Form.Item
                 name="email"
-                label="Email Address"
+                label={t('email_address', 'Email Address')}
                 rules={[
-                  { required: true, message: 'Please enter email' },
-                  { type: 'email', message: 'Valid email required' }
+                  { required: true, message: t('please_enter_email', 'Please enter email') },
+                  { type: 'email', message: t('valid_email_required', 'Valid email required') }
                 ]}
               >
                 <Input placeholder="john@aurasupply.biz" />
@@ -678,13 +681,13 @@ const UserManagement = () => {
 
           <Row gutter={12}>
             <Col span={12}>
-              <Form.Item name="first_name" label="First Name">
-                <Input placeholder="First Name" />
+              <Form.Item name="first_name" label={t('first_name', 'First Name')}>
+                <Input placeholder={t('first_name', 'First Name')} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="last_name" label="Last Name">
-                <Input placeholder="Last Name" />
+              <Form.Item name="last_name" label={t('last_name', 'Last Name')}>
+                <Input placeholder={t('last_name', 'Last Name')} />
               </Form.Item>
             </Col>
           </Row>
@@ -693,20 +696,20 @@ const UserManagement = () => {
             <Col span={12}>
               <Form.Item
                 name="role"
-                label="Role & Privilege Preset"
-                rules={[{ required: true, message: 'Please select role' }]}
+                label={t('role_privilege_preset', 'Role & Privilege Preset')}
+                rules={[{ required: true, message: t('please_select_role', 'Please select role') }]}
               >
-                <Select placeholder="Select role preset">
+                <Select placeholder={t('select_role_preset', 'Select role preset')}>
                   {ROLE_PRESETS.map((r) => (
                     <Option key={r.key} value={r.key}>
-                      {r.label} ({r.badge})
+                      {t(r.key, r.label)} ({r.badge})
                     </Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="phone" label="Phone Number">
+              <Form.Item name="phone" label={t('phone_number', 'Phone Number')}>
                 <Input placeholder="e.g. 012 345 678" />
               </Form.Item>
             </Col>
@@ -716,22 +719,22 @@ const UserManagement = () => {
             <Col span={12}>
               <Form.Item
                 name="status"
-                label="Account Status"
+                label={t('account_status', 'Account Status')}
                 rules={[{ required: true }]}
               >
                 <Select>
-                  <Option value="active">Active</Option>
-                  <Option value="inactive">Suspended</Option>
+                  <Option value="active">{t('active', 'Active')}</Option>
+                  <Option value="inactive">{t('inactive', 'Suspended')}</Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="password"
-                label={editingUser ? 'Reset Password (optional)' : 'Account Password'}
-                rules={editingUser ? [] : [{ required: true, message: 'Password is required' }]}
+                label={editingUser ? t('reset_password_optional', 'Reset Password (optional)') : t('account_password', 'Account Password')}
+                rules={editingUser ? [] : [{ required: true, message: t('password_is_required', 'Password is required') }]}
               >
-                <Input.Password placeholder="At least 6 characters" prefix={<KeyOutlined />} />
+                <Input.Password placeholder={t('at_least_6_chars', 'At least 6 characters')} prefix={<KeyOutlined />} />
               </Form.Item>
             </Col>
           </Row>

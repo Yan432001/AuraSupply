@@ -10,6 +10,7 @@ import {
 import { buildModulePath, getDefaultMenuKey } from '../../data/erpModules';
 import ErpModuleSidebar from '../../components/web/shared/ErpModuleSidebar';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 import AuraLogo from '../../components/common/AuraLogo';
 
 const { Sider } = Layout;
@@ -17,6 +18,7 @@ const { Text } = Typography;
 
 const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -159,7 +161,7 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
                 boxShadow: '0 4px 14px rgba(249, 115, 22, 0.18)',
                 transition: 'all 0.2s ease',
               }}
-              title="Aura ERP Command Center"
+              title={t('command_center', 'Aura ERP Command Center')}
             >
               <AuraLogo size={24} showText={false} />
             </div>
@@ -219,7 +221,7 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
                     textTransform: 'uppercase',
                   }}
                 >
-                  COMMAND HUB
+                  {t('command_hub', 'COMMAND HUB')}
                 </span>
               </div>
             </div>
@@ -227,7 +229,7 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
         </div>
 
         {!collapsed && (
-          <Tooltip title="Collapse sidebar (Ctrl+B)">
+          <Tooltip title={t('collapse_sidebar', 'Collapse sidebar (Ctrl+B)')}>
             <Button
               type="text"
               size="small"
@@ -284,7 +286,7 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
       >
         {collapsed ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-            <Tooltip title="Expand Sidebar" placement="right">
+            <Tooltip title={t('expand_sidebar', 'Expand Sidebar')} placement="right">
               <Button
                 type="text"
                 size="small"
@@ -301,7 +303,7 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
                 }}
               />
             </Tooltip>
-            <Tooltip title="ERP System Status: All 15 Modules Operational" placement="right">
+            <Tooltip title={t('erp_status_all_operational', 'ERP System Status: All 15 Modules Operational')} placement="right">
               <div
                 style={{
                   width: 8,
@@ -337,10 +339,10 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
                 }}
               />
               <Text style={{ fontSize: 11, fontWeight: 600, color: adminTheme.subtext }}>
-                ERP Core: 15 Modules
+                {t('erp_core_modules', 'ERP Core: 15 Modules')}
               </Text>
             </div>
-            <Tooltip title="Settings & Modules">
+            <Tooltip title={t('settings_and_modules', 'Settings & Modules')}>
               <Button
                 type="text"
                 size="small"

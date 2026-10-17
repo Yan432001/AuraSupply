@@ -26,6 +26,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -42,6 +43,7 @@ const getLiveProducts = () => {
 
 export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] }) {
   const adminTheme = useAdminTheme();
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [productsList, setProductsList] = useState(() => getLiveProducts());
@@ -124,12 +126,12 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
             }}
             style={{ fontWeight: 700 }}
           >
-            Back to Products
+            {t('back_to_products', 'Back to Products')}
           </Button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <BarcodeOutlined style={{ color: '#2563eb', fontSize: 18 }} />
             <span style={{ fontSize: 18, fontWeight: 800, color: '#2563eb' }}>
-              Print Barcode Label
+              {t('print_barcode_label', 'Print Barcode Label')}
             </span>
           </div>
         </div>
@@ -144,7 +146,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
             paddingInline: 24,
           }}
         >
-          Print Barcodes ({labelCards.length} Labels)
+          {t('print_barcodes', 'Print Barcodes')} ({labelCards.length} {t('labels', 'Labels')})
         </Button>
       </div>
 
@@ -155,11 +157,11 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
       >
         <div style={{ marginBottom: 16 }}>
           <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 6 }}>
-            Add Product to Print:
+            {t('add_product_to_print', 'Add Product to Print:')}
           </label>
           <Select
             showSearch
-            placeholder="Search catalog product to add..."
+            placeholder={t('search_catalog_product', 'Search catalog product to add...')}
             style={{ width: '100%' }}
             onChange={handleAddItem}
             value={null}
@@ -179,7 +181,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
           dataSource={itemsToPrint}
           columns={[
             {
-              title: 'Product Name (Product Code)',
+              title: t('product_name_code', 'Product Name (Product Code)'),
               dataIndex: 'name',
               key: 'name',
               render: (name, record) => (
@@ -192,7 +194,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
               ),
             },
             {
-              title: 'Print Quantity',
+              title: t('print_quantity', 'Print Quantity'),
               dataIndex: 'printQty',
               key: 'printQty',
               width: 160,
@@ -207,14 +209,14 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
               ),
             },
             {
-              title: 'Selling Price',
+              title: t('price', 'Selling Price'),
               dataIndex: 'price',
               key: 'price',
               width: 140,
               render: (p) => <strong style={{ color: '#16a34a' }}>{formatCurrency(p)}</strong>,
             },
             {
-              title: 'Action',
+              title: t('action', 'Action'),
               key: 'action',
               width: 80,
               align: 'center',
@@ -237,7 +239,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
         <Row gutter={16} align="middle">
           <Col xs={24} sm={12}>
             <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 6 }}>
-              Barcode Paper Style / Size:
+              {t('paper_style_size', 'Barcode Paper Style / Size:')}
             </label>
             <Select
               value={selectedPaperStyle}
@@ -254,17 +256,17 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
           </Col>
           <Col xs={24} sm={12}>
             <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 6 }}>
-              Information to Display:
+              {t('info_to_display', 'Information to Display:')}
             </label>
             <Space wrap>
               <Checkbox checked={printProductName} onChange={(e) => setPrintProductName(e.target.checked)}>
-                Product Name
+                {t('product_name', 'Product Name')}
               </Checkbox>
               <Checkbox checked={printProductPrice} onChange={(e) => setPrintProductPrice(e.target.checked)}>
-                Price
+                {t('price', 'Price')}
               </Checkbox>
               <Checkbox checked={printCurrencies} onChange={(e) => setPrintCurrencies(e.target.checked)}>
-                Currencies (USD)
+                {t('currencies_usd', 'Currencies (USD)')}
               </Checkbox>
             </Space>
           </Col>
@@ -277,7 +279,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <PrinterOutlined style={{ color: '#0284c7' }} />
             <span style={{ fontWeight: 800 }}>
-              Live Barcode Sheet Preview ({labelCards.length} Labels Ready)
+              {t('live_barcode_preview', 'Live Barcode Sheet Preview')} ({labelCards.length} {t('labels_ready', 'Labels Ready')})
             </span>
           </div>
         }
