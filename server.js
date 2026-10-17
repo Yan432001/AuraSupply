@@ -73,6 +73,15 @@ async function startServer() {
     console.warn('[Route] Warning mounting AuraTheme public routes:', err.message);
   }
 
+  // High-Volume Items & RBAC Architecture Routes
+  try {
+    const itemsRoute = require('./API/app/routes/items.routes');
+    app.use(itemsRoute);
+    console.log('[Route] Mounted /api/items (High-Volume Architecture)');
+  } catch (err) {
+    console.warn('[Route] Warning mounting /api/items:', err.message);
+  }
+
   // Mount Admin & ERP Module Routes
 
   const adminRoutes = [
