@@ -6,6 +6,7 @@ import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { NetworkStatusProvider } from './contexts/NetworkStatusContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 // Base Web Layout & Pages
 import MainLayout from './layouts/MainLayout';
@@ -172,15 +173,17 @@ const AppContent = () => {
 const App = () => (
   <NetworkStatusProvider>
     <AuthProvider>
-      <WishlistProvider>
-        <CartProvider>
-          <Router>
-            <AntApp>
-              <AppContent />
-            </AntApp>
-          </Router>
-        </CartProvider>
-      </WishlistProvider>
+      <LanguageProvider>
+        <WishlistProvider>
+          <CartProvider>
+            <Router>
+              <AntApp>
+                <AppContent />
+              </AntApp>
+            </Router>
+          </CartProvider>
+        </WishlistProvider>
+      </LanguageProvider>
     </AuthProvider>
   </NetworkStatusProvider>
 );

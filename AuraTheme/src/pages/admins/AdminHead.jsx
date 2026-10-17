@@ -20,6 +20,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useLanguage, useTranslation } from '../../contexts/LanguageContext';
 import ThemeSettings from '../../contexts/ThemeSettings';
 import { getModuleByKey } from '../../data/erpModules';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
@@ -54,6 +55,8 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
   const isGlassActive = Boolean(customSettings?.transparentSystem?.enabled);
   const { branches, billers, activeBranch, setActiveBranchId } = useBranchesAndBillers();
   const { headerRef } = useHeaderHeight();
+  const { currentLanguage, activeLanguage, setLanguage, languages } = useLanguage();
+  const { t } = useTranslation();
 
   const headerBgColor = adminTheme.headerBg || (themeMode === 'dark' ? 'rgba(11, 17, 30, 0.88)' : 'rgba(255, 255, 255, 0.92)');
   const headerTextColor = adminTheme.headerColor || adminTheme.text;
@@ -77,11 +80,11 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
   const handleUserMenuClick = ({ key }) => {
     if (key === 'logout') {
       Modal.confirm({
-        title: 'Sign Out Confirmation',
-        content: 'Are you sure you want to log out of the Aura ERP administration portal?',
-        okText: 'Yes, Sign Out',
+        title: t('logout', 'Sign Out Confirmation'),
+        content: t('confirm_logout', 'Are you sure you want to log out of the Aura ERP administration portal?'),
+        okText: t('yes_logout', 'Yes, Sign Out'),
         okType: 'danger',
-        cancelText: 'Cancel',
+        cancelText: t('cancel', 'Cancel'),
         onOk: () => {
           logout();
         }
@@ -94,11 +97,33 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
   };
 
   const userMenuItems = [
-    { key: 'profile', icon: <UserOutlined />, label: 'My Profile' },
-    { key: 'settings', icon: <SettingOutlined />, label: 'Settings' },
+    { key: 'profile', icon: <UserOutlined />, label: t('profile', 'My Profile') },
+    { key: 'settings', icon: <SettingOutlined />, label: t('settings', 'Settings') },
     { type: 'divider' },
-    { key: 'logout', icon: <LogoutOutlined />, label: 'Sign Out', danger: true },
+    { key: 'logout', icon: <LogoutOutlined />, label: t('logout', 'Sign Out'), danger: true },
   ];
+
+  const languageMenuItems = languages.map((lang) => {
+    const isSelected = lang.code === currentLanguage;
+    return {
+      key: lang.code,
+      icon: <span style={{ fontSize: 16 }}>{lang.flag}</span>,
+      label: (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, minWidth: 150, padding: '2px 0' }}>
+          <div>
+            <div style={{ fontWeight: isSelected ? 700 : 500, color: isSelected ? adminTheme.primary : undefined, fontSize: 13 }}>
+              {lang.native}
+            </div>
+            <div style={{ fontSize: 11, color: adminTheme.subtext }}>
+              {lang.name}
+            </div>
+          </div>
+          {isSelected && <CheckOutlined style={{ color: adminTheme.primary, fontSize: 12 }} />}
+        </div>
+      ),
+      onClick: () => setLanguage(lang.code),
+    };
+  });
 
   const branchMenuItems = [
     {
@@ -395,7 +420,37 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
               />
             </Tooltip>
 
-            <Tooltip title="ERP Modules Switchboard (Open/Close Modules)">
+            {/* Language Switcher Dropdown (AURA_v1 Concept) */}
+            <Dropdown menu={{ items: languageMenuItems }} trigger={['click']} placement="bottomRight">
+              <Button
+                style={{
+                  height: 34,
+                  borderRadius: 9,
+                  background: headerButtonBg,
+                  border: `1px solid ${headerBorderColor}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: isMobile ? '0 8px' : '0 10px',
+                  color: headerTextColor,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  transition: 'all 0.18s ease',
+                }}
+              >
+                <span style={{ fontSize: 15, display: 'inline-flex', alignItems: 'center' }}>
+                  {activeLanguage?.flag || '🌐'}
+                </span>
+                {!isMobile && (
+                  <span style={{ maxWidth: 90 }} className="truncate">
+                    {activeLanguage?.native || activeLanguage?.name || 'Language'}
+                  </span>
+                )}
+                <DownOutlined style={{ fontSize: 8.5, opacity: 0.6 }} />
+              </Button>
+            </Dropdown>
+
+            <Tooltip title={t('modules', 'ERP Modules Switchboard')}>
               <Button
                 type="text"
                 icon={<ControlOutlined style={{ fontSize: 14 }} />}

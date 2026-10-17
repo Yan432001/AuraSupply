@@ -46,6 +46,7 @@ import { erpModules, buildModulePath } from '../../../data/erpModules';
 import { useAdminModules } from '../../../hooks/useAdminModules';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
 const { Text } = Typography;
 
@@ -142,6 +143,7 @@ export default function AdminModuleScrollSlidebar() {
   const location = useLocation();
   const { isModuleOpen } = useAdminModules();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const scrollContainerRef = useRef(null);
 
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -395,7 +397,7 @@ export default function AdminModuleScrollSlidebar() {
               </span>
 
               {/* Title */}
-              <span>{item.label}</span>
+              <span>{t(item.key, item.label)}</span>
 
               {/* Active Indicator or KPI Pill */}
               {isActive ? (

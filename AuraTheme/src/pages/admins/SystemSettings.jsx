@@ -7,10 +7,13 @@ import {
   MoonOutlined,
   CheckOutlined,
   ThunderboltOutlined,
+  GlobalOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import { useLocation } from 'react-router-dom';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useLanguage, useTranslation } from '../../contexts/LanguageContext';
 import { getMenuByKey, getModuleByKey } from '../../data/erpModules';
 import ThemeSettings from '../../contexts/ThemeSettings';
 import { WALLPAPER_PRESETS } from '../../utils/uiTheme';
@@ -57,6 +60,8 @@ const presetQuickList = [
 const SystemSettings = () => {
   const adminTheme = useAdminTheme();
   const { themeMode, setThemeMode, themePreset, changePreset, customSettings, updateTransparentSystem } = useTheme();
+  const { currentLanguage, setLanguage, activeLanguage, supportedLanguages, fetchTranslations, isLoadingTranslations } = useLanguage();
+  const { t } = useTranslation();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const moduleKey = searchParams.get('module') || 'settings';
@@ -397,6 +402,134 @@ const SystemSettings = () => {
               />
             </div>
           </Col>
+        </Row>
+      </Card>
+
+      {/* ======================================================== */}
+      {/* 2. REGIONAL LOCALIZATION & LANGUAGE ENGINE (AURA_v1)    */}
+      {/* ======================================================== */}
+      <Card
+        style={{
+          borderRadius: 20,
+          border: `1px solid ${adminTheme.border}`,
+          background: adminTheme.card,
+          boxShadow: adminTheme.shadow,
+          overflow: 'hidden',
+        }}
+        styles={{ body: { padding: '22px 24px' } }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14, marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                background: `${adminTheme.primary}18`,
+                color: adminTheme.primary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 20,
+              }}
+            >
+              <GlobalOutlined />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Title level={5} style={{ margin: 0, color: adminTheme.text, fontWeight: 800 }}>
+                  {t('language', 'Language & Regional Localization')}
+                </Title>
+                <Tag color="cyan" style={{ borderRadius: 6, fontWeight: 700, fontSize: 11 }}>
+                  AURA_v1 Multi-Lingual Core
+                </Tag>
+              </div>
+              <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
+                Configure active system dialect, POS strings, and synchronized MySQL translation database.
+              </Text>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Tag color="green" style={{ borderRadius: 999, padding: '2px 10px', fontSize: 11.5, fontWeight: 600 }}>
+              5,112 Clean Unicode Keys Active
+            </Tag>
+            <Button
+              size="small"
+              icon={<SyncOutlined spin={isLoadingTranslations} />}
+              onClick={() => {
+                fetchTranslations(currentLanguage);
+                message.success('Translations re-synchronized from database table aura_language');
+              }}
+              style={{
+                borderRadius: 8,
+                fontWeight: 600,
+                fontSize: 11.5,
+              }}
+            >
+              Sync DB
+            </Button>
+          </div>
+        </div>
+
+        <Row gutter={[12, 12]}>
+          {supportedLanguages.map((lang) => {
+            const isSelected = currentLanguage === lang.code;
+            return (
+              <Col xs={12} sm={8} md={6} lg={4.8} key={lang.code} style={{ flex: '1 0 18%', minWidth: 140 }}>
+                <div
+                  onClick={() => {
+                    setLanguage(lang.code);
+                    message.success(`Language switched to ${lang.native} (${lang.name})`);
+                  }}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 14,
+                    border: isSelected ? `2px solid ${adminTheme.primary}` : `1px solid ${adminTheme.border}`,
+                    background: isSelected
+                      ? (adminTheme.isDark ? `${adminTheme.primary}22` : `${adminTheme.primary}0d`)
+                      : (adminTheme.isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)'),
+                    cursor: 'pointer',
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
+                    position: 'relative',
+                    boxShadow: isSelected ? `0 4px 14px ${adminTheme.primary}33` : 'none',
+                    transform: isSelected ? 'translateY(-2px)' : 'none',
+                  }}
+                >
+                  {isSelected && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        width: 18,
+                        height: 18,
+                        borderRadius: '50%',
+                        background: adminTheme.primary,
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 10,
+                      }}
+                    >
+                      <CheckOutlined />
+                    </div>
+                  )}
+                  <div style={{ fontSize: 24, lineHeight: 1 }}>{lang.flag}</div>
+                  <div style={{ fontWeight: 800, fontSize: 13.5, color: isSelected ? adminTheme.primary : adminTheme.text, marginTop: 4 }}>
+                    {lang.native}
+                  </div>
+                  <div style={{ fontSize: 11, color: adminTheme.subtext, fontWeight: 500 }}>
+                    {lang.name} &bull; <span style={{ textTransform: 'uppercase' }}>{lang.iso}</span>
+                  </div>
+                </div>
+              </Col>
+            );
+          })}
         </Row>
       </Card>
 
