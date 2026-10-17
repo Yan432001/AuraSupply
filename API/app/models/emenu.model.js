@@ -78,11 +78,9 @@ const EMenuModel = {
 
     const dataSql = `
       SELECT p.id, p.code, p.name, p.price, p.image, p.unit, p.details, p.category_id,
-             COALESCE(SUM(wp.quantity), 0) AS in_stock
+             (SELECT COALESCE(SUM(wp.quantity), 0) FROM aura_warehouses_products wp WHERE wp.product_id = p.id) AS in_stock
       FROM aura_products p
-      LEFT JOIN aura_warehouses_products wp ON wp.product_id = p.id
       WHERE ${whereSql}
-      GROUP BY p.id
       ORDER BY p.name ASC
       LIMIT ? OFFSET ?
     `;

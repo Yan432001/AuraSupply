@@ -10,11 +10,9 @@ exports.getStoreList = async (req, res) => {
              c.address, c.phone, c.email, c.city, c.logo, c.banner,
              c.theme_color, c.currency_code, c.currency_symbol, c.tagline,
              c.rating, c.reviews_count, c.operating_hours,
-             COUNT(DISTINCT p.id) AS products_count
+             (SELECT COUNT(p.id) FROM aura_products p WHERE p.biller_id = c.id AND p.status = 1) AS products_count
       FROM aura_companies c
-      LEFT JOIN aura_products p ON p.biller_id = c.id AND p.status = 1
       WHERE c.group_name = 'biller' AND c.group_id IS NULL
-      GROUP BY c.id
       ORDER BY c.id ASC
     `);
     return res.status(200).json({ status: true, data: rows });
