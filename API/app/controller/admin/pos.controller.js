@@ -585,3 +585,291 @@ exports.checkoutPosSale = async (req, res) => {
     connection.release();
   }
 };
+
+// 10. List All POS Registers (Shift History)
+exports.getRegistersList = async (req, res) => {
+  try {
+    const { status, user_id, limit = 50 } = req.query;
+    let query = `
+      SELECT r.*, u.username as cashier_username, u.first_name, u.last_name, u.email as cashier_email
+      FROM aura_pos_register r
+      LEFT JOIN aura_users u ON u.id = r.user_id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (status) {
+      query += ` AND r.status = ?`;
+      params.push(status);
+    }
+    if (user_id) {
+      query += ` AND r.user_id = ?`;
+      params.push(user_id);
+    }
+    query += ` ORDER BY r.id DESC LIMIT ?`;
+    params.push(parseInt(limit, 10));
+
+    const [rows] = await pool.query(query, params);
+    return res.json({
+      success: true,
+      registers: rows
+    });
+  } catch (error) {
+    console.error('[POS] getRegistersList error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 11. Today's Sale Report Breakdown
+exports.getTodaySaleReport = async (req, res) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    // Sales breakdown
+    const [salesRows] = await pool.query(`
+      SELECT 
+        COUNT(s.id) as total_invoices,
+        COALESCE(SUM(s.grand_total), 0) as total_sales,
+        COALESCE(SUM(s.paid), 0) as total_paid
+      FROM aura_sales s
+      WHERE DATE(s.date) = ?
+    `, [today]);
+
+    // Payment methods breakdown
+    const [paymentRows] = await pool.query(`
+      SELECT 
+        p.paid_by,
+        COALESCE(SUM(p.amount), 0) as total_amount
+      FROM aura_payments p
+      WHERE DATE(p.date) = ?
+      GROUP BY p.paid_by
+    `, [today]);
+
+    // Expenses
+    const [expenseRows] = await pool.query(`
+      SELECT COALESCE(SUM(amount), 0) as total_expenses
+      FROM aura_expenses
+      WHERE DATE(date) = ?
+    `, [today]);
+
+    let cashSales = 0;
+    let cardSales = 0;
+    let abaSales = 0;
+    let chequeSales = 0;
+
+    paymentRows.forEach(p => {
+      const type = (p.paid_by || '').toLowerCase();
+      if (type.includes('cash')) cashSales += parseFloat(p.total_amount);
+      else if (type.includes('card') || type.includes('cc') || type.includes('stripe')) cardSales += parseFloat(p.total_amount);
+      else if (type.includes('aba') || type.includes('khqr')) abaSales += parseFloat(p.total_amount);
+      else if (type.includes('cheque') || type.includes('ch')) chequeSales += parseFloat(p.total_amount);
+    });
+
+    return res.json({
+      success: true,
+      date: today,
+      total_invoices: salesRows[0]?.total_invoices || 0,
+      total_sales: parseFloat(salesRows[0]?.total_sales) || 0,
+      cash_sales: cashSales,
+      card_sales: cardSales,
+      aba_sales: abaSales,
+      cheque_sales: chequeSales,
+      expenses: parseFloat(expenseRows[0]?.total_expenses) || 0,
+      net_sales: (parseFloat(salesRows[0]?.total_sales) || 0) - (parseFloat(expenseRows[0]?.total_expenses) || 0)
+    });
+  } catch (error) {
+    console.error('[POS] getTodaySaleReport error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 12. Today's Profit Estimate
+exports.getTodayProfit = async (req, res) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const [rows] = await pool.query(`
+      SELECT 
+        COALESCE(SUM(si.subtotal), 0) as gross_revenue,
+        COALESCE(SUM(si.quantity * COALESCE(p.cost, si.unit_price * 0.7)), 0) as total_cost
+      FROM aura_sale_items si
+      JOIN aura_sales s ON s.id = si.sale_id
+      LEFT JOIN aura_products p ON p.id = si.product_id
+      WHERE DATE(s.date) = ?
+    `, [today]);
+
+    const gross = parseFloat(rows[0]?.gross_revenue) || 0;
+    const cost = parseFloat(rows[0]?.total_cost) || 0;
+    const profit = gross - cost;
+
+    return res.json({
+      success: true,
+      date: today,
+      gross_revenue: gross,
+      total_cost: cost,
+      net_profit: profit,
+      margin_percentage: gross > 0 ? ((profit / gross) * 100).toFixed(1) : 0
+    });
+  } catch (error) {
+    console.error('[POS] getTodayProfit error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 13. Add POS Drawer Expense
+exports.addPosExpense = async (req, res) => {
+  try {
+    const { amount, note, category_id = 1, paid_by = 'Cash', warehouse_id = 1, user_id = 1 } = req.body;
+    const expenseAmount = parseFloat(amount) || 0;
+    const ref = `EXP-${Date.now().toString().slice(-6)}`;
+
+    const [result] = await pool.query(`
+      INSERT INTO aura_expenses 
+      (date, reference, amount, paid_by, note, created_by, warehouse_id, category_id, grand_total, payment_status)
+      VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, 'paid')
+    `, [ref, expenseAmount, paid_by, note || 'POS Drawer Expense', user_id, warehouse_id, category_id, expenseAmount]);
+
+    return res.json({
+      success: true,
+      message: 'Expense added successfully',
+      id: result.insertId,
+      reference: ref,
+      amount: expenseAmount
+    });
+  } catch (error) {
+    console.error('[POS] addPosExpense error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 14. Suspend Sale (Hold Bill)
+exports.suspendSale = async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const { customer_id = 2, customer = 'General Customer', suspend_note = '', items = [], total = 0, biller_id = 1, warehouse_id = 1, user_id = 1 } = req.body;
+    const ref = `SUS-${Date.now().toString().slice(-6)}`;
+
+    const [billResult] = await connection.query(`
+      INSERT INTO aura_suspended_bills
+      (date, refer, customer_id, customer, count, total, biller_id, warehouse_id, created_by, suspend_note)
+      VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [ref, customer_id, customer, items.length, parseFloat(total) || 0, biller_id, warehouse_id, user_id, suspend_note]);
+
+    const suspendId = billResult.insertId;
+
+    if (Array.isArray(items) && items.length > 0) {
+      for (const item of items) {
+        const qty = parseFloat(item.quantity) || 1;
+        const price = parseFloat(item.unit_price || item.price) || 0;
+        await connection.query(`
+          INSERT INTO aura_suspended_items
+          (suspend_id, product_id, product_code, product_name, unit_price, quantity, subtotal, product_unit_code)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [suspendId, item.id, item.code || '', item.name, price, qty, qty * price, item.unit_code || 'pcs']);
+      }
+    }
+
+    await connection.commit();
+    return res.json({
+      success: true,
+      message: 'Bill suspended successfully',
+      suspend_id: suspendId,
+      reference: ref
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('[POS] suspendSale error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
+// 15. Get Suspended Sales (Held Bills)
+exports.getSuspendedSales = async (req, res) => {
+  try {
+    const [bills] = await pool.query(`
+      SELECT b.*, u.username as cashier_username
+      FROM aura_suspended_bills b
+      LEFT JOIN aura_users u ON u.id = b.created_by
+      ORDER BY b.id DESC LIMIT 50
+    `);
+
+    // Fetch items for each bill
+    for (const b of bills) {
+      const [items] = await pool.query(`
+        SELECT * FROM aura_suspended_items WHERE suspend_id = ?
+      `, [b.id]);
+      b.items = items;
+    }
+
+    return res.json({
+      success: true,
+      bills
+    });
+  } catch (error) {
+    console.error('[POS] getSuspendedSales error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 16. Delete Suspended Sale
+exports.deleteSuspendedSale = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM aura_suspended_items WHERE suspend_id = ?', [id]);
+    await pool.query('DELETE FROM aura_suspended_bills WHERE id = ?', [id]);
+    return res.json({ success: true, message: 'Suspended bill deleted' });
+  } catch (error) {
+    console.error('[POS] deleteSuspendedSale error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 17. Get Recent POS Sales (Invoices History)
+exports.getPosSales = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit || '50', 10);
+    const [sales] = await pool.query(`
+      SELECT s.*, u.username as cashier_username
+      FROM aura_sales s
+      LEFT JOIN aura_users u ON u.id = s.created_by
+      WHERE s.pos = 1 OR s.pos IS NULL
+      ORDER BY s.id DESC LIMIT ?
+    `, [limit]);
+
+    return res.json({
+      success: true,
+      sales
+    });
+  } catch (error) {
+    console.error('[POS] getPosSales error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 18. Get POS Settings
+exports.getPosSettings = async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM aura_pos_settings LIMIT 1');
+    return res.json({
+      success: true,
+      settings: rows[0] || {}
+    });
+  } catch (error) {
+    console.error('[POS] getPosSettings error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 19. Update POS Settings
+exports.updatePosSettings = async (req, res) => {
+  try {
+    const settings = req.body;
+    await pool.query(`
+      UPDATE aura_pos_settings SET ? WHERE pos_id = 1
+    `, [settings]);
+    return res.json({ success: true, message: 'POS settings updated successfully' });
+  } catch (error) {
+    console.error('[POS] updatePosSettings error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};

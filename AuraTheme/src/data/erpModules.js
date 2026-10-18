@@ -155,9 +155,9 @@ export const erpModules = [
       'Control customer reserve stocks and cashier register shift closes.',
     ],
     menus: [
-      leaf('list_pos', 'List POS', 'Browse live counter POS transactions, sales register, and receipt history.', { route: '/admins/orders' }),
-      leaf('pos-screen', 'Open POS Terminal', 'Launch the fast counter touch-screen checkout register.', { route: '/shop' }),
-      leaf('pos-settings', 'POS Settings', 'Default POS register behaviors, sound effects, receipt printers, and cash drawer pins.'),
+      leaf('list_pos', 'List POS', 'Browse live counter POS transactions, sales register, and receipt history.', { route: '/admins/pos?tab=sales' }),
+      leaf('pos-screen', 'Open POS Terminal', 'Launch the fast counter touch-screen checkout register.', { route: '/admins/pos' }),
+      leaf('pos-settings', 'POS Settings', 'Default POS register behaviors, sound effects, receipt printers, and cash drawer pins.', { route: '/admins/pos?tab=settings' }),
       leaf('gift-cards', 'Gift Cards', 'Issue stored-value prepaid gift cards and check balances.'),
       leaf('member-cards', 'Member Cards', 'Manage customer VIP membership cards, tiers, and loyalty points.'),
       leaf('coupons', 'Coupons', 'Issue percentage and fixed promotional voucher codes.'),
