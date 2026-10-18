@@ -196,25 +196,32 @@ exports.closeRegister = async (req, res) => {
       closed_by
     } = req.body;
 
-    if (!register_id) {
-      return res.status(400).json({ success: false, message: 'Register ID is required' });
-    }
-
+    const uid = closed_by || 1;
     const cashSubmitted = parseFloat(total_cash_submitted) || 0;
     const cardSlips = parseInt(total_cc_slips_submitted, 10) || 0;
     const cheques = parseInt(total_cheques_submitted, 10) || 0;
-    const uid = closed_by || 1;
 
-    // Fetch register to calculate totals
-    const [regs] = await pool.query("SELECT * FROM aura_pos_register WHERE id = ?", [register_id]);
-    if (regs.length === 0) {
-      return res.status(404).json({ success: false, message: 'Register not found' });
+    let register;
+    if (register_id) {
+      const [regs] = await pool.query("SELECT * FROM aura_pos_register WHERE id = ?", [register_id]);
+      register = regs[0];
+    } else {
+      const [regs] = await pool.query(
+        "SELECT * FROM aura_pos_register WHERE user_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1",
+        [uid]
+      );
+      register = regs[0];
     }
-    const register = regs[0];
+
+    if (!register) {
+      return res.status(404).json({ success: false, message: 'No open register found to close' });
+    }
+
+    const regId = register.id;
 
     // Compute sales in period
     const [salesSummary] = await pool.query(
-      `SELECT COALESCE(SUM(paid), 0) as total_cash
+      `SELECT COALESCE(SUM(amount), 0) as total_cash
        FROM aura_payments 
        WHERE date >= ? AND (created_by = ? OR ? = 1) AND LOWER(paid_by) LIKE '%cash%'`,
       [register.date, register.user_id, register.user_id]
@@ -245,11 +252,11 @@ exports.closeRegister = async (req, res) => {
         cheques,
         note || '',
         uid,
-        register_id
+        regId
       ]
     );
 
-    const [updated] = await pool.query("SELECT * FROM aura_pos_register WHERE id = ?", [register_id]);
+    const [updated] = await pool.query("SELECT * FROM aura_pos_register WHERE id = ?", [regId]);
 
     return res.json({
       success: true,

@@ -308,7 +308,18 @@ const AdminLayout = () => {
   if (isPosPage) {
     return (
       <NotificationProvider>
-        <div style={{ width: '100vw', height: '100vh', maxWidth: '100vw', maxHeight: '100vh', overflow: 'hidden' }}>
+        <div
+          className="admin-active pos-standalone-viewport"
+          style={{
+            width: '100vw',
+            height: '100vh',
+            maxWidth: '100vw',
+            maxHeight: '100vh',
+            overflow: 'hidden',
+            backgroundColor: adminTheme.pageBackground || (themeMode === 'dark' ? '#090d16' : '#f8fafc'),
+            color: adminTheme.text,
+          }}
+        >
           <Outlet context={{ moduleState, onToggleModule: handleToggleModule }} />
         </div>
       </NotificationProvider>

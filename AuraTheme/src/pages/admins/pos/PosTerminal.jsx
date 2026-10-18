@@ -178,7 +178,14 @@ const PosTerminal = () => {
   const { modal } = App.useApp ? App.useApp() : {};
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { themeMode, toggleThemeMode } = useTheme();
+  const {
+    themeMode,
+    toggleThemeMode,
+    themePreset,
+    changePreset,
+    customSettings,
+    updateCustomTheme,
+  } = useTheme();
   const { currentLanguage, setLanguage } = useLanguage();
   const { t } = useTranslation();
   const adminTheme = useAdminTheme();
@@ -199,6 +206,7 @@ const PosTerminal = () => {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [registerAlertDismissed, setRegisterAlertDismissed] = useState(false);
   const [openRegisterCashInHand, setOpenRegisterCashInHand] = useState('');
+  const [openRegisterNote, setOpenRegisterNote] = useState('');
   const [closeRegisterModalVisible, setCloseRegisterModalVisible] = useState(false);
   const [shiftSummary, setShiftSummary] = useState(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
@@ -341,56 +349,45 @@ const PosTerminal = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {});
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen?.().catch(() => {});
-      setIsFullscreen(false);
-    }
-  };
+  // Dynamic theme-responsive styles for top action utility buttons
+  const topActionBtnStyle = useMemo(() => ({
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    background: adminTheme.headerButtonBg || (themeMode === 'dark' ? '#1e293b' : '#f1f5f9'),
+    color: adminTheme.text,
+    border: `1px solid ${adminTheme.border || (themeMode === 'dark' ? '#334155' : '#cbd5e1')}`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  }), [adminTheme, themeMode]);
 
   // =========================================================================
-  // 1. REGISTER SHIFT LIFECYCLE (Open & Close Register)
+  // 1. REGISTER SHIFT LIFECYCLE (Open & Close Register - Strict Gatekeeper)
   // =========================================================================
-  // Check if register is active on load
+  // Step 1: Check if current cashier has an active open register in database on load
   const checkRegisterStatus = async () => {
     setLoadingRegister(true);
     try {
-      const res = await axios.get(`/api/admin/pos/register/current?user_id=${user?.id || 1}`);
+      const currentUserId = user?.id || 1;
+      const res = await axios.get(`/api/admin/pos/register/current?user_id=${currentUserId}`);
       if (res.data?.success && res.data?.isOpen && res.data?.register) {
         setCurrentRegister(res.data.register);
         setIsRegisterOpen(true);
+        localStorage.setItem('aura_pos_register_session', JSON.stringify(res.data.register));
       } else {
-        // Check localStorage fallback
-        const localReg = localStorage.getItem('aura_pos_register_session');
-        if (localReg) {
-          try {
-            const parsed = JSON.parse(localReg);
-            setCurrentRegister(parsed);
-            setIsRegisterOpen(true);
-          } catch (_) {
-            setIsRegisterOpen(false);
-          }
-        } else {
-          setIsRegisterOpen(false);
-        }
+        // Strict Gatekeeper: No open register found in database, enforce Open Register Screen
+        setCurrentRegister(null);
+        setIsRegisterOpen(false);
+        localStorage.removeItem('aura_pos_register_session');
       }
     } catch (err) {
-      console.warn('[POS] Failed checking register, using local session:', err);
-      const localReg = localStorage.getItem('aura_pos_register_session');
-      if (localReg) {
-        try {
-          const parsed = JSON.parse(localReg);
-          setCurrentRegister(parsed);
-          setIsRegisterOpen(true);
-        } catch (_) {
-          setIsRegisterOpen(false);
-        }
-      } else {
-        setIsRegisterOpen(false);
-      }
+      console.warn('[POS] Failed checking register from backend:', err);
+      setCurrentRegister(null);
+      setIsRegisterOpen(false);
+      localStorage.removeItem('aura_pos_register_session');
     } finally {
       setLoadingRegister(false);
     }
@@ -400,40 +397,45 @@ const PosTerminal = () => {
     checkRegisterStatus();
   }, [user]);
 
-  // Handle Opening Register from Image 1 Screen
+  // Step 2: Handle Opening Register from Cash on Hand Screen
   const handleOpenRegisterSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    const cashVal = parseFloat(openRegisterCashInHand) || 0;
+    const rawVal = openRegisterCashInHand === '' ? '0' : openRegisterCashInHand;
+    const cashVal = parseFloat(rawVal);
+    if (isNaN(cashVal) || cashVal < 0) {
+      message.error(t('invalid_cash_amount', 'Please enter a valid Cash on Hand amount (>= 0).'));
+      return;
+    }
 
     try {
       const payload = {
         cash_in_hand: cashVal,
         user_id: user?.id || 1,
-        note: 'Opened from POS Terminal screen',
+        note: openRegisterNote || 'Shift opened from POS Terminal',
       };
 
       const res = await axios.post('/api/admin/pos/register/open', payload);
       if (res.data?.success) {
-        message.success(t('register_opened', 'Register opened successfully! POS Terminal unlocked.'));
-        setCurrentRegister(res.data.register);
+        message.success(t('register_opened', 'Cash register opened successfully! POS Terminal unlocked.'));
+        const reg = res.data.register || {
+          id: res.data.register_id || Date.now(),
+          date: new Date().toISOString(),
+          user_id: user?.id || 1,
+          cash_in_hand: cashVal,
+          status: 'open',
+          note: openRegisterNote || '',
+        };
+        setCurrentRegister(reg);
         setIsRegisterOpen(true);
-        localStorage.setItem('aura_pos_register_session', JSON.stringify(res.data.register));
+        localStorage.setItem('aura_pos_register_session', JSON.stringify(reg));
         playPosAudio('success', soundEnabled);
+        fetchProductsAndCategories();
+      } else {
+        message.error(res.data?.message || 'Failed to open cash register');
       }
     } catch (err) {
-      console.warn('[POS] Backend open register, using local session:', err);
-      const mockReg = {
-        id: Date.now(),
-        date: new Date().toISOString(),
-        user_id: user?.id || 1,
-        cash_in_hand: cashVal,
-        status: 'open',
-      };
-      setCurrentRegister(mockReg);
-      setIsRegisterOpen(true);
-      localStorage.setItem('aura_pos_register_session', JSON.stringify(mockReg));
-      message.success('Cash register opened successfully!');
-      playPosAudio('success', soundEnabled);
+      console.error('[POS] Open register error:', err);
+      message.error(err.response?.data?.message || err.message || 'Failed to open register');
     }
   };
 
@@ -480,11 +482,11 @@ const PosTerminal = () => {
     }
   };
 
-  // Submit Close Register
+  // Step 3: Submit Close Register (Reconciliation & Shift Termination)
   const handleSubmitCloseRegister = async (values) => {
     try {
       const payload = {
-        register_id: currentRegister?.id,
+        register_id: currentRegister?.id || null,
         total_cash_submitted: parseFloat(values.total_cash_submitted) || 0,
         total_cc_slips_submitted: parseInt(values.total_cc_slips_submitted, 10) || 0,
         total_cheques_submitted: parseInt(values.total_cheques_submitted, 10) || 0,
@@ -492,19 +494,24 @@ const PosTerminal = () => {
         closed_by: user?.id || 1,
       };
 
-      await axios.post('/api/admin/pos/register/close', payload);
-      message.success(t('register_closed_successfully', 'Cash register closed successfully!'));
+      const res = await axios.post('/api/admin/pos/register/close', payload);
+      if (res.data?.success) {
+        message.success(t('register_closed_successfully', 'Cash register closed successfully!'));
+      }
       localStorage.removeItem('aura_pos_register_session');
+      setCurrentRegister(null);
       setIsRegisterOpen(false);
       setCloseRegisterModalVisible(false);
-      navigate('/admins/dashboard');
+      // Immediately exit POS Terminal to Admin Dashboard
+      navigate('/admins');
     } catch (err) {
       console.error('[POS] Close register error:', err);
       localStorage.removeItem('aura_pos_register_session');
+      setCurrentRegister(null);
       setIsRegisterOpen(false);
       setCloseRegisterModalVisible(false);
-      message.info('Register closed locally');
-      navigate('/admins/dashboard');
+      message.info('Register closed');
+      navigate('/admins');
     }
   };
 
@@ -985,9 +992,38 @@ const PosTerminal = () => {
   };
 
   // =========================================================================
-  // VIEW 1: STEP 1 - OPEN REGISTER SCREEN (Matching Image 1 EXACTLY)
+  // VIEW 0: LOADING REGISTER STATE (Zero-Flash Gatekeeper)
   // =========================================================================
-  if (!isRegisterOpen && !loadingRegister) {
+  if (loadingRegister) {
+    return (
+      <div
+        style={{
+          width: '100vw',
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: adminTheme.pageBackground || (themeMode === 'dark' ? '#090d16' : '#f8fafc'),
+          color: adminTheme.text,
+          gap: 16,
+        }}
+      >
+        <Spin size="large" />
+        <div style={{ fontSize: 16, fontWeight: 600, color: adminTheme.subtext }}>
+          {t('verifying_register', 'Verifying Cash Register Shift Session...')}
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // VIEW 1: STRICT GATEKEEPER - OPEN REGISTER SCREEN (Matching cyspharma open_register.php)
+  // =========================================================================
+  if (!isRegisterOpen) {
+    const cashNum = parseFloat(openRegisterCashInHand) || 0;
+    const khrEquivalent = cashNum * KHR_EXCHANGE_RATE;
+
     return (
       <div
         style={{
@@ -998,137 +1034,165 @@ const PosTerminal = () => {
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          background: '#f1f5f9',
-          color: '#1e293b',
+          background: adminTheme.pageBackground || (themeMode === 'dark' ? '#090d16' : '#f8fafc'),
+          color: adminTheme.text,
           fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
         }}
       >
-        {/* Top Navbar matching Image 1 */}
+        {/* Top Navbar with Theme Controls and Return to Dashboard */}
         <header
           style={{
-            height: 48,
-            minHeight: 48,
-            background: '#ffffff',
-            borderBottom: '1px solid #e2e8f0',
+            height: 52,
+            minHeight: 52,
+            background: adminTheme.headerBg || (themeMode === 'dark' ? '#0f172a' : '#ffffff'),
+            borderBottom: `1px solid ${adminTheme.headerBorder || (themeMode === 'dark' ? '#1e293b' : '#e2e8f0')}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0 16px',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+            padding: '0 18px',
+            boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)',
             zIndex: 40,
             flexShrink: 0,
           }}
         >
-          {/* Left: Fold/Back to Admin Dashboard Button >> */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Left: Return to Dashboard & Brand Title */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
-              onClick={() => navigate('/admins/dashboard')}
+              type="button"
+              onClick={() => navigate('/admins')}
               title="Return to Admin Dashboard"
               style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                background: '#0f172a',
-                color: '#ffffff',
-                border: 'none',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                borderRadius: 8,
+                background: adminTheme.headerButtonBg || (themeMode === 'dark' ? '#1e293b' : '#f1f5f9'),
+                border: `1px solid ${adminTheme.border || (themeMode === 'dark' ? '#334155' : '#cbd5e1')}`,
+                color: adminTheme.text,
                 cursor: 'pointer',
-                fontWeight: 900,
-                fontSize: 14,
-                boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                fontWeight: 600,
+                fontSize: 13,
+                transition: 'all 0.15s ease',
               }}
             >
-              &gt;&gt;
+              <ArrowLeftOutlined />
+              <span>Back to Admin</span>
             </button>
+
+            <span
+              style={{
+                fontSize: 17,
+                fontWeight: 800,
+                color: adminTheme.primary || '#0284c7',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              SBC Solutions POS
+            </span>
+
+            <Tag color="warning" style={{ borderRadius: 12, padding: '2px 8px', fontWeight: 600 }}>
+              <ClockCircleOutlined style={{ marginRight: 4 }} />
+              Register Closed • Opening Required
+            </Tag>
           </div>
 
-          {/* Right: Quick Action Icons matching Image 1 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Tooltip title="Home / Dashboard">
-              <Button type="text" size="small" icon={<HomeOutlined style={{ fontSize: 16 }} />} onClick={() => navigate('/admins/dashboard')} />
-            </Tooltip>
-            <Tooltip title="POS Module">
-              <Button type="text" size="small" icon={<ShoppingCartOutlined style={{ fontSize: 16 }} />} />
-            </Tooltip>
-            <Tooltip title="Dark / Light Mode">
-              <Button type="text" size="small" icon={<MoonOutlined style={{ fontSize: 15 }} />} onClick={toggleThemeMode} />
-            </Tooltip>
-            {/* Language Flag */}
-            <Tooltip title="Language">
-              <span style={{ cursor: 'pointer', fontSize: 14 }}>🇬🇧</span>
-            </Tooltip>
-            {/* Warning 15 Badge */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: '#ef4444', color: '#fff', padding: '1px 6px', borderRadius: 10, fontSize: 11, fontWeight: 700 }}>
-              <WarningOutlined style={{ fontSize: 12 }} />
-              <span>15</span>
-            </div>
-            {/* POS Icon */}
-            <Tooltip title="POS Terminal">
-              <Button type="text" size="small" style={{ fontWeight: 700, fontSize: 12 }}>
-                🪟 POS
-              </Button>
-            </Tooltip>
-            {/* Hourglass */}
-            <Tooltip title="Register Session">
-              <HourglassOutlined style={{ fontSize: 15, color: '#64748b' }} />
-            </Tooltip>
-            {/* List */}
-            <Tooltip title="Registers">
-              <UnorderedListOutlined style={{ fontSize: 15, color: '#64748b' }} />
-            </Tooltip>
-            {/* Cloud Sync */}
-            <Tooltip title="Sync / Cloud">
-              <CloudSyncOutlined style={{ fontSize: 16, color: '#64748b' }} />
-            </Tooltip>
-            {/* User Profile Avatar with username */}
+          {/* Right: Quick Action Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Real-time Clock */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
-                padding: '2px 8px 2px 4px',
-                borderRadius: 16,
-                background: '#e2e8f0',
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 600,
+                color: adminTheme.subtext,
+                padding: '4px 10px',
+                borderRadius: 8,
+                background: adminTheme.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+              }}
+            >
+              <ClockCircleOutlined style={{ color: adminTheme.primary }} />
+              <span>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            </div>
+
+            {/* Dark / Light Theme Toggle */}
+            <Tooltip title={themeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+              <button
+                type="button"
+                onClick={toggleThemeMode}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: themeMode === 'dark' ? '#312e81' : '#fef3c7',
+                  color: themeMode === 'dark' ? '#c7d2fe' : '#d97706',
+                  border: `1px solid ${themeMode === 'dark' ? '#4338ca' : '#fde68a'}`,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {themeMode === 'dark' ? <SunOutlined style={{ fontSize: 16 }} /> : <MoonOutlined style={{ fontSize: 16 }} />}
+              </button>
+            </Tooltip>
+
+            {/* Cashier Avatar & Name */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '3px 12px 3px 4px',
+                borderRadius: 20,
+                background: adminTheme.headerButtonBg || (themeMode === 'dark' ? '#1e293b' : '#e2e8f0'),
+                border: `1px solid ${adminTheme.border || '#cbd5e1'}`,
+                fontSize: 13,
+                fontWeight: 600,
+                color: adminTheme.text,
               }}
             >
               <Avatar
-                size={22}
+                size={26}
                 src={user?.avatar && typeof user.avatar === 'string' && user.avatar.trim() !== '' ? user.avatar : null}
                 icon={<UserOutlined />}
-                style={{ background: '#0284c7' }}
+                style={{ background: adminTheme.primary || '#0284c7' }}
               />
               <span>{user?.name || user?.username || 'sbcsolutions'}</span>
             </div>
           </div>
         </header>
 
-        {/* Red Warning Banner matching Image 1 */}
+        {/* Warning Notification Banner */}
         {!registerAlertDismissed && (
           <div
             style={{
-              background: '#fde8e8',
-              borderBottom: '1px solid #f8b4b4',
-              color: '#9b1c1c',
-              padding: '10px 20px',
+              background: themeMode === 'dark' ? 'rgba(239, 68, 68, 0.15)' : '#fef2f2',
+              borderBottom: `1px solid ${themeMode === 'dark' ? 'rgba(239, 68, 68, 0.3)' : '#fecaca'}`,
+              color: themeMode === 'dark' ? '#fca5a5' : '#991b1b',
+              padding: '10px 24px',
               fontSize: 13,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
+              fontWeight: 500,
             }}
           >
-            <span>Register is not open, Please enter the cash in hand amount and click open register</span>
+            <span>
+              <strong>Shift Closed:</strong> No cash register is currently open for your account. Please enter the Cash on Hand amount below and click <strong>Open Register</strong> to launch the POS terminal.
+            </span>
             <button
+              type="button"
               onClick={() => setRegisterAlertDismissed(true)}
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: '#9b1c1c',
+                color: 'inherit',
                 cursor: 'pointer',
-                fontSize: 16,
+                fontSize: 18,
                 fontWeight: 'bold',
                 lineHeight: 1,
               }}
@@ -1138,100 +1202,283 @@ const PosTerminal = () => {
           </div>
         )}
 
-        {/* Main Content Area: Card with Open Register Box matching Image 1 */}
-        <div style={{ flex: 1, padding: '24px 28px', overflowY: 'auto' }}>
+        {/* Main Content Area: Centered Elevated Setup Card */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '28px 16px',
+          }}
+        >
           <div
             style={{
-              background: '#ffffff',
-              borderRadius: 4,
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)',
+              maxWidth: 540,
+              width: '100%',
+              background: adminTheme.cardBg || (themeMode === 'dark' ? '#1e293b' : '#ffffff'),
+              borderRadius: 16,
+              border: `1px solid ${adminTheme.cardBorder || adminTheme.border || '#e2e8f0'}`,
+              boxShadow: adminTheme.shadow || '0 10px 30px rgba(0, 0, 0, 0.08)',
               overflow: 'hidden',
+              backdropFilter: 'blur(10px)',
             }}
           >
-            {/* Card Header: Briefcase icon + Open Register */}
+            {/* Card Header */}
             <div
               style={{
-                padding: '14px 20px',
-                borderBottom: '1px solid #edf2f7',
+                padding: '20px 24px',
+                borderBottom: `1px solid ${adminTheme.border || '#edf2f7'}`,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
+                gap: 12,
               }}
             >
-              <span style={{ fontSize: 16, color: '#0284c7' }}>💼</span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#0284c7' }}>Open Register</span>
-            </div>
-
-            {/* Card Body: Gray well container */}
-            <div style={{ padding: '24px 20px' }}>
               <div
                 style={{
-                  maxWidth: 480,
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 4,
-                  padding: '20px 22px',
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  background: `${adminTheme.primary}18`,
+                  color: adminTheme.primary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 22,
                 }}
               >
-                <form onSubmit={handleOpenRegisterSubmit}>
-                  <div style={{ marginBottom: 16 }}>
-                    <label
-                      htmlFor="cash_in_hand"
-                      style={{
-                        display: 'block',
-                        marginBottom: 6,
-                        fontWeight: 600,
-                        fontSize: 13,
-                        color: '#334155',
-                      }}
-                    >
-                      Cash in hand
-                    </label>
-                    <input
-                      id="cash_in_hand"
-                      type="number"
-                      step="any"
-                      autoFocus
-                      value={openRegisterCashInHand}
-                      onChange={(e) => setOpenRegisterCashInHand(e.target.value)}
-                      placeholder="0.00"
-                      style={{
-                        width: '100%',
-                        height: 38,
-                        padding: '6px 12px',
-                        fontSize: 14,
-                        borderRadius: 4,
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    style={{
-                      background: '#3b82f6',
-                      borderColor: '#3b82f6',
-                      color: '#ffffff',
-                      padding: '8px 18px',
-                      borderRadius: 4,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      border: 'none',
-                      transition: 'background 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#2563eb')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = '#3b82f6')}
-                  >
-                    Open Register
-                  </button>
-                </form>
+                💼
+              </div>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: adminTheme.text }}>
+                  Open Cash Register
+                </div>
+                <div style={{ fontSize: 12.5, color: adminTheme.subtext }}>
+                  Enter cash on hand to initiate register session and unlock sales terminal
+                </div>
               </div>
             </div>
+
+            {/* Cashier & Shift Info Strip */}
+            <div
+              style={{
+                margin: '20px 24px 16px',
+                padding: '12px 16px',
+                borderRadius: 10,
+                background: adminTheme.isDark ? 'rgba(255, 255, 255, 0.03)' : '#f8fafc',
+                border: `1px solid ${adminTheme.border || '#e2e8f0'}`,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 12,
+                fontSize: 12,
+              }}
+            >
+              <div>
+                <span style={{ color: adminTheme.subtext, display: 'block' }}>Cashier</span>
+                <span style={{ fontWeight: 600, color: adminTheme.text }}>{user?.name || user?.username || 'sbcsolutions'}</span>
+              </div>
+              <div>
+                <span style={{ color: adminTheme.subtext, display: 'block' }}>Terminal Rate</span>
+                <span style={{ fontWeight: 600, color: adminTheme.text }}>1$ = ៛{KHR_EXCHANGE_RATE.toLocaleString()}</span>
+              </div>
+              <div>
+                <span style={{ color: adminTheme.subtext, display: 'block' }}>Date</span>
+                <span style={{ fontWeight: 600, color: adminTheme.text }}>{new Date().toLocaleDateString()}</span>
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleOpenRegisterSubmit} style={{ padding: '0 24px 24px' }}>
+              {/* Cash in Hand Input */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <label
+                    htmlFor="cash_in_hand"
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 13.5,
+                      color: adminTheme.text,
+                    }}
+                  >
+                    Cash in Hand (Opening Balance) <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <span style={{ fontSize: 12, color: adminTheme.subtext }}>Supports USD & KHR</span>
+                </div>
+
+                {/* Quick Preset Buttons */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+                  {['0', '20', '50', '100', '200', '500'].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setOpenRegisterCashInHand(val)}
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: 6,
+                        border: `1px solid ${openRegisterCashInHand === val ? adminTheme.primary : adminTheme.border}`,
+                        background: openRegisterCashInHand === val ? `${adminTheme.primary}20` : adminTheme.headerButtonBg || (themeMode === 'dark' ? '#141d2e' : '#f1f5f9'),
+                        color: openRegisterCashInHand === val ? adminTheme.primary : adminTheme.text,
+                        fontWeight: 600,
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        transition: 'all 0.12s ease',
+                      }}
+                    >
+                      ${val}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ position: 'relative' }}>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      left: 14,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: adminTheme.subtext,
+                    }}
+                  >
+                    $
+                  </span>
+                  <input
+                    id="cash_in_hand"
+                    type="number"
+                    step="any"
+                    autoFocus
+                    value={openRegisterCashInHand}
+                    onChange={(e) => setOpenRegisterCashInHand(e.target.value)}
+                    placeholder="100.00"
+                    style={{
+                      width: '100%',
+                      height: 46,
+                      paddingLeft: 34,
+                      paddingRight: 14,
+                      fontSize: 18,
+                      fontWeight: 700,
+                      borderRadius: 10,
+                      border: `1px solid ${adminTheme.border || '#cbd5e1'}`,
+                      background: adminTheme.headerInputBg || (themeMode === 'dark' ? '#141d2e' : '#ffffff'),
+                      color: adminTheme.text,
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      transition: 'border-color 0.15s ease',
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = adminTheme.primary)}
+                    onBlur={(e) => (e.target.style.borderColor = adminTheme.border || '#cbd5e1')}
+                  />
+                </div>
+
+                {/* Live KHR Equivalent Box */}
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    background: adminTheme.isDark ? 'rgba(16, 185, 129, 0.12)' : '#ecfdf5',
+                    border: `1px solid ${adminTheme.isDark ? 'rgba(16, 185, 129, 0.25)' : '#a7f3d0'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: 12.5,
+                  }}
+                >
+                  <span style={{ color: adminTheme.isDark ? '#6ee7b7' : '#047857', fontWeight: 600 }}>
+                    KHR Equivalent:
+                  </span>
+                  <span style={{ color: adminTheme.isDark ? '#a7f3d0' : '#065f46', fontWeight: 800 }}>
+                    ៛{khrEquivalent.toLocaleString()} (Rate: ៛{KHR_EXCHANGE_RATE.toLocaleString()}/$)
+                  </span>
+                </div>
+              </div>
+
+              {/* Optional Shift Opening Note */}
+              <div style={{ marginBottom: 20 }}>
+                <label
+                  htmlFor="register_note"
+                  style={{
+                    display: 'block',
+                    marginBottom: 6,
+                    fontWeight: 600,
+                    fontSize: 12.5,
+                    color: adminTheme.text,
+                  }}
+                >
+                  Shift Notes (Optional)
+                </label>
+                <input
+                  id="register_note"
+                  type="text"
+                  value={openRegisterNote}
+                  onChange={(e) => setOpenRegisterNote(e.target.value)}
+                  placeholder="e.g. Morning shift, Drawer #1, Cash verified with supervisor"
+                  style={{
+                    width: '100%',
+                    height: 38,
+                    padding: '6px 12px',
+                    fontSize: 13,
+                    borderRadius: 8,
+                    border: `1px solid ${adminTheme.border || '#cbd5e1'}`,
+                    background: adminTheme.headerInputBg || (themeMode === 'dark' ? '#141d2e' : '#ffffff'),
+                    color: adminTheme.text,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => navigate('/admins')}
+                  style={{
+                    flex: '0 0 auto',
+                    height: 44,
+                    padding: '0 16px',
+                    borderRadius: 8,
+                    border: `1px solid ${adminTheme.border || '#cbd5e1'}`,
+                    background: adminTheme.headerButtonBg || (themeMode === 'dark' ? '#1e293b' : '#f8fafc'),
+                    color: adminTheme.text,
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  style={{
+                    flex: 1,
+                    height: 44,
+                    background: adminTheme.primary || '#0284c7',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(1.08)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.filter = 'none')}
+                >
+                  <ThunderboltFilled />
+                  <span>Open Register & Launch POS</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -1257,14 +1504,14 @@ const PosTerminal = () => {
       }}
     >
       {/* ===================================================================== */}
-      {/* TOP HEADER: Store Name & Full Action Buttons Bar matching Image 2     */}
+      {/* TOP HEADER: Store Name & Full Action Buttons Bar matching cyspharma    */}
       {/* ===================================================================== */}
       <header
         style={{
           height: 48,
           minHeight: 48,
-          background: themeMode === 'dark' ? '#0f172a' : '#ffffff',
-          borderBottom: `1px solid ${themeMode === 'dark' ? '#1e293b' : '#e2e8f0'}`,
+          background: adminTheme.headerBg || (themeMode === 'dark' ? '#0f172a' : '#ffffff'),
+          borderBottom: `1px solid ${adminTheme.headerBorder || (themeMode === 'dark' ? '#1e293b' : '#e2e8f0')}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -1274,24 +1521,51 @@ const PosTerminal = () => {
           flexShrink: 0,
         }}
       >
-        {/* Left: Brand Name (SBC Solutions) */}
+        {/* Left: Brand Name, Shift Badge & Back to Dashboard */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            type="button"
+            onClick={() => navigate('/admins')}
+            title="Return to Admin Dashboard"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 10px',
+              borderRadius: 6,
+              background: adminTheme.headerButtonBg || (themeMode === 'dark' ? '#1e293b' : '#f1f5f9'),
+              border: `1px solid ${adminTheme.border || (themeMode === 'dark' ? '#334155' : '#cbd5e1')}`,
+              color: adminTheme.text,
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 12,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <ArrowLeftOutlined />
+            <span>Admin</span>
+          </button>
+
           <span
             style={{
               fontSize: 16,
               fontWeight: 700,
-              color: '#0284c7',
+              color: adminTheme.primary || '#0284c7',
               letterSpacing: '-0.01em',
               cursor: 'pointer',
             }}
-            onClick={() => navigate('/admins/dashboard')}
+            onClick={() => navigate('/admins')}
             title="SBC Solutions POS Terminal"
           >
             SBC Solutions
           </span>
+
+          <Tag color="success" style={{ borderRadius: 10, padding: '1px 8px', fontWeight: 600, fontSize: 11 }}>
+            Shift #{currentRegister?.id || 1} • Open
+          </Tag>
         </div>
 
-        {/* Right Action Bar (The exact row of utility buttons from Image 2) */}
+        {/* Right Action Bar (The exact row of utility buttons from cyspharma) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
           {/* 1. Settings */}
           <Tooltip title="POS Settings">
@@ -1452,15 +1726,33 @@ const PosTerminal = () => {
             </button>
           </Tooltip>
 
-          {/* 14. Cashier Avatar & Name (sbcsolutions) */}
+          {/* 14. Theme Mode Switcher (Dark / Light) */}
+          <Tooltip title={themeMode === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}>
+            <button
+              type="button"
+              onClick={toggleThemeMode}
+              style={{
+                ...topActionBtnStyle,
+                background: themeMode === 'dark' ? '#312e81' : '#fef3c7',
+                color: themeMode === 'dark' ? '#c7d2fe' : '#d97706',
+                borderColor: themeMode === 'dark' ? '#4338ca' : '#fde68a',
+              }}
+            >
+              {themeMode === 'dark' ? <SunOutlined style={{ fontSize: 15 }} /> : <MoonOutlined style={{ fontSize: 15 }} />}
+            </button>
+          </Tooltip>
+
+          {/* 15. Cashier Avatar & Name (sbcsolutions) */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              padding: '2px 8px 2px 4px',
+              padding: '2px 10px 2px 4px',
               borderRadius: 16,
-              background: '#e2e8f0',
+              background: adminTheme.headerButtonBg || (themeMode === 'dark' ? '#1e293b' : '#e2e8f0'),
+              border: `1px solid ${adminTheme.border || '#cbd5e1'}`,
+              color: adminTheme.text,
               fontSize: 12,
               fontWeight: 600,
               marginLeft: 4,
@@ -1470,7 +1762,7 @@ const PosTerminal = () => {
               size={22}
               src={user?.avatar && typeof user.avatar === 'string' && user.avatar.trim() !== '' ? user.avatar : null}
               icon={<UserOutlined />}
-              style={{ background: '#0284c7' }}
+              style={{ background: adminTheme.primary || '#0284c7' }}
             />
             <span>{user?.name || user?.username || 'sbcsolutions'}</span>
           </div>
@@ -1953,15 +2245,15 @@ const PosTerminal = () => {
               </tbody>
             </table>
 
-            {/* 3 Action Buttons Pad: Suspend, Cancel, Pay Now matching Image 2 */}
+            {/* 3 Action Buttons Pad: Suspend, Cancel, Pay Now matching cyspharma */}
             <div
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
                 gap: 8,
                 padding: '8px 10px',
-                background: '#f8fafc',
-                borderTop: '1px solid #e2e8f0',
+                background: adminTheme.cardMuted || (themeMode === 'dark' ? '#0f172a' : '#f8fafc'),
+                borderTop: `1px solid ${adminTheme.border || '#e2e8f0'}`,
               }}
             >
               {/* Suspend Button */}
@@ -1970,10 +2262,10 @@ const PosTerminal = () => {
                 onClick={handleHoldOrder}
                 style={{
                   height: 38,
-                  borderRadius: 4,
-                  border: '1px solid #17a2b8',
-                  background: '#ffffff',
-                  color: '#17a2b8',
+                  borderRadius: 6,
+                  border: '1px solid #d97706',
+                  background: themeMode === 'dark' ? 'rgba(217, 119, 6, 0.15)' : '#fffbeb',
+                  color: '#d97706',
                   fontWeight: 600,
                   fontSize: 13,
                   cursor: 'pointer',
@@ -1989,10 +2281,10 @@ const PosTerminal = () => {
                 onClick={clearCart}
                 style={{
                   height: 38,
-                  borderRadius: 4,
-                  border: '1px solid #dc3545',
-                  background: '#ffffff',
-                  color: '#dc3545',
+                  borderRadius: 6,
+                  border: '1px solid #ef4444',
+                  background: themeMode === 'dark' ? 'rgba(239, 68, 68, 0.15)' : '#fef2f2',
+                  color: '#ef4444',
                   fontWeight: 600,
                   fontSize: 13,
                   cursor: 'pointer',
@@ -2008,9 +2300,9 @@ const PosTerminal = () => {
                 onClick={handleOpenCheckout}
                 style={{
                   height: 38,
-                  borderRadius: 4,
+                  borderRadius: 6,
                   border: 'none',
-                  background: '#28a745',
+                  background: adminTheme.primary || '#16a34a',
                   color: '#ffffff',
                   fontWeight: 700,
                   fontSize: 13,
@@ -2019,7 +2311,7 @@ const PosTerminal = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 6,
-                  boxShadow: '0 2px 5px rgba(40, 167, 69, 0.3)',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
                   transition: 'all 0.15s ease',
                 }}
               >
@@ -2031,7 +2323,7 @@ const PosTerminal = () => {
         </div>
 
         {/* =================================================================== */}
-        {/* RIGHT PANEL: CATEGORIES, SEARCH & PRODUCT GRID (Matching Image 2)  */}
+        {/* RIGHT PANEL: CATEGORIES, SEARCH & PRODUCT GRID (Matching cyspharma)*/}
         {/* =================================================================== */}
         <div
           style={{
@@ -2040,16 +2332,16 @@ const PosTerminal = () => {
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            background: themeMode === 'dark' ? '#090d16' : '#f8fafc',
+            background: adminTheme.pageBackground || (themeMode === 'dark' ? '#090d16' : '#f8fafc'),
             boxSizing: 'border-box',
           }}
         >
-          {/* Top Categories Pills Bar matching Image 2 */}
+          {/* Top Categories Pills Bar matching cyspharma */}
           <div
             style={{
               padding: '8px 12px',
-              background: themeMode === 'dark' ? '#0f172a' : '#ffffff',
-              borderBottom: '1px solid #e2e8f0',
+              background: adminTheme.headerBg || (themeMode === 'dark' ? '#0f172a' : '#ffffff'),
+              borderBottom: `1px solid ${adminTheme.border || '#e2e8f0'}`,
               flexShrink: 0,
             }}
           >
@@ -2073,9 +2365,9 @@ const PosTerminal = () => {
                     style={{
                       height: 30,
                       padding: '0 14px',
-                      borderRadius: 3,
+                      borderRadius: 6,
                       border: 'none',
-                      background: isActive ? '#b91c1c' : '#1e3a5f',
+                      background: isActive ? (adminTheme.primary || '#0284c7') : (themeMode === 'dark' ? '#1e293b' : '#334155'),
                       color: '#ffffff',
                       fontSize: 12,
                       fontWeight: 600,
@@ -2092,14 +2384,14 @@ const PosTerminal = () => {
             </div>
           </div>
 
-          {/* Two Search Inputs Row matching Image 2 */}
+          {/* Two Search Inputs Row matching cyspharma */}
           <div
             style={{
               display: 'flex',
               gap: 10,
               padding: '8px 12px',
-              background: themeMode === 'dark' ? '#0f172a' : '#ffffff',
-              borderBottom: '1px solid #e2e8f0',
+              background: adminTheme.headerBg || (themeMode === 'dark' ? '#0f172a' : '#ffffff'),
+              borderBottom: `1px solid ${adminTheme.border || '#e2e8f0'}`,
               flexShrink: 0,
             }}
           >
@@ -2112,11 +2404,11 @@ const PosTerminal = () => {
                 flex: 1,
                 height: 32,
                 padding: '4px 10px',
-                borderRadius: 3,
-                border: '1px solid #cbd5e1',
+                borderRadius: 6,
+                border: `1px solid ${adminTheme.border || '#cbd5e1'}`,
                 fontSize: 12,
                 outline: 'none',
-                background: themeMode === 'dark' ? '#1e293b' : '#ffffff',
+                background: adminTheme.headerInputBg || (themeMode === 'dark' ? '#1e293b' : '#ffffff'),
                 color: adminTheme.text,
               }}
             />
@@ -2129,17 +2421,17 @@ const PosTerminal = () => {
                 flex: 1,
                 height: 32,
                 padding: '4px 10px',
-                borderRadius: 3,
-                border: '1px solid #cbd5e1',
+                borderRadius: 6,
+                border: `1px solid ${adminTheme.border || '#cbd5e1'}`,
                 fontSize: 12,
                 outline: 'none',
-                background: themeMode === 'dark' ? '#1e293b' : '#ffffff',
+                background: adminTheme.headerInputBg || (themeMode === 'dark' ? '#1e293b' : '#ffffff'),
                 color: adminTheme.text,
               }}
             />
           </div>
 
-          {/* Product Cards Grid matching Image 2 */}
+          {/* Product Cards Grid matching cyspharma */}
           <div
             style={{
               flex: 1,
@@ -2150,10 +2442,10 @@ const PosTerminal = () => {
             {loadingProducts ? (
               <div style={{ padding: 40, textAlign: 'center' }}>
                 <Spin size="large" />
-                <div style={{ marginTop: 8, color: '#64748b', fontSize: 12 }}>Loading products...</div>
+                <div style={{ marginTop: 8, color: adminTheme.subtext, fontSize: 12 }}>Loading products...</div>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+              <div style={{ padding: 40, textAlign: 'center', color: adminTheme.subtext }}>
                 <InboxOutlined style={{ fontSize: 36, opacity: 0.3 }} />
                 <div style={{ fontSize: 13, marginTop: 4 }}>No products in this category</div>
               </div>
@@ -2170,10 +2462,10 @@ const PosTerminal = () => {
                     key={p.id}
                     onClick={() => addToCart(p)}
                     style={{
-                      background: '#ffffff',
-                      borderRadius: 4,
-                      border: '1px solid #cbd5e1',
-                      padding: 6,
+                      background: adminTheme.cardBg || (themeMode === 'dark' ? '#1e293b' : '#ffffff'),
+                      borderRadius: 8,
+                      border: `1px solid ${adminTheme.cardBorder || adminTheme.border || '#cbd5e1'}`,
+                      padding: 8,
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
@@ -2181,14 +2473,14 @@ const PosTerminal = () => {
                       textAlign: 'center',
                       userSelect: 'none',
                       transition: 'all 0.15s ease',
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                      boxShadow: adminTheme.shadow || '0 1px 3px rgba(0, 0, 0, 0.04)',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#0284c7';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.borderColor = adminTheme.primary || '#0284c7';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#cbd5e1';
+                      e.currentTarget.style.borderColor = adminTheme.cardBorder || adminTheme.border || '#cbd5e1';
                       e.currentTarget.style.transform = 'none';
                     }}
                   >
@@ -2200,8 +2492,8 @@ const PosTerminal = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: '#f8fafc',
-                        borderRadius: 3,
+                        background: adminTheme.isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc',
+                        borderRadius: 6,
                         overflow: 'hidden',
                         marginBottom: 6,
                       }}
@@ -2219,11 +2511,11 @@ const PosTerminal = () => {
                             width: 50,
                             height: 50,
                             borderRadius: '50%',
-                            border: '2px solid #cbd5e1',
+                            border: `2px solid ${adminTheme.border || '#cbd5e1'}`,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: '#94a3b8',
+                            color: adminTheme.subtext,
                             fontSize: 22,
                           }}
                         >
@@ -2237,7 +2529,7 @@ const PosTerminal = () => {
                       style={{
                         fontSize: 11.5,
                         fontWeight: 600,
-                        color: '#1e293b',
+                        color: adminTheme.text,
                         maxWidth: '100%',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -2248,16 +2540,16 @@ const PosTerminal = () => {
                       {p.name}
                     </div>
 
-                    {/* Price Tag (e.g. USD0.00, USD1.50) */}
+                    {/* Price Tag */}
                     <div
                       style={{
-                        fontSize: 11,
+                        fontSize: 11.5,
                         fontWeight: 700,
-                        color: '#334155',
+                        color: adminTheme.primary || '#0284c7',
                         marginTop: 2,
                       }}
                     >
-                      USD{p.price.toFixed(2)}
+                      ${parseFloat(p.price || 0).toFixed(2)}
                     </div>
                   </div>
                 ))}
@@ -2265,15 +2557,15 @@ const PosTerminal = () => {
             )}
           </div>
 
-          {/* Bottom Bar: Navigation Arrows & Sell Gift Card Button matching Image 2 */}
+          {/* Bottom Bar: Navigation Arrows & Sell Gift Card Button matching cyspharma */}
           <div
             style={{
               height: 38,
               minHeight: 38,
               display: 'flex',
               alignItems: 'stretch',
-              background: '#0284c7',
-              borderTop: '1px solid #0369a1',
+              background: adminTheme.primary || '#0284c7',
+              borderTop: `1px solid ${adminTheme.border || '#0369a1'}`,
               flexShrink: 0,
             }}
           >
@@ -2281,7 +2573,7 @@ const PosTerminal = () => {
             <button
               type="button"
               onClick={() => message.info('Previous page')}
-              style={bottomGridNavBtnStyle}
+              style={{ ...bottomGridNavBtnStyle, background: adminTheme.primary || '#0284c7' }}
             >
               &lt;
             </button>
@@ -2293,7 +2585,7 @@ const PosTerminal = () => {
               style={{
                 flex: 1,
                 border: 'none',
-                background: '#0284c7',
+                background: adminTheme.primary || '#0284c7',
                 color: '#ffffff',
                 fontWeight: 700,
                 fontSize: 12,
@@ -3496,6 +3788,84 @@ const PosTerminal = () => {
                   </div>
                 ),
               },
+              {
+                key: 'theme',
+                label: 'Theme & Interface',
+                children: (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, color: adminTheme.text }}>Appearance Mode</div>
+                        <div style={{ fontSize: 12, color: adminTheme.subtext }}>
+                          Toggle between Dark and Light mode for POS & Admin
+                        </div>
+                      </div>
+                      <Radio.Group
+                        value={themeMode}
+                        onChange={(e) => {
+                          if (e.target.value !== themeMode) toggleThemeMode();
+                        }}
+                      >
+                        <Radio.Button value="light">☀️ Light</Radio.Button>
+                        <Radio.Button value="dark">🌙 Dark</Radio.Button>
+                      </Radio.Group>
+                    </div>
+
+                    <Divider style={{ margin: '8px 0' }} />
+
+                    <div>
+                      <div style={{ fontWeight: 600, color: adminTheme.text, marginBottom: 4 }}>
+                        Admin Theme Preset & Accent Color
+                      </div>
+                      <div style={{ fontSize: 12, color: adminTheme.subtext, marginBottom: 10 }}>
+                        Select the primary visual identity preset synced with Admin Theme Settings
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                        {[
+                          { key: 'default', name: 'Default Blue', color: '#2f6fed' },
+                          { key: 'aurora', name: 'Aurora Glow', color: '#7c3aed' },
+                          { key: 'cyber', name: 'Cyber Neon', color: '#06b6d4' },
+                          { key: 'sunset', name: 'Sunset Amber', color: '#f43f5e' },
+                          { key: 'emerald', name: 'Emerald Mint', color: '#10b981' },
+                          { key: 'minimal', name: 'Cosmic Slate', color: '#64748b' },
+                        ].map((p) => (
+                          <div
+                            key={p.key}
+                            onClick={() => {
+                              changePreset(p.key);
+                              message.success(`Applied ${p.name} theme preset!`);
+                            }}
+                            style={{
+                              padding: '10px 12px',
+                              borderRadius: 8,
+                              border: `2px solid ${themePreset === p.key ? p.color : (adminTheme.border || '#cbd5e1')}`,
+                              background: themePreset === p.key ? `${p.color}15` : adminTheme.isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 14,
+                                height: 14,
+                                borderRadius: '50%',
+                                background: p.color,
+                                display: 'inline-block',
+                              }}
+                            />
+                            <span style={{ fontSize: 12, fontWeight: themePreset === p.key ? 700 : 500, color: adminTheme.text }}>
+                              {p.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ),
+              },
             ]}
           />
 
@@ -3717,20 +4087,7 @@ const PosTerminal = () => {
   );
 };
 
-// Styles for Top Actions Bar & Buttons
-const topActionBtnStyle = {
-  width: 30,
-  height: 30,
-  borderRadius: 4,
-  background: '#64748b',
-  color: '#ffffff',
-  border: 'none',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  cursor: 'pointer',
-  transition: 'all 0.15s ease',
-};
+
 
 const inputAddonBtnStyle = {
   height: 30,
