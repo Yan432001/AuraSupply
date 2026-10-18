@@ -44,6 +44,7 @@ import { useCart } from '../../contexts/CartContext';
 
 import { useWishlist } from '../../contexts/WishlistContext';
 import { useTranslation } from '../../contexts/LanguageContext';
+import { useAdminModules } from '../../contexts/AdminModulesContext';
 import { publicTheme, formatCurrency, formatCompact } from '../../utils/webTheme';
 import { animateAddToCart } from '../../utils/helpers';
 import TelegramMiniAppModal, { BOTFATHER_CONFIG } from '../../components/web/shared/TelegramMiniAppModal';
@@ -52,6 +53,9 @@ import RetailShopCard from '../../components/web/shared/RetailShopCard';
 import ProductQuickViewModal from '../../components/web/shared/ProductQuickViewModal';
 import ShopQuickViewModal from '../../components/web/shared/ShopQuickViewModal';
 import PromotionPosterSlider from '../../components/web/shared/PromotionPosterSlider';
+import EducationTemplateView from '../../components/web/templates/EducationTemplateView';
+import CompanyProfileTemplateView from '../../components/web/templates/CompanyProfileTemplateView';
+import ServiceBookingTemplateView from '../../components/web/templates/ServiceBookingTemplateView';
 
 const { Title, Text, Paragraph } = Typography;
 const { useBreakpoint } = Grid;
@@ -81,8 +85,20 @@ export default function Home() {
   const countdown = useCountdown(18);
   const { addItem, addToCart } = useCart();
   const { wishlist, toggleWishlist } = useWishlist();
+  const { activeWebsiteTemplate } = useAdminModules();
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeRetailCategory, setActiveRetailCategory] = useState('all');
+
+  // Render Sub-Module Website Template based on Admin setting
+  if (activeWebsiteTemplate === 'education') {
+    return <EducationTemplateView />;
+  }
+  if (activeWebsiteTemplate === 'company') {
+    return <CompanyProfileTemplateView />;
+  }
+  if (activeWebsiteTemplate === 'booking') {
+    return <ServiceBookingTemplateView />;
+  }
   const [telegramShop, setTelegramShop] = useState(null);
   const [previewShop, setPreviewShop] = useState(null);
   const [previewProduct, setPreviewProduct] = useState(null);

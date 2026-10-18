@@ -74,9 +74,7 @@ const AdminThemeWrapper = ({ children }) => {
 const ThemedAdminLayout = () => (
   <ThemeProvider>
     <AdminThemeWrapper>
-      <AdminModulesProvider>
-        <AdminLayout />
-      </AdminModulesProvider>
+      <AdminLayout />
     </AdminThemeWrapper>
   </ThemeProvider>
 );
@@ -174,15 +172,17 @@ const App = () => (
   <NetworkStatusProvider>
     <AuthProvider>
       <LanguageProvider>
-        <WishlistProvider>
-          <CartProvider>
-            <Router>
-              <AntApp>
-                <AppContent />
-              </AntApp>
-            </Router>
-          </CartProvider>
-        </WishlistProvider>
+        <AdminModulesProvider>
+          <WishlistProvider>
+            <CartProvider>
+              <Router>
+                <AntApp>
+                  <AppContent />
+                </AntApp>
+              </Router>
+            </CartProvider>
+          </WishlistProvider>
+        </AdminModulesProvider>
       </LanguageProvider>
     </AuthProvider>
   </NetworkStatusProvider>

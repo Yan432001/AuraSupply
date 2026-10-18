@@ -43,6 +43,8 @@ import { useCart } from '../../../contexts/CartContext';
 import { useWishlist } from '../../../contexts/WishlistContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage, useTranslation, SUPPORTED_LANGUAGES } from '../../../contexts/LanguageContext';
+import { useAdminModules } from '../../../contexts/AdminModulesContext';
+import { WEBSITE_TEMPLATES } from '../../../data/websiteTemplates';
 import { fetchProducts, fetchShops } from '../../../utils/apiconfig';
 import { formatCurrency, publicTheme } from '../../../utils/webTheme';
 import OfflineWarningBanner from '../../common/OfflineWarningBanner';
@@ -87,6 +89,7 @@ const Header = ({ currentPage }) => {
   const { cartItemCount, cartTotal = 0 } = useCart();
   const { wishlistItemCount } = useWishlist();
   const { user, logout, canAccessOperationsPortal } = useAuth();
+  const { activeWebsiteTemplate, setWebsiteTemplate, currentTemplate } = useAdminModules();
   const { currentLanguage, setLanguage, activeLanguage, supportedLanguages: ctxLangs, languages: ctxLangs2 } = useLanguage();
   const supportedLanguages = Array.isArray(ctxLangs) && ctxLangs.length ? ctxLangs : (Array.isArray(ctxLangs2) && ctxLangs2.length ? ctxLangs2 : SUPPORTED_LANGUAGES);
   const { t } = useTranslation();
@@ -327,16 +330,39 @@ const Header = ({ currentPage }) => {
     });
   }, [supportedLanguages, currentLanguage, setLanguage]);
 
-  const navItems = useMemo(
-    () => [
+  const navItems = useMemo(() => {
+    if (activeWebsiteTemplate === 'education') {
+      return [
+        { key: '/', icon: <HomeOutlined />, label: t('home', 'Home') },
+        { key: '/learn', icon: <BookOutlined />, label: t('courses_lms', 'Courses & LMS') },
+        { key: '/service', icon: <TeamOutlined />, label: t('faculty', 'Faculty') },
+        { key: '/products', icon: <AppstoreOutlined />, label: t('materials', 'Study Packs') },
+      ];
+    }
+    if (activeWebsiteTemplate === 'company') {
+      return [
+        { key: '/', icon: <HomeOutlined />, label: t('home', 'Home') },
+        { key: '/service', icon: <TeamOutlined />, label: t('solutions', 'Solutions') },
+        { key: '/shops', icon: <ShopOutlined />, label: t('case_studies', 'Case Studies') },
+        { key: '/products', icon: <AppstoreOutlined />, label: t('equipment', 'Equipment') },
+      ];
+    }
+    if (activeWebsiteTemplate === 'booking') {
+      return [
+        { key: '/', icon: <HomeOutlined />, label: t('home', 'Home') },
+        { key: '/service', icon: <TeamOutlined />, label: t('services', 'Services') },
+        { key: '/shops', icon: <ShopOutlined />, label: t('locations', 'Locations') },
+        { key: '/learn', icon: <BookOutlined />, label: t('advisory', 'Advisory') },
+      ];
+    }
+    return [
       { key: '/', icon: <HomeOutlined />, label: t('home', 'Home') },
       { key: '/shops', icon: <ShopOutlined />, label: t('shops', 'Shops') },
       { key: '/products', icon: <AppstoreOutlined />, label: t('products', 'Products') },
       { key: '/service', icon: <TeamOutlined />, label: t('service', 'Service') },
       { key: '/learn', icon: <BookOutlined />, label: t('learn', 'Learn') },
-    ],
-    [t]
-  );
+    ];
+  }, [activeWebsiteTemplate, t]);
 
   const quickLinks = [
     { key: '/wishlist', icon: <HeartOutlined />, label: t('wishlist', 'Wishlist') },

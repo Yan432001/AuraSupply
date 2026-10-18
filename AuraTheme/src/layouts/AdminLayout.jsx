@@ -40,28 +40,34 @@ const AdminLayout = () => {
   const [switchingToAdmin, setSwitchingToAdmin] = useState(false);
 
   // Role and administrative permission classification
-  const userRole = (user?.role || user?.group_name || '').toLowerCase();
+  const effectiveUser = user?.user ? { ...user.user, ...user } : user;
+  const userRole = (effectiveUser?.role || effectiveUser?.group_name || effectiveUser?.group?.name || '').toLowerCase();
+  const effectiveGroupId = Number(effectiveUser?.group_id || effectiveUser?.group?.id || 0);
+  const effectiveLevel = Number(effectiveUser?.level || effectiveUser?.group?.level || 0);
+
   const isActualOwnerOrAdmin = Boolean(
     isOwner ||
     isAdmin ||
-    Number(user?.group_id) === 1 ||
-    Number(user?.group_id) === 2 ||
+    effectiveGroupId === 1 ||
+    effectiveGroupId === 2 ||
+    effectiveLevel === 1 ||
+    effectiveLevel === 2 ||
     userRole === 'owner' ||
     userRole === 'admin' ||
-    user?.username === 'admin' ||
-    user?.username === 'sbcsolutions'
+    effectiveUser?.username === 'admin' ||
+    effectiveUser?.username === 'sbcsolutions'
   );
 
   const isCustomer = !isActualOwnerOrAdmin && Boolean(
     userRole === 'customer' ||
-    Number(user?.group_id) === 4 ||
-    Boolean(user?.Customer) ||
-    (user?.allow_admin_login !== undefined && Number(user?.allow_admin_login) === 0)
+    effectiveGroupId === 4 ||
+    Boolean(effectiveUser?.Customer) ||
+    (effectiveUser?.allow_admin_login !== undefined && Number(effectiveUser?.allow_admin_login) === 0)
   );
 
   const hasAdminAccess = Boolean(
     isActualOwnerOrAdmin ||
-    (!isCustomer && (Number(user?.level) <= 30 || Number(user?.allow_admin_login) === 1))
+    (!isCustomer && (effectiveLevel <= 30 || Number(effectiveUser?.allow_admin_login) === 1))
   );
 
   // Check if current route is a login route

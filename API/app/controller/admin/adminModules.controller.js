@@ -290,6 +290,8 @@ exports.listModules = async (req, res) => {
         sort_order: ms?.sort_order || m.id,
         accent: accentColor,
         category,
+        active_template: configObj.active_template || 'default',
+        config: configObj,
         submodules: subMap[m.name] || []
       });
     }
@@ -578,7 +580,25 @@ exports.bulkUpdateModules = async (req, res) => {
       } catch (_) {}
     }
 
-    // 5. Update aura_license status & last_check_at
+    // 5. Synchronize active_template if provided in payload
+    const selectedTemplate = req.body.active_template || req.body.active_website_template;
+    if (selectedTemplate) {
+      try {
+        const [curr] = await db.query("SELECT config FROM aura_module_settings WHERE module_key = 'ecommerce' LIMIT 1");
+        let cfg = {};
+        if (curr && curr.length > 0 && curr[0].config) {
+          try { cfg = typeof curr[0].config === 'string' ? JSON.parse(curr[0].config) : curr[0].config; } catch (_) {}
+        }
+        cfg.active_template = selectedTemplate;
+        await db.query(`
+          INSERT INTO aura_module_settings (module_key, title, is_enabled, sort_order, config)
+          VALUES ('ecommerce', 'Ecommerce', 1, 0, ?)
+          ON DUPLICATE KEY UPDATE config = VALUES(config)
+        `, [JSON.stringify(cfg)]);
+      } catch (_) {}
+    }
+
+    // 6. Update aura_license status & last_check_at
     try {
       await db.query(`
         UPDATE aura_license 
@@ -587,7 +607,7 @@ exports.bulkUpdateModules = async (req, res) => {
       `, [check.license_key]);
     } catch (_) {}
 
-    // 6. Audit Logging
+    // 7. Audit Logging
     await logActivity({
       req,
       action: 'modules_bulk_update',
@@ -595,7 +615,8 @@ exports.bulkUpdateModules = async (req, res) => {
       recordId: 'all',
       newValues: {
         total_modules_updated: moduleEntries.length,
-        verified_license: check.license_key
+        verified_license: check.license_key,
+        active_template: selectedTemplate || 'default'
       }
     });
 
@@ -603,11 +624,91 @@ exports.bulkUpdateModules = async (req, res) => {
       updated_modules_count: moduleEntries.length,
       license_name: check.license_name,
       license_key: check.license_key,
+      active_template: selectedTemplate || 'default',
       is_valid: true
     }, 'Enterprise License verified. All module settings have been successfully updated across the database.');
   } catch (err) {
     console.error('[bulkUpdateModules error]', err);
     return sendError(res, 'Failed to update module settings', 500, err.message);
+  }
+};
+
+/**
+ * POST /api/admin/modules/website-template
+ * Switch the active public website template (e.g. 'default', 'education', 'company', 'booking')
+ */
+exports.updateWebsiteTemplate = async (req, res) => {
+  try {
+    const template_id = req.body.template_id || req.body.template;
+    if (!template_id) {
+      return sendError(res, 'template_id or template is required', 400);
+    }
+
+    const [curr] = await db.query("SELECT config FROM aura_module_settings WHERE module_key = 'ecommerce' LIMIT 1");
+    let cfg = {};
+    if (curr && curr.length > 0 && curr[0].config) {
+      try { cfg = typeof curr[0].config === 'string' ? JSON.parse(curr[0].config) : curr[0].config; } catch (_) {}
+    }
+    cfg.active_template = template_id;
+
+    await db.query(`
+      INSERT INTO aura_module_settings (module_key, title, is_enabled, sort_order, config)
+      VALUES ('ecommerce', 'Ecommerce', 1, 0, ?)
+      ON DUPLICATE KEY UPDATE config = VALUES(config)
+    `, [JSON.stringify(cfg)]);
+
+    return sendSuccess(res, { active_template: template_id }, `Active website template switched to '${template_id}'`);
+  } catch (err) {
+    return sendError(res, 'Failed to update website template', 500, err.message);
+  }
+};
+
+/**
+ * GET /api/public/website-status
+ * Public endpoint (no auth required) returning online status and active template for the storefront
+ */
+exports.getPublicWebsiteStatus = async (req, res) => {
+  try {
+    let isEcommerceActive = true;
+    try {
+      const [mRows] = await db.query("SELECT active FROM aura_modules WHERE name = 'ecommerce' OR module = 'shop' LIMIT 1");
+      if (mRows && mRows.length > 0) {
+        isEcommerceActive = Number(mRows[0].active) === 1;
+      }
+    } catch (_) {}
+
+    try {
+      const [sRows] = await db.query("SELECT shop FROM aura_settings LIMIT 1");
+      if (sRows && sRows.length > 0 && sRows[0].shop !== undefined) {
+        isEcommerceActive = isEcommerceActive && Number(sRows[0].shop) === 1;
+      }
+    } catch (_) {}
+
+    let activeTemplate = 'default';
+    try {
+      const [msRows] = await db.query("SELECT config, is_enabled FROM aura_module_settings WHERE module_key = 'ecommerce' LIMIT 1");
+      if (msRows && msRows.length > 0) {
+        if (msRows[0].config) {
+          const cfg = typeof msRows[0].config === 'string' ? JSON.parse(msRows[0].config) : msRows[0].config;
+          if (cfg?.active_template) activeTemplate = cfg.active_template;
+        }
+      }
+    } catch (_) {}
+
+    let submodules = [];
+    try {
+      const [subRows] = await db.query("SELECT * FROM aura_sub_module_settings WHERE module_key = 'ecommerce' ORDER BY sort_order ASC, id ASC");
+      submodules = subRows;
+    } catch (_) {}
+
+    return sendSuccess(res, {
+      is_ecommerce_active: isEcommerceActive,
+      is_online: isEcommerceActive,
+      active_template: activeTemplate,
+      submodules
+    });
+  } catch (err) {
+    return sendError(res, 'Failed to fetch public website status', 500, err.message);
   }
 };
 

@@ -15,54 +15,63 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   });
-  const [loadingSession, setLoadingSession] = useState(true);
+  const [loadingSession, setLoadingSession] = useState(() => Boolean(localStorage.getItem('token')));
+
+  // Support both flattened and wrapped session user payloads
+  const effectiveUser = user?.user ? { ...user.user, ...user } : user;
 
   // Group Permissions ($this->GP in CodeIgniter 3)
-  const GP = user?.GP || user?.permissionsMap || {};
+  const GP = effectiveUser?.GP || effectiveUser?.permissionsMap || {};
 
   // Role flags matching CodeIgniter 3 MY_Controller
-  const roleName = (user?.group_name || user?.role || '').toLowerCase();
+  const roleName = (effectiveUser?.group_name || effectiveUser?.role || effectiveUser?.group?.name || '').toLowerCase();
+  const effectiveGroupId = Number(effectiveUser?.group_id || effectiveUser?.group?.id || 0);
+  const effectiveLevel = Number(effectiveUser?.level || effectiveUser?.group?.level || 0);
+
   const isOwner = Boolean(
-    Number(user?.group_id) === 1 || 
-    Number(user?.level) === 1 || 
+    effectiveGroupId === 1 || 
+    effectiveLevel === 1 || 
     roleName === 'owner' || 
-    user?.Owner
+    effectiveUser?.Owner ||
+    effectiveUser?.username === 'admin'
   );
   const isAdmin = Boolean(
-    Number(user?.group_id) === 2 || 
-    Number(user?.level) === 2 || 
+    effectiveGroupId === 2 || 
+    effectiveLevel === 2 || 
     roleName === 'admin' || 
-    user?.Admin
+    effectiveUser?.Admin
   );
-  const isStore = Boolean(roleName === 'store' || user?.Store);
-  const isSupplier = Boolean(roleName === 'supplier' || user?.Supplier);
+  const isStore = Boolean(roleName === 'store' || effectiveUser?.Store);
+  const isSupplier = Boolean(roleName === 'supplier' || effectiveUser?.Supplier);
   const isCustomer = Boolean(
-    roleName === 'customer' || 
-    user?.Customer ||
-    Number(user?.group_id) === 4
+    !isOwner && !isAdmin && (
+      roleName === 'customer' || 
+      effectiveUser?.Customer ||
+      effectiveGroupId === 4
+    )
   );
   const isSalesman = Boolean(
     roleName === 'salesman' || 
     roleName === 'sale-agents' || 
     roleName === 'saleman' || 
-    user?.Salesman
+    effectiveUser?.Salesman
   );
 
   // Staff or Admin flag for ERP Operations Portal access
   const isStaffOrAdmin = Boolean(
-    user &&
+    effectiveUser &&
     !isCustomer &&
     roleName !== 'customer' &&
-    Number(user?.group_id) !== 4 &&
+    effectiveGroupId !== 4 &&
     (
       isOwner ||
       isAdmin ||
       isStore ||
       isSalesman ||
       isSupplier ||
-      Boolean(user?.allow_admin_login) ||
+      Boolean(effectiveUser?.allow_admin_login) ||
       ['owner', 'admin', 'branch', 'salesman', 'employee', 'audit', 'account', 'cashier', 'stock', 'shop', 'store'].includes(roleName) ||
-      (Number(user?.group_id) > 0 && Number(user?.group_id) !== 4)
+      (effectiveGroupId > 0 && effectiveGroupId !== 4)
     )
   );
   const canAccessOperationsPortal = isStaffOrAdmin;
@@ -169,7 +178,19 @@ export const AuthProvider = ({ children }) => {
         });
 
         if (isMounted && (res.data?.success || res.data?.status) && res.data?.data) {
-          const freshUser = res.data.data;
+          const payloadData = res.data.data;
+          const userObj = payloadData.user || payloadData.profile || payloadData;
+          const freshUser = {
+            ...userObj,
+            GP: payloadData.GP || userObj.GP || {},
+            permissions: payloadData.permissions || userObj.permissions || [],
+            group: payloadData.group || userObj.group || {},
+            group_name: payloadData.group?.name || userObj.group_name || userObj.role || 'owner',
+            group_id: payloadData.group?.id || userObj.group_id || 1,
+            allow_admin_login: payloadData.group?.allow_admin_login !== undefined
+              ? payloadData.group.allow_admin_login
+              : (userObj.allow_admin_login !== undefined ? userObj.allow_admin_login : 1)
+          };
           setUser(freshUser);
           localStorage.setItem('user', JSON.stringify(freshUser));
         }

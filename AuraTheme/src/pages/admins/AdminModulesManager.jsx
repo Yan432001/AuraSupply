@@ -60,11 +60,13 @@ import {
   SafetyOutlined,
   SaveOutlined,
   DeleteOutlined,
-  UsergroupAddOutlined
+  UsergroupAddOutlined,
+  ExportOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { erpModules } from '../../data/erpModules';
+import { WEBSITE_TEMPLATES, getWebsiteTemplate } from '../../data/websiteTemplates';
 import { useAdminModules } from '../../hooks/useAdminModules';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -149,6 +151,9 @@ const AdminModulesManager = () => {
   const {
     moduleState,
     isModuleOpen,
+    activeWebsiteTemplate,
+    setWebsiteTemplate,
+    currentTemplate,
     toggleModule: contextToggleModule,
     setAllModuleStates,
     enableAllModules,
@@ -157,6 +162,17 @@ const AdminModulesManager = () => {
     activeModulesCount,
     totalModulesCount
   } = useAdminModules();
+
+  // Active Website Template State
+  const [selectedWebsiteTemplate, setSelectedWebsiteTemplate] = useState(
+    () => activeWebsiteTemplate || 'default'
+  );
+
+  useEffect(() => {
+    if (activeWebsiteTemplate) {
+      setSelectedWebsiteTemplate(activeWebsiteTemplate);
+    }
+  }, [activeWebsiteTemplate]);
 
   // Search & Filtering State
   const [searchQuery, setSearchQuery] = useState('');
@@ -336,9 +352,10 @@ const AdminModulesManager = () => {
   const currentActiveCount = useMemo(() => {
     return mergedModules.filter((m) => m.enabled).length;
   }, [mergedModules]);
+  const isTemplateDirty = selectedWebsiteTemplate !== (activeWebsiteTemplate || 'default');
   const unsavedCount = useMemo(() => {
-    return mergedModules.filter((m) => m.isDirty).length;
-  }, [mergedModules]);
+    return mergedModules.filter((m) => m.isDirty).length + (isTemplateDirty ? 1 : 0);
+  }, [mergedModules, isTemplateDirty]);
   const hasUnsavedChanges = unsavedCount > 0;
 
   // Filter modules
@@ -454,7 +471,8 @@ const AdminModulesManager = () => {
           user_name: licenseUserName.trim(),
           license_key: licenseKeyInput.trim(),
           modules: localModuleStates,
-          submodules: localSubmoduleStates
+          submodules: localSubmoduleStates,
+          active_template: selectedWebsiteTemplate
         },
         {
           headers: {
@@ -478,6 +496,9 @@ const AdminModulesManager = () => {
         setInitialSubmoduleStates({ ...localSubmoduleStates });
         if (typeof setAllModuleStates === 'function') {
           setAllModuleStates(localModuleStates);
+        }
+        if (typeof setWebsiteTemplate === 'function') {
+          setWebsiteTemplate(selectedWebsiteTemplate);
         }
         fetchModuleData();
       } else {
@@ -946,7 +967,7 @@ const AdminModulesManager = () => {
 
             <Row gutter={[16, 16]}>
               {catModules.map((m) => {
-                const isOpen = isModuleOpen(m.key);
+                const isOpen = Boolean(m.enabled);
                 const IconComponent = moduleIconMap[m.key] || AppstoreOutlined;
 
                 return (
@@ -1131,6 +1152,107 @@ const AdminModulesManager = () => {
                         />
                       )}
 
+                      {/* Website Template Sub-module Selector for E-commerce (Multi-Service Architecture) */}
+                      {m.key === 'ecommerce' && (
+                        <div
+                          style={{
+                            marginBottom: 14,
+                            padding: '12px 14px',
+                            borderRadius: 10,
+                            background: isDark ? 'rgba(30, 41, 59, 0.7)' : '#f8fafc',
+                            border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'}`
+                          }}
+                        >
+                          <Flex justify="space-between" align="center" style={{ marginBottom: 8 }}>
+                            <Flex align="center" gap={6}>
+                              <GlobalOutlined style={{ color: primary, fontSize: 14 }} />
+                              <Text strong style={{ fontSize: 12, color: adminTheme.text }}>
+                                {t('active_website_template', 'Active Website Template (Multi-Service)')}
+                              </Text>
+                            </Flex>
+                            <Tag color={isOpen ? 'success' : 'default'} style={{ margin: 0, borderRadius: 6, fontSize: 10.5 }}>
+                              {isOpen ? t('storefront_online', 'ONLINE') : t('storefront_offline', 'OFFLINE')}
+                            </Tag>
+                          </Flex>
+
+                          <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 10 }}>
+                            {t('select_website_template_desc', 'Select active storefront service template (Default E-commerce, Education, Company Profile, Booking):')}
+                          </Text>
+
+                          <Radio.Group
+                            value={selectedWebsiteTemplate}
+                            onChange={(e) => {
+                              setSelectedWebsiteTemplate(e.target.value);
+                              handleSubmoduleSwitch(`ecommerce-${e.target.value}`, true);
+                            }}
+                            style={{ width: '100%' }}
+                            disabled={!isOpen}
+                          >
+                            <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                              {Object.values(WEBSITE_TEMPLATES).map((tmpl) => {
+                                const isSelected = selectedWebsiteTemplate === tmpl.id;
+                                return (
+                                  <div
+                                    key={tmpl.id}
+                                    onClick={() => {
+                                      if (isOpen) {
+                                        setSelectedWebsiteTemplate(tmpl.id);
+                                        handleSubmoduleSwitch(`ecommerce-${tmpl.id}`, true);
+                                      }
+                                    }}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      padding: '7px 10px',
+                                      borderRadius: 8,
+                                      cursor: isOpen ? 'pointer' : 'not-allowed',
+                                      background: isSelected ? `${primary}14` : (isDark ? 'rgba(255,255,255,0.03)' : '#ffffff'),
+                                      border: `1px solid ${isSelected ? `${primary}66` : (isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0')}`,
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                  >
+                                    <Flex align="center" gap={8}>
+                                      <Radio value={tmpl.id} style={{ margin: 0 }} />
+                                      <div>
+                                        <Text style={{ fontSize: 12, fontWeight: isSelected ? 700 : 500, color: adminTheme.text, display: 'block' }}>
+                                          {tmpl.name}
+                                        </Text>
+                                        <Text type="secondary" style={{ fontSize: 10.5, lineHeight: 1.2, display: 'block' }}>
+                                          {tmpl.description}
+                                        </Text>
+                                      </div>
+                                    </Flex>
+                                    {isSelected && (
+                                      <Tag color="cyan" style={{ margin: 0, fontSize: 10, borderRadius: 4, fontWeight: 700 }}>
+                                        ACTIVE
+                                      </Tag>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </Space>
+                          </Radio.Group>
+
+                          <Flex justify="space-between" align="center" style={{ marginTop: 10 }}>
+                            <Button
+                              size="small"
+                              type="link"
+                              icon={<ExportOutlined />}
+                              onClick={() => window.open('/', '_blank')}
+                              style={{ padding: 0, fontSize: 11, color: primary }}
+                            >
+                              {t('preview_live_website', 'Preview Storefront ↗')}
+                            </Button>
+                            {selectedWebsiteTemplate !== activeWebsiteTemplate && (
+                              <Tag color="gold" style={{ margin: 0, fontSize: 10, borderRadius: 4 }}>
+                                {t('template_pending_save', 'Template change pending save')}
+                              </Tag>
+                            )}
+                          </Flex>
+                        </div>
+                      )}
+
                       {/* Footer Actions: Permissions Manager & Navigation */}
                       <Divider style={{ margin: '10px 0' }} />
                       <Flex justify="space-between" align="center" wrap="wrap" gap={8}>
@@ -1150,15 +1272,28 @@ const AdminModulesManager = () => {
                         </Button>
 
                         {isOpen ? (
-                          <Button
-                            type="link"
-                            size="small"
-                            icon={<EyeOutlined />}
-                            onClick={() => navigate(`/admins?module=${m.controller || m.key}`)}
-                            style={{ padding: 0, fontWeight: 600, color: primary }}
-                          >
-                            {t('explore_module', 'Explore Module')}
-                          </Button>
+                          <Flex align="center" gap={8}>
+                            {m.key === 'ecommerce' && (
+                              <Button
+                                type="default"
+                                size="small"
+                                icon={<ExportOutlined />}
+                                onClick={() => window.open('/', '_blank')}
+                                style={{ borderRadius: 6, fontSize: 11.5 }}
+                              >
+                                {t('live_store', 'Live Store')}
+                              </Button>
+                            )}
+                            <Button
+                              type="link"
+                              size="small"
+                              icon={<EyeOutlined />}
+                              onClick={() => navigate(`/admins?module=${m.controller || m.key}`)}
+                              style={{ padding: 0, fontWeight: 600, color: primary }}
+                            >
+                              {t('explore_module', 'Explore Module')}
+                            </Button>
+                          </Flex>
                         ) : (
                           <Text type="secondary" style={{ fontSize: 11.5, fontStyle: 'italic' }}>
                             {t('inactive_in_sidebar', 'Inactive in Sidebar')}

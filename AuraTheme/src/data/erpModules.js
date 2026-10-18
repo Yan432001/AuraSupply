@@ -1201,6 +1201,36 @@ export const erpModules = [
     ],
   },
 
+  // 37b. E-COMMERCE & MULTI-PURPOSE WEBSITE
+  {
+    key: 'ecommerce',
+    label: 'E-commerce & Website',
+    iconKey: 'portal',
+    accent: '#2563eb',
+    enabled: true,
+    health: 'stable',
+    kpiLabel: 'Active Website Template',
+    kpiValue: 'E-commerce',
+    description: 'Master toggle for public website visibility, shopping storefront, and extensible multi-service website templates.',
+    statusNote: 'Connected directly to public website storefront visibility and template engine.',
+    detailBullets: [
+      'Master On/Off switch controls public website availability (Maintenance mode when OFF).',
+      'Selectable sub-modules for Default E-commerce, Education Website, Company Profile, and Booking.',
+      'Full catalog sync, Telegram Mini App ordering, and multi-service template switching.'
+    ],
+    menus: [
+      leaf('website-home', 'View Public Website', 'Open the live customer-facing website storefront.', { route: '/' }),
+      leaf('template-settings', 'Website Templates', 'Configure active sub-website template and appearance.', { route: '/admins/settings/modules' }),
+      leaf('storefront-controls', 'Storefront Control', 'Featured products, hero banners, and retail store settings.', { route: '/admins/frontend' })
+    ],
+    submodules: [
+      { key: 'ecommerce-default', label: 'Default E-commerce', enabled: true, description: 'Base retail store with product catalog, cart, and checkout.' },
+      { key: 'ecommerce-education', label: 'Education Website', enabled: true, description: 'Interactive courses, academy LMS portal, and admissions.' },
+      { key: 'ecommerce-company', label: 'Company Profile', enabled: true, description: 'Corporate showcase, enterprise solutions, and portfolio.' },
+      { key: 'ecommerce-booking', label: 'Service / Booking Website', enabled: true, description: 'Service consultation menu, appointments, and booking engine.' }
+    ]
+  },
+
   // 38. WEBSITE CMS
   {
     key: 'cms',

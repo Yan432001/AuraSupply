@@ -100,6 +100,8 @@ module.exports = (app) => {
   app.post('/api/admin/modules/submodule/toggle', authenticate, requireRole('owner', 'admin'), modCtrl.toggleSubmodule);
   app.get('/api/admin/modules/license', authenticate, modCtrl.getLicense);
   app.post('/api/admin/modules/license', authenticate, requireRole('owner', 'admin'), modCtrl.updateLicense);
+  app.post('/api/admin/modules/website-template', authenticate, requireRole('owner', 'admin'), modCtrl.updateWebsiteTemplate);
+  app.get('/api/public/website-status', modCtrl.getPublicWebsiteStatus);
 
   // Module Permissions Management
   app.get('/api/admin/modules/:moduleKey/permissions', authenticate, modCtrl.getModulePermissions);

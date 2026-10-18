@@ -14,6 +14,8 @@ function resolveOptionalPackage(pkgName, fallbackRelativePath) {
 }
 
 export default defineConfig({
+  base: '/',
+  appType: 'spa',
   plugins: [react(), tailwindcss()],
   build: {
     outDir: path.resolve(__dirname, 'dist'),

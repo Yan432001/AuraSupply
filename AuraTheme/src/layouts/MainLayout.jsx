@@ -9,6 +9,8 @@ import { useCart } from '../contexts/CartContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import { publicTheme } from '../utils/webTheme';
+import { useAdminModules } from '../contexts/AdminModulesContext';
+import WebsiteOfflineMaintenance from '../components/web/templates/WebsiteOfflineMaintenance';
 
 const { Content } = Layout;
 const { useBreakpoint } = Grid;
@@ -50,6 +52,7 @@ const MainLayout = () => {
   const { cartItemCount, cartTotal } = useCart();
   const { headerRef } = useHeaderHeight();
   const { t } = useTranslation();
+  const { isWebsiteOnline } = useAdminModules();
   const currentPage = location.pathname;
 
   // Enforce website theme isolation: ensure admin theme styles or dark classes never leak onto the public website
@@ -72,6 +75,17 @@ const MainLayout = () => {
     document.body.style.backgroundColor = '#ffffff';
     document.body.style.color = '#0f172a';
   }, [location.pathname]);
+
+  // If E-commerce / Website module is toggled OFF, display dedicated Maintenance Screen
+  if (!isWebsiteOnline) {
+    return (
+      <ConfigProvider theme={websiteThemeConfig}>
+        <AntApp>
+          <WebsiteOfflineMaintenance />
+        </AntApp>
+      </ConfigProvider>
+    );
+  }
 
   return (
     <ConfigProvider theme={websiteThemeConfig}>
