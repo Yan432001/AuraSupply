@@ -44,6 +44,7 @@ import AdminAccessControlManager from './pages/admins/AdminAccessControlManager'
 import AdminFrontEndManager from './pages/admins/AdminFrontEndManager';
 import AdminProfile from './pages/admins/AdminProfile';
 import ModernAuraLogin from './pages/admins/auth/ModernAuraLogin';
+import PosTerminal from './pages/admins/pos/PosTerminal';
 import { AdminModulesProvider } from './contexts/AdminModulesContext';
 
 // E-Menu Telegram Mini App Layout & Views
@@ -125,6 +126,7 @@ const AppContent = () => {
         <Route index element={<AdminDashboardRouter />} />
         <Route path="login" element={<ModernAuraLogin />} />
         <Route path="dashboard" element={<AdminDashboardRouter />} />
+        <Route path="pos" element={<PosTerminal />} />
         <Route path="profile" element={<AdminProfile />} />
         <Route path="products" element={<AdminProducts />} />
         <Route path="products/add" element={<AdminProducts />} />

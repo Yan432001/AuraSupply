@@ -886,6 +886,32 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
               </Tooltip>
             )}
 
+            {/* Open POS Terminal Button */}
+            <Tooltip title="Open Fullscreen POS Cashier Terminal (/admins/pos)">
+              <Button
+                type="primary"
+                onClick={() => navigate('/admins/pos')}
+                style={{
+                  height: 36,
+                  borderRadius: 10,
+                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                  borderColor: '#2563eb',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: isTabletOrDesktop ? '0 12px' : '0 9px',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  boxShadow: '0 2px 10px rgba(37, 99, 235, 0.25)',
+                  transition: 'all 0.18s ease',
+                }}
+              >
+                <CreditCardOutlined style={{ fontSize: 13 }} />
+                {isTabletOrDesktop && <span>POS Terminal</span>}
+              </Button>
+            </Tooltip>
+
             {/* Live Storefront Quick Link */}
             <Tooltip title={t('open_live_storefront', 'Open Live Storefront Website')}>
               <Button

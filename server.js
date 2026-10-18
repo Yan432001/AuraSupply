@@ -109,7 +109,8 @@ async function startServer() {
     'units',
     'systemSettings',
     'language',
-    'bpasErpData'
+    'bpasErpData',
+    'pos'
   ];
 
   for (const routeName of adminRoutes) {

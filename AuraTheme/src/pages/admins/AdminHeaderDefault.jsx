@@ -7,6 +7,7 @@ import {
   CheckCircleFilled,
   SettingOutlined,
   CloseOutlined,
+  CreditCardOutlined,
 } from '@ant-design/icons';
 import { buildModulePath, getDefaultMenuKey } from '../../data/erpModules';
 import ErpModuleSidebar from '../../components/web/shared/ErpModuleSidebar';
@@ -250,16 +251,53 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
         )}
       </div>
 
+      {/* Quick POS Terminal Launcher */}
+      <div style={{ padding: collapsed ? '8px 8px 4px' : '8px 12px 6px', flexShrink: 0 }}>
+        <Tooltip title={t('pos_terminal', 'Open POS Terminal')} placement="right">
+          <button
+            onClick={() => navigate('/admins/pos')}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              gap: 10,
+              padding: collapsed ? '9px 0' : '8px 12px',
+              borderRadius: 10,
+              border: '1px solid rgba(16, 185, 129, 0.35)',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.22) 100%)',
+              color: '#10b981',
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: 'pointer',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.12)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.24) 0%, rgba(5, 150, 105, 0.36) 100%)';
+              e.currentTarget.style.borderColor = '#10b981';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.22) 100%)';
+              e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+            }}
+          >
+            <CreditCardOutlined style={{ fontSize: 16 }} />
+            {!collapsed && <span>{t('pos_terminal', 'POS Terminal')}</span>}
+          </button>
+        </Tooltip>
+      </div>
+
       {/* Scrollable Modules Navigation */}
       <div
         style={{
           flex: '1 1 0%',
           minHeight: 0,
-          height: 'calc(100vh - 118px)',
-          maxHeight: 'calc(100vh - 118px)',
+          height: 'calc(100vh - 170px)',
+          maxHeight: 'calc(100vh - 170px)',
           overflowY: 'auto',
           overflowX: 'hidden',
-          padding: collapsed ? '10px 8px' : '12px 6px 12px 10px',
+          padding: collapsed ? '10px 8px' : '10px 6px 12px 10px',
           scrollBehavior: 'smooth',
         }}
         className="erp-sidebar-scroll"

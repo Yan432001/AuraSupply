@@ -291,6 +291,17 @@ const AdminLayout = () => {
     );
   }
 
+  const isPosPage = location.pathname.startsWith('/admins/pos');
+  if (isPosPage) {
+    return (
+      <NotificationProvider>
+        <div style={{ width: '100vw', height: '100vh', maxWidth: '100vw', maxHeight: '100vh', overflow: 'hidden' }}>
+          <Outlet context={{ moduleState, onToggleModule: handleToggleModule }} />
+        </div>
+      </NotificationProvider>
+    );
+  }
+
   return (
     <NotificationProvider>
       <Layout
