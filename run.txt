@@ -1,0 +1,133 @@
+Viewed package.json:1-43
+Viewed package.json:1-40
+Viewed .env:1-25
+Viewed .env:2-101
+Viewed vite.config.js:1-55
+Ran command: Check .vscode folder (`Test-Path "c:\AuraSupply\.vscode"`)
+Created launch.json
+Created tasks.json
+
+Here is the complete step-by-step guide to opening, configuring, and running the entire **Aura Supply ERP & Storefront Platform** in Visual Studio Code.
+
+---
+
+### 1. Project Directory & Key Locations
+
+| Component | Physical Path | Role |
+| :--- | :--- | :--- |
+| **Workspace Root** | `C:\AuraSupply` | Root folder to open in VS Code. Contains backend entry, dependencies, and database files. |
+| **Backend Entry** | [server.js](file:///c:/AuraSupply/server.js) | Express server running API, database pool, Telegram daemon, and static asset serving (Port `3000`). |
+| **Frontend App** | [c:\AuraSupply\AuraTheme](file:///c:/AuraSupply/AuraTheme) | React 19 + Vite + Ant Design SPA (Storefront, Customer Portal, and Admin Dashboard). |
+| **Environment Config** | [.env](file:///c:/AuraSupply/.env) | Database credentials, ports, JWT keys, and Telegram credentials. |
+| **Database DDL & Migrations** | [aura_v1_db.sql](file:///c:/AuraSupply/aura_v1_db.sql) & [migrations/](file:///c:/AuraSupply/migrations) | Complete MySQL schema and RBAC migrations. |
+| **VS Code Configs** | [.vscode/launch.json](file:///c:/AuraSupply/.vscode/launch.json) & [.vscode/tasks.json](file:///c:/AuraSupply/.vscode/tasks.json) | One-click debugging and task runners for VS Code. |
+
+---
+
+### 2. Prerequisites Checklist
+
+1. **Visual Studio Code** installed.
+2. **Node.js** (v18+ or v20+) installed.
+3. **MySQL Service** (WampServer, XAMPP, or native MySQL 8/9) running on port `3306`.
+4. Ensure the database credentials in [.env](file:///c:/AuraSupply/.env) match your MySQL settings:
+   ```env
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_USER=root
+   DB_PASSWORD=43200111
+   DB_NAME=aura_v1_db
+   PORT=3000
+   ```
+   *(If your MySQL `root` has no password, change `DB_PASSWORD=` to empty).*
+
+---
+
+### 3. Step-by-Step Instructions to Run in VS Code
+
+#### Step 1: Open the Project in VS Code
+1. Open VS Code.
+2. Click **File** $\rightarrow$ **Open Folder...** (or press `Ctrl + K, Ctrl + O`).
+3. Select `C:\AuraSupply` and click **Select Folder**.
+
+---
+
+#### Step 2: Choose Your Run Mode
+
+You can run the system using either **Method A (All-in-One Full Stack)** or **Method B (Full Dev Mode with Hot-Reload)**.
+
+---
+
+#### Method A: All-in-One Full Stack (Simplest & Recommended)
+In this mode, the Express backend serves both the API endpoints **and** the compiled React frontend directly on `http://localhost:3000`.
+
+1. Open the integrated terminal in VS Code:
+   * Press ``Ctrl + ` `` (or **Terminal** $\rightarrow$ **New Terminal**).
+2. Ensure you are in the root directory `C:\AuraSupply`.
+3. If you haven't built the frontend yet, build it once:
+   ```powershell
+   cd AuraTheme
+   npm run build
+   cd ..
+   ```
+4. Start the server:
+   ```powershell
+   node server.js
+   ```
+5. You will see:
+   ```text
+   🚀 Aura Global Server running at http://0.0.0.0:3000
+   🌐 Default Website:  http://0.0.0.0:3000/
+   🛍️ E-Menu WebApp:    http://0.0.0.0:3000/shop/sbc-store
+   📡 E-Menu & TMA API: http://0.0.0.0:3000/api/tma/stores
+   [Database] Connected successfully to MySQL (127.0.0.1:3306/aura_v1_db)
+   ```
+
+---
+
+#### Method B: Full Development Mode (with Live Hot-Reload for React)
+Use this mode if you are making active code edits to React components in `AuraTheme/src/` and want instantaneous hot-module replacement (HMR).
+
+1. **Terminal 1 (Backend API)**:
+   * Open integrated terminal in `C:\AuraSupply`:
+     ```powershell
+     node server.js
+     ```
+   * *The backend API runs on `http://localhost:3000`.*
+
+2. **Terminal 2 (Frontend Dev Server)**:
+   * Click the **+** (Split or New Terminal) icon in VS Code.
+   * Switch into the `AuraTheme` directory:
+     ```powershell
+     cd AuraTheme
+     npm run dev
+     ```
+   * *The Vite dev server runs on `http://localhost:5173` and automatically proxies all `/api` requests to port `3000`.*
+
+---
+
+### 4. VS Code One-Click Shortcuts
+
+Pre-configured VS Code tasks and debug profiles are now available in your workspace:
+
+* **F5 Debugger**:
+  * Press **`F5`** anywhere in VS Code to launch `server.js` with the Node.js debugger attached.
+* **Run Tasks**:
+  * Press `Ctrl + Shift + P` $\rightarrow$ type **`Tasks: Run Task`** $\rightarrow$ Select:
+    * `1. Start Backend Server (Port 3000)`
+    * `2. Start Frontend Dev (Vite Port 5173)`
+    * `3. Build Frontend Production (AuraTheme/dist)`
+
+---
+
+### 5. Key URLs to Test in Your Browser
+
+| Section | URL | Default Credentials / Role |
+| :--- | :--- | :--- |
+| **Main Storefront Website** | [http://localhost:3000/](http://localhost:3000/) | Public (Catalog, Cart, Shops) |
+| **Customer Registration** | [http://localhost:3000/register](http://localhost:3000/register) | Automatically gets `"customer"` role |
+| **Customer Login** | [http://localhost:3000/login](http://localhost:3000/login) | Log in as Customer |
+| **Customer Account Portal** | [http://localhost:3000/profile](http://localhost:3000/profile) | Order tracking, history, loyalty points |
+| **Admin Dashboard** | [http://localhost:3000/admins/dashboard](http://localhost:3000/admins/dashboard) | Requires Admin privileges |
+| **Admin Login** | [http://localhost:3000/admins/login](http://localhost:3000/admins/login) | Username: `admin` \| Password: `admin` |
+| **Digital E-Menu WebApp** | [http://localhost:3000/shop/sbc-store](http://localhost:3000/shop/sbc-store) | Storefront & QR ordering |
+| **Health Check API** | [http://localhost:3000/api/health](http://localhost:3000/api/health) | System status & uptime |
