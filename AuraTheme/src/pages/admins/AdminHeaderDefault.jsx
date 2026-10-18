@@ -90,12 +90,238 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
     }
   };
 
+  // Dedicated clean layout for Mobile Navigation Drawer (no Sider breakpoint conflicts)
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          background: adminTheme.sidebar,
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          boxSizing: 'border-box',
+        }}
+      >
+        {/* Brand Header with Close Button */}
+        <div
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 14px',
+            borderBottom: `1px solid ${adminTheme.sidebarBorder}`,
+            minHeight: 58,
+            height: 58,
+            boxSizing: 'border-box',
+          }}
+        >
+          <div
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              userSelect: 'none',
+            }}
+            onClick={() => {
+              if (onMenuClick) onMenuClick();
+              navigate('/admins');
+            }}
+          >
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 11,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.16), rgba(59, 130, 246, 0.08))',
+                border: '1px solid rgba(249, 115, 22, 0.24)',
+                boxShadow: '0 3px 12px rgba(249, 115, 22, 0.14)',
+                flexShrink: 0,
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <AuraLogo size={23} showText={false} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    letterSpacing: '-0.02em',
+                    color: adminTheme.text,
+                  }}
+                >
+                  AURA
+                </span>
+                <span style={{ color: '#f97316', fontWeight: 900, fontSize: 16 }}>.</span>
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    color: '#f97316',
+                    background: 'rgba(249, 115, 22, 0.12)',
+                    border: '1px solid rgba(249, 115, 22, 0.25)',
+                    padding: '1px 5px',
+                    borderRadius: 4,
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  ERP
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  letterSpacing: '0.14em',
+                  color: adminTheme.subtext,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {t('command_hub', 'COMMAND HUB')}
+              </span>
+            </div>
+          </div>
+
+          <Tooltip title={t('close_menu', 'Close navigation')}>
+            <Button
+              type="text"
+              size="small"
+              icon={<CloseOutlined style={{ fontSize: 16 }} />}
+              onClick={() => {
+                if (onMenuClick) onMenuClick();
+                else if (setCollapsed) setCollapsed(false);
+              }}
+              aria-label={t('close_menu', 'Close navigation')}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                color: adminTheme.subtext,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            />
+          </Tooltip>
+        </div>
+
+        {/* Quick POS Terminal Launcher */}
+        <div style={{ padding: '8px 12px 6px', flexShrink: 0 }}>
+          <button
+            onClick={() => {
+              if (onMenuClick) onMenuClick();
+              navigate('/admins/pos');
+            }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              gap: 10,
+              padding: '8px 12px',
+              borderRadius: 10,
+              border: '1px solid rgba(16, 185, 129, 0.35)',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.22) 100%)',
+              color: '#10b981',
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: 'pointer',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.12)',
+            }}
+          >
+            <CreditCardOutlined style={{ fontSize: 16 }} />
+            <span>{t('pos_terminal', 'POS Terminal')}</span>
+          </button>
+        </div>
+
+        {/* Scrollable Modules Navigation */}
+        <div
+          style={{
+            flex: '1 1 0%',
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            padding: '10px 8px 16px',
+            WebkitOverflowScrolling: 'touch',
+          }}
+          className="erp-sidebar-scroll"
+        >
+          <ErpModuleSidebar
+            collapsed={false}
+            activeModuleKey={activeModuleKey}
+            activeMenuKey={activeMenuKey}
+            onNavigate={handleNavigate}
+          />
+        </div>
+
+        {/* Bottom Dock / System Telemetry */}
+        <div
+          style={{
+            flexShrink: 0,
+            minHeight: 52,
+            padding: '10px 12px 12px',
+            borderTop: `1px solid ${adminTheme.sidebarBorder}`,
+            background: adminTheme.isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.02)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: '#10b981',
+                boxShadow: '0 0 6px #10b981',
+                display: 'inline-block',
+              }}
+            />
+            <Text style={{ fontSize: 11, fontWeight: 600, color: adminTheme.subtext }}>
+              {t('erp_core_modules', 'ERP Core: 15 Modules')}
+            </Text>
+          </div>
+          <Tooltip title={t('settings_and_modules', 'Settings & Modules')}>
+            <Button
+              type="text"
+              size="small"
+              icon={<SettingOutlined style={{ fontSize: 13 }} />}
+              onClick={() => {
+                if (onMenuClick) onMenuClick();
+                navigate('/admins/modules');
+              }}
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 6,
+                color: adminTheme.subtext,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+              }}
+            />
+          </Tooltip>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Sider
       collapsible
       collapsed={collapsed}
       onCollapse={setCollapsed}
-      breakpoint="lg"
       collapsedWidth={72}
       width={264}
       trigger={null}
@@ -103,7 +329,7 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
         background: adminTheme.sidebar,
         height: '100vh',
         maxHeight: '100vh',
-        position: isMobile ? 'relative' : 'fixed',
+        position: 'fixed',
         left: 0,
         top: 0,
         bottom: 0,

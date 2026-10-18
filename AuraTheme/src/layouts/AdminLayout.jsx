@@ -33,7 +33,7 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const { moduleState, toggleModule } = useAdminModules();
   const [collapsed, setCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false));
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   const { user, token, isAuthenticated, isOwner, isAdmin, login, logout, loadingSession } = useAuth();
@@ -141,8 +141,21 @@ const AdminLayout = () => {
     };
   }, []);
 
+  const handleToggleMobileDrawer = () => {
+    setMobileDrawerOpen((previous) => !previous);
+  };
+
+  const handleOpenMobileDrawer = () => {
+    setMobileDrawerOpen(true);
+  };
+
+  const handleCloseMobileDrawer = () => {
+    setMobileDrawerOpen(false);
+  };
+
   const handleToggle = () => {
-    if (isMobile) {
+    const isScreenMobile = typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : isMobile;
+    if (isScreenMobile) {
       setMobileDrawerOpen((previous) => !previous);
     } else {
       setCollapsed((previous) => !previous);
@@ -314,16 +327,17 @@ const AdminLayout = () => {
           width: '100%',
         }}
       >
-        {isMobile && showSidebar && (
+        {showSidebar && (
           <Drawer
             placement="left"
             open={mobileDrawerOpen}
             closable={false}
-            width={Math.min(280, typeof window !== 'undefined' ? window.innerWidth * 0.84 : 280)}
-            onClose={() => setMobileDrawerOpen(false)}
+            width={Math.min(290, typeof window !== 'undefined' ? Math.round(window.innerWidth * 0.84) : 290)}
+            onClose={handleCloseMobileDrawer}
             mask={true}
             maskClosable={true}
             destroyOnHidden
+            zIndex={2000}
             styles={{
               body: { padding: 0, background: adminTheme.sidebar, height: '100%', overflow: 'hidden' },
               header: { display: 'none' },
@@ -332,8 +346,8 @@ const AdminLayout = () => {
           >
             <HeaderDefault
               collapsed={false}
-              setCollapsed={() => setMobileDrawerOpen(false)}
-              onMenuClick={() => setMobileDrawerOpen(false)}
+              setCollapsed={handleCloseMobileDrawer}
+              onMenuClick={handleCloseMobileDrawer}
               moduleState={moduleState}
               onToggleModule={handleToggleModule}
               isMobile={true}
@@ -365,6 +379,8 @@ const AdminLayout = () => {
           <Head
             collapsed={collapsed}
             setCollapsed={handleToggle}
+            toggleMobileDrawer={handleToggleMobileDrawer}
+            openMobileDrawer={handleOpenMobileDrawer}
             isMobile={isMobile}
             showModuleMenu={showSidebar}
           />

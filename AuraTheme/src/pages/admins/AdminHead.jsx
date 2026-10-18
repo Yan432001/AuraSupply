@@ -112,7 +112,14 @@ const defaultNotifications = [
   },
 ];
 
-const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
+const Head = ({
+  collapsed,
+  setCollapsed,
+  toggleMobileDrawer,
+  openMobileDrawer,
+  isMobile,
+  showModuleMenu,
+}) => {
   const screens = useBreakpoint();
   const adminTheme = useAdminTheme();
   const location = useLocation();
@@ -124,10 +131,16 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
   const { currentLanguage, activeLanguage, setLanguage, languages } = useLanguage();
   const { t } = useTranslation();
 
-  // Responsive device checks combining Antd breakpoints and prop
-  const isDesktop = screens.lg ?? !isMobile;
-  const isTabletOrDesktop = screens.md ?? !isMobile;
-  const isSmallMobile = screens.xs ?? (typeof window !== 'undefined' ? window.innerWidth < 576 : false);
+  // Responsive device checks combining Antd breakpoints, window width, and props
+  const isDesktop = typeof window !== 'undefined'
+    ? window.innerWidth >= 992
+    : (screens.lg ?? !isMobile);
+  const isTabletOrDesktop = typeof window !== 'undefined'
+    ? window.innerWidth >= 768
+    : (screens.md ?? !isMobile);
+  const isSmallMobile = typeof window !== 'undefined'
+    ? window.innerWidth < 576
+    : (screens.xs ?? false);
 
   // Search Palette State
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -792,8 +805,22 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
               >
                 <button
                   type="button"
-                  aria-label="Toggle Navigation"
-                  onClick={setCollapsed}
+                  aria-label={!isDesktop ? t('open_menu', 'Open Navigation Drawer') : t('toggle_sidebar', 'Toggle Sidebar')}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!isDesktop) {
+                      if (toggleMobileDrawer) {
+                        toggleMobileDrawer();
+                      } else if (openMobileDrawer) {
+                        openMobileDrawer();
+                      } else if (setCollapsed) {
+                        setCollapsed();
+                      }
+                    } else if (setCollapsed) {
+                      setCollapsed();
+                    }
+                  }}
                   className="admin-header-btn"
                   style={iconButtonStyle}
                 >
