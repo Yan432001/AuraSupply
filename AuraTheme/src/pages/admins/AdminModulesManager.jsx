@@ -90,21 +90,37 @@ const moduleIconMap = {
 };
 
 const moduleCategories = {
-  asset: 'Core Operations',
   inventory: 'Core Operations',
   procurement: 'Core Operations',
+  asset: 'Core Operations',
   sales: 'Commerce & Orders',
   pos: 'Commerce & Orders',
-  'front-end': 'Commerce & Orders',
   crm: 'Commerce & Orders',
-  clinic: 'Healthcare & Clinical',
+  ecommerce: 'Commerce & Orders',
+  'front-end': 'Commerce & Orders',
   accounting: 'Finance & Banking',
+  loan: 'Finance & Banking',
   loans: 'Finance & Banking',
-  property: 'Real Estate & Property',
+  installment: 'Finance & Banking',
+  pawn: 'Finance & Banking',
+  saving: 'Finance & Banking',
+  tax: 'Finance & Banking',
+  project: 'Projects & Operations',
+  manufaturing: 'Manufacturing & Engineering',
   hr: 'Human Resources',
   payroll: 'Human Resources',
+  attendance: 'Human Resources',
+  property: 'Real Estate & Property',
+  rental: 'Real Estate & Property',
+  clinic: 'Healthcare & Clinical',
+  school: 'Education & Schools',
+  hotel_apartment: 'Hospitality & Real Estate',
+  email_marketing: 'Digital Content',
   cms: 'Digital Content',
+  express: 'Logistics & Dispatch',
+  dashboard: 'System Administration',
   reports: 'Analytics & Audits',
+  users: 'System Administration',
   settings: 'System Administration'
 };
 
@@ -112,9 +128,14 @@ const categoryOrder = [
   'Core Operations',
   'Commerce & Orders',
   'Finance & Banking',
+  'Projects & Operations',
+  'Manufacturing & Engineering',
   'Healthcare & Clinical',
+  'Education & Schools',
   'Human Resources',
   'Real Estate & Property',
+  'Hospitality & Real Estate',
+  'Logistics & Dispatch',
   'Digital Content',
   'Analytics & Audits',
   'System Administration'
@@ -234,22 +255,34 @@ const AdminModulesManager = () => {
     fetchModuleData();
   }, []);
 
-  // Merge local registry with dbModules
+  // Merge local registry with dbModules (sourced from aura_modules + aura_module_settings)
   const mergedModules = useMemo(() => {
     if (dbModules && dbModules.length > 0) {
       return dbModules.map((dbMod) => {
-        const localMod = erpModules.find((m) => m.key === dbMod.key) || {};
+        const modKey = dbMod.name || dbMod.key;
+        const localMod = erpModules.find((m) => m.key === modKey) || {};
         return {
           ...localMod,
           ...dbMod,
-          category: dbMod.category || moduleCategories[dbMod.key] || 'Core Operations',
-          enabled: isModuleOpen(dbMod.key),
-          submodules: dbMod.submodules || localMod.submodules || []
+          name: modKey,
+          key: modKey,
+          label: dbMod.title || dbMod.label || localMod.label || modKey,
+          title: dbMod.title || dbMod.label || localMod.label || modKey,
+          category: dbMod.category || moduleCategories[modKey] || 'Core Operations',
+          enabled: dbMod.enabled !== undefined ? Boolean(dbMod.enabled) : isModuleOpen(modKey),
+          submodules: dbMod.submodules || localMod.submodules || [],
+          image: dbMod.image,
+          favicon: dbMod.favicon,
+          style: dbMod.style,
+          controller: dbMod.controller,
+          module: dbMod.module,
+          description: dbMod.description || localMod.description || `Enterprise ${modKey} management module`
         };
       });
     }
     return erpModules.map((m) => ({
       ...m,
+      name: m.key,
       category: moduleCategories[m.key] || 'Core Operations',
       enabled: isModuleOpen(m.key),
       submodules: m.submodules || []
@@ -930,40 +963,52 @@ const AdminModulesManager = () => {
                       />
 
                       {/* Header with Icon, Name, and License-gated Switch */}
-                      <Flex justify="space-between" align="flex-start" style={{ marginBottom: 12 }}>
+                      <Flex justify="space-between" align="flex-start" style={{ marginBottom: 10 }}>
                         <Flex align="center" gap={12}>
                           <div
                             style={{
-                              width: 44,
-                              height: 44,
+                              width: 46,
+                              height: 46,
                               borderRadius: 12,
                               background: isOpen ? `${m.accent || primary}18` : adminTheme.cardMuted,
                               color: isOpen ? (m.accent || primary) : adminTheme.subtext,
                               display: 'grid',
                               placeItems: 'center',
                               fontSize: 22,
-                              transition: 'all 0.2s ease'
+                              transition: 'all 0.2s ease',
+                              flexShrink: 0
                             }}
                           >
-                            <IconComponent />
+                            {m.favicon ? (
+                              <i className={m.favicon} style={{ fontSize: 22 }} />
+                            ) : (
+                              <IconComponent />
+                            )}
                           </div>
 
                           <div>
                             <Title level={5} style={{ margin: 0, color: adminTheme.text }}>
                               {t(m.label, m.label)}
                             </Title>
-                            <Tag
-                              color={isOpen ? 'green' : 'default'}
-                              style={{
-                                borderRadius: 6,
-                                fontSize: 11,
-                                marginTop: 4,
-                                padding: '1px 8px',
-                                fontWeight: 600
-                              }}
-                            >
-                              {isOpen ? t('active_open', 'ACTIVE / OPEN') : t('disabled_hidden', 'DISABLED / CLOSED')}
-                            </Tag>
+                            <Flex align="center" gap={6} wrap="wrap" style={{ marginTop: 4 }}>
+                              <Tag
+                                color={isOpen ? 'green' : 'default'}
+                                style={{
+                                  borderRadius: 6,
+                                  fontSize: 10.5,
+                                  padding: '1px 7px',
+                                  fontWeight: 600,
+                                  margin: 0
+                                }}
+                              >
+                                {isOpen ? t('active_open', 'ACTIVE / OPEN') : t('disabled_hidden', 'DISABLED / CLOSED')}
+                              </Tag>
+                              {m.style && (
+                                <Tag style={{ borderRadius: 6, fontSize: 10, margin: 0, background: `${m.accent || primary}15`, color: m.accent || primary, borderColor: `${m.accent || primary}33`, fontWeight: 600 }}>
+                                  {m.style}
+                                </Tag>
+                              )}
+                            </Flex>
                           </div>
                         </Flex>
 
@@ -980,6 +1025,29 @@ const AdminModulesManager = () => {
                             />
                           </Tooltip>
                         </Flex>
+                      </Flex>
+
+                      {/* Technical Module Metadata Badges */}
+                      <Flex align="center" gap={6} wrap="wrap" style={{ marginBottom: 10 }}>
+                        {m.module && (
+                          <Tooltip title={t('settings_column_tooltip', 'Settings flag in aura_settings')}>
+                            <Tag style={{ borderRadius: 6, fontSize: 11, background: adminTheme.cardMuted, margin: 0 }}>
+                              <code>Settings-&gt;{m.module}</code>
+                            </Tag>
+                          </Tooltip>
+                        )}
+                        {m.controller && (
+                          <Tooltip title={t('controller_tooltip', 'Controller / Route handler')}>
+                            <Tag icon={<GlobalOutlined />} style={{ borderRadius: 6, fontSize: 11, margin: 0 }}>
+                              {m.controller}
+                            </Tag>
+                          </Tooltip>
+                        )}
+                        {m.image && (
+                          <Tag style={{ borderRadius: 6, fontSize: 10.5, margin: 0, color: adminTheme.subtext }}>
+                            {m.image}
+                          </Tag>
+                        )}
                       </Flex>
 
                       {/* Description */}
@@ -1068,7 +1136,7 @@ const AdminModulesManager = () => {
                             type="link"
                             size="small"
                             icon={<EyeOutlined />}
-                            onClick={() => navigate(`/admins?module=${m.key}`)}
+                            onClick={() => navigate(`/admins?module=${m.controller || m.key}`)}
                             style={{ padding: 0, fontWeight: 600, color: primary }}
                           >
                             {t('explore_module', 'Explore Module')}

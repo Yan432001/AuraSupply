@@ -2,35 +2,51 @@ const { db } = require('../../config/utill/helper');
 const { sendSuccess, sendError } = require('../../config/utill/response');
 const { logActivity } = require('../../services/auditLogger.service');
 
-// Known settings column mapping mirroring AURA_v1 bpas_settings
-const SETTINGS_MODULE_MAP = {
-  inventory: 'module_inventory',
-  products: 'module_inventory',
-  asset: 'module_asset',
-  procurement: 'module_purchase',
-  purchases: 'module_purchase',
-  sales: 'module_sale',
-  pos: 'pos',
-  accounting: 'module_account',
-  hr: 'module_hr',
-  payroll: 'payroll',
-  attendance: 'attendance',
-  crm: 'module_crm',
-  property: 'module_property',
-  clinic: 'module_clinic',
-  schools: 'module_school',
-  loans: 'module_loan',
-  pawns: 'module_pawn',
-  savings: 'module_save',
-  installments: 'module_installment',
-  rooms: 'module_hotel_apartment',
-  gym: 'module_gym',
-  repairs: 'module_repair',
-  concretes: 'module_concrete',
-  truckings: 'module_truckings',
-  clearances: 'module_clearance',
-  expenses: 'module_expense',
-  tax: 'module_tax'
+// Style to Hex color mapping mirroring AURA_v1 style.css
+const STYLE_COLOR_MAP = {
+  bblue: '#428BCA',
+  blightBlue: '#009688',
+  bgreen: '#bdea74',
+  bmGreen: '#16a085',
+  bdarkGreen: '#16a34a',
+  bpink: '#e84c8a',
+  borange: '#fa603d',
+  blightOrange: '#bf994d',
+  bpurple: '#8e44ad',
+  bred: '#ff5454'
+};
+
+// Department / Category mapping for aura_modules
+const MODULE_CATEGORY_MAP = {
+  inventory: 'Core Operations',
+  procurement: 'Core Operations',
+  asset: 'Core Operations',
+  sales: 'Commerce & Orders',
+  pos: 'Commerce & Orders',
+  crm: 'Commerce & Orders',
+  ecommerce: 'Commerce & Orders',
+  accounting: 'Finance & Banking',
+  loan: 'Finance & Banking',
+  installment: 'Finance & Banking',
+  pawn: 'Finance & Banking',
+  saving: 'Finance & Banking',
+  tax: 'Finance & Banking',
+  project: 'Projects & Operations',
+  manufaturing: 'Manufacturing & Engineering',
+  hr: 'Human Resources',
+  payroll: 'Human Resources',
+  attendance: 'Human Resources',
+  property: 'Real Estate & Property',
+  rental: 'Real Estate & Property',
+  clinic: 'Healthcare & Clinical',
+  school: 'Education & Schools',
+  hotel_apartment: 'Hospitality & Real Estate',
+  email_marketing: 'Digital Content',
+  express: 'Logistics & Dispatch',
+  dashboard: 'System Administration',
+  reports: 'Analytics & Audits',
+  users: 'System Administration',
+  settings: 'System Administration'
 };
 
 /**
@@ -156,16 +172,51 @@ exports.verifyLicense = async (req, res) => {
 
 /**
  * GET /api/admin/modules
- * Return all ERP modules with categories, icons, and nested sub-modules
+ * Return all 25 modules from aura_modules + aura_module_settings + aura_settings
+ * Columns from aura_modules: [id, name, status, module, active, image, favicon, style, controller, description]
+ * Columns from aura_module_settings: [id, module_key, title, is_enabled, sort_order, config]
  */
 exports.listModules = async (req, res) => {
   try {
-    const [modules] = await db.query(`
-      SELECT *
-      FROM aura_module_settings
-      ORDER BY sort_order ASC, id ASC
-    `);
+    // 1. Fetch all rows from aura_modules
+    let auraMods = [];
+    try {
+      const [mRows] = await db.query(`
+        SELECT id, name, status, module, active, image, favicon, style, controller, description
+        FROM aura_modules
+        ORDER BY id ASC
+      `);
+      auraMods = mRows;
+    } catch (mErr) {
+      console.warn('[listModules] aura_modules lookup failed:', mErr.message);
+    }
 
+    // 2. Fetch live settings row (aura_settings)
+    let settingsRow = {};
+    try {
+      const [sRows] = await db.query('SELECT * FROM aura_settings LIMIT 1');
+      if (sRows && sRows.length > 0) {
+        settingsRow = sRows[0];
+      }
+    } catch (_) {}
+
+    // 3. Fetch aura_module_settings
+    let moduleSettings = [];
+    try {
+      const [msRows] = await db.query(`
+        SELECT id, module_key, title, is_enabled, sort_order, config
+        FROM aura_module_settings
+        ORDER BY sort_order ASC, id ASC
+      `);
+      moduleSettings = msRows;
+    } catch (_) {}
+
+    const settingMap = {};
+    for (const ms of moduleSettings) {
+      settingMap[ms.module_key] = ms;
+    }
+
+    // 4. Fetch sub-modules
     let submodules = [];
     try {
       const [subRows] = await db.query(`
@@ -176,7 +227,6 @@ exports.listModules = async (req, res) => {
       submodules = subRows;
     } catch (_) {}
 
-    // Group submodules by module_key
     const subMap = {};
     for (const sub of submodules) {
       if (!subMap[sub.module_key]) {
@@ -191,27 +241,97 @@ exports.listModules = async (req, res) => {
       });
     }
 
-    const payload = modules.map(m => {
+    // 5. Build combined module list
+    const processedKeys = new Set();
+    const payload = [];
+
+    // Map each module from aura_modules
+    for (const m of auraMods) {
+      processedKeys.add(m.name);
+      const ms = settingMap[m.name];
+
+      // Determine active status:
+      // In AURA_v1: $this->site->activeModule($row->module) checks $Settings->{$row->module} == 1
+      const isActInSettings = m.module && settingsRow[m.module] !== undefined
+        ? Number(settingsRow[m.module]) === 1
+        : false;
+      const isActInModules = Number(m.active) === 1;
+      const isActInModuleSettings = ms ? Number(ms.is_enabled) === 1 : false;
+
+      // Module is open/active if active in aura_settings, aura_modules, or aura_module_settings
+      const isEnabled = isActInSettings || isActInModules || isActInModuleSettings;
+
       let configObj = {};
       try {
-        if (m.config) {
-          configObj = typeof m.config === 'string' ? JSON.parse(m.config) : m.config;
+        if (ms?.config) {
+          configObj = typeof ms.config === 'string' ? JSON.parse(ms.config) : ms.config;
         }
       } catch (_) {}
 
-      return {
+      const cleanTitle = ms?.title || m.name.charAt(0).toUpperCase() + m.name.slice(1).replace(/_/g, ' ');
+      const accentColor = STYLE_COLOR_MAP[m.style] || configObj.accent || '#2563eb';
+      const category = MODULE_CATEGORY_MAP[m.name] || configObj.category || 'Core Operations';
+
+      payload.push({
         id: m.id,
-        key: m.module_key,
-        label: m.title || m.label || configObj.label || m.module_key,
-        category: m.category || configObj.category || 'Operations',
-        iconKey: m.icon_key || configObj.iconKey || m.module_key,
-        accent: m.accent_color || configObj.accent || '#2563eb',
-        enabled: m.is_enabled === 1,
-        sortOrder: m.sort_order || 0,
-        description: m.description || configObj.description || '',
-        submodules: subMap[m.module_key] || []
-      };
-    });
+        name: m.name,
+        key: m.name,
+        title: cleanTitle,
+        label: cleanTitle,
+        status: m.status,
+        module: m.module,
+        active: isEnabled ? 1 : 0,
+        enabled: isEnabled,
+        image: m.image,
+        favicon: m.favicon,
+        style: m.style,
+        controller: m.controller,
+        description: m.description || configObj.description || `Enterprise ${cleanTitle} management`,
+        sort_order: ms?.sort_order || m.id,
+        accent: accentColor,
+        category,
+        submodules: subMap[m.name] || []
+      });
+    }
+
+    // Include any additional modules in aura_module_settings not present in aura_modules (e.g. dashboard, reports, users, settings)
+    for (const ms of moduleSettings) {
+      if (!processedKeys.has(ms.module_key)) {
+        processedKeys.add(ms.module_key);
+        let configObj = {};
+        try {
+          if (ms.config) {
+            configObj = typeof ms.config === 'string' ? JSON.parse(ms.config) : ms.config;
+          }
+        } catch (_) {}
+
+        const isEnabled = ms.is_enabled === 1;
+        const cleanTitle = ms.title || ms.module_key.charAt(0).toUpperCase() + ms.module_key.slice(1).replace(/_/g, ' ');
+
+        payload.push({
+          id: ms.id + 100,
+          name: ms.module_key,
+          key: ms.module_key,
+          title: cleanTitle,
+          label: cleanTitle,
+          status: 1,
+          module: ms.module_key,
+          active: isEnabled ? 1 : 0,
+          enabled: isEnabled,
+          image: `${ms.module_key}.png`,
+          favicon: ms.module_key === 'dashboard' ? 'fa-regular fa-gauge-high' :
+                   ms.module_key === 'reports' ? 'fa-regular fa-chart-mixed' :
+                   ms.module_key === 'users' ? 'fa-regular fa-users' : 'fa-regular fa-gear',
+          style: 'bblue',
+          controller: ms.module_key,
+          description: configObj.description || `Core system module: ${cleanTitle}`,
+          sort_order: ms.sort_order || 99,
+          accent: configObj.accent || '#0284c7',
+          category: MODULE_CATEGORY_MAP[ms.module_key] || 'System Administration',
+          submodules: subMap[ms.module_key] || []
+        });
+      }
+    }
 
     const totalModules = payload.length;
     const activeModules = payload.filter(m => m.enabled).length;
@@ -233,9 +353,15 @@ exports.listModules = async (req, res) => {
 /**
  * POST /api/admin/modules/toggle
  * Enable (Open) or Disable (Close) an ERP module.
- * STRICT SECURITY REQUIREMENT:
- * Must verify License Activation Key (either provided in request body, x-license-key header, or active DB license)
+ *
+ * STRICT LICENSE CHECK:
+ * Verifies License Activation Key (either provided in request body, x-license-key header, or active DB license)
  * before permitting any module update!
+ *
+ * SYNCHRONIZES:
+ * 1. aura_modules.active
+ * 2. aura_settings.{module}
+ * 3. aura_module_settings.is_enabled
  */
 exports.toggleModule = async (req, res) => {
   try {
@@ -263,11 +389,15 @@ exports.toggleModule = async (req, res) => {
       if (check.valid) {
         licenseValid = true;
         licenseInfo = check;
+      } else {
+        return res.status(403).json({
+          success: false,
+          valid: false,
+          message: 'Invalid License Activation Key. Module update denied.'
+        });
       }
-    }
-
-    // If key not supplied directly in request, check if system has active verified license in DB
-    if (!licenseValid) {
+    } else {
+      // If key not supplied directly in request, check if system has active verified license in DB
       try {
         const [activeLic] = await db.query(
           "SELECT * FROM aura_license WHERE status = 'active' AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1"
@@ -287,29 +417,51 @@ exports.toggleModule = async (req, res) => {
       });
     }
 
-    // 2. Update or Insert module in aura_module_settings
+    // 2. Look up module field in aura_modules
+    let settingField = null;
+    try {
+      const [aRows] = await db.query(
+        'SELECT id, name, module FROM aura_modules WHERE name = ? OR module = ? LIMIT 1',
+        [module_key, module_key]
+      );
+      if (aRows && aRows.length > 0) {
+        settingField = aRows[0].module;
+      }
+    } catch (_) {}
+
+    // 3. Update aura_modules table
+    try {
+      await db.query(`
+        UPDATE aura_modules
+        SET active = ?
+        WHERE name = ? OR module = ?
+      `, [isEnabled, module_key, module_key]);
+    } catch (mErr) {
+      console.warn('[toggleModule] aura_modules update error:', mErr.message);
+    }
+
+    // 4. Update aura_settings table (e.g. module_inventory, module_purchase, pos, etc.)
+    if (settingField) {
+      try {
+        await db.query(`UPDATE aura_settings SET \`${settingField}\` = ? LIMIT 1`, [isEnabled]);
+      } catch (colErr) {
+        console.warn(`[toggleModule] sync to aura_settings.${settingField} error:`, colErr.message);
+      }
+    }
+
+    // 5. Update or Insert in aura_module_settings
     await db.query(`
       INSERT INTO aura_module_settings (module_key, title, is_enabled, sort_order)
       VALUES (?, ?, ?, 0)
       ON DUPLICATE KEY UPDATE
         is_enabled = VALUES(is_enabled)
-    `, [module_key, module_key.charAt(0).toUpperCase() + module_key.slice(1), isEnabled]);
+    `, [module_key, module_key.charAt(0).toUpperCase() + module_key.slice(1).replace(/_/g, ' '), isEnabled]);
 
-    // 3. Keep aura_settings in sync with AURA_v1 CodeIgniter schema
-    const settingsCol = SETTINGS_MODULE_MAP[module_key];
-    if (settingsCol) {
-      try {
-        await db.query(`UPDATE aura_settings SET \`${settingsCol}\` = ? LIMIT 1`, [isEnabled]);
-      } catch (colErr) {
-        console.warn(`[toggleModule] sync to aura_settings.${settingsCol} error:`, colErr.message);
-      }
-    }
-
-    // 4. Audit Log
+    // 6. Audit Log
     await logActivity({
       req,
       action: isEnabled ? 'module_open' : 'module_close',
-      tableName: 'aura_module_settings',
+      tableName: 'aura_modules',
       recordId: module_key,
       newValues: { is_enabled: isEnabled, verified_license: licenseInfo?.license_key || 'verified' }
     });
@@ -317,6 +469,8 @@ exports.toggleModule = async (req, res) => {
     return sendSuccess(res, {
       module_key,
       is_enabled: isEnabled === 1,
+      active: isEnabled,
+      setting_field: settingField,
       license_verified: true
     }, `Module '${module_key}' successfully ${isEnabled ? 'opened (enabled)' : 'closed (disabled)'}`);
   } catch (err) {
@@ -466,7 +620,6 @@ exports.getModulePermissions = async (req, res) => {
       return sendError(res, 'moduleKey is required', 400);
     }
 
-    // Determine query variations (e.g. sales vs sale, purchases vs purchase)
     const singular = moduleKey.endsWith('s') ? moduleKey.slice(0, -1) : moduleKey;
     const plural = moduleKey.endsWith('s') ? moduleKey : `${moduleKey}s`;
 
@@ -502,7 +655,6 @@ exports.getModulePermissions = async (req, res) => {
     for (const k of keys) {
       matrix[k.permission_key] = {};
       for (const g of groups) {
-        // Owner and Admin always have full access
         if (g.level <= 2 || g.name === 'owner' || g.name === 'admin' || g.id === 1) {
           matrix[k.permission_key][g.id] = true;
         } else {
@@ -548,7 +700,6 @@ exports.createModulePermission = async (req, res) => {
       return sendError(res, 'Action name or permission_key is required', 400);
     }
 
-    // Build standard permission key: e.g. "sales-export" or sanitized custom key
     const cleanAction = (action || permission_key)
       .toLowerCase()
       .trim()
@@ -634,7 +785,6 @@ exports.updateModulePermissions = async (req, res) => {
   try {
     const { moduleKey } = req.params;
     const { matrix = {} } = req.body;
-    // matrix format: { [permission_key]: { [groupId]: boolean } }
 
     if (!matrix || Object.keys(matrix).length === 0) {
       return sendError(res, 'Permission matrix data is required', 400);
@@ -643,7 +793,6 @@ exports.updateModulePermissions = async (req, res) => {
     for (const [permKey, groupMap] of Object.entries(matrix)) {
       for (const [groupId, isAllowed] of Object.entries(groupMap)) {
         const gid = parseInt(groupId, 10);
-        // Owner group (id 1) always remains 1
         const allowedVal = (gid === 1) ? 1 : (isAllowed ? 1 : 0);
 
         await db.query(`
