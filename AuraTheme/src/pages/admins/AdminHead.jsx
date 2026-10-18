@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
+  App,
   Avatar,
   Badge,
   Button,
@@ -121,6 +122,7 @@ const Head = ({
   showModuleMenu,
 }) => {
   const screens = useBreakpoint();
+  const { modal } = App.useApp ? App.useApp() : {};
   const adminTheme = useAdminTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -212,7 +214,8 @@ const Head = ({
   // Sign out confirmation
   const handleUserMenuClick = ({ key }) => {
     if (key === 'logout') {
-      Modal.confirm({
+      const confirmFn = modal?.confirm || Modal.confirm;
+      confirmFn({
         title: t('logout', 'Sign Out Confirmation'),
         content: t('confirm_logout', 'Are you sure you want to log out of the Aura ERP administration portal?'),
         okText: t('yes_logout', 'Yes, Sign Out'),
@@ -797,7 +800,7 @@ const Head = ({
               <Tooltip
                 title={
                   !isDesktop
-                    ? t('open_menu', 'Open Navigation Drawer')
+                    ? null
                     : collapsed
                     ? t('expand_sidebar', 'Expand Sidebar (Ctrl+B)')
                     : t('collapse_sidebar', 'Collapse Sidebar (Ctrl+B)')
@@ -805,7 +808,7 @@ const Head = ({
               >
                 <button
                   type="button"
-                  aria-label={!isDesktop ? t('open_menu', 'Open Navigation Drawer') : t('toggle_sidebar', 'Toggle Sidebar')}
+                  aria-label={collapsed ? t('expand_sidebar', 'Expand Sidebar') : t('collapse_sidebar', 'Collapse Sidebar')}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
+  App,
   Avatar,
   Badge,
   Button,
@@ -128,6 +129,7 @@ const playPosAudio = (type = 'beep', soundEnabled = true) => {
 
 const PosTerminal = () => {
   const screens = useBreakpoint();
+  const { modal } = App.useApp ? App.useApp() : {};
   const navigate = useNavigate();
   const { user } = useAuth();
   const { themeMode, toggleThemeMode } = useTheme();
@@ -521,7 +523,8 @@ const PosTerminal = () => {
   // Clear Entire Cart
   const clearCart = () => {
     if (cart.length === 0) return;
-    Modal.confirm({
+    const confirmFn = modal?.confirm || Modal.confirm;
+    confirmFn({
       title: t('clear_cart', 'Clear Current POS Cart?'),
       content: t('confirm_clear_cart', 'Are you sure you want to discard all items from the active order?'),
       okText: t('yes_clear', 'Yes, Discard Cart'),
@@ -803,7 +806,8 @@ const PosTerminal = () => {
               icon={<ArrowLeftOutlined />}
               onClick={() => {
                 if (cart.length > 0) {
-                  Modal.confirm({
+                  const confirmFn = modal?.confirm || Modal.confirm;
+                  confirmFn({
                     title: 'Leave POS Terminal?',
                     content: 'You have active items in your cart. Leave and discard cart?',
                     okText: 'Yes, Exit POS',

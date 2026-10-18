@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Card, Tabs, Table, Button, Form, Input, InputNumber, Switch, Space, Tag, Modal,
+  App, Card, Tabs, Table, Button, Form, Input, InputNumber, Switch, Space, Tag, Modal,
   message, Popconfirm, Typography, Row, Col, Select, Divider, Alert, Tooltip, Badge,
   Statistic, Rate
 } from 'antd';
@@ -22,6 +22,7 @@ const { TextArea } = Input;
 const { Option } = Select;
 
 export default function AdminCmsManager() {
+  const { modal } = App.useApp ? App.useApp() : {};
   const adminTheme = useAdminTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -811,7 +812,8 @@ export default function AdminCmsManager() {
               size="small"
               icon={<EyeOutlined />}
               onClick={() => {
-                Modal.info({
+                const infoFn = modal?.info || Modal.info;
+                infoFn({
                   title: `Inquiry from ${record.name}`,
                   content: (
                     <div style={{ marginTop: 12 }}>

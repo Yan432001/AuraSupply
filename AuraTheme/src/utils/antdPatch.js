@@ -30,28 +30,36 @@ if (typeof unstableSetRender === 'function') {
 
 // 2. Suppress benign Ant Design v5 deprecation & static context notices
 if (typeof window !== 'undefined' && console) {
-  const isAntdKnownWarning = (msg) => {
-    if (!msg || typeof msg !== 'string') return false;
+  const isAntdKnownWarning = (args) => {
+    if (!args || !args.length) return false;
+    const combined = args
+      .map((arg) => (typeof arg === 'string' ? arg : (arg && arg.message) || ''))
+      .join(' ');
+
     return (
-      msg.includes('[antd: message] Static function can not consume context') ||
-      msg.includes('[antd: Card] `bordered` is deprecated') ||
-      msg.includes('[antd: Card] `bodyStyle` is deprecated') ||
-      msg.includes('[antd: Dropdown] `dropdownRender` is deprecated') ||
-      msg.includes('An empty string ("") was passed to the src attribute') ||
-      msg.includes('Instance created by `useForm` is not connected to any Form element') ||
-      msg.includes('triggering nested component updates from render is not allowed')
+      combined.includes('Static function can not consume context') ||
+      combined.includes('[antd: Modal]') && combined.includes('Static function') ||
+      combined.includes('[antd: message] Static function') ||
+      combined.includes('[antd: notification] Static function') ||
+      combined.includes('`destroyOnClose` is deprecated') ||
+      combined.includes('`dropdownRender` is deprecated') ||
+      combined.includes('`bordered` is deprecated') ||
+      combined.includes('`bodyStyle` is deprecated') ||
+      combined.includes('An empty string ("") was passed to the src attribute') ||
+      combined.includes('Instance created by `useForm` is not connected to any Form element') ||
+      combined.includes('triggering nested component updates from render is not allowed')
     );
   };
 
   const originalWarn = console.warn;
   console.warn = (...args) => {
-    if (isAntdKnownWarning(args[0])) return;
+    if (isAntdKnownWarning(args)) return;
     originalWarn.apply(console, args);
   };
 
   const originalError = console.error;
   console.error = (...args) => {
-    if (isAntdKnownWarning(args[0])) return;
+    if (isAntdKnownWarning(args)) return;
     originalError.apply(console, args);
   };
 }
