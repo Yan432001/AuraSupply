@@ -1164,7 +1164,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
 
             {/* Interactive Notifications Bell Dropdown */}
             <Dropdown
-              dropdownRender={() => notificationsMenuContent}
+              popupRender={() => notificationsMenuContent}
               trigger={['click']}
               placement="bottomRight"
             >
@@ -1210,7 +1210,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <Avatar
                     size={28}
-                    src={user?.avatar || undefined}
+                    src={user?.avatar && typeof user.avatar === 'string' && user.avatar.trim() !== '' ? user.avatar : null}
                     icon={<UserOutlined style={{ fontSize: 13 }} />}
                     style={{
                       border: '1.5px solid #f97316',

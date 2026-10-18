@@ -36,6 +36,8 @@ if (typeof window !== 'undefined' && console) {
       msg.includes('[antd: message] Static function can not consume context') ||
       msg.includes('[antd: Card] `bordered` is deprecated') ||
       msg.includes('[antd: Card] `bodyStyle` is deprecated') ||
+      msg.includes('[antd: Dropdown] `dropdownRender` is deprecated') ||
+      msg.includes('An empty string ("") was passed to the src attribute') ||
       msg.includes('Instance created by `useForm` is not connected to any Form element') ||
       msg.includes('triggering nested component updates from render is not allowed')
     );

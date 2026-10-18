@@ -1016,7 +1016,7 @@ const PosTerminal = () => {
           >
             <Avatar
               size={26}
-              src={user?.avatar}
+              src={user?.avatar && typeof user.avatar === 'string' && user.avatar.trim() !== '' ? user.avatar : null}
               icon={<UserOutlined />}
               style={{ background: '#f97316' }}
             />
