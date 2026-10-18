@@ -479,6 +479,139 @@ exports.toggleModule = async (req, res) => {
 };
 
 /**
+ * POST /api/admin/modules/bulk-update
+ * Bulk update module switch states across aura_modules, aura_settings, and aura_module_settings.
+ * Aligns directly with AURA_v1 System_settings.php::modules():
+ * - User clicks switches ON/OFF freely in the UI
+ * - Submits form with username and license key
+ * - Verifies license: if true, synchronizes all module flags across database; if false, denies update.
+ */
+exports.bulkUpdateModules = async (req, res) => {
+  try {
+    const { user_name, license_key, modules = {}, submodules = {} } = req.body;
+
+    const candidateKey = license_key || req.headers['x-license-key'];
+    const candidateUser = user_name || 'aura_erp';
+
+    if (!candidateKey) {
+      return res.status(403).json({
+        success: false,
+        valid: false,
+        message: 'License Activation Key is required to save module configurations.'
+      });
+    }
+
+    // 1. Strict License Validation (matching AURA_v1)
+    const check = await validateLicenseKey(candidateKey, candidateUser);
+    if (!check.valid) {
+      return res.status(403).json({
+        success: false,
+        valid: false,
+        message: check.message || 'Invalid License Activation Key. Please enter a valid license key (e.g. hianyan@v1) to update module settings.'
+      });
+    }
+
+    // 2. Fetch module definitions from aura_modules
+    let allMods = [];
+    try {
+      const [mRows] = await db.query('SELECT id, name, module, active FROM aura_modules');
+      allMods = mRows;
+    } catch (_) {}
+
+    const modByCode = {};
+    for (const m of allMods) {
+      modByCode[m.name] = m;
+      if (m.module) {
+        modByCode[m.module] = m;
+      }
+    }
+
+    // 3. Process and synchronize each module state
+    const moduleEntries = Object.entries(modules);
+    for (const [key, val] of moduleEntries) {
+      const isEnabled = (val === true || val === 1 || val === '1') ? 1 : 0;
+
+      // Security rule: Never allow disabling core settings
+      if (key === 'settings' && isEnabled === 0) continue;
+
+      const modRow = modByCode[key];
+      const settingCol = modRow ? modRow.module : (key.startsWith('module_') ? key : `module_${key}`);
+
+      // a. Synchronize aura_modules table
+      try {
+        await db.query(
+          'UPDATE aura_modules SET active = ? WHERE name = ? OR module = ?',
+          [isEnabled, key, key]
+        );
+      } catch (err) {
+        console.warn(`[bulkUpdateModules] aura_modules update failed for ${key}:`, err.message);
+      }
+
+      // b. Synchronize aura_settings table column
+      if (settingCol) {
+        try {
+          await db.query(`UPDATE aura_settings SET \`${settingCol}\` = ? LIMIT 1`, [isEnabled]);
+        } catch (_) {}
+      }
+
+      // c. Synchronize aura_module_settings table
+      try {
+        await db.query(`
+          INSERT INTO aura_module_settings (module_key, title, is_enabled, sort_order)
+          VALUES (?, ?, ?, 0)
+          ON DUPLICATE KEY UPDATE is_enabled = VALUES(is_enabled)
+        `, [key, key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '), isEnabled]);
+      } catch (_) {}
+    }
+
+    // 4. Synchronize sub-modules if provided
+    for (const [subKey, subVal] of Object.entries(submodules)) {
+      const subEnabled = (subVal === true || subVal === 1 || subVal === '1') ? 1 : 0;
+      try {
+        await db.query(`UPDATE aura_settings SET \`${subKey}\` = ? LIMIT 1`, [subEnabled]);
+      } catch (_) {}
+      try {
+        await db.query(
+          'UPDATE aura_sub_module_settings SET is_enabled = ?, updated_at = NOW() WHERE sub_module_key = ?',
+          [subEnabled, subKey]
+        );
+      } catch (_) {}
+    }
+
+    // 5. Update aura_license status & last_check_at
+    try {
+      await db.query(`
+        UPDATE aura_license 
+        SET last_check_at = NOW(), status = 'active'
+        WHERE id = 1 OR license_key = ?
+      `, [check.license_key]);
+    } catch (_) {}
+
+    // 6. Audit Logging
+    await logActivity({
+      req,
+      action: 'modules_bulk_update',
+      tableName: 'aura_modules',
+      recordId: 'all',
+      newValues: {
+        total_modules_updated: moduleEntries.length,
+        verified_license: check.license_key
+      }
+    });
+
+    return sendSuccess(res, {
+      updated_modules_count: moduleEntries.length,
+      license_name: check.license_name,
+      license_key: check.license_key,
+      is_valid: true
+    }, 'Enterprise License verified. All module settings have been successfully updated across the database.');
+  } catch (err) {
+    console.error('[bulkUpdateModules error]', err);
+    return sendError(res, 'Failed to update module settings', 500, err.message);
+  }
+};
+
+/**
  * POST /api/admin/modules/submodule/toggle
  * Enable or disable an ERP sub-module
  */

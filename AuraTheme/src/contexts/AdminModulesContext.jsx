@@ -80,6 +80,13 @@ export const AdminModulesProvider = ({ children }) => {
     setModuleState(next);
   }, []);
 
+  const setAllModuleStates = useCallback((nextStates) => {
+    setModuleState((prev) => ({
+      ...prev,
+      ...nextStates,
+    }));
+  }, []);
+
   const resetModules = useCallback(() => {
     setModuleState(getDefaultModuleState());
   }, []);
@@ -95,6 +102,7 @@ export const AdminModulesProvider = ({ children }) => {
       moduleState,
       isModuleOpen,
       toggleModule,
+      setAllModuleStates,
       enableAllModules,
       disableAllModules,
       resetModules,
@@ -105,6 +113,7 @@ export const AdminModulesProvider = ({ children }) => {
       moduleState,
       isModuleOpen,
       toggleModule,
+      setAllModuleStates,
       enableAllModules,
       disableAllModules,
       resetModules,

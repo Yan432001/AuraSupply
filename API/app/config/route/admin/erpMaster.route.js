@@ -96,6 +96,7 @@ module.exports = (app) => {
   app.get('/api/admin/modules', authenticate, modCtrl.listModules);
   app.post('/api/admin/modules/verify-license', authenticate, modCtrl.verifyLicense);
   app.post('/api/admin/modules/toggle', authenticate, requireRole('owner', 'admin'), modCtrl.toggleModule);
+  app.post('/api/admin/modules/bulk-update', authenticate, requireRole('owner', 'admin'), modCtrl.bulkUpdateModules);
   app.post('/api/admin/modules/submodule/toggle', authenticate, requireRole('owner', 'admin'), modCtrl.toggleSubmodule);
   app.get('/api/admin/modules/license', authenticate, modCtrl.getLicense);
   app.post('/api/admin/modules/license', authenticate, requireRole('owner', 'admin'), modCtrl.updateLicense);

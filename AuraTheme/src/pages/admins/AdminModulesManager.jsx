@@ -23,7 +23,8 @@ import {
   Checkbox,
   Radio,
   message,
-  Popconfirm
+  Popconfirm,
+  Select
 } from 'antd';
 import {
   AppstoreOutlined,
@@ -149,6 +150,7 @@ const AdminModulesManager = () => {
     moduleState,
     isModuleOpen,
     toggleModule: contextToggleModule,
+    setAllModuleStates,
     enableAllModules,
     disableAllModules,
     resetModules,
@@ -167,25 +169,32 @@ const AdminModulesManager = () => {
   const [licenseData, setLicenseData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // License Verification & Gate State
+  // Local Module Switch States (allow clicking ON/OFF freely before submit, matching AURA_v1)
+  const [localModuleStates, setLocalModuleStates] = useState({});
+  const [initialModuleStates, setInitialModuleStates] = useState({});
+
+  // Local Submodule Switch States
+  const [localSubmoduleStates, setLocalSubmoduleStates] = useState({});
+  const [initialSubmoduleStates, setInitialSubmoduleStates] = useState({});
+
+  // Enterprise License Submission Form States (matching AURA_v1 modules.php)
+  const [licenseUserName, setLicenseUserName] = useState('aura_erp');
+  const [licenseKeyInput, setLicenseKeyInput] = useState(
+    () => sessionStorage.getItem('aura_license_key') || 'hianyan@v1'
+  );
+  const [submittingModules, setSubmittingModules] = useState(false);
+
+  // License Verification Status
   const [isLicenseVerified, setIsLicenseVerified] = useState(
     () => sessionStorage.getItem('aura_license_verified') === 'true'
   );
   const [verifiedLicenseKey, setVerifiedLicenseKey] = useState(
     () => sessionStorage.getItem('aura_license_key') || ''
   );
-  const [licenseAuthModalOpen, setLicenseAuthModalOpen] = useState(false);
-  const [licenseAuthSubmitting, setLicenseAuthSubmitting] = useState(false);
-  const [pendingModuleAction, setPendingModuleAction] = useState(null); // { key, label, targetState }
-  const [licenseAuthForm] = Form.useForm();
 
   // Standalone Enterprise License Update Modal
   const [licenseModalOpen, setLicenseModalOpen] = useState(false);
   const [licenseForm] = Form.useForm();
-
-  // Confirmation Modal State for Disabling a Module
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [pendingDisableModule, setPendingDisableModule] = useState(null);
 
   // Module Permissions Drawer & Management State
   const [permissionsDrawerOpen, setPermissionsDrawerOpen] = useState(false);
@@ -204,8 +213,8 @@ const AdminModulesManager = () => {
   const getAuthHeader = () => {
     const token = localStorage.getItem('token');
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    if (verifiedLicenseKey) {
-      headers['x-license-key'] = verifiedLicenseKey;
+    if (verifiedLicenseKey || licenseKeyInput) {
+      headers['x-license-key'] = verifiedLicenseKey || licenseKeyInput;
     }
     return headers;
   };
@@ -223,20 +232,35 @@ const AdminModulesManager = () => {
         const fetched = modRes.value.data.data?.modules || [];
         setDbModules(fetched);
 
+        const modMap = {};
+        fetched.forEach((m) => {
+          const k = m.name || m.key;
+          modMap[k] = Boolean(m.enabled);
+        });
+        setLocalModuleStates(modMap);
+        setInitialModuleStates(modMap);
+
         const subMap = {};
         fetched.forEach((m) => {
           if (m.submodules) {
             m.submodules.forEach((s) => {
-              subMap[s.key] = s.enabled;
+              subMap[s.key] = s.enabled !== false;
             });
           }
         });
         setSubmoduleStates(subMap);
+        setLocalSubmoduleStates(subMap);
+        setInitialSubmoduleStates(subMap);
       }
 
       if (licRes.status === 'fulfilled' && licRes.value.data?.success) {
         const lic = licRes.value.data.data;
         setLicenseData(lic);
+        if (lic?.license_key) {
+          if (!licenseKeyInput || licenseKeyInput === 'hianyan@v1') {
+            setLicenseKeyInput(lic.license_key);
+          }
+        }
         if (lic?.is_valid && !verifiedLicenseKey) {
           setVerifiedLicenseKey(lic.license_key);
           setIsLicenseVerified(true);
@@ -261,6 +285,13 @@ const AdminModulesManager = () => {
       return dbModules.map((dbMod) => {
         const modKey = dbMod.name || dbMod.key;
         const localMod = erpModules.find((m) => m.key === modKey) || {};
+        const isCurrentOpen = localModuleStates[modKey] !== undefined
+          ? Boolean(localModuleStates[modKey])
+          : (dbMod.enabled !== undefined ? Boolean(dbMod.enabled) : isModuleOpen(modKey));
+        const isInitialOpen = initialModuleStates[modKey] !== undefined
+          ? Boolean(initialModuleStates[modKey])
+          : Boolean(dbMod.enabled);
+
         return {
           ...localMod,
           ...dbMod,
@@ -269,7 +300,8 @@ const AdminModulesManager = () => {
           label: dbMod.title || dbMod.label || localMod.label || modKey,
           title: dbMod.title || dbMod.label || localMod.label || modKey,
           category: dbMod.category || moduleCategories[modKey] || 'Core Operations',
-          enabled: dbMod.enabled !== undefined ? Boolean(dbMod.enabled) : isModuleOpen(modKey),
+          enabled: isCurrentOpen,
+          isDirty: isCurrentOpen !== isInitialOpen,
           submodules: dbMod.submodules || localMod.submodules || [],
           image: dbMod.image,
           favicon: dbMod.favicon,
@@ -280,19 +312,39 @@ const AdminModulesManager = () => {
         };
       });
     }
-    return erpModules.map((m) => ({
-      ...m,
-      name: m.key,
-      category: moduleCategories[m.key] || 'Core Operations',
-      enabled: isModuleOpen(m.key),
-      submodules: m.submodules || []
-    }));
-  }, [dbModules, isModuleOpen]);
+    return erpModules.map((m) => {
+      const isCurrentOpen = localModuleStates[m.key] !== undefined
+        ? Boolean(localModuleStates[m.key])
+        : isModuleOpen(m.key);
+      const isInitialOpen = initialModuleStates[m.key] !== undefined
+        ? Boolean(initialModuleStates[m.key])
+        : isModuleOpen(m.key);
+
+      return {
+        ...m,
+        name: m.key,
+        category: moduleCategories[m.key] || 'Core Operations',
+        enabled: isCurrentOpen,
+        isDirty: isCurrentOpen !== isInitialOpen,
+        submodules: m.submodules || []
+      };
+    });
+  }, [dbModules, localModuleStates, initialModuleStates, isModuleOpen]);
+
+  // Statistics
+  const currentTotalCount = mergedModules.length;
+  const currentActiveCount = useMemo(() => {
+    return mergedModules.filter((m) => m.enabled).length;
+  }, [mergedModules]);
+  const unsavedCount = useMemo(() => {
+    return mergedModules.filter((m) => m.isDirty).length;
+  }, [mergedModules]);
+  const hasUnsavedChanges = unsavedCount > 0;
 
   // Filter modules
   const filteredModules = useMemo(() => {
     return mergedModules.filter((m) => {
-      const isOpen = isModuleOpen(m.key);
+      const isOpen = m.enabled;
       const cat = m.category || moduleCategories[m.key] || 'Core Operations';
 
       // Status filter
@@ -316,7 +368,7 @@ const AdminModulesManager = () => {
 
       return true;
     });
-  }, [mergedModules, isModuleOpen, selectedFilter, selectedCategory, searchQuery]);
+  }, [mergedModules, selectedFilter, selectedCategory, searchQuery]);
 
   // Group modules by category
   const groupedModules = useMemo(() => {
@@ -335,151 +387,111 @@ const AdminModulesManager = () => {
   }, [filteredModules]);
 
   // --------------------------------------------------------------------------
-  // LICENSE ACTIVATION GATE: Check License Key on Open or Close Module
+  // CLICK ON AND OFF FREELY (BEFORE SUBMISSION)
+  // Aligned with c:\wamp64\www\AURA_v1\themes\default\admin\views\settings\modules.php:
+  // Admin toggles switches on/off in local state without blocking prompts on each click!
   // --------------------------------------------------------------------------
-  const handleToggleRequest = (moduleKey, targetState) => {
-    const mod = mergedModules.find((m) => m.key === moduleKey);
-
-    if (moduleKey === 'settings' && !targetState) {
+  const handleModuleSwitch = (moduleKey, checked) => {
+    if (moduleKey === 'settings' && !checked) {
       message.error(t('security_cannot_disable_settings', 'Security Rule: Core System Administration cannot be disabled.'));
       return;
     }
 
-    // MANDATORY REQUIREMENT:
-    // "if user open or close module is check License Activation Key true can submit update modules"
-    if (!isLicenseVerified) {
-      setPendingModuleAction({
-        key: moduleKey,
-        label: mod?.label || moduleKey,
-        targetState
-      });
-      licenseAuthForm.setFieldsValue({
-        user_name: 'aura_erp',
-        license_key: licenseData?.license_key || 'hianyan@v1'
-      });
-      setLicenseAuthModalOpen(true);
+    setLocalModuleStates((prev) => ({
+      ...prev,
+      [moduleKey]: checked
+    }));
+  };
+
+  const handleSubmoduleSwitch = (subKey, checked) => {
+    setLocalSubmoduleStates((prev) => ({
+      ...prev,
+      [subKey]: checked
+    }));
+  };
+
+  const handleEnableAllLocal = () => {
+    const next = {};
+    mergedModules.forEach((m) => {
+      next[m.key] = true;
+    });
+    setLocalModuleStates(next);
+    message.info(t('all_modules_selected_on', 'All modules toggled ON. Enter License Key and submit to commit.'));
+  };
+
+  const handleDisableNonCoreLocal = () => {
+    const next = {};
+    mergedModules.forEach((m) => {
+      next[m.key] = m.key === 'settings';
+    });
+    setLocalModuleStates(next);
+    message.info(t('non_core_marked_off', 'Non-core modules toggled OFF. Enter License Key and submit to commit.'));
+  };
+
+  const handleResetChanges = () => {
+    setLocalModuleStates({ ...initialModuleStates });
+    setLocalSubmoduleStates({ ...initialSubmoduleStates });
+    message.info(t('changes_discarded', 'Unsaved changes discarded.'));
+  };
+
+  // --------------------------------------------------------------------------
+  // SUBMIT UPDATE MODULES & ENTERPRISE LICENSE
+  // Aligned with AURA_v1 System_settings.php::modules():
+  // Verifies user_name and license_key against validateLicenseKey;
+  // If true, commits changes across aura_modules, aura_settings, and aura_module_settings.
+  // --------------------------------------------------------------------------
+  const handleSubmitAllModuleSettings = async () => {
+    if (!licenseKeyInput || !licenseKeyInput.trim()) {
+      message.error(t('enter_license_key_msg', 'Please enter your License Activation Key to authorize module updates.'));
       return;
     }
 
-    if (!targetState) {
-      // Disabling -> Open confirmation modal previewing consequences
-      setPendingDisableModule(mod);
-      setConfirmModalOpen(true);
-    } else {
-      // Enabling -> Apply immediately with verified license
-      applyModuleToggle(moduleKey, true, verifiedLicenseKey);
-    }
-  };
-
-  // Submit and verify license from the gate modal
-  const handleVerifyLicenseAndSubmitAction = async () => {
-    try {
-      const values = await licenseAuthForm.validateFields();
-      setLicenseAuthSubmitting(true);
-
-      const res = await axios.post('/api/admin/modules/verify-license', values, {
-        headers: getAuthHeader()
-      });
-
-      if (res.data?.success && res.data.data?.valid) {
-        message.success(t('license_verified_success', 'License Activation Key verified successfully!'));
-        const verifiedKey = values.license_key.trim();
-        setIsLicenseVerified(true);
-        setVerifiedLicenseKey(verifiedKey);
-        sessionStorage.setItem('aura_license_verified', 'true');
-        sessionStorage.setItem('aura_license_key', verifiedKey);
-        setLicenseAuthModalOpen(false);
-
-        // Now submit the pending module update
-        if (pendingModuleAction) {
-          const { key, targetState } = pendingModuleAction;
-          setPendingModuleAction(null);
-
-          if (!targetState) {
-            const mod = mergedModules.find((m) => m.key === key);
-            setPendingDisableModule(mod);
-            setConfirmModalOpen(true);
-          } else {
-            await applyModuleToggle(key, true, verifiedKey, values.user_name);
-          }
-        }
-      } else {
-        message.error(t('invalid_license_key', 'Invalid License Activation Key. Module update denied.'));
-      }
-    } catch (err) {
-      const errMsg = err.response?.data?.message || t('license_verification_failed', 'License verification failed. Please enter a valid activation key.');
-      message.error(errMsg);
-    } finally {
-      setLicenseAuthSubmitting(false);
-    }
-  };
-
-  // Execute module state update
-  const applyModuleToggle = async (moduleKey, enabled, keyOverride, userOverride) => {
-    const keyToSend = keyOverride || verifiedLicenseKey || licenseData?.license_key || 'hianyan@v1';
-    const userToSend = userOverride || 'aura_erp';
-
-    contextToggleModule(moduleKey, enabled);
+    setSubmittingModules(true);
     try {
       const res = await axios.post(
-        '/api/admin/modules/toggle',
+        '/api/admin/modules/bulk-update',
         {
-          module_key: moduleKey,
-          enabled,
-          license_key: keyToSend,
-          user_name: userToSend
+          user_name: licenseUserName.trim(),
+          license_key: licenseKeyInput.trim(),
+          modules: localModuleStates,
+          submodules: localSubmoduleStates
         },
         {
           headers: {
             ...getAuthHeader(),
-            'x-license-key': keyToSend
+            'x-license-key': licenseKeyInput.trim()
           }
         }
       );
-      if (res.data?.success) {
+
+      if (res.data?.success && res.data.data?.is_valid) {
         message.success(
-          t('module_updated_status', `Module '${moduleKey}' successfully ${enabled ? 'opened (enabled)' : 'closed (disabled)'}`)
+          t('modules_saved_successfully', 'Enterprise License verified! Module settings successfully saved and synchronized.')
         );
+        const verifiedKey = licenseKeyInput.trim();
+        setIsLicenseVerified(true);
+        setVerifiedLicenseKey(verifiedKey);
+        sessionStorage.setItem('aura_license_verified', 'true');
+        sessionStorage.setItem('aura_license_key', verifiedKey);
+
+        setInitialModuleStates({ ...localModuleStates });
+        setInitialSubmoduleStates({ ...localSubmoduleStates });
+        if (typeof setAllModuleStates === 'function') {
+          setAllModuleStates(localModuleStates);
+        }
         fetchModuleData();
-      }
-    } catch (err) {
-      // If unauthorized due to license key
-      if (err.response?.status === 403) {
-        setIsLicenseVerified(false);
-        sessionStorage.removeItem('aura_license_verified');
-        message.error(err.response?.data?.message || t('license_required_to_toggle', 'License Activation Key required to open or close ERP modules.'));
       } else {
-        message.error(err.response?.data?.message || t('failed_to_toggle_module', 'Failed to toggle module status'));
+        message.error(res.data?.message || t('invalid_license_key', 'Invalid License Activation Key. Module update denied.'));
       }
-      // Revert frontend state on failure
-      contextToggleModule(moduleKey, !enabled);
-    }
-  };
-
-  const confirmDisableModule = () => {
-    if (pendingDisableModule) {
-      applyModuleToggle(pendingDisableModule.key, false, verifiedLicenseKey);
-      setConfirmModalOpen(false);
-      setPendingDisableModule(null);
-    }
-  };
-
-  // Handle submodule toggle
-  const handleSubmoduleToggle = async (subKey, checked) => {
-    setSubmoduleStates((prev) => ({ ...prev, [subKey]: checked }));
-    try {
-      await axios.post(
-        '/api/admin/modules/submodule/toggle',
-        { sub_module_key: subKey, enabled: checked },
-        { headers: getAuthHeader() }
-      );
-      message.success(t('submodule_toggled', `Sub-module '${subKey}' ${checked ? 'enabled' : 'disabled'}`));
     } catch (err) {
-      message.error(t('submodule_toggle_failed', 'Failed to toggle sub-module'));
+      const errMsg = err.response?.data?.message || t('license_verification_failed', 'Invalid License Activation Key. Module update denied.');
+      message.error(errMsg);
+    } finally {
+      setSubmittingModules(false);
     }
   };
 
-  // Standalone License update submission
+  // Standalone License update submission (from top banner modal)
   const handleLicenseSubmit = async () => {
     try {
       const values = await licenseForm.validateFields();
@@ -491,6 +503,8 @@ const AdminModulesManager = () => {
         setLicenseModalOpen(false);
         setIsLicenseVerified(true);
         setVerifiedLicenseKey(values.license_key);
+        setLicenseKeyInput(values.license_key);
+        if (values.user_name) setLicenseUserName(values.user_name);
         sessionStorage.setItem('aura_license_verified', 'true');
         sessionStorage.setItem('aura_license_key', values.license_key);
         fetchModuleData();
@@ -656,14 +670,7 @@ const AdminModulesManager = () => {
           <Button
             type="primary"
             icon={<CheckOutlined />}
-            onClick={() => {
-              if (!isLicenseVerified) {
-                setPendingModuleAction({ key: 'all', label: 'All Modules', targetState: true });
-                setLicenseAuthModalOpen(true);
-              } else {
-                enableAllModules();
-              }
-            }}
+            onClick={handleEnableAllLocal}
             style={{ borderRadius: 10, fontWeight: 600, background: '#16a34a', borderColor: '#16a34a' }}
           >
             {t('enable_all_modules', 'Enable All Modules')}
@@ -671,14 +678,7 @@ const AdminModulesManager = () => {
           <Button
             danger
             icon={<CloseCircleOutlined />}
-            onClick={() => {
-              if (!isLicenseVerified) {
-                setPendingModuleAction({ key: 'all_non_core', label: 'Non-Core Modules', targetState: false });
-                setLicenseAuthModalOpen(true);
-              } else {
-                disableAllModules();
-              }
-            }}
+            onClick={handleDisableNonCoreLocal}
             style={{ borderRadius: 10, fontWeight: 600 }}
           >
             {t('disable_non_core', 'Disable Non-Core')}
@@ -740,7 +740,7 @@ const AdminModulesManager = () => {
                   </Tag>
                 </Flex>
                 <Text style={{ color: adminTheme.subtext, fontSize: 12.5, display: 'block', marginTop: 3 }}>
-                  {t('license_key', 'License Key')}: <code>{verifiedLicenseKey || licenseData?.license_key || 'hianyan@v1'}</code> &bull; {t('unlimited_users_warehouses', 'Unlimited Users & Unlimited Multi-warehouses')}
+                  {t('license_key', 'License Key')}: <code>{verifiedLicenseKey || licenseKeyInput || licenseData?.license_key || 'hianyan@v1'}</code> &bull; {t('unlimited_users_warehouses', 'Unlimited Users & Unlimited Multi-warehouses')}
                 </Text>
               </div>
             </Flex>
@@ -758,9 +758,9 @@ const AdminModulesManager = () => {
                 icon={<KeyOutlined />}
                 onClick={() => {
                   licenseForm.setFieldsValue({
-                    license_key: verifiedLicenseKey || licenseData?.license_key || 'AURA-ENT-2026-X892-PRO',
+                    license_key: verifiedLicenseKey || licenseKeyInput || licenseData?.license_key || 'hianyan@v1',
                     license_name: licenseData?.license_name || 'Aura Enterprise Supply B2B',
-                    user_name: 'aura_erp'
+                    user_name: licenseUserName || 'aura_erp'
                   });
                   setLicenseModalOpen(true);
                 }}
@@ -784,7 +784,7 @@ const AdminModulesManager = () => {
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
             <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('total_erp_modules', 'Total ERP Modules')}</Text>
             <Title level={2} style={{ margin: '4px 0 0', color: adminTheme.text }}>
-              {totalModulesCount}
+              {currentTotalCount}
             </Title>
             <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{t('available_business_modules', 'Available business modules')}</Text>
           </Card>
@@ -797,7 +797,7 @@ const AdminModulesManager = () => {
               <EyeOutlined style={{ color: '#16a34a', fontSize: 16 }} />
             </Flex>
             <Title level={2} style={{ margin: '4px 0 0', color: '#16a34a' }}>
-              {activeModulesCount}
+              {currentActiveCount}
             </Title>
             <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{t('visible_in_nav_apis', 'Visible in navigation & APIs')}</Text>
           </Card>
@@ -809,8 +809,8 @@ const AdminModulesManager = () => {
               <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('disabled_dormant', 'Disabled / Dormant')}</Text>
               <EyeInvisibleOutlined style={{ color: '#ea580c', fontSize: 16 }} />
             </Flex>
-            <Title level={2} style={{ margin: '4px 0 0', color: totalModulesCount - activeModulesCount > 0 ? '#ea580c' : adminTheme.subtext }}>
-              {totalModulesCount - activeModulesCount}
+            <Title level={2} style={{ margin: '4px 0 0', color: currentTotalCount - currentActiveCount > 0 ? '#ea580c' : adminTheme.subtext }}>
+              {currentTotalCount - currentActiveCount}
             </Title>
             <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{t('excluded_from_sidebar', 'Excluded from sidebar')}</Text>
           </Card>
@@ -818,19 +818,27 @@ const AdminModulesManager = () => {
 
         <Col xs={12} sm={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
-            <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('active_system_footprint', 'Active System Footprint')}</Text>
+            <Flex justify="space-between" align="center">
+              <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('active_system_footprint', 'Active System Footprint')}</Text>
+              {hasUnsavedChanges && (
+                <Tag color="warning" style={{ borderRadius: 6, fontWeight: 700, margin: 0 }}>
+                  {unsavedCount} {t('unsaved', 'unsaved')}
+                </Tag>
+              )}
+            </Flex>
             <Title level={2} style={{ margin: '4px 0 0', color: '#2563eb' }}>
-              {Math.round((activeModulesCount / totalModulesCount) * 100)}%
+              {currentTotalCount > 0 ? Math.round((currentActiveCount / currentTotalCount) * 100) : 0}%
             </Title>
             <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{t('operating_capacity', 'Operating capacity')}</Text>
           </Card>
         </Col>
       </Row>
 
-      {/* 4. Search and Category Filter Toolbar */}
-      <Card style={cardStyle} styles={{ body: { padding: '16px 20px' } }}>
-        <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} md={8}>
+      {/* 4. Search and Filter Toolbar (Clean Single-Row Layout without the cluttered category pills) */}
+      <Card style={cardStyle} styles={{ body: { padding: '14px 20px' } }}>
+        <Row gutter={[16, 12]} align="middle">
+          {/* Search Input */}
+          <Col xs={24} sm={10} md={9}>
             <Input
               prefix={<SearchOutlined style={{ color: adminTheme.subtext }} />}
               placeholder={t('search_modules_placeholder', 'Search modules (e.g. Sales, Inventory, POS, Clinic)...')}
@@ -841,14 +849,15 @@ const AdminModulesManager = () => {
             />
           </Col>
 
-          <Col xs={24} md={8}>
-            <Flex gap={8} wrap="wrap">
+          {/* Quick Status Filters */}
+          <Col xs={24} sm={8} md={8}>
+            <Space size={6} wrap>
               <Button
                 type={selectedFilter === 'all' ? 'primary' : 'default'}
                 onClick={() => setSelectedFilter('all')}
                 style={{ borderRadius: 8, fontSize: 12.5 }}
               >
-                {t('all', 'All')} ({totalModulesCount})
+                {t('all', 'All')} ({currentTotalCount})
               </Button>
               <Button
                 type={selectedFilter === 'open' ? 'primary' : 'default'}
@@ -856,10 +865,10 @@ const AdminModulesManager = () => {
                 style={{
                   borderRadius: 8,
                   fontSize: 12.5,
-                  ...(selectedFilter === 'open' ? { background: '#16a34a', borderColor: '#16a34a' } : {})
+                  ...(selectedFilter === 'open' ? { background: '#16a34a', borderColor: '#16a34a', color: '#fff' } : {})
                 }}
               >
-                {t('active', 'Active')} ({activeModulesCount})
+                {t('active', 'Active')} ({currentActiveCount})
               </Button>
               <Button
                 type={selectedFilter === 'closed' ? 'primary' : 'default'}
@@ -867,33 +876,35 @@ const AdminModulesManager = () => {
                 style={{
                   borderRadius: 8,
                   fontSize: 12.5,
-                  ...(selectedFilter === 'closed' ? { background: '#ea580c', borderColor: '#ea580c' } : {})
+                  ...(selectedFilter === 'closed' ? { background: '#ea580c', borderColor: '#ea580c', color: '#fff' } : {})
                 }}
               >
-                {t('disabled', 'Disabled')} ({totalModulesCount - activeModulesCount})
+                {t('disabled', 'Disabled')} ({currentTotalCount - currentActiveCount})
               </Button>
-            </Flex>
+            </Space>
           </Col>
 
-          <Col xs={24} md={8} style={{ textAlign: 'right' }}>
-            <Flex justify="flex-end" gap={6} wrap="wrap">
-              <Tag.CheckableTag
-                checked={selectedCategory === 'all'}
-                onChange={() => setSelectedCategory('all')}
-                style={{ borderRadius: 8, fontSize: 12, padding: '3px 10px' }}
-              >
-                {t('all_categories', 'ALL CATEGORIES')}
-              </Tag.CheckableTag>
-              {categoryOrder.map((cat) => (
-                <Tag.CheckableTag
-                  key={cat}
-                  checked={selectedCategory === cat}
-                  onChange={() => setSelectedCategory(cat)}
-                  style={{ borderRadius: 8, fontSize: 12, padding: '3px 10px' }}
-                >
-                  {t(cat, cat)}
-                </Tag.CheckableTag>
-              ))}
+          {/* Category Dropdown (Clean, modern dropdown replacing the messy 15 wrapping tags!) */}
+          <Col xs={24} sm={6} md={7} style={{ textAlign: 'right' }}>
+            <Flex justify="flex-end" align="center" gap={10} wrap="wrap">
+              {hasUnsavedChanges && (
+                <Tag color="warning" icon={<ExclamationCircleOutlined />} style={{ borderRadius: 6, fontWeight: 700, margin: 0 }}>
+                  {unsavedCount} {t('unsaved_changes', 'modified')}
+                </Tag>
+              )}
+              <Select
+                value={selectedCategory}
+                onChange={setSelectedCategory}
+                style={{ width: 190 }}
+                placeholder={t('filter_by_category', 'Filter Category')}
+                options={[
+                  { value: 'all', label: `📂 ${t('all_categories', 'All Categories')}` },
+                  ...categoryOrder.map((cat) => ({
+                    value: cat,
+                    label: t(cat, cat)
+                  }))
+                ]}
+              />
             </Flex>
           </Col>
         </Row>
@@ -1003,6 +1014,11 @@ const AdminModulesManager = () => {
                               >
                                 {isOpen ? t('active_open', 'ACTIVE / OPEN') : t('disabled_hidden', 'DISABLED / CLOSED')}
                               </Tag>
+                              {m.isDirty && (
+                                <Tag color="orange" style={{ borderRadius: 6, fontSize: 10, margin: 0, fontWeight: 700 }}>
+                                  {t('pending_save', 'PENDING SAVE')}
+                                </Tag>
+                              )}
                               {m.style && (
                                 <Tag style={{ borderRadius: 6, fontSize: 10, margin: 0, background: `${m.accent || primary}15`, color: m.accent || primary, borderColor: `${m.accent || primary}33`, fontWeight: 600 }}>
                                   {m.style}
@@ -1013,10 +1029,10 @@ const AdminModulesManager = () => {
                         </Flex>
 
                         <Flex vertical align="flex-end" gap={4}>
-                          <Tooltip title={isLicenseVerified ? t('toggle_module_state', 'Click to open or close module') : t('license_required_click', 'License Activation Key required to toggle')}>
+                          <Tooltip title={m.isDirty ? t('pending_save_tooltip', 'Pending submission with License Key') : t('toggle_module_state', 'Click to turn module ON or OFF')}>
                             <Switch
                               checked={isOpen}
-                              onChange={(checked) => handleToggleRequest(m.key, checked)}
+                              onChange={(checked) => handleModuleSwitch(m.key, checked)}
                               checkedChildren="ON"
                               unCheckedChildren="OFF"
                               style={{
@@ -1078,13 +1094,15 @@ const AdminModulesManager = () => {
                                   <Text style={{ fontSize: 12, color: adminTheme.text, fontWeight: 600 }}>
                                     {t('submodules_and_capabilities', 'Sub-modules & Capabilities')} ({m.submodules.length})
                                   </Text>
-                                  <Badge count={m.submodules.filter((s) => submoduleStates[s.key] !== false).length} style={{ backgroundColor: primary }} />
+                                  <Badge count={m.submodules.filter((s) => (localSubmoduleStates[s.key] !== undefined ? localSubmoduleStates[s.key] : submoduleStates[s.key] !== false)).length} style={{ backgroundColor: primary }} />
                                 </Flex>
                               ),
                               children: (
                                 <Space direction="vertical" size={10} style={{ width: '100%' }}>
                                   {m.submodules.map((sub) => {
-                                    const subActive = submoduleStates[sub.key] !== false;
+                                    const subActive = localSubmoduleStates[sub.key] !== undefined
+                                      ? localSubmoduleStates[sub.key]
+                                      : submoduleStates[sub.key] !== false;
                                     return (
                                       <Flex key={sub.key} justify="space-between" align="center">
                                         <div style={{ paddingRight: 8 }}>
@@ -1101,7 +1119,7 @@ const AdminModulesManager = () => {
                                           size="small"
                                           disabled={!isOpen}
                                           checked={subActive && isOpen}
-                                          onChange={(checked) => handleSubmoduleToggle(sub.key, checked)}
+                                          onChange={(checked) => handleSubmoduleSwitch(sub.key, checked)}
                                         />
                                       </Flex>
                                     );
@@ -1157,126 +1175,165 @@ const AdminModulesManager = () => {
       })}
 
       {/* ---------------------------------------------------------------------- */}
-      {/* LICENSE ACTIVATION KEY AUTHENTICATION MODAL (ON MODULE OPEN / CLOSE) */}
+      {/* 6. AURA ENTERPRISE LICENSE & MODULE SAVE SECTION (Replication of AURA_v1 modules.php) */}
       {/* ---------------------------------------------------------------------- */}
-      <Modal
-        title={
-          <Flex align="center" gap={8} style={{ color: '#2563eb' }}>
-            <KeyOutlined style={{ fontSize: 20 }} />
-            <span>{t('license_activation_key_required', 'License Activation Key Verification')}</span>
-          </Flex>
-        }
-        open={licenseAuthModalOpen}
-        onOk={handleVerifyLicenseAndSubmitAction}
-        onCancel={() => {
-          setLicenseAuthModalOpen(false);
-          setPendingModuleAction(null);
+      <Card
+        style={{
+          ...cardStyle,
+          border: `2px solid ${adminTheme.primary}44`,
+          boxShadow: `0 8px 24px ${adminTheme.primary}15`,
+          marginTop: 12
         }}
-        confirmLoading={licenseAuthSubmitting}
-        okText={t('verify_and_submit_update', 'Verify & Submit Module Update')}
-        cancelText={t('cancel', 'Cancel')}
-        destroyOnClose
+        styles={{ body: { padding: '24px 28px' } }}
       >
-        <Space direction="vertical" size={14} style={{ width: '100%', marginTop: 12 }}>
-          <Alert
-            type="info"
-            showIcon
-            message={
-              <span>
-                {t('security_module_activation_gate', 'Security Gate: Enterprise License Required')}
-              </span>
-            }
-            description={
-              <span>
-                {t('license_gate_desc', 'Opening or closing ERP modules requires verification with a valid Enterprise License Activation Key. Please enter your Administrator credentials to authenticate this action.')}
-                {pendingModuleAction && (
-                  <div style={{ marginTop: 8, fontWeight: 600, color: '#1d4ed8' }}>
-                    {t('action_target', 'Pending Action')}: {pendingModuleAction.targetState ? t('open_module', 'Open (Enable)') : t('close_module', 'Close (Disable)')} &bull; {pendingModuleAction.label} (<code>{pendingModuleAction.key}</code>)
-                  </div>
-                )}
-              </span>
-            }
-          />
-
-          <Form form={licenseAuthForm} layout="vertical" orientation="vertical">
-            <Form.Item
-              name="user_name"
-              label={t('admin_user_name', 'Administrator Username')}
-              initialValue="aura_erp"
-              rules={[{ required: true, message: t('enter_username_msg', 'Please enter Administrator username') }]}
-            >
-              <Input prefix={<TeamOutlined />} placeholder="e.g. aura_erp" />
-            </Form.Item>
-
-            <Form.Item
-              name="license_key"
-              label={t('license_activation_key', 'License Activation Key')}
-              rules={[{ required: true, message: t('enter_license_key_msg', 'Please enter License Activation Key') }]}
-              extra={
-                <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
-                  {t('hint_master_key', 'AURA_v1 Master Key')}: <code>hianyan@v1</code> {t('or_enterprise_key', 'or active Enterprise Key')} (<code>AURA-ENT-2026-X892-PRO</code>)
-                </Text>
-              }
-            >
-              <Input.Password prefix={<LockOutlined />} placeholder="Enter License Activation Key (e.g. hianyan@v1)" />
-            </Form.Item>
-          </Form>
-        </Space>
-      </Modal>
-
-      {/* ---------------------------------------------------------------------- */}
-      {/* CONFIRMATION MODAL BEFORE DISABLING A MODULE */}
-      {/* ---------------------------------------------------------------------- */}
-      <Modal
-        title={
-          <Flex align="center" gap={8} style={{ color: '#dc2626' }}>
-            <ExclamationCircleOutlined />
-            <span>{t('confirm_module_deactivation', 'Confirm Module Deactivation')}</span>
-          </Flex>
-        }
-        open={confirmModalOpen}
-        onOk={confirmDisableModule}
-        onCancel={() => {
-          setConfirmModalOpen(false);
-          setPendingDisableModule(null);
-        }}
-        okText={t('yes_deactivate_module', 'Yes, Deactivate Module')}
-        cancelText={t('keep_enabled', 'Keep Enabled')}
-        okButtonProps={{ danger: true }}
-      >
-        {pendingDisableModule && (
-          <Space direction="vertical" size={14} style={{ marginTop: 12, width: '100%' }}>
-            <Alert
-              type="warning"
-              showIcon
-              message={
-                <span>
-                  {t('about_to_turn_off', 'You are about to turn off')} <strong>{t(pendingDisableModule.label, pendingDisableModule.label)}</strong> (<code>{pendingDisableModule.key}</code>).
-                </span>
-              }
-              description={t('deactivate_module_desc', 'Deactivating this module will immediately hide its navigation menus from all non-superadmin users and exclude its analytical widgets from the Admin Dashboard.')}
-            />
-
-            {pendingDisableModule.submodules && pendingDisableModule.submodules.length > 0 && (
-              <div>
-                <Text strong style={{ fontSize: 12.5, display: 'block', marginBottom: 6 }}>
-                  {t('affected_submodules', 'Affected Sub-modules')} ({pendingDisableModule.submodules.length}):
-                </Text>
-                <div style={{ maxHeight: 120, overflowY: 'auto', background: adminTheme.cardMuted, padding: '8px 12px', borderRadius: 8 }}>
-                  {pendingDisableModule.submodules.map((s) => (
-                    <Text key={s.key} style={{ fontSize: 12, color: adminTheme.subtext, display: 'block' }}>
-                      &bull; {t(s.label, s.label)} (<code>{s.key}</code>)
-                    </Text>
-                  ))}
-                </div>
-              </div>
-            )}
-            <Text style={{ fontSize: 12, color: adminTheme.subtext }}>
-              {t('can_reenable_anytime', 'You can re-enable this module at any time from this switchboard.')}
+        <Flex align="center" gap={14} style={{ marginBottom: 20 }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 14,
+              background: adminTheme.primary,
+              color: '#fff',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: 24,
+              boxShadow: `0 6px 16px ${adminTheme.primary}33`
+            }}
+          >
+            <SafetyCertificateOutlined />
+          </div>
+          <div>
+            <Flex align="center" gap={8} wrap="wrap">
+              <Title level={4} style={{ margin: 0, color: adminTheme.text, fontWeight: 700 }}>
+                {t('aura_enterprise_license_and_settings', 'Aura Enterprise License & Module Update Credentials')}
+              </Title>
+              {hasUnsavedChanges && (
+                <Tag color="warning" icon={<ExclamationCircleOutlined />} style={{ borderRadius: 6, fontWeight: 700 }}>
+                  {unsavedCount} {t('unsaved_changes', 'modules modified')}
+                </Tag>
+              )}
+            </Flex>
+            <Text style={{ color: adminTheme.subtext, fontSize: 13, display: 'block', marginTop: 3 }}>
+              {t('aura_license_note', 'Aligned with AURA_v1: enter your Administrator credentials and License Activation Key (e.g. hianyan@v1) to authenticate and synchronize all module changes to the database.')}
             </Text>
+          </div>
+        </Flex>
+
+        <Row gutter={[20, 16]} align="bottom">
+          <Col xs={24} sm={12} md={7}>
+            <Text strong style={{ fontSize: 13, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
+              {t('admin_username', 'Administrator Username')}
+            </Text>
+            <Input
+              prefix={<TeamOutlined style={{ color: adminTheme.subtext }} />}
+              value={licenseUserName}
+              onChange={(e) => setLicenseUserName(e.target.value)}
+              placeholder="aura_erp"
+              style={{ borderRadius: 10, height: 42 }}
+            />
+          </Col>
+
+          <Col xs={24} sm={12} md={8}>
+            <Text strong style={{ fontSize: 13, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
+              {t('license_activation_key', 'License Activation Key')}
+            </Text>
+            <Input.Password
+              prefix={<KeyOutlined style={{ color: adminTheme.subtext }} />}
+              value={licenseKeyInput}
+              onChange={(e) => setLicenseKeyInput(e.target.value)}
+              placeholder="e.g. hianyan@v1 or AURA-ENT-2026-X892-PRO"
+              style={{ borderRadius: 10, height: 42 }}
+            />
+          </Col>
+
+          <Col xs={24} md={9}>
+            <Flex gap={10} wrap="wrap">
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                loading={submittingModules}
+                onClick={handleSubmitAllModuleSettings}
+                style={{
+                  height: 42,
+                  borderRadius: 10,
+                  fontWeight: 700,
+                  background: '#16a34a',
+                  borderColor: '#16a34a',
+                  flex: 1
+                }}
+              >
+                {t('submit_update_modules', 'Update Aura Enterprise License & Save')}
+              </Button>
+              {hasUnsavedChanges && (
+                <Button
+                  onClick={handleResetChanges}
+                  style={{ height: 42, borderRadius: 10, fontWeight: 600 }}
+                >
+                  {t('discard_changes', 'Discard')}
+                </Button>
+              )}
+            </Flex>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* ---------------------------------------------------------------------- */}
+      {/* STICKY / FLOATING BOTTOM ACTION BAR FOR QUICK SUBMIT */}
+      {/* ---------------------------------------------------------------------- */}
+      {hasUnsavedChanges && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 999,
+            background: adminTheme.isDark ? '#1e293b' : '#ffffff',
+            border: `2px solid ${adminTheme.primary}`,
+            borderRadius: 16,
+            padding: '12px 24px',
+            boxShadow: '0 12px 36px rgba(0,0,0,0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            maxWidth: '92vw'
+          }}
+        >
+          <Badge count={unsavedCount} overflowCount={99} style={{ backgroundColor: '#f59e0b' }}>
+            <SafetyCertificateOutlined style={{ fontSize: 24, color: adminTheme.primary }} />
+          </Badge>
+          <div>
+            <Text strong style={{ color: adminTheme.text, fontSize: 13.5, display: 'block' }}>
+              {unsavedCount} {t('unsaved_module_changes', 'modules modified')}
+            </Text>
+            <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>
+              {t('click_to_commit_changes', 'Submit with License Activation Key to commit changes across database')}
+            </Text>
+          </div>
+          <Space size={10}>
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              loading={submittingModules}
+              onClick={handleSubmitAllModuleSettings}
+              style={{
+                borderRadius: 10,
+                fontWeight: 700,
+                background: '#16a34a',
+                borderColor: '#16a34a'
+              }}
+            >
+              {t('submit_and_save', 'Submit & Save')}
+            </Button>
+            <Button
+              onClick={handleResetChanges}
+              style={{ borderRadius: 10 }}
+            >
+              {t('discard', 'Discard')}
+            </Button>
           </Space>
-        )}
-      </Modal>
+        </div>
+      )}
 
       {/* ---------------------------------------------------------------------- */}
       {/* ENTERPRISE LICENSE UPDATE MODAL */}
