@@ -86,7 +86,7 @@ const websitePages = [
 const Header = ({ currentPage }) => {
   const { cartItemCount, cartTotal = 0 } = useCart();
   const { wishlistItemCount } = useWishlist();
-  const { user, logout } = useAuth();
+  const { user, logout, canAccessOperationsPortal } = useAuth();
   const { currentLanguage, setLanguage, activeLanguage, supportedLanguages: ctxLangs, languages: ctxLangs2 } = useLanguage();
   const supportedLanguages = Array.isArray(ctxLangs) && ctxLangs.length ? ctxLangs : (Array.isArray(ctxLangs2) && ctxLangs2.length ? ctxLangs2 : SUPPORTED_LANGUAGES);
   const { t } = useTranslation();
@@ -206,7 +206,7 @@ const Header = ({ currentPage }) => {
         products: allStoresCatalog.slice(0, 5),
         services: serviceItems.slice(0, 2),
         learn: learnItems.slice(0, 2),
-        pages: websitePages.slice(0, 3),
+        pages: websitePages.filter(pg => !pg.path.startsWith('/admins') || canAccessOperationsPortal).slice(0, 3),
         matchedStoreNames: [],
         total: 0,
         isDefaultSuggestions: true,
@@ -274,12 +274,14 @@ const Header = ({ currentPage }) => {
         l.tag.toLowerCase().includes(q)
     );
 
-    const matchedPages = websitePages.filter(
-      (pg) =>
-        pg.title.toLowerCase().includes(q) ||
-        pg.description.toLowerCase().includes(q) ||
-        pg.path.toLowerCase().includes(q)
-    );
+    const matchedPages = websitePages
+      .filter((pg) => !pg.path.startsWith('/admins') || canAccessOperationsPortal)
+      .filter(
+        (pg) =>
+          pg.title.toLowerCase().includes(q) ||
+          pg.description.toLowerCase().includes(q) ||
+          pg.path.toLowerCase().includes(q)
+      );
 
     const total =
       matchedShops.length +
@@ -373,7 +375,7 @@ const Header = ({ currentPage }) => {
 
   const userMenuItems = useMemo(() => {
     if (user) {
-      return [
+      const items = [
         {
           key: 'user-info',
           disabled: true,
@@ -390,20 +392,30 @@ const Header = ({ currentPage }) => {
           icon: <UserOutlined style={{ color: publicTheme.primary }} />,
           label: t('profile', 'My Profile & Settings'),
         },
-        {
+      ];
+
+      // Only show Operations Portal if user is staff or admin, not customer
+      if (canAccessOperationsPortal) {
+        items.push({
           key: 'admins',
           icon: <ThunderboltOutlined style={{ color: '#f59e0b' }} />,
           label: t('operations_portal', 'Operations & ERP Portal'),
-        },
+        });
+      }
+
+      items.push(
         { type: 'divider' },
         {
           key: 'logout',
           icon: <LogoutOutlined style={{ color: '#ef4444' }} />,
           label: t('logout', 'Sign Out of Workspace'),
           danger: true,
-        },
-      ];
+        }
+      );
+
+      return items;
     }
+
     return [
       {
         key: 'guest-info',
@@ -426,13 +438,8 @@ const Header = ({ currentPage }) => {
         icon: <UserAddOutlined style={{ color: '#10b981' }} />,
         label: t('create_account', 'Create Account / Register'),
       },
-      {
-        key: 'admins',
-        icon: <ThunderboltOutlined style={{ color: '#f59e0b' }} />,
-        label: t('operations_portal', 'ERP Operations Portal (/admins)'),
-      },
     ];
-  }, [user, t]);
+  }, [user, canAccessOperationsPortal, t]);
 
   const handleSelectResult = (targetUrl) => {
     setIsSearchFocused(false);
@@ -1314,7 +1321,7 @@ const Header = ({ currentPage }) => {
                     {renderSearchDropdown()}
                   </div>
 
-                  {screens.lg && (
+                  {screens.lg && canAccessOperationsPortal && (
                     <Button
                       icon={<ThunderboltOutlined />}
                       onClick={() => navigate('/admins/dashboard')}
@@ -1713,24 +1720,26 @@ const Header = ({ currentPage }) => {
             {cartItemCount > 0 && <Tag color="blue">{cartItemCount}</Tag>}
           </Button>
 
-          <Button
-            block
-            icon={<ThunderboltOutlined />}
-            onClick={() => {
-              navigate('/admins/dashboard');
-              setDrawerVisible(false);
-            }}
-            style={{
-              height: 42,
-              borderRadius: 12,
-              textAlign: 'left',
-              justifyContent: 'flex-start',
-              fontWeight: 600,
-              fontSize: 13,
-            }}
-          >
-            {t('operations_portal', 'Operations Portal')}
-          </Button>
+          {canAccessOperationsPortal && (
+            <Button
+              block
+              icon={<ThunderboltOutlined />}
+              onClick={() => {
+                navigate('/admins/dashboard');
+                setDrawerVisible(false);
+              }}
+              style={{
+                height: 42,
+                borderRadius: 12,
+                textAlign: 'left',
+                justifyContent: 'flex-start',
+                fontWeight: 600,
+                fontSize: 13,
+              }}
+            >
+              {t('operations_portal', 'Operations Portal')}
+            </Button>
+          )}
 
           <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 6px 4px' }}>
             {t('account', 'Account')}

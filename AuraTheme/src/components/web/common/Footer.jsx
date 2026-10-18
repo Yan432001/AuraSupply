@@ -15,11 +15,13 @@ import { publicTheme } from '../../../utils/webTheme';
 import AuraLogo from '../../common/AuraLogo';
 import { submitNewsletter, fetchShopSettings, fetchBranches } from '../../../utils/apiconfig';
 import { useTranslation } from '../../../contexts/LanguageContext';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const { Text, Title } = Typography;
 
 export default function Footer() {
   const { t } = useTranslation();
+  const { canAccessOperationsPortal } = useAuth();
   const [rfqEmail, setRfqEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [settings, setSettings] = useState(null);
@@ -213,11 +215,13 @@ export default function Footer() {
               {t('operations_erp', 'Operations & ERP')}
             </div>
             <Space direction="vertical" size={10} style={{ width: '100%' }}>
-              {footerOperations.map((item) => (
-                <Link
-                  key={item.label}
-                  to={item.to}
-                  style={{ color: '#64748b', fontSize: 13, transition: 'color 0.15s ease' }}
+              {footerOperations
+                .filter((item) => !item.to.startsWith('/admins') || canAccessOperationsPortal)
+                .map((item) => (
+                  <Link
+                    key={item.label}
+                    to={item.to}
+                    style={{ color: '#64748b', fontSize: 13, transition: 'color 0.15s ease' }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = '#2f6fed')}
                   onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
                 >

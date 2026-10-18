@@ -36,13 +36,36 @@ export const AuthProvider = ({ children }) => {
   );
   const isStore = Boolean(roleName === 'store' || user?.Store);
   const isSupplier = Boolean(roleName === 'supplier' || user?.Supplier);
-  const isCustomer = Boolean(roleName === 'customer' || user?.Customer);
+  const isCustomer = Boolean(
+    roleName === 'customer' || 
+    user?.Customer ||
+    Number(user?.group_id) === 4
+  );
   const isSalesman = Boolean(
     roleName === 'salesman' || 
     roleName === 'sale-agents' || 
     roleName === 'saleman' || 
     user?.Salesman
   );
+
+  // Staff or Admin flag for ERP Operations Portal access
+  const isStaffOrAdmin = Boolean(
+    user &&
+    !isCustomer &&
+    roleName !== 'customer' &&
+    Number(user?.group_id) !== 4 &&
+    (
+      isOwner ||
+      isAdmin ||
+      isStore ||
+      isSalesman ||
+      isSupplier ||
+      Boolean(user?.allow_admin_login) ||
+      ['owner', 'admin', 'branch', 'salesman', 'employee', 'audit', 'account', 'cashier', 'stock', 'shop', 'store'].includes(roleName) ||
+      (Number(user?.group_id) > 0 && Number(user?.group_id) !== 4)
+    )
+  );
+  const canAccessOperationsPortal = isStaffOrAdmin;
 
   /**
    * Check if current user has permission
@@ -186,6 +209,8 @@ export const AuthProvider = ({ children }) => {
         isSupplier,
         isCustomer,
         isSalesman,
+        isStaffOrAdmin,
+        canAccessOperationsPortal,
         hasPermission,
         hasAnyPermission,
         hasAllPermissions,
