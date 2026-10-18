@@ -212,9 +212,15 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
     } else if (key === 'profile') {
       navigate('/admins/profile');
     } else if (key === 'theme-transparent') {
-      navigate('/admins/profile?tab=appearance');
+      toggleTransparentSystem?.();
     } else if (key === 'settings') {
       navigate('/admins/settings/system');
+    } else if (key === 'mobile-dark-mode') {
+      toggleThemeMode?.();
+    } else if (key === 'mobile-storefront') {
+      window.open('/', '_blank');
+    } else if (key === 'mobile-switchboard') {
+      navigate('/admins/modules');
     }
   };
 
@@ -248,53 +254,142 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
     };
   });
 
-  // User Profile Menu Items
-  const userMenuItems = [
-    { key: 'profile', icon: <UserOutlined />, label: t('profile', 'My Profile') },
-    {
-      key: 'theme-transparent',
-      icon: <BgColorsOutlined />,
-      label: (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <span>{t('transparent_theme_settings', 'Transparent Theme Settings')}</span>
-          <span
-            style={{
-              fontSize: 10,
-              padding: '1px 6px',
-              borderRadius: 4,
-              background: isGlassActive
-                ? (themeMode === 'dark' ? 'rgba(47, 111, 237, 0.25)' : 'rgba(47, 111, 237, 0.12)')
-                : (themeMode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'),
-              color: isGlassActive ? adminTheme.primary : adminTheme.subtext,
-              fontWeight: 700,
-            }}
-          >
-            {isGlassActive ? 'GLASS ON' : 'OFF'}
-          </span>
-        </div>
-      ),
-    },
-    { key: 'settings', icon: <SettingOutlined />, label: t('settings', 'Settings') },
-    {
-      key: 'change_language_sub',
-      icon: <GlobalOutlined />,
-      label: t('change_language', 'Change Language'),
-      children: langList.map((l) => ({
-        key: `sub-lang-${l.code}`,
-        icon: <span style={{ fontSize: 14 }}>{l.flag}</span>,
-        label: `${l.native} (${l.name})`,
-        onClick: () => {
-          setLanguage(l.code);
-          try {
-            message.destroy();
-            message.success(`Language switched to ${l.native} (${l.name})`);
-          } catch (_) {}
+  // User Profile Menu Items (Responsive for mobile & desktop)
+  const userMenuItems = useMemo(() => {
+    const items = [
+      {
+        key: 'header-user-info',
+        disabled: true,
+        label: (
+          <div style={{ padding: '6px 2px 8px', borderBottom: `1px solid ${headerBorderColor}` }}>
+            <div style={{ fontWeight: 800, fontSize: 13.5, color: headerTextColor }}>
+              {user?.name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.username || 'Admin User')}
+            </div>
+            <div style={{ fontSize: 11, color: adminTheme.subtext, marginTop: 2 }}>
+              {(user?.group_name || user?.role || (user?.isOwner ? 'Owner' : user?.isAdmin ? 'Admin' : 'Staff')).toUpperCase()} &bull; {user?.email || 'admin@aura.erp'}
+            </div>
+          </div>
+        ),
+      },
+      { key: 'profile', icon: <UserOutlined style={{ fontSize: 14 }} />, label: t('profile', 'My Profile') },
+    ];
+
+    if (!isTabletOrDesktop) {
+      items.push(
+        {
+          key: 'mobile-dark-mode',
+          icon: themeMode === 'dark' ? <SunOutlined style={{ color: '#f59e0b', fontSize: 14 }} /> : <MoonOutlined style={{ fontSize: 14 }} />,
+          label: (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <span>{themeMode === 'dark' ? t('light_mode', 'Light Mode') : t('dark_mode', 'Dark Mode')}</span>
+              <Tag color={themeMode === 'dark' ? 'gold' : 'blue'} style={{ margin: 0, fontSize: 10, borderRadius: 4, fontWeight: 700 }}>
+                {themeMode === 'dark' ? 'DARK' : 'LIGHT'}
+              </Tag>
+            </div>
+          ),
         },
-      })),
-    },
-    { type: 'divider' },
-    { key: 'logout', icon: <LogoutOutlined />, label: t('logout', 'Sign Out'), danger: true },
-  ];
+        {
+          key: 'theme-transparent',
+          icon: <span style={{ fontSize: 14 }}>💎</span>,
+          label: (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <span>{t('transparent_glass_mode', 'Glass System')}</span>
+              <span
+                style={{
+                  fontSize: 10,
+                  padding: '1px 6px',
+                  borderRadius: 4,
+                  background: isGlassActive
+                    ? (themeMode === 'dark' ? 'rgba(47, 111, 237, 0.25)' : 'rgba(47, 111, 237, 0.12)')
+                    : (themeMode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'),
+                  color: isGlassActive ? adminTheme.primary : adminTheme.subtext,
+                  fontWeight: 700,
+                }}
+              >
+                {isGlassActive ? 'ACTIVE' : 'OFF'}
+              </span>
+            </div>
+          ),
+        },
+        {
+          key: 'mobile-storefront',
+          icon: <ExportOutlined style={{ color: '#10b981', fontSize: 14 }} />,
+          label: t('open_live_storefront', 'Live Storefront Website'),
+        },
+        {
+          key: 'mobile-switchboard',
+          icon: <ControlOutlined style={{ color: adminTheme.primary, fontSize: 14 }} />,
+          label: t('modules_switchboard', 'Modules Switchboard'),
+        }
+      );
+    } else {
+      items.push({
+        key: 'theme-transparent',
+        icon: <BgColorsOutlined style={{ fontSize: 14 }} />,
+        label: (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span>{t('transparent_theme_settings', 'Transparent Theme')}</span>
+            <span
+              style={{
+                fontSize: 10,
+                padding: '1px 6px',
+                borderRadius: 4,
+                background: isGlassActive
+                  ? (themeMode === 'dark' ? 'rgba(47, 111, 237, 0.25)' : 'rgba(47, 111, 237, 0.12)')
+                  : (themeMode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'),
+                color: isGlassActive ? adminTheme.primary : adminTheme.subtext,
+                fontWeight: 700,
+              }}
+            >
+              {isGlassActive ? 'GLASS ON' : 'OFF'}
+            </span>
+          </div>
+        ),
+      });
+    }
+
+    items.push(
+      { key: 'settings', icon: <SettingOutlined style={{ fontSize: 14 }} />, label: t('settings', 'System Settings') },
+      {
+        key: 'change_language_sub',
+        icon: <GlobalOutlined style={{ fontSize: 14 }} />,
+        label: (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+            <span>{t('change_language', 'Language')}</span>
+            <span style={{ fontSize: 11, color: adminTheme.subtext }}>{activeLanguage?.native || 'English'}</span>
+          </div>
+        ),
+        children: langList.map((l) => ({
+          key: `sub-lang-${l.code}`,
+          icon: <span style={{ fontSize: 14 }}>{l.flag}</span>,
+          label: `${l.native} (${l.name})`,
+          onClick: () => {
+            setLanguage(l.code);
+            try {
+              message.destroy();
+              message.success(`Language switched to ${l.native} (${l.name})`);
+            } catch (_) {}
+          },
+        })),
+      },
+      { type: 'divider' },
+      { key: 'logout', icon: <LogoutOutlined style={{ fontSize: 14 }} />, label: t('logout', 'Sign Out'), danger: true }
+    );
+
+    return items;
+  }, [
+    isTabletOrDesktop,
+    user,
+    headerBorderColor,
+    headerTextColor,
+    adminTheme,
+    t,
+    themeMode,
+    isGlassActive,
+    activeLanguage,
+    langList,
+    setLanguage,
+  ]);
 
   // Breadcrumbs Computation
   const breadcrumbsList = useMemo(() => {
@@ -775,16 +870,16 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                   </Text>
                 </div>
               ) : (
-                /* Mobile & Small Screen Compact Truncated Title */
-                <Title
-                  level={5}
+                /* Mobile & Small Screen Clean Legible Title */
+                <Text
+                  strong
                   style={{
                     margin: 0,
                     color: headerTextColor,
-                    fontSize: isSmallMobile ? 13.5 : 14.5,
+                    fontSize: isSmallMobile ? 14 : 15,
                     fontWeight: 700,
                     letterSpacing: '-0.01em',
-                    maxWidth: isSmallMobile ? 125 : isTabletOrDesktop ? 220 : 160,
+                    maxWidth: isSmallMobile ? 135 : 190,
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -792,7 +887,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                   title={currentPageTitle}
                 >
                   {currentPageTitle}
-                </Title>
+                </Text>
               )}
 
               {/* Status Badge Tag on Desktop */}
@@ -817,7 +912,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
           </Flex>
 
           {/* ================================================================= */}
-          {/* 3. CENTER: ADAPTIVE SEARCH BAR (Desktop) / ICON (Mobile)          */}
+          {/* 3. CENTER: ADAPTIVE SEARCH BAR (Desktop Only)                    */}
           {/* ================================================================= */}
           {isTabletOrDesktop ? (
             <div
@@ -869,9 +964,9 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
           ) : null}
 
           {/* ================================================================= */}
-          {/* 4. RIGHT SECTION: ACTION ICONS & USER PROFILE DROPDOWN           */}
+          {/* 4. RIGHT SECTION: CLEAN ACTION ICONS & USER PROFILE DROPDOWN     */}
           {/* ================================================================= */}
-          <Flex align="center" gap={6} style={{ flexShrink: 0 }}>
+          <Flex align="center" gap={isTabletOrDesktop ? 6 : 5} style={{ flexShrink: 0 }}>
             {/* Search Icon Trigger on Mobile Viewports */}
             {!isTabletOrDesktop && (
               <Tooltip title={t('search_erp', 'Search ERP (Ctrl+K)')}>
@@ -893,15 +988,15 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                 type="primary"
                 onClick={() => navigate('/admins/pos')}
                 style={{
-                  height: 36,
-                  borderRadius: 10,
+                  height: 35,
+                  borderRadius: 9,
                   background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
                   borderColor: '#2563eb',
                   color: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
-                  padding: isTabletOrDesktop ? '0 12px' : '0 9px',
+                  gap: 5,
+                  padding: isTabletOrDesktop ? '0 12px' : '0 8px',
                   fontWeight: 700,
                   fontSize: 12,
                   boxShadow: '0 2px 10px rgba(37, 99, 235, 0.25)',
@@ -909,159 +1004,163 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                 }}
               >
                 <CreditCardOutlined style={{ fontSize: 13 }} />
-                {isTabletOrDesktop && <span>POS Terminal</span>}
+                <span>POS</span>
+                {isTabletOrDesktop && <span>Terminal</span>}
               </Button>
             </Tooltip>
 
-            {/* Live Storefront Quick Link */}
-            <Tooltip title={t('open_live_storefront', 'Open Live Storefront Website')}>
-              <Button
-                type="text"
-                onClick={() => window.open('/', '_blank')}
-                style={{
-                  height: 36,
-                  borderRadius: 10,
-                  background: themeMode === 'dark' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.08)',
-                  border: '1px solid rgba(16, 185, 129, 0.35)',
-                  color: themeMode === 'dark' ? '#34d399' : '#059669',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: isTabletOrDesktop ? '0 11px' : '0 9px',
-                  fontWeight: 600,
-                  fontSize: 12,
-                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.1)',
-                  transition: 'all 0.18s ease',
-                }}
-              >
-                <span
-                  style={{
-                    width: 6.5,
-                    height: 6.5,
-                    borderRadius: '50%',
-                    background: '#10b981',
-                    boxShadow: '0 0 6px #10b981',
-                    display: 'inline-block',
-                    flexShrink: 0,
-                  }}
-                />
-                {isTabletOrDesktop && <span>{t('storefront', 'Storefront')}</span>}
-                <ExportOutlined style={{ fontSize: 10.5, opacity: 0.8 }} />
-              </Button>
-            </Tooltip>
+            {/* Desktop-Only Action Icons to keep Mobile Header Clean */}
+            {isTabletOrDesktop && (
+              <>
+                {/* Live Storefront Quick Link */}
+                <Tooltip title={t('open_live_storefront', 'Open Live Storefront Website')}>
+                  <Button
+                    type="text"
+                    onClick={() => window.open('/', '_blank')}
+                    style={{
+                      height: 36,
+                      borderRadius: 10,
+                      background: themeMode === 'dark' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.08)',
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      color: themeMode === 'dark' ? '#34d399' : '#059669',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '0 11px',
+                      fontWeight: 600,
+                      fontSize: 12,
+                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.1)',
+                      transition: 'all 0.18s ease',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 6.5,
+                        height: 6.5,
+                        borderRadius: '50%',
+                        background: '#10b981',
+                        boxShadow: '0 0 6px #10b981',
+                        display: 'inline-block',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span>{t('storefront', 'Storefront')}</span>
+                    <ExportOutlined style={{ fontSize: 10.5, opacity: 0.8 }} />
+                  </Button>
+                </Tooltip>
 
-            {/* Fullscreen Button (Laptop/Desktop) */}
-            {isDesktop && (
-              <Tooltip title={t('fullscreen', 'Toggle Fullscreen')}>
-                <button
-                  type="button"
-                  aria-label="Toggle Fullscreen"
-                  onClick={handleFullscreen}
-                  className="admin-header-btn"
-                  style={iconButtonStyle}
+                {/* Fullscreen Button */}
+                {isDesktop && (
+                  <Tooltip title={t('fullscreen', 'Toggle Fullscreen')}>
+                    <button
+                      type="button"
+                      aria-label="Toggle Fullscreen"
+                      onClick={handleFullscreen}
+                      className="admin-header-btn"
+                      style={iconButtonStyle}
+                    >
+                      <ExpandOutlined style={{ fontSize: 14 }} />
+                    </button>
+                  </Tooltip>
+                )}
+
+                {/* Light / Dark Mode Toggle Button */}
+                <Tooltip
+                  title={
+                    themeMode === 'dark'
+                      ? t('switch_to_light_mode', 'Switch to light mode')
+                      : t('switch_to_dark_mode', 'Switch to dark mode')
+                  }
                 >
-                  <ExpandOutlined style={{ fontSize: 14 }} />
-                </button>
-              </Tooltip>
+                  <button
+                    type="button"
+                    aria-label="Toggle Theme Mode"
+                    onClick={toggleThemeMode}
+                    className="admin-header-btn"
+                    style={iconButtonStyle}
+                  >
+                    {themeMode === 'dark' ? (
+                      <SunOutlined style={{ fontSize: 14.5, color: '#f59e0b' }} />
+                    ) : (
+                      <MoonOutlined style={{ fontSize: 14 }} />
+                    )}
+                  </button>
+                </Tooltip>
+
+                {/* Theme Settings Color Palette Modal Picker */}
+                <ThemeSettings buttonStyle={iconButtonStyle} />
+
+                {/* Transparent Glass Mode Toggle (💎) */}
+                <Tooltip
+                  title={
+                    isGlassActive
+                      ? 'Transparent Glass Mode: ON (Click to disable)'
+                      : 'Transparent Glass Mode: OFF (Click to enable)'
+                  }
+                >
+                  <button
+                    type="button"
+                    aria-label="Toggle Glass Theme"
+                    onClick={() => toggleTransparentSystem()}
+                    className="admin-header-btn"
+                    style={{
+                      ...iconButtonStyle,
+                      border: isGlassActive ? `1.5px solid ${adminTheme.primary}` : iconButtonStyle.border,
+                      background: isGlassActive
+                        ? themeMode === 'dark'
+                          ? 'rgba(47, 111, 237, 0.22)'
+                          : 'rgba(47, 111, 237, 0.12)'
+                        : iconButtonStyle.background,
+                      color: isGlassActive ? adminTheme.primary : iconButtonStyle.color,
+                      boxShadow: isGlassActive ? `0 0 10px ${adminTheme.primary}40` : 'none',
+                    }}
+                  >
+                    <span style={{ fontSize: 13, lineHeight: 1 }}>💎</span>
+                  </button>
+                </Tooltip>
+
+                {/* Language Switcher Dropdown */}
+                <Dropdown menu={{ items: languageMenuItems }} trigger={['click']} placement="bottomRight">
+                  <Button
+                    style={{
+                      height: 36,
+                      borderRadius: 10,
+                      background: headerButtonBg,
+                      border: `1px solid ${headerBorderColor}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '0 9px',
+                      color: headerTextColor,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      transition: 'all 0.18s ease',
+                    }}
+                  >
+                    <span style={{ fontSize: 15, display: 'inline-flex', alignItems: 'center' }}>
+                      {activeLanguage?.flag || '🌐'}
+                    </span>
+                    <span style={{ maxWidth: 80 }} className="truncate">
+                      {activeLanguage?.native || activeLanguage?.name || 'Lang'}
+                    </span>
+                    <DownOutlined style={{ fontSize: 8.5, opacity: 0.6 }} />
+                  </Button>
+                </Dropdown>
+
+                {/* ERP Modules Switchboard Quick Link */}
+                <Tooltip title={t('modules', 'ERP Modules Switchboard')}>
+                  <button
+                    type="button"
+                    aria-label="ERP Modules Switchboard"
+                    onClick={() => navigate('/admins/modules')}
+                    className="admin-header-btn"
+                    style={iconButtonStyle}
+                  >
+                    <ControlOutlined style={{ fontSize: 14 }} />
+                  </button>
+                </Tooltip>
+              </>
             )}
-
-            {/* Light / Dark Mode Toggle Button */}
-            <Tooltip
-              title={
-                themeMode === 'dark'
-                  ? t('switch_to_light_mode', 'Switch to light mode')
-                  : t('switch_to_dark_mode', 'Switch to dark mode')
-              }
-            >
-              <button
-                type="button"
-                aria-label="Toggle Theme Mode"
-                onClick={toggleThemeMode}
-                className="admin-header-btn"
-                style={iconButtonStyle}
-              >
-                {themeMode === 'dark' ? (
-                  <SunOutlined style={{ fontSize: 14.5, color: '#f59e0b' }} />
-                ) : (
-                  <MoonOutlined style={{ fontSize: 14 }} />
-                )}
-              </button>
-            </Tooltip>
-
-            {/* Theme Settings Color Palette Modal Picker */}
-            <ThemeSettings buttonStyle={iconButtonStyle} />
-
-            {/* Transparent Glass Mode Toggle (💎) */}
-            <Tooltip
-              title={
-                isGlassActive
-                  ? 'Transparent Glass Mode: ON (Click to disable)'
-                  : 'Transparent Glass Mode: OFF (Click to enable)'
-              }
-            >
-              <button
-                type="button"
-                aria-label="Toggle Glass Theme"
-                onClick={() => toggleTransparentSystem()}
-                className="admin-header-btn"
-                style={{
-                  ...iconButtonStyle,
-                  border: isGlassActive ? `1.5px solid ${adminTheme.primary}` : iconButtonStyle.border,
-                  background: isGlassActive
-                    ? themeMode === 'dark'
-                      ? 'rgba(47, 111, 237, 0.22)'
-                      : 'rgba(47, 111, 237, 0.12)'
-                    : iconButtonStyle.background,
-                  color: isGlassActive ? adminTheme.primary : iconButtonStyle.color,
-                  boxShadow: isGlassActive ? `0 0 10px ${adminTheme.primary}40` : 'none',
-                }}
-              >
-                <span style={{ fontSize: 13, lineHeight: 1 }}>💎</span>
-              </button>
-            </Tooltip>
-
-            {/* Language Switcher Dropdown (Properly aligned with placement="bottomRight") */}
-            <Dropdown menu={{ items: languageMenuItems }} trigger={['click']} placement="bottomRight">
-              <Button
-                style={{
-                  height: 36,
-                  borderRadius: 10,
-                  background: headerButtonBg,
-                  border: `1px solid ${headerBorderColor}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: isTabletOrDesktop ? '0 9px' : '0 8px',
-                  color: headerTextColor,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  transition: 'all 0.18s ease',
-                }}
-              >
-                <span style={{ fontSize: 15, display: 'inline-flex', alignItems: 'center' }}>
-                  {activeLanguage?.flag || '🌐'}
-                </span>
-                {isTabletOrDesktop && (
-                  <span style={{ maxWidth: 80 }} className="truncate">
-                    {activeLanguage?.native || activeLanguage?.name || 'Lang'}
-                  </span>
-                )}
-                <DownOutlined style={{ fontSize: 8.5, opacity: 0.6 }} />
-              </Button>
-            </Dropdown>
-
-            {/* ERP Modules Switchboard Quick Link */}
-            <Tooltip title={t('modules', 'ERP Modules Switchboard')}>
-              <button
-                type="button"
-                aria-label="ERP Modules Switchboard"
-                onClick={() => navigate('/admins/modules')}
-                className="admin-header-btn"
-                style={iconButtonStyle}
-              >
-                <ControlOutlined style={{ fontSize: 14 }} />
-              </button>
-            </Tooltip>
 
             {/* Interactive Notifications Bell Dropdown */}
             <Dropdown

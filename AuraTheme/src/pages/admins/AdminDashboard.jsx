@@ -263,23 +263,26 @@ const AdminDashboard = () => {
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
       {/* 1. Dashboard Top Header & Switchboard Gateway */}
-      <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
+      <Flex justify="space-between" align={isMobile ? 'flex-start' : 'center'} wrap="wrap" gap={14}>
         <div>
-          <Title level={4} style={{ margin: 0, color: adminTheme.text }}>
+          <Title level={4} style={{ margin: 0, color: adminTheme.text, fontSize: isMobile ? 19 : 22, fontWeight: 800, letterSpacing: '-0.02em' }}>
             {t('erp_command_center_title', 'Aura ERP Command Center & Module Analytics')}
           </Title>
-          <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
+          <Text style={{ color: adminTheme.subtext, fontSize: isMobile ? 13.5 : 12.5, fontWeight: 500 }}>
             {t('live_telemetry_modules_active', 'Live telemetry • {active} of {total} Modules Active').replace('{active}', activeModulesCount).replace('{total}', totalModulesCount)}
           </Text>
         </div>
 
-        <Space size={10} wrap>
+        <Flex gap={10} wrap="wrap" style={{ width: isMobile ? '100%' : 'auto', marginTop: isMobile ? 4 : 0 }}>
           {/* Main button to open Module Switchboard Page */}
           <Button
             type="primary"
             icon={<ControlOutlined />}
             onClick={() => navigate('/admins/modules')}
             style={{
+              flex: isMobile ? '1 1 100%' : 'none',
+              height: isMobile ? 42 : 36,
+              fontSize: isMobile ? 14 : 13,
               fontWeight: 700,
               background: adminTheme.primary,
               borderColor: adminTheme.primary,
@@ -293,7 +296,13 @@ const AdminDashboard = () => {
           <Button
             icon={<GlobalOutlined />}
             onClick={() => navigate('/admins?module=data&section=dashboard')}
-            style={{ fontWeight: 600, borderRadius: 10 }}
+            style={{
+              flex: isMobile ? '1 1 calc(50% - 5px)' : 'none',
+              height: isMobile ? 38 : 36,
+              fontSize: isMobile ? 13 : 12.5,
+              fontWeight: 600,
+              borderRadius: 10,
+            }}
           >
             {t('website_cms', 'Website CMS')}
           </Button>
@@ -301,7 +310,15 @@ const AdminDashboard = () => {
           <Button
             icon={<QrcodeOutlined />}
             onClick={() => navigate('/admins?module=data&section=qrcode')}
-            style={{ fontWeight: 600, borderRadius: 10, borderColor: '#0284c7', color: '#0284c7' }}
+            style={{
+              flex: isMobile ? '1 1 calc(50% - 5px)' : 'none',
+              height: isMobile ? 38 : 36,
+              fontSize: isMobile ? 13 : 12.5,
+              fontWeight: 600,
+              borderRadius: 10,
+              borderColor: '#0284c7',
+              color: '#0284c7',
+            }}
           >
             {t('store_qr', 'Store QR')}
           </Button>
@@ -309,18 +326,23 @@ const AdminDashboard = () => {
           <Tag
             icon={<CheckCircleFilled />}
             style={{
+              width: isMobile ? '100%' : 'auto',
+              justifyContent: isMobile ? 'center' : 'flex-start',
+              display: 'inline-flex',
+              alignItems: 'center',
               margin: 0,
               borderRadius: 8,
               border: 'none',
               background: c.greenSoft,
               color: c.green,
-              padding: '6px 12px',
+              padding: isMobile ? '8px 14px' : '6px 12px',
+              fontSize: isMobile ? 13 : 12,
               fontWeight: 700,
             }}
           >
             {t('all_systems_healthy', 'All Systems Healthy')}
           </Tag>
-        </Space>
+        </Flex>
       </Flex>
 
       {/* 2. Top System KPI Cards */}
@@ -329,31 +351,43 @@ const AdminDashboard = () => {
           const displayVal = idx === 2 ? `${activeModulesCount} / ${totalModulesCount}` : (idx === 1 || idx === 3 ? t(item.value, item.value) : item.value);
           return (
             <Col xs={24} sm={12} xl={6} key={item.title}>
-              <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
+              <Card
+                style={{
+                  ...cardStyle,
+                  borderRadius: 16,
+                  boxShadow: adminTheme.isDark ? '0 4px 16px rgba(0, 0, 0, 0.25)' : '0 2px 10px rgba(15, 23, 42, 0.04)',
+                }}
+                styles={{ body: { padding: isMobile ? '18px 18px 16px' : 18 } }}
+              >
                 <Flex justify="space-between" align="flex-start">
                   <div>
-                    <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>{t(item.title, item.title)}</Text>
-                    <Title level={3} style={{ margin: '4px 0 2px', color: adminTheme.text }}>
+                    <Text style={{ color: adminTheme.subtext, fontSize: isMobile ? 13.5 : 12.5, fontWeight: 600 }}>
+                      {t(item.title, item.title)}
+                    </Text>
+                    <div style={{ margin: '5px 0 2px', color: adminTheme.text, fontSize: isMobile ? 26 : 24, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
                       {displayVal}
-                    </Title>
-                    <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{t(item.sub, item.sub)}</Text>
+                    </div>
+                    <Text style={{ color: adminTheme.subtext, fontSize: isMobile ? 12.5 : 11.5, fontWeight: 500 }}>
+                      {t(item.sub, item.sub)}
+                    </Text>
                   </div>
                   <div
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 10,
+                      width: isMobile ? 42 : 36,
+                      height: isMobile ? 42 : 36,
+                      borderRadius: 12,
                       background: `${c[item.colorKey]}1a`,
                       color: c[item.colorKey],
                       display: 'grid',
                       placeItems: 'center',
-                      fontSize: 17,
+                      fontSize: isMobile ? 20 : 17,
+                      flexShrink: 0,
                     }}
                   >
                     {item.icon}
                   </div>
                 </Flex>
-                <div style={{ marginTop: 10 }}>
+                <div style={{ marginTop: 12 }}>
                   <MiniBars data={item.bars} color={c[item.colorKey]} />
                 </div>
               </Card>
@@ -462,20 +496,20 @@ const AdminDashboard = () => {
           {/* Card 1: Sales Revenue */}
           <Col xs={24} sm={12} xl={6}>
             <div style={{
-              padding: '16px',
+              padding: isMobile ? '16px 14px' : '16px',
               background: adminTheme.isDark ? 'rgba(22, 163, 74, 0.12)' : '#f0fdf4',
               borderRadius: 14,
               border: '1px solid rgba(22, 163, 74, 0.22)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                <Text style={{ color: '#15803d', fontSize: 12, fontWeight: 600 }}>{t('sales', 'Sales Revenue')}</Text>
+                <Text style={{ color: '#15803d', fontSize: isMobile ? 13 : 12, fontWeight: 700 }}>{t('sales', 'Sales Revenue')}</Text>
                 <Tag color="green" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>+14.2%</Tag>
               </Flex>
-              <Title level={3} style={{ margin: '2px 0 4px', color: '#16a34a', fontWeight: 800 }}>
+              <div style={{ margin: '2px 0 4px', color: '#16a34a', fontWeight: 800, fontSize: isMobile ? 24 : 22, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                 {formatCurrency(liveStats?.revenue?.value || liveStats?.totalRevenue || 117000)}
-              </Title>
-              <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
+              </div>
+              <Text style={{ fontSize: isMobile ? 12 : 11.5, color: adminTheme.subtext, fontWeight: 500 }}>
                 {liveStats?.orders?.value || liveStats?.totalSales || 384} {t('orders', 'wholesale orders')}
               </Text>
             </div>
@@ -484,20 +518,20 @@ const AdminDashboard = () => {
           {/* Card 2: Procurement Spend */}
           <Col xs={24} sm={12} xl={6}>
             <div style={{
-              padding: '16px',
+              padding: isMobile ? '16px 14px' : '16px',
               background: adminTheme.isDark ? 'rgba(2, 132, 199, 0.12)' : '#f0f9ff',
               borderRadius: 14,
               border: '1px solid rgba(2, 132, 199, 0.22)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                <Text style={{ color: '#0369a1', fontSize: 12, fontWeight: 600 }}>{t('purchases', 'Procurement Spend')}</Text>
+                <Text style={{ color: '#0369a1', fontSize: isMobile ? 13 : 12, fontWeight: 700 }}>{t('purchases', 'Procurement Spend')}</Text>
                 <Tag color="blue" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>-3.8%</Tag>
               </Flex>
-              <Title level={3} style={{ margin: '2px 0 4px', color: '#0284c7', fontWeight: 800 }}>
+              <div style={{ margin: '2px 0 4px', color: '#0284c7', fontWeight: 800, fontSize: isMobile ? 24 : 22, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                 {formatCurrency(liveStats?.purchases?.value || 61000)}
-              </Title>
-              <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
+              </div>
+              <Text style={{ fontSize: isMobile ? 12 : 11.5, color: adminTheme.subtext, fontWeight: 500 }}>
                 {t('suppliers', 'Supplier purchase settlements')}
               </Text>
             </div>
@@ -506,20 +540,20 @@ const AdminDashboard = () => {
           {/* Card 3: Commercial Network (Buyers & Suppliers) */}
           <Col xs={24} sm={12} xl={6}>
             <div style={{
-              padding: '16px',
+              padding: isMobile ? '16px 14px' : '16px',
               background: adminTheme.isDark ? 'rgba(124, 58, 237, 0.12)' : '#f5f3ff',
               borderRadius: 14,
               border: '1px solid rgba(124, 58, 237, 0.22)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                <Text style={{ color: '#6d28d9', fontSize: 12, fontWeight: 600 }}>{t('customers', 'B2B Network')}</Text>
+                <Text style={{ color: '#6d28d9', fontSize: isMobile ? 13 : 12, fontWeight: 700 }}>{t('customers', 'B2B Network')}</Text>
                 <Tag color="purple" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>{t('active', 'Live')}</Tag>
               </Flex>
-              <Title level={3} style={{ margin: '2px 0 4px', color: '#7c3aed', fontWeight: 800 }}>
+              <div style={{ margin: '2px 0 4px', color: '#7c3aed', fontWeight: 800, fontSize: isMobile ? 24 : 22, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                 {liveStats?.customers?.value || 35} / {liveStats?.suppliers?.value || 9}
-              </Title>
-              <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
+              </div>
+              <Text style={{ fontSize: isMobile ? 12 : 11.5, color: adminTheme.subtext, fontWeight: 500 }}>
                 {liveStats?.customers?.value || 35} {t('customers', 'Buyers')} &bull; {liveStats?.suppliers?.value || 9} {t('suppliers', 'Suppliers')}
               </Text>
             </div>
@@ -528,20 +562,20 @@ const AdminDashboard = () => {
           {/* Card 4: Inventory & Operations */}
           <Col xs={24} sm={12} xl={6}>
             <div style={{
-              padding: '16px',
+              padding: isMobile ? '16px 14px' : '16px',
               background: adminTheme.isDark ? 'rgba(234, 88, 12, 0.12)' : '#fff7ed',
               borderRadius: 14,
               border: '1px solid rgba(234, 88, 12, 0.22)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                <Text style={{ color: '#c2410c', fontSize: 12, fontWeight: 600 }}>{t('inventory', 'Stock Valuation')}</Text>
+                <Text style={{ color: '#c2410c', fontSize: isMobile ? 13 : 12, fontWeight: 700 }}>{t('inventory', 'Stock Valuation')}</Text>
                 <Tag color="orange" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>12.4K Units</Tag>
               </Flex>
-              <Title level={3} style={{ margin: '2px 0 4px', color: '#ea580c', fontWeight: 800 }}>
+              <div style={{ margin: '2px 0 4px', color: '#ea580c', fontWeight: 800, fontSize: isMobile ? 24 : 22, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                 {formatCurrency(liveStats?.stockValuation?.value || 665000)}
-              </Title>
-              <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>
+              </div>
+              <Text style={{ fontSize: isMobile ? 12 : 11.5, color: adminTheme.subtext, fontWeight: 500 }}>
                 {liveStats?.products?.value || liveStats?.totalProducts || 12450} {t('products', 'Catalog SKUs')}
               </Text>
             </div>

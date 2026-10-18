@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { Button, Tooltip, Typography, Space, Badge } from 'antd';
+import { Button, Tooltip, Typography, Space, Badge, Grid } from 'antd';
 import {
   LeftOutlined,
   RightOutlined,
@@ -49,6 +49,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useTranslation } from '../../../contexts/LanguageContext';
 
 const { Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const moduleIconMap = {
   dashboard: DashboardOutlined,
@@ -138,6 +139,8 @@ const moduleIndexPermissionMap = {
 };
 
 export default function AdminModuleScrollSlidebar() {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const adminTheme = useAdminTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -286,7 +289,7 @@ export default function AdminModuleScrollSlidebar() {
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
-        padding: '6px 14px',
+        padding: isMobile ? '6px 8px' : '6px 14px',
         background: adminTheme.isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.85)',
         backdropFilter: 'blur(12px)',
         borderBottom: `1px solid ${adminTheme.border || 'rgba(0, 0, 0, 0.06)'}`,
@@ -298,8 +301,8 @@ export default function AdminModuleScrollSlidebar() {
         boxSizing: 'border-box'
       }}
     >
-      {/* Left Slide Arrow */}
-      {canScrollLeft && (
+      {/* Left Slide Arrow (Desktop Only) */}
+      {canScrollLeft && !isMobile && (
         <Button
           type="text"
           size="small"
@@ -322,7 +325,7 @@ export default function AdminModuleScrollSlidebar() {
         />
       )}
 
-      {/* Scrollable Container */}
+      {/* Scrollable Container with Smooth Touch Scrolling */}
       <div
         ref={scrollContainerRef}
         onScroll={checkScroll}
@@ -331,13 +334,16 @@ export default function AdminModuleScrollSlidebar() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 6,
+          gap: isMobile ? 8 : 6,
           overflowX: 'auto',
           overflowY: 'hidden',
-          padding: '2px 4px',
+          padding: '3px 4px',
           flex: 1,
           scrollBehavior: 'smooth',
-          whiteSpace: 'nowrap'
+          whiteSpace: 'nowrap',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
         }}
       >
         {slidebarItems.map((item) => {
@@ -354,8 +360,9 @@ export default function AdminModuleScrollSlidebar() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 7,
-                padding: '5px 11px',
-                borderRadius: 8,
+                padding: isMobile ? '6px 14px' : '5px 12px',
+                height: isMobile ? 36 : 33,
+                borderRadius: 999,
                 border: isActive
                   ? `1px solid ${adminTheme.primary}`
                   : `1px solid ${adminTheme.sidebarBorder || 'rgba(0, 0, 0, 0.06)'}`,
@@ -365,7 +372,7 @@ export default function AdminModuleScrollSlidebar() {
                 color: isActive
                   ? adminTheme.sidebarActiveText
                   : adminTheme.text,
-                fontSize: 12,
+                fontSize: isMobile ? 13 : 12.5,
                 fontWeight: isActive ? 700 : 500,
                 cursor: 'pointer',
                 transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -389,7 +396,7 @@ export default function AdminModuleScrollSlidebar() {
               {/* Icon Container */}
               <span
                 style={{
-                  fontSize: 13,
+                  fontSize: isMobile ? 14 : 13,
                   color: isActive ? item.accent : (adminTheme.subtext || '#64748b'),
                   display: 'flex',
                   alignItems: 'center',
@@ -406,8 +413,8 @@ export default function AdminModuleScrollSlidebar() {
               {isActive ? (
                 <span
                   style={{
-                    width: 5,
-                    height: 5,
+                    width: 6,
+                    height: 6,
                     borderRadius: '50%',
                     background: item.accent || '#3b82f6',
                     boxShadow: `0 0 6px ${item.accent || '#3b82f6'}`
@@ -416,11 +423,11 @@ export default function AdminModuleScrollSlidebar() {
               ) : item.badge && !item.badge.includes(' ') && (
                 <span
                   style={{
-                    fontSize: 9.5,
+                    fontSize: 10,
                     fontWeight: 700,
-                    padding: '0.5px 5px',
+                    padding: '1px 6px',
                     borderRadius: 999,
-                    background: adminTheme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                    background: adminTheme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
                     color: adminTheme.subtext
                   }}
                 >
@@ -432,8 +439,8 @@ export default function AdminModuleScrollSlidebar() {
         })}
       </div>
 
-      {/* Right Slide Arrow */}
-      {canScrollRight && (
+      {/* Right Slide Arrow (Desktop Only) */}
+      {canScrollRight && !isMobile && (
         <Button
           type="text"
           size="small"
