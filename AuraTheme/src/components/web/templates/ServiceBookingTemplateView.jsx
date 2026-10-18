@@ -296,7 +296,7 @@ export default function ServiceBookingTemplateView() {
         onOk={handleBookingSubmit}
         onCancel={() => setBookingModalOpen(false)}
         okText={t('confirm_booking_button', 'Confirm & Book Appointment')}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={bookingForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="serviceName" label={t('selected_service', 'Service Offering')}>

@@ -472,7 +472,7 @@ export default function UnitsManagement() {
         confirmLoading={saving}
         okText={editingUnit ? t('save_changes', 'Save Changes') : t('create_unit', 'Create Unit')}
         cancelText={t('cancel', 'Cancel')}
-        destroyOnClose
+        destroyOnHidden
         width={560}
       >
         <Alert

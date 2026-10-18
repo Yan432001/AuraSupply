@@ -310,7 +310,7 @@ const CustomersManagement = () => {
         onCancel={() => setIsModalOpen(false)}
         okText={editingCustomer ? t('save_changes', 'Save Changes') : t('create_customer', 'Create Customer')}
         cancelText={t('cancel', 'Cancel')}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item

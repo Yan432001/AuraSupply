@@ -687,7 +687,7 @@ const BpasUnifiedModuleWorkspace = () => {
         open={createModalVisible}
         onCancel={() => setCreateModalVisible(false)}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
         centered
         width={600}
       >

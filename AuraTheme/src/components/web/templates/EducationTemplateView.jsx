@@ -387,7 +387,7 @@ export default function EducationTemplateView() {
         onOk={handleAdmissionSubmit}
         onCancel={() => setAdmissionModalOpen(false)}
         okText={t('submit_application', 'Submit Application')}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="course" label={t('selected_program', 'Selected Program / Track')}>

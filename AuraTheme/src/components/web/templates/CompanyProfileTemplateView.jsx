@@ -308,7 +308,7 @@ export default function CompanyProfileTemplateView() {
         onOk={handleRfpSubmit}
         onCancel={() => setRfpModalOpen(false)}
         okText={t('submit_rfp_button', 'Submit Proposal Request')}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={rfpForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item

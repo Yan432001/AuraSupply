@@ -1400,7 +1400,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
         open={groupModalVisible}
         onCancel={() => setGroupModalVisible(false)}
         onOk={handleSaveGroupModal}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={groupForm} layout="vertical">
           <Form.Item name="description" label="Role Description">
@@ -1451,7 +1451,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
         onCancel={() => setBranchModalVisible(false)}
         onOk={handleSaveUserBranches}
         confirmLoading={savingBranches}
-        destroyOnClose
+        destroyOnHidden
       >
         <Text style={{ color: adminTheme.subtext, fontSize: 12, display: 'block', marginBottom: 14 }}>
           Select which branches/stores from <Text code>aura_companies</Text> this user is authorized to manage and transact with.

@@ -652,7 +652,7 @@ const UserManagement = () => {
         onCancel={() => setIsModalOpen(false)}
         okText={editingUser ? t('save_changes', 'Save Changes') : t('create_user', 'Create User')}
         cancelText={t('cancel', 'Cancel')}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" style={{ marginTop: 14 }}>
           <Row gutter={12}>
@@ -760,7 +760,7 @@ const UserManagement = () => {
         onCancel={() => setIsMatrixOpen(false)}
         width={860}
         okText="Save Permissions"
-        destroyOnClose
+        destroyOnHidden
       >
         <Space direction="vertical" size={14} style={{ width: '100%', marginTop: 12 }}>
           {/* Preset Buttons Bar */}

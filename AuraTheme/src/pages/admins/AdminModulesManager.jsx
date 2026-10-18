@@ -1484,7 +1484,7 @@ const AdminModulesManager = () => {
         onOk={handleLicenseSubmit}
         onCancel={() => setLicenseModalOpen(false)}
         okText={t('verify_and_activate_license', 'Verify & Activate License')}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={licenseForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
@@ -1562,7 +1562,7 @@ const AdminModulesManager = () => {
         open={permissionsDrawerOpen}
         onClose={() => setPermissionsDrawerOpen(false)}
         width={960}
-        destroyOnClose
+        destroyOnHidden
       >
         <Space orientation="vertical" size={16} style={{ width: '100%' }}>
           {/* Instructions and Toolbar */}
@@ -1721,7 +1721,7 @@ const AdminModulesManager = () => {
         confirmLoading={creatingPerm}
         okText={t('create_and_register_permission', 'Create & Register Permission')}
         cancelText={t('cancel', 'Cancel')}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={createPermForm}
