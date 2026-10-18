@@ -94,10 +94,17 @@ module.exports = (app) => {
   // 5. ERP MODULE SWITCHBOARD & LICENSE
   // --------------------------------------------------------------------------
   app.get('/api/admin/modules', authenticate, modCtrl.listModules);
+  app.post('/api/admin/modules/verify-license', authenticate, modCtrl.verifyLicense);
   app.post('/api/admin/modules/toggle', authenticate, requireRole('owner', 'admin'), modCtrl.toggleModule);
   app.post('/api/admin/modules/submodule/toggle', authenticate, requireRole('owner', 'admin'), modCtrl.toggleSubmodule);
   app.get('/api/admin/modules/license', authenticate, modCtrl.getLicense);
   app.post('/api/admin/modules/license', authenticate, requireRole('owner', 'admin'), modCtrl.updateLicense);
+
+  // Module Permissions Management
+  app.get('/api/admin/modules/:moduleKey/permissions', authenticate, modCtrl.getModulePermissions);
+  app.post('/api/admin/modules/:moduleKey/permissions', authenticate, requireRole('owner', 'admin'), modCtrl.createModulePermission);
+  app.put('/api/admin/modules/:moduleKey/permissions', authenticate, requireRole('owner', 'admin'), modCtrl.updateModulePermissions);
+  app.delete('/api/admin/modules/:moduleKey/permissions/:permissionKey', authenticate, requireRole('owner', 'admin'), modCtrl.deleteModulePermission);
 
   // --------------------------------------------------------------------------
   // 6. ERP DASHBOARD & TELEMETRY

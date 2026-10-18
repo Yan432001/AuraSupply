@@ -42,7 +42,8 @@ import {
   LockOutlined,
   BlockOutlined,
   TagsOutlined,
-  DeploymentUnitOutlined
+  DeploymentUnitOutlined,
+  AppstoreOutlined
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -393,6 +394,14 @@ export default function SystemSettings() {
             onClick={() => navigate('/admins?module=settings&menu=permissions')}
           >
             {t('permissions', 'Permissions')}
+          </Button>
+          <Button
+            size="small"
+            icon={<AppstoreOutlined />}
+            onClick={() => navigate('/admins?module=modules')}
+            style={{ borderRadius: 6, fontWeight: 600, borderColor: '#2563eb', color: '#2563eb' }}
+          >
+            {t('modules', 'Modules (Switchboard)')}
           </Button>
         </Space>
       </Card>
