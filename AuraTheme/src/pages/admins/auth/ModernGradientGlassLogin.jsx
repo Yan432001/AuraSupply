@@ -174,6 +174,7 @@ const GradientGlassLogin = () => {
             style={{ marginBottom: 24 }}
           >
             <Input
+              autoComplete="username"
               prefix={<UserOutlined style={{ color: 'rgba(255, 255, 255, 0.6)' }} />}
               placeholder="Username"
               style={{
@@ -194,6 +195,7 @@ const GradientGlassLogin = () => {
             style={{ marginBottom: 24 }}
           >
             <Input.Password
+              autoComplete="current-password"
               prefix={<LockOutlined style={{ color: 'rgba(255, 255, 255, 0.6)' }} />}
               placeholder="Password"
               iconRender={(visible) => 

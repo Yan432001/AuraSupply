@@ -458,6 +458,7 @@ const ModernAuraLogin = () => {
               >
                 <Input
                   size="large"
+                  autoComplete="username"
                   prefix={<UserOutlined style={{ color: '#94a3b8' }} />}
                   placeholder={t('username_or_email', 'Username or Email')}
                   style={{ borderRadius: 10 }}
@@ -471,6 +472,7 @@ const ModernAuraLogin = () => {
               >
                 <Input.Password
                   size="large"
+                  autoComplete="current-password"
                   prefix={<LockOutlined style={{ color: '#94a3b8' }} />}
                   placeholder={t('password', 'Password')}
                   style={{ borderRadius: 10 }}

@@ -30,10 +30,10 @@ const Login = () => {
           <Title level={4} style={{ margin: 0, color: '#64748B' }}>Sign in to your Aura account</Title>
           <Form form={form} onFinish={onFinish} layout="vertical">
             <Form.Item name="username" rules={[{ required: true, message: 'Please input your username!' }]}>
-              <Input placeholder="Username" prefix={<UserOutlined />} size="large" />
+              <Input placeholder="Username" autoComplete="username" prefix={<UserOutlined />} size="large" />
             </Form.Item>
             <Form.Item name="password" rules={[{ required: true, message: 'Please input your password!' }]}>
-              <Input.Password placeholder="Password" size="large" />
+              <Input.Password placeholder="Password" autoComplete="current-password" size="large" />
             </Form.Item>
             <Form.Item>
               <Button type="primary" htmlType="submit" loading={loading} block size="large" style={{ borderRadius: 12 }}>

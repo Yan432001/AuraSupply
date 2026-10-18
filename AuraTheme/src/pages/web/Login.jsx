@@ -220,6 +220,7 @@ export default function Login() {
               rules={[{ required: true, message: t('enter_email_or_username', 'Please enter your email or username') }]}
             >
               <Input
+                autoComplete="username"
                 prefix={<UserOutlined style={{ color: '#94a3b8', marginRight: 6 }} />}
                 placeholder="name@auraglobal.com"
                 size="large"
@@ -247,6 +248,7 @@ export default function Login() {
               rules={[{ required: true, message: t('enter_password', 'Please enter your password') }]}
             >
               <Input.Password
+                autoComplete="current-password"
                 prefix={<LockOutlined style={{ color: '#94a3b8', marginRight: 6 }} />}
                 placeholder="••••••••"
                 size="large"

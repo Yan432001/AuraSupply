@@ -120,6 +120,7 @@ const MinimalistFloatingLogin = () => {
             ]}
           >
             <Input
+              autoComplete="username"
               prefix={<MailOutlined style={{ color: token.colorTextSecondary }} />}
               placeholder="admin@example.com"
               style={{
@@ -137,6 +138,7 @@ const MinimalistFloatingLogin = () => {
             rules={[{ required: true, message: 'Please input your password!' }]}
           >
             <Input.Password
+              autoComplete="current-password"
               prefix={<LockOutlined style={{ color: token.colorTextSecondary }} />}
               placeholder="••••••••"
               style={{

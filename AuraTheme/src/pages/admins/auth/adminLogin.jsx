@@ -105,6 +105,7 @@ const ModernCardLogin = () => {
             rules={[{ required: true, message: 'Please input your username!' }]}
           >
             <Input
+              autoComplete="username"
               prefix={<UserOutlined style={{ color: token.colorTextSecondary }} />}
               placeholder="Username or Email"
               style={{ borderRadius: 8 }}
@@ -116,6 +117,7 @@ const ModernCardLogin = () => {
             rules={[{ required: true, message: 'Please input your password!' }]}
           >
             <Input.Password
+              autoComplete="current-password"
               prefix={<LockOutlined style={{ color: token.colorTextSecondary }} />}
               placeholder="Password"
               iconRender={(visible) => 

@@ -1,21 +1,63 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
+// Helper to verify if JWT string is expired or malformed
+const isTokenExpired = (rawToken) => {
+  if (!rawToken || typeof rawToken !== 'string') return true;
+  try {
+    const parts = rawToken.split('.');
+    if (parts.length !== 3) return false;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const decoded = JSON.parse(jsonPayload);
+    if (decoded && decoded.exp) {
+      return Date.now() >= decoded.exp * 1000;
+    }
+    return false;
+  } catch (_) {
+    return true;
+  }
+};
+
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+  const [token, setToken] = useState(() => {
+    const saved = localStorage.getItem('token');
+    if (!saved) return null;
+    if (isTokenExpired(saved)) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      return null;
+    }
+    return saved;
+  });
+
   const [user, setUser] = useState(() => {
     try {
+      const savedToken = localStorage.getItem('token');
+      if (!savedToken || isTokenExpired(savedToken)) {
+        return null;
+      }
       const savedUser = localStorage.getItem('user');
       return savedUser ? JSON.parse(savedUser) : null;
     } catch {
       return null;
     }
   });
-  const [loadingSession, setLoadingSession] = useState(() => Boolean(localStorage.getItem('token')));
+
+  const [loadingSession, setLoadingSession] = useState(() => {
+    const saved = localStorage.getItem('token');
+    return Boolean(saved && !isTokenExpired(saved));
+  });
 
   // Support both flattened and wrapped session user payloads
   const effectiveUser = user?.user ? { ...user.user, ...user } : user;
@@ -155,7 +197,16 @@ export const AuthProvider = ({ children }) => {
     let isMounted = true;
     const initSession = async () => {
       const savedToken = localStorage.getItem('token');
-      if (!savedToken) {
+      if (!savedToken || isTokenExpired(savedToken)) {
+        if (savedToken) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          delete axios.defaults.headers.common['Authorization'];
+          if (isMounted) {
+            setUser(null);
+            setToken(null);
+          }
+        }
         if (isMounted) setLoadingSession(false);
         return;
       }
@@ -172,10 +223,26 @@ export const AuthProvider = ({ children }) => {
 
       try {
         // Customer accounts authenticate via /api/auth/profile; Admin/staff via /api/admin/auth/session
-        const sessionEndpoint = isCustomerAccount ? '/api/auth/profile' : '/api/admin/auth/session';
+        // Pass ?silent=1 and x-session-check header so backend returns 200 with authenticated:false instead of logging 401 console errors on dead sessions
+        const baseEndpoint = isCustomerAccount ? '/api/auth/profile' : '/api/admin/auth/session';
+        const sessionEndpoint = `${baseEndpoint}?silent=1`;
         const res = await axios.get(sessionEndpoint, {
-          headers: { Authorization: `Bearer ${savedToken}` }
+          headers: { 
+            Authorization: `Bearer ${savedToken}`,
+            'x-session-check': '1'
+          }
         });
+
+        if (res.data?.authenticated === false || (!res.data?.success && !res.data?.status)) {
+          if (isMounted) {
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            delete axios.defaults.headers.common['Authorization'];
+          }
+          return;
+        }
 
         if (isMounted && (res.data?.success || res.data?.status) && res.data?.data) {
           const payloadData = res.data.data;
@@ -202,6 +269,7 @@ export const AuthProvider = ({ children }) => {
             setToken(null);
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            delete axios.defaults.headers.common['Authorization'];
           }
         } else if (err.response?.status === 403 && !isCustomerAccount) {
           // If 403 when hitting admin session, account may be a customer or restricted

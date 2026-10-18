@@ -244,6 +244,7 @@ export default function Register() {
               ]}
             >
               <Input.Password
+                autoComplete="new-password"
                 prefix={<LockOutlined style={{ color: '#94a3b8', marginRight: 6 }} />}
                 placeholder={t('at_least_6_chars', 'At least 6 characters')}
                 size="large"
@@ -268,6 +269,7 @@ export default function Register() {
               ]}
             >
               <Input.Password
+                autoComplete="new-password"
                 prefix={<LockOutlined style={{ color: '#94a3b8', marginRight: 6 }} />}
                 placeholder={t('repeat_password', 'Repeat password')}
                 size="large"

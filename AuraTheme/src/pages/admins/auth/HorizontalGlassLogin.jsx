@@ -344,6 +344,7 @@ const HorizontalGlassLogin = () => {
                 style={{ marginBottom: 24 }}
               >
                 <Input
+                  autoComplete="username"
                   prefix={<MailOutlined style={{ color: 'rgba(255, 255, 255, 0.6)' }} />}
                   placeholder="Email address"
                   className="form-input"
@@ -361,6 +362,7 @@ const HorizontalGlassLogin = () => {
                 style={{ marginBottom: 24 }}
               >
                 <Input.Password
+                  autoComplete="current-password"
                   prefix={<LockOutlined style={{ color: 'rgba(255, 255, 255, 0.6)' }} />}
                   placeholder="Password"
                   iconRender={(visible) => 

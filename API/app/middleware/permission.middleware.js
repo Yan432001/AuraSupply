@@ -18,12 +18,17 @@ const authenticate = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     let userId = null;
 
+    const isSilent = req.query.silent === '1' || req.headers['x-session-check'] === '1';
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
       try {
         const decoded = jwt.verify(token, JWT_SECRET);
         userId = decoded?.id || decoded?.user_id || decoded?.data?.profile?.id || decoded?.data?.id;
       } catch (err) {
+        if (isSilent) {
+          return res.json({ success: false, authenticated: false, message: 'Session token expired or invalid.', data: null });
+        }
         return sendError(res, 'Session token expired or invalid. Please sign in again.', 401);
       }
     } else if (req.session && req.session.user_id) {
@@ -32,10 +37,16 @@ const authenticate = async (req, res, next) => {
       // Dev explicit bypass when requested via ?dev=1
       userId = 1;
     } else {
+      if (isSilent) {
+        return res.json({ success: false, authenticated: false, message: 'Authentication required. No bearer token provided.', data: null });
+      }
       return sendError(res, 'Authentication required. No bearer token provided.', 401);
     }
 
     if (!userId) {
+      if (isSilent) {
+        return res.json({ success: false, authenticated: false, message: 'Malformed credentials.', data: null });
+      }
       return sendError(res, 'Malformed credentials.', 401);
     }
 
@@ -54,6 +65,9 @@ const authenticate = async (req, res, next) => {
     `, [userId]);
 
     if (!rows || rows.length === 0) {
+      if (isSilent) {
+        return res.json({ success: false, authenticated: false, message: 'User account not found or deactivated.', data: null });
+      }
       return sendError(res, 'User account not found or deactivated.', 401);
     }
 

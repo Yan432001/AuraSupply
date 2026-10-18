@@ -410,7 +410,18 @@ exports.token_key_login = () => {
       token = authorization.split(" ")[1];
     }
 
+    const isSilent = req.query.silent === '1' || req.headers['x-session-check'] === '1';
+
     if (!token) {
+      if (isSilent) {
+        return res.json({
+          success: false,
+          status: false,
+          authenticated: false,
+          message: "Unauthorized: Missing authentication token",
+          data: null
+        });
+      }
       return res.status(401).json({
         success: false,
         status: false,
@@ -420,6 +431,15 @@ exports.token_key_login = () => {
 
     jwt.verify(token, JWT_SECRET, (error, decoded) => {
       if (error) {
+        if (isSilent) {
+          return res.json({
+            success: false,
+            status: false,
+            authenticated: false,
+            message: "Unauthorized: Invalid or expired token",
+            data: null
+          });
+        }
         return res.status(401).json({
           success: false,
           status: false,
