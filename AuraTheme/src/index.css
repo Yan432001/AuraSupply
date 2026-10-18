@@ -688,4 +688,167 @@ body.admin-active.theme-dark {
   border-radius: 99px;
 }
 
+/* ==========================================================================
+   Aura ERP Admin Responsive Architecture & Visual Polish (/admins/*)
+   ========================================================================== */
+
+/* 1. Universal Layout & Overflow Prevention */
+.admin-layout {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+}
+
+/* 2. Universal Data Tables Horizontal Scroll & Sticky Columns */
+.admin-layout .ant-table-wrapper {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-layout .ant-table {
+  overflow-x: auto !important;
+}
+
+.admin-layout .ant-table-thead > tr > th {
+  white-space: nowrap !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.01em;
+}
+
+.admin-layout .ant-table-tbody > tr > td {
+  word-break: break-word;
+}
+
+/* 3. Universal Responsive Modals / Dialogs */
+.admin-layout .ant-modal,
+.ant-modal {
+  max-width: calc(100vw - 24px) !important;
+  margin: 16px auto !important;
+  padding-bottom: 16px !important;
+}
+
+.admin-layout .ant-modal-content,
+.ant-modal .ant-modal-content {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  max-height: calc(100vh - 48px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16) !important;
+}
+
+.admin-layout .ant-modal-header,
+.ant-modal .ant-modal-header {
+  flex-shrink: 0 !important;
+  margin-bottom: 0 !important;
+  padding: 16px 20px 12px !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15) !important;
+}
+
+.admin-layout .ant-modal-body,
+.ant-modal .ant-modal-body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  max-height: calc(100vh - 170px) !important;
+  padding: 16px 20px !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-layout .ant-modal-footer,
+.ant-modal .ant-modal-footer {
+  flex-shrink: 0 !important;
+  margin-top: 0 !important;
+  padding: 12px 20px 16px !important;
+  border-top: 1px solid rgba(148, 163, 184, 0.15) !important;
+}
+
+@media (max-width: 768px) {
+  .admin-layout .ant-modal,
+  .ant-modal {
+    max-width: calc(100vw - 16px) !important;
+    margin: 8px auto !important;
+    top: 8px !important;
+  }
+
+  .admin-layout .ant-modal-body,
+  .ant-modal .ant-modal-body {
+    padding: 12px 14px !important;
+  }
+
+  .admin-layout .ant-modal-footer,
+  .ant-modal .ant-modal-footer {
+    padding: 10px 14px 14px !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    justify-content: flex-end !important;
+  }
+}
+
+/* 4. Responsive Forms & Inputs on Mobile Devices */
+@media (max-width: 768px) {
+  .admin-layout .ant-form-item {
+    margin-bottom: 14px !important;
+  }
+
+  .admin-layout .ant-form-item-label {
+    padding-bottom: 4px !important;
+  }
+
+  .admin-layout .ant-form-item-label > label {
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+  }
+
+  .admin-layout .ant-input,
+  .admin-layout .ant-select,
+  .admin-layout .ant-input-number,
+  .admin-layout .ant-picker {
+    font-size: 13.5px !important;
+  }
+
+  .admin-layout h1, .admin-layout .ant-typography h1 { font-size: 22px !important; }
+  .admin-layout h2, .admin-layout .ant-typography h2 { font-size: 19px !important; }
+  .admin-layout h3, .admin-layout .ant-typography h3 { font-size: 17px !important; }
+  .admin-layout h4, .admin-layout .ant-typography h4 { font-size: 15px !important; }
+  .admin-layout h5, .admin-layout .ant-typography h5 { font-size: 13.5px !important; }
+}
+
+/* 5. Visual Polish: Modern Cards, Elevations & Rounded Corners */
+.admin-layout .ant-card {
+  border-radius: 14px !important;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease !important;
+}
+
+@media (max-width: 768px) {
+  .admin-layout .ant-card {
+    border-radius: 12px !important;
+  }
+  
+  .admin-layout .ant-card-body {
+    padding: 14px !important;
+  }
+}
+
+/* 6. Custom Responsive Scrollbars */
+.admin-layout ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.admin-layout ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-layout ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
+
+.admin-layout ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+
 

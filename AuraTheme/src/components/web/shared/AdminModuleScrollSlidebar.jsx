@@ -292,7 +292,10 @@ export default function AdminModuleScrollSlidebar() {
         borderBottom: `1px solid ${adminTheme.border || 'rgba(0, 0, 0, 0.06)'}`,
         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.03)',
         zIndex: 900,
-        gap: 6
+        gap: 6,
+        maxWidth: '100%',
+        overflowX: 'hidden',
+        boxSizing: 'border-box'
       }}
     >
       {/* Left Slide Arrow */}

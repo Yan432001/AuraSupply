@@ -762,6 +762,7 @@ export default function AdminFrontEndController({ embedded = false }) {
                     dataSource={storeProducts}
                     rowKey="id"
                     pagination={{ pageSize: 8 }}
+                    scroll={{ x: 800 }}
                   />
                 </Space>
               ),

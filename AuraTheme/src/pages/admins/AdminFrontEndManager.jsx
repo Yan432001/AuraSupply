@@ -2087,6 +2087,7 @@ function HeroSlidersTab({
         rowKey="id"
         pagination={false}
         size="middle"
+        scroll={{ x: 700 }}
       />
     </Space>
   );
@@ -2188,7 +2189,7 @@ function WebsitePagesTab({ pages, setPages, adminTheme }) {
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Table columns={columns} dataSource={pages} rowKey="id" pagination={false} size="middle" />
+      <Table columns={columns} dataSource={pages} rowKey="id" pagination={false} size="middle" scroll={{ x: 750 }} />
 
       <Modal
         title={t('edit_content_page', 'Edit Content Page')}
@@ -2610,6 +2611,7 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
           rowKey="id"
           pagination={{ pageSize: 5 }}
           size="small"
+          scroll={{ x: 750 }}
           columns={[
             {
               title: 'Time',

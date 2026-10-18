@@ -801,7 +801,7 @@ const AdminModulesManager = () => {
 
       {/* 3. System Statistics Overview */}
       <Row gutter={[16, 16]}>
-        <Col xs={12} sm={6}>
+        <Col xs={24} sm={12} xl={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
             <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('total_erp_modules', 'Total ERP Modules')}</Text>
             <Title level={2} style={{ margin: '4px 0 0', color: adminTheme.text }}>
@@ -811,7 +811,7 @@ const AdminModulesManager = () => {
           </Card>
         </Col>
 
-        <Col xs={12} sm={6}>
+        <Col xs={24} sm={12} xl={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
             <Flex justify="space-between" align="center">
               <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('active_and_operational', 'Active & Operational')}</Text>
@@ -824,7 +824,7 @@ const AdminModulesManager = () => {
           </Card>
         </Col>
 
-        <Col xs={12} sm={6}>
+        <Col xs={24} sm={12} xl={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
             <Flex justify="space-between" align="center">
               <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('disabled_dormant', 'Disabled / Dormant')}</Text>
@@ -837,7 +837,7 @@ const AdminModulesManager = () => {
           </Card>
         </Col>
 
-        <Col xs={12} sm={6}>
+        <Col xs={24} sm={12} xl={6}>
           <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
             <Flex justify="space-between" align="center">
               <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>{t('active_system_footprint', 'Active System Footprint')}</Text>
@@ -971,7 +971,7 @@ const AdminModulesManager = () => {
                 const IconComponent = moduleIconMap[m.key] || AppstoreOutlined;
 
                 return (
-                  <Col xs={24} sm={12} lg={8} key={m.key}>
+                  <Col xs={24} sm={12} lg={8} xl={8} xxl={6} key={m.key}>
                     <Card
                       style={{
                         ...cardStyle,

@@ -5,13 +5,14 @@ import {
   ExpandOutlined,
   LogoutOutlined,
   MenuOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   MoonOutlined,
   SearchOutlined,
   SettingOutlined,
   SunOutlined,
   UserOutlined,
   ControlOutlined,
-  ShopOutlined,
   DownOutlined,
   CheckOutlined,
   GlobalOutlined,
@@ -25,7 +26,6 @@ import { useLanguage, useTranslation, SUPPORTED_LANGUAGES } from '../../contexts
 import ThemeSettings from '../../contexts/ThemeSettings';
 import { getModuleByKey } from '../../data/erpModules';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
-import { useBranchesAndBillers } from '../../hooks/useBranchesAndBillers';
 import { useHeaderHeight } from '../../hooks/useHeaderHeight';
 import OfflineWarningBanner from '../../components/common/OfflineWarningBanner';
 
@@ -54,7 +54,6 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
   const { user, logout } = useAuth();
   const { themeMode, toggleThemeMode, customSettings, toggleTransparentSystem } = useTheme();
   const isGlassActive = Boolean(customSettings?.transparentSystem?.enabled);
-  const { branches, billers, activeBranch, setActiveBranchId } = useBranchesAndBillers();
   const { headerRef } = useHeaderHeight();
   const { currentLanguage, activeLanguage, setLanguage, languages } = useLanguage();
   const { t } = useTranslation();
@@ -176,40 +175,6 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
     { key: 'logout', icon: <LogoutOutlined />, label: t('logout', 'Sign Out'), danger: true },
   ];
 
-  const branchMenuItems = [
-    {
-      key: 'header',
-      type: 'group',
-      label: t('switch_branch_context', 'Switch Store Branch & Biller Context'),
-    },
-    ...branches.map((b) => {
-      const linkedBiller = billers.find((bil) => bil.id === b.biller_id);
-      const isSelected = activeBranch?.id === b.id;
-      return {
-        key: `branch-${b.id}`,
-        icon: isSelected ? <CheckOutlined style={{ color: '#16a34a' }} /> : <ShopOutlined style={{ color: adminTheme.primary }} />,
-        label: (
-          <div style={{ padding: '2px 0' }}>
-            <div style={{ fontWeight: isSelected ? 700 : 500, color: isSelected ? adminTheme.primary : undefined }}>
-              {b.name}
-            </div>
-            <div style={{ fontSize: 11, color: adminTheme.subtext }}>
-              {t('biller', 'Biller')}: {linkedBiller?.trading_name || linkedBiller?.company_name || 'Central'} &bull; {b.city}
-            </div>
-          </div>
-        ),
-        onClick: () => setActiveBranchId(b.id),
-      };
-    }),
-    { type: 'divider' },
-    {
-      key: 'manage-branches',
-      icon: <SettingOutlined />,
-      label: <span style={{ fontWeight: 600 }}>{t('manage_all_branches_billers', 'Manage All Branches & Billers')}</span>,
-      onClick: () => navigate('/admins/settings/branches'),
-    },
-  ];
-
   const pageKey = location.pathname.replace('/admins/', '').replace(/\//g, '_');
   const currentTitle = t(pageKey, pageTitles[location.pathname] || 'ERP Workspace');
   const dashboardModuleKey = new URLSearchParams(location.search).get('module');
@@ -262,18 +227,20 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          maxWidth: '100vw',
+          overflow: 'hidden',
           transition: 'background 0.22s ease, color 0.22s ease, border-color 0.22s ease',
         }}
       >
         <Flex justify="space-between" align="center" style={{ width: '100%' }} gap={12}>
           {/* Left Context & Menu Toggle */}
           <Flex align="center" gap={10} style={{ minWidth: 0 }}>
-            {/* Mobile Drawer Trigger only (Collapse sidebar button deleted for desktop) */}
-            {isMobile && showModuleMenu && (
-              <Tooltip title="Open menu">
+            {/* Menu Toggle: Drawer on Mobile/Tablet, Collapsible Sidebar on Desktop */}
+            {showModuleMenu && (
+              <Tooltip title={isMobile ? t('open_menu', 'Open Navigation Menu') : (collapsed ? t('expand_sidebar', 'Expand Sidebar (Ctrl+B)') : t('collapse_sidebar', 'Collapse Sidebar (Ctrl+B)'))}>
                 <Button
                   type="text"
-                  icon={<MenuOutlined style={{ fontSize: 15 }} />}
+                  icon={isMobile ? <MenuOutlined style={{ fontSize: 16 }} /> : (collapsed ? <MenuUnfoldOutlined style={{ fontSize: 16 }} /> : <MenuFoldOutlined style={{ fontSize: 16 }} />)}
                   onClick={setCollapsed}
                   style={iconButtonStyle}
                 />
@@ -396,42 +363,6 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
                 <ExportOutlined style={{ fontSize: 10, opacity: 0.8 }} />
               </Button>
             </Tooltip>
-
-            {/* Active Branch / Multiple Biller Context Dropdown */}
-            <Dropdown menu={{ items: branchMenuItems }} trigger={['click']} placement="bottomRight">
-              <Button
-                style={{
-                  height: 34,
-                  borderRadius: 9,
-                  background: headerButtonBg,
-                  border: `1px solid ${headerBorderColor}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '0 10px',
-                  color: headerTextColor,
-                }}
-              >
-                <div
-                  style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: 5,
-                    background: adminTheme.sidebarActiveBg,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <ShopOutlined style={{ color: adminTheme.primary, fontSize: 11 }} />
-                </div>
-                <span style={{ fontWeight: 600, fontSize: 12, maxWidth: isMobile ? 110 : 150, color: headerTextColor }} className="truncate">
-                  {activeBranch?.name || t('select_branch', 'Select Branch')}
-                </span>
-                <DownOutlined style={{ fontSize: 8.5, opacity: 0.6, color: headerTextColor }} />
-              </Button>
-            </Dropdown>
 
             {/* Utility Icons */}
             {!isMobile && (

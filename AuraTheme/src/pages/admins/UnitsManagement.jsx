@@ -455,6 +455,7 @@ export default function UnitsManagement() {
           loading={loading}
           pagination={{ pageSize: 15, showSizeChanger: true }}
           style={{ background: 'transparent' }}
+          scroll={{ x: 650 }}
         />
       </Card>
 

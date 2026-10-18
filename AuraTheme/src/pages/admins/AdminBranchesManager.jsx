@@ -867,6 +867,7 @@ const AdminBranchesManager = () => {
                     dataSource={filteredBranches}
                     rowKey="id"
                     pagination={{ pageSize: 8, showSizeChanger: true }}
+                    scroll={{ x: 850 }}
                     style={{ marginTop: 8 }}
                   />
                 </Space>
@@ -906,6 +907,7 @@ const AdminBranchesManager = () => {
                     dataSource={filteredBillers}
                     rowKey="id"
                     pagination={{ pageSize: 8 }}
+                    scroll={{ x: 850 }}
                     style={{ marginTop: 8 }}
                   />
                 </Space>

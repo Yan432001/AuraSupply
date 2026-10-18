@@ -629,6 +629,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                     rowKey="id"
                     pagination={false}
                     bordered
+                    scroll={{ x: 900 }}
                     columns={[
                       {
                         title: t('role_id_name', 'Role ID & Name'),
@@ -1034,6 +1035,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                       rowKey="id"
                       bordered
                       pagination={{ pageSize: 10 }}
+                      scroll={{ x: 800 }}
                       columns={[
                         {
                           title: t('applicant_supplier', 'Applicant / Supplier'),
@@ -1157,6 +1159,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                     rowKey="id"
                     bordered
                     pagination={{ pageSize: 12 }}
+                    scroll={{ x: 850 }}
                     columns={[
                       {
                         title: 'User',
@@ -1270,6 +1273,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                               rowKey="id"
                               bordered
                               pagination={{ pageSize: 12 }}
+                              scroll={{ x: 800 }}
                               columns={[
                                 {
                                   title: 'Timestamp',
@@ -1333,6 +1337,7 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                               rowKey="id"
                               bordered
                               pagination={{ pageSize: 12 }}
+                              scroll={{ x: 800 }}
                               columns={[
                                 {
                                   title: 'Timestamp',

@@ -12,7 +12,6 @@ import {
   Table,
   Tag,
   Typography,
-  Alert,
   Tooltip as AntTooltip,
 } from 'antd';
 import { formatCurrency } from '../../utils/uiTheme';
@@ -45,7 +44,6 @@ import {
   ReconciliationOutlined,
   BankOutlined,
   CheckOutlined,
-  EyeInvisibleOutlined,
   ArrowUpOutlined,
 } from '@ant-design/icons';
 import {
@@ -262,11 +260,6 @@ const AdminDashboard = () => {
     return allModuleUptime.filter((m) => isModuleOpen(m.moduleKey));
   }, [isModuleOpen]);
 
-  // Closed modules list for quick re-enabling
-  const closedModules = useMemo(() => {
-    return erpModules.filter((m) => !isModuleOpen(m.key));
-  }, [erpModules, isModuleOpen]);
-
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
       {/* 1. Dashboard Top Header & Switchboard Gateway */}
@@ -330,63 +323,12 @@ const AdminDashboard = () => {
         </Space>
       </Flex>
 
-      {/* 2. Closed Module Alert Banner (shows if e.g. Assets or others are closed) */}
-      {closedModules.length > 0 && (
-        <Alert
-          type="warning"
-          showIcon
-          icon={<EyeInvisibleOutlined style={{ color: '#ea580c' }} />}
-          message={
-            <Flex justify="space-between" align="center" wrap="wrap" gap={10}>
-              <div>
-                <strong>{closedModules.length} {t('modules_deactivated', 'Module(s) Deactivated:')} </strong>
-                {closedModules.map((m) => (
-                  <Tag
-                    key={m.key}
-                    color="orange"
-                    style={{ borderRadius: 6, fontWeight: 600, margin: '0 4px' }}
-                  >
-                    {t(m.label, m.label)} ({m.key})
-                  </Tag>
-                ))}
-                <span style={{ fontSize: 12, color: adminTheme.subtext }}>
-                  — {t('modules_hidden_from_sidebar_desc', 'These modules are hidden from the sidebar menu and their charts are excluded from the dashboard.')}
-                </span>
-              </div>
-
-              <Space size={8}>
-                {closedModules.map((m) => (
-                  <Button
-                    key={m.key}
-                    size="small"
-                    type="primary"
-                    style={{ background: '#16a34a', borderColor: '#16a34a', borderRadius: 6, fontSize: 11.5 }}
-                    onClick={() => toggleModule(m.key, true)}
-                  >
-                    {t('reopen', 'Re-open')} {t(m.label, m.label)}
-                  </Button>
-                ))}
-                <Button
-                  size="small"
-                  icon={<ControlOutlined />}
-                  onClick={() => navigate('/admins/modules')}
-                  style={{ borderRadius: 6, fontSize: 11.5 }}
-                >
-                  {t('manage_modules', 'Manage Modules')}
-                </Button>
-              </Space>
-            </Flex>
-          }
-          style={{ borderRadius: 12, border: '1px solid #fed7aa' }}
-        />
-      )}
-
-      {/* 3. Top System KPI Cards */}
+      {/* 2. Top System KPI Cards */}
       <Row gutter={[16, 16]}>
         {baseKpiCards.map((item, idx) => {
           const displayVal = idx === 2 ? `${activeModulesCount} / ${totalModulesCount}` : (idx === 1 || idx === 3 ? t(item.value, item.value) : item.value);
           return (
-            <Col xs={12} lg={6} key={item.title}>
+            <Col xs={24} sm={12} xl={6} key={item.title}>
               <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
                 <Flex justify="space-between" align="flex-start">
                   <div>
@@ -518,7 +460,7 @@ const AdminDashboard = () => {
         {/* Soft-Tinted KPI Grid */}
         <Row gutter={[16, 16]}>
           {/* Card 1: Sales Revenue */}
-          <Col xs={12} sm={6}>
+          <Col xs={24} sm={12} xl={6}>
             <div style={{
               padding: '16px',
               background: adminTheme.isDark ? 'rgba(22, 163, 74, 0.12)' : '#f0fdf4',
@@ -540,7 +482,7 @@ const AdminDashboard = () => {
           </Col>
 
           {/* Card 2: Procurement Spend */}
-          <Col xs={12} sm={6}>
+          <Col xs={24} sm={12} xl={6}>
             <div style={{
               padding: '16px',
               background: adminTheme.isDark ? 'rgba(2, 132, 199, 0.12)' : '#f0f9ff',
@@ -562,7 +504,7 @@ const AdminDashboard = () => {
           </Col>
 
           {/* Card 3: Commercial Network (Buyers & Suppliers) */}
-          <Col xs={12} sm={6}>
+          <Col xs={24} sm={12} xl={6}>
             <div style={{
               padding: '16px',
               background: adminTheme.isDark ? 'rgba(124, 58, 237, 0.12)' : '#f5f3ff',
@@ -584,7 +526,7 @@ const AdminDashboard = () => {
           </Col>
 
           {/* Card 4: Inventory & Operations */}
-          <Col xs={12} sm={6}>
+          <Col xs={24} sm={12} xl={6}>
             <div style={{
               padding: '16px',
               background: adminTheme.isDark ? 'rgba(234, 88, 12, 0.12)' : '#fff7ed',
@@ -1091,7 +1033,7 @@ const AdminDashboard = () => {
             {visibleStorage.length > 0 ? (
               <Row gutter={[10, 10]}>
                 {visibleStorage.map((item) => (
-                  <Col span={Math.max(3, Math.floor(24 / Math.max(1, visibleStorage.length)))} key={item.moduleKey}>
+                  <Col xs={12} sm={8} md={6} lg={Math.max(3, Math.floor(24 / Math.max(1, visibleStorage.length)))} key={item.moduleKey}>
                     <Flex vertical align="center" gap={8}>
                       <div
                         style={{
@@ -1138,7 +1080,7 @@ const AdminDashboard = () => {
             {/* Module Uptime Grid (Only Active Modules) */}
             <Row gutter={[10, 10]} style={{ marginTop: 20 }}>
               {visibleUptime.map((item) => (
-                <Col xs={12} sm={8} key={item.moduleKey}>
+                <Col xs={24} sm={12} md={8} key={item.moduleKey}>
                   <Flex
                     justify="space-between"
                     align="center"

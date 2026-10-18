@@ -677,6 +677,7 @@ const BpasUnifiedModuleWorkspace = () => {
             },
             showTotal: (tot, range) => `${range[0]}-${range[1]} of ${tot} records`
           }}
+          scroll={{ x: 800 }}
           style={{ borderRadius: 16, overflow: 'hidden' }}
         />
       </Card>

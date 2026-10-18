@@ -578,6 +578,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                               pagination={false}
                               dataSource={multiUnitRows}
                               rowKey="unit_id"
+                              scroll={{ x: 650 }}
                               columns={[
                                 {
                                   title: 'Unit',
@@ -913,6 +914,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                     <Table
                       rowKey="id"
                       dataSource={variantRows}
+                      scroll={{ x: 600 }}
                       columns={[
                         { title: t('variant_name', 'Variant Name'), dataIndex: 'name', key: 'name', render: (t) => <strong>{t}</strong> },
                         { title: t('barcode', 'Barcode'), dataIndex: 'barcode', key: 'barcode', render: (b) => <Tag color="blue">{b}</Tag> },
@@ -1045,6 +1047,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                     <Table
                       rowKey="id"
                       dataSource={addOnRows}
+                      scroll={{ x: 500 }}
                       columns={[
                         { title: 'Add On Name', dataIndex: 'name', key: 'name', render: (t) => <strong>{t}</strong> },
                         { title: 'Additional Price', dataIndex: 'price', key: 'price', render: (p) => <Tag color="green">+{formatCurrency(p)}</Tag> },

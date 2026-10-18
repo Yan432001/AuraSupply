@@ -149,6 +149,22 @@ const AdminLayout = () => {
     }
   };
 
+  // Keyboard shortcut: Ctrl+B or Cmd+B toggles sidebar smoothly
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        const target = e.target;
+        const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+        if (!isInput) {
+          e.preventDefault();
+          handleToggle();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMobile]);
+
   const handleToggleModule = (moduleKey, enabled) => {
     toggleModule(moduleKey, enabled);
   };
@@ -282,6 +298,9 @@ const AdminLayout = () => {
         style={{
           minHeight: '100vh',
           background: adminTheme.pageBackground,
+          overflowX: 'hidden',
+          maxWidth: '100vw',
+          width: '100%',
         }}
       >
         {isMobile && showSidebar && (
@@ -289,16 +308,20 @@ const AdminLayout = () => {
             placement="left"
             open={mobileDrawerOpen}
             closable={false}
-            width={264}
+            width={Math.min(280, typeof window !== 'undefined' ? window.innerWidth * 0.84 : 280)}
             onClose={() => setMobileDrawerOpen(false)}
+            mask={true}
+            maskClosable={true}
+            destroyOnHidden
             styles={{
-              body: { padding: 0, background: adminTheme.sidebar },
+              body: { padding: 0, background: adminTheme.sidebar, height: '100%', overflow: 'hidden' },
               header: { display: 'none' },
+              mask: { backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0, 0, 0, 0.45)' },
             }}
           >
             <HeaderDefault
               collapsed={false}
-              setCollapsed={() => {}}
+              setCollapsed={() => setMobileDrawerOpen(false)}
               onMenuClick={() => setMobileDrawerOpen(false)}
               moduleState={moduleState}
               onToggleModule={handleToggleModule}
@@ -320,9 +343,12 @@ const AdminLayout = () => {
         <Layout
           style={{
             marginLeft: contentMarginLeft,
-            transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: 'margin-left 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
             minHeight: '100vh',
             backgroundColor: 'transparent',
+            maxWidth: isMobile ? '100vw' : `calc(100vw - ${contentMarginLeft}px)`,
+            overflowX: 'hidden',
+            width: isMobile ? '100%' : 'auto',
           }}
         >
           <Head
@@ -337,9 +363,13 @@ const AdminLayout = () => {
           <Content
             style={{
               margin: 0,
-              padding: isMobile ? 16 : 24,
+              padding: isMobile ? '12px 12px 28px' : '20px 24px 36px',
               background: 'transparent',
               minHeight: 'calc(100vh - 76px)',
+              overflowX: 'hidden',
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box',
             }}
           >
             <Outlet context={{ moduleState, onToggleModule: handleToggleModule }} />

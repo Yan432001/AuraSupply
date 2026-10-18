@@ -6,6 +6,7 @@ import {
   MenuUnfoldOutlined,
   CheckCircleFilled,
   SettingOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import { buildModulePath, getDefaultMenuKey } from '../../data/erpModules';
 import ErpModuleSidebar from '../../components/web/shared/ErpModuleSidebar';
@@ -228,12 +229,12 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
           )}
         </div>
 
-        {!collapsed && (
-          <Tooltip title={t('collapse_sidebar', 'Collapse sidebar (Ctrl+B)')}>
+        {(!collapsed || isMobile) && (
+          <Tooltip title={isMobile ? t('close_menu', 'Close menu') : t('collapse_sidebar', 'Collapse sidebar (Ctrl+B)')}>
             <Button
               type="text"
               size="small"
-              icon={<MenuFoldOutlined style={{ fontSize: 14 }} />}
+              icon={isMobile ? <CloseOutlined style={{ fontSize: 15 }} /> : <MenuFoldOutlined style={{ fontSize: 14 }} />}
               onClick={() => setCollapsed?.(true)}
               style={{
                 width: 28,
