@@ -368,6 +368,25 @@ exports.addProducts = async (req, res) => {
           `, [newId, v.name, safeCost, parseFloat(v.price) || safePrice, parseFloat(v.quantity) || 10]);
         }
       }
+    // Save Multi-Unit Pricing (AURA_v1)
+    if (Array.isArray(unitPrices) && unitPrices.length > 0) {
+      for (const up of unitPrices) {
+        if (!up.unit_id) continue;
+        const uCost = parseFloat(up.cost) || safeCost;
+        const uPrice = parseFloat(up.price) || safePrice;
+        const uBarcode = up.product_code || up.barcode || null;
+        const uQty = parseFloat(up.unit_qty || up.operation_value || 1);
+
+        await db.query(`
+          INSERT INTO aura_cost_price_by_units (product_id, unit_id, cost, price, product_code)
+          VALUES (?, ?, ?, ?, ?)
+        `, [newId, up.unit_id, uCost, uPrice, uBarcode]);
+
+        await db.query(`
+          INSERT INTO aura_product_units (product_id, unit_id, unit_qty, unit_price)
+          VALUES (?, ?, ?, ?)
+        `, [newId, up.unit_id, uQty, uPrice]);
+      }
     }
 
     const [createdRows] = await db.query(`
@@ -564,6 +583,47 @@ exports.updateProducts = async (req, res) => {
         VALUES (?, 1, ?, ?)
         ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)
       `, [id, parseFloat(quantity) || 0, parseFloat(cost) || 0]);
+    // Update Multi-Unit Pricing (AURA_v1)
+    if (Array.isArray(unitPrices)) {
+      for (const up of unitPrices) {
+        if (!up.unit_id) continue;
+        const uCost = parseFloat(up.cost) || parseFloat(cost) || 0;
+        const uPrice = parseFloat(up.price) || parseFloat(price) || 0;
+        const uBarcode = up.product_code || up.barcode || null;
+        const uQty = parseFloat(up.unit_qty || up.operation_value || 1);
+
+        const [existingCp] = await db.query(
+          'SELECT id FROM aura_cost_price_by_units WHERE product_id = ? AND unit_id = ? LIMIT 1',
+          [id, up.unit_id]
+        );
+        if (existingCp.length > 0) {
+          await db.query(`
+            UPDATE aura_cost_price_by_units SET cost = ?, price = ?, product_code = ?
+            WHERE id = ?
+          `, [uCost, uPrice, uBarcode, existingCp[0].id]);
+        } else {
+          await db.query(`
+            INSERT INTO aura_cost_price_by_units (product_id, unit_id, cost, price, product_code)
+            VALUES (?, ?, ?, ?, ?)
+          `, [id, up.unit_id, uCost, uPrice, uBarcode]);
+        }
+
+        const [existingPu] = await db.query(
+          'SELECT id FROM aura_product_units WHERE product_id = ? AND unit_id = ? LIMIT 1',
+          [id, up.unit_id]
+        );
+        if (existingPu.length > 0) {
+          await db.query(`
+            UPDATE aura_product_units SET unit_qty = ?, unit_price = ?
+            WHERE id = ?
+          `, [uQty, uPrice, existingPu[0].id]);
+        } else {
+          await db.query(`
+            INSERT INTO aura_product_units (product_id, unit_id, unit_qty, unit_price)
+            VALUES (?, ?, ?, ?)
+          `, [id, up.unit_id, uQty, uPrice]);
+        }
+      }
     }
 
     const [updatedRows] = await db.query(`

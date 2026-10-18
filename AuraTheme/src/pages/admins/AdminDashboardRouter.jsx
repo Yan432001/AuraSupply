@@ -22,6 +22,7 @@ import CustomersManagement from './CustomersManagement';
 import UserManagement from './UserManagement';
 import AdminAccessControlManager from './AdminAccessControlManager';
 import CategoriesPage from './CategoriesPage';
+import UnitsManagement from './UnitsManagement';
 import InventoryReport from './InventoryReport';
 import SalesReport from './SalesReport';
 import AdminErrorBoundary from '../../components/common/AdminErrorBoundary';
@@ -154,6 +155,11 @@ const AdminDashboardRouter = () => {
   // Categories
   if (menuKey === 'categories' || (moduleKey === 'settings' && menuKey === 'categories')) {
     return <CategoriesPage />;
+  }
+
+  // Units of Measurement Management (AURA_v1)
+  if (menuKey === 'units' || (moduleKey === 'settings' && menuKey === 'units')) {
+    return <UnitsManagement />;
   }
 
   // Sales Orders & Invoices (including POS counter sales)

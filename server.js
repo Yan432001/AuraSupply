@@ -106,6 +106,8 @@ async function startServer() {
     'product.serials',
     'product.units',
     'product.variants',
+    'units',
+    'systemSettings',
     'language',
     'bpasErpData'
   ];

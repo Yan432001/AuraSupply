@@ -75,3 +75,134 @@ exports.getPurchases = async (req, res) => {
     logError("purchases.controller.getPurchases", err, res);
   }
 };
+
+/**
+ * POST /api/admin/purchases
+ * Create a new purchase with multi-unit conversion and warehouse stock ledger addition
+ */
+exports.createPurchase = async (req, res) => {
+  try {
+    const {
+      reference_no,
+      supplier_id = 1,
+      supplier = 'General Supplier',
+      warehouse_id = 1,
+      note = '',
+      status = 'received',
+      payment_status = 'due',
+      paid = 0,
+      grand_total,
+      items = []
+    } = req.body;
+
+    const { unitToBaseQty, convertToBasePrice } = require('../../utils/unitConverter');
+
+    const refNo = reference_no || `PO-${Date.now().toString().slice(-6)}`;
+    const calcGrandTotal = parseFloat(grand_total) || items.reduce((acc, it) => acc + (parseFloat(it.quantity || 1) * parseFloat(it.unit_cost || 0)), 0);
+
+    const [purchaseRes] = await db.query(`
+      INSERT INTO aura_purchases 
+      (reference_no, supplier_id, supplier, warehouse_id, note, total, grand_total, paid, status, payment_status, date)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    `, [
+      refNo,
+      parseInt(supplier_id) || 1,
+      supplier,
+      parseInt(warehouse_id) || 1,
+      note,
+      calcGrandTotal,
+      calcGrandTotal,
+      parseFloat(paid) || 0,
+      status,
+      payment_status
+    ]);
+
+    const newPurchaseId = purchaseRes.insertId;
+    const whId = parseInt(warehouse_id) || 1;
+
+    for (const item of items) {
+      const prodId = parseInt(item.product_id) || 0;
+      let unitId = item.product_unit_id || item.unit_id || null;
+      let unitCode = item.product_unit_code || item.unit_code || null;
+      let unitObj = null;
+
+      if (unitId) {
+        const [uRows] = await db.query('SELECT * FROM aura_units WHERE id = ?', [unitId]);
+        if (uRows.length) {
+          unitObj = uRows[0];
+          unitCode = unitObj.code;
+        }
+      } else if (prodId) {
+        const [pRows] = await db.query('SELECT p.purchase_unit, p.unit, u.code, u.operator, u.operation_value FROM aura_products p LEFT JOIN aura_units u ON u.id = COALESCE(p.purchase_unit, p.unit) WHERE p.id = ?', [prodId]);
+        if (pRows.length && pRows[0].code) {
+          unitId = pRows[0].purchase_unit || pRows[0].unit;
+          unitCode = pRows[0].code;
+          unitObj = pRows[0];
+        }
+      }
+
+      const itemQty = parseFloat(item.quantity) || 1;
+      const baseUnitQty = unitToBaseQty(itemQty, unitObj);
+      const unitCost = parseFloat(item.unit_cost) || 0;
+      const baseUnitCost = convertToBasePrice(unitCost, unitObj);
+      const subtotal = parseFloat(item.subtotal || (itemQty * unitCost)) || 0;
+
+      await db.query(`
+        INSERT INTO aura_purchase_items 
+        (purchase_id, product_id, product_code, product_name, product_unit_id, product_unit_code, warehouse_id, quantity, unit_quantity, unit_cost, real_unit_cost, net_unit_cost, base_unit_cost, subtotal, status, date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      `, [
+        newPurchaseId,
+        prodId,
+        item.product_code || '',
+        item.product_name || 'Item',
+        unitId,
+        unitCode,
+        whId,
+        itemQty,
+        baseUnitQty,
+        unitCost,
+        unitCost,
+        unitCost,
+        baseUnitCost,
+        subtotal,
+        status
+      ]);
+
+      // If status is received, increment warehouse stock in base units
+      if (status === 'received' && prodId) {
+        const [existingStock] = await db.query(
+          'SELECT id FROM aura_warehouses_products WHERE product_id = ? AND warehouse_id = ? LIMIT 1',
+          [prodId, whId]
+        );
+
+        if (existingStock.length > 0) {
+          await db.query(`
+            UPDATE aura_warehouses_products 
+            SET quantity = quantity + ? 
+            WHERE product_id = ? AND warehouse_id = ?
+          `, [baseUnitQty, prodId, whId]);
+        } else {
+          await db.query(`
+            INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity)
+            VALUES (?, ?, ?)
+          `, [prodId, whId, baseUnitQty]);
+        }
+      }
+    }
+
+    res.status(201).json({
+      status: true,
+      message: 'Purchase created successfully',
+      data: {
+        id: newPurchaseId,
+        referenceNo: refNo,
+        grandTotal: calcGrandTotal,
+        status
+      }
+    });
+  } catch (err) {
+    logError("purchases.controller.createPurchase", err, res);
+  }
+};
+

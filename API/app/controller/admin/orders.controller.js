@@ -301,20 +301,63 @@ exports.createOrder = async (req, res) => {
 
     const newSaleId = saleRes.insertId;
 
+    const { unitToBaseQty } = require('../../utils/unitConverter');
+
     for (const item of items) {
+      const prodId = parseInt(item.product_id) || 0;
+      let unitId = item.product_unit_id || item.unit_id || null;
+      let unitCode = item.product_unit_code || item.unit_code || null;
+      let unitObj = null;
+
+      if (unitId) {
+        const [uRows] = await db.query('SELECT * FROM aura_units WHERE id = ?', [unitId]);
+        if (uRows.length) {
+          unitObj = uRows[0];
+          unitCode = unitObj.code;
+        }
+      } else if (prodId) {
+        const [pRows] = await db.query('SELECT p.sale_unit, p.unit, u.code, u.operator, u.operation_value FROM aura_products p LEFT JOIN aura_units u ON u.id = COALESCE(p.sale_unit, p.unit) WHERE p.id = ?', [prodId]);
+        if (pRows.length && pRows[0].code) {
+          unitId = pRows[0].sale_unit || pRows[0].unit;
+          unitCode = pRows[0].code;
+          unitObj = pRows[0];
+        }
+      }
+
+      const itemQty = parseFloat(item.quantity) || 1;
+      const baseUnitQty = unitToBaseQty(itemQty, unitObj);
+      const unitPrice = parseFloat(item.unit_price) || 0;
+      const subtotal = parseFloat(item.subtotal || (itemQty * unitPrice)) || 0;
+      const whId = parseInt(warehouse_id) || 1;
+
       await db.query(`
         INSERT INTO aura_sale_items 
-        (sale_id, product_id, product_code, product_name, quantity, unit_price, subtotal)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        (sale_id, product_id, product_code, product_name, quantity, unit_quantity, product_unit_id, product_unit_code, unit_price, net_unit_price, real_unit_price, subtotal, warehouse_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         newSaleId,
-        item.product_id || 0,
+        prodId,
         item.product_code || '',
         item.product_name || 'Item',
-        parseFloat(item.quantity) || 1,
-        parseFloat(item.unit_price) || 0,
-        parseFloat(item.subtotal || (item.quantity * item.unit_price)) || 0
+        itemQty,
+        baseUnitQty,
+        unitId,
+        unitCode,
+        unitPrice,
+        unitPrice,
+        unitPrice,
+        subtotal,
+        whId
       ]);
+
+      // Deduct warehouse stock in base units
+      if (prodId) {
+        await db.query(`
+          UPDATE aura_warehouses_products 
+          SET quantity = quantity - ? 
+          WHERE product_id = ? AND warehouse_id = ?
+        `, [baseUnitQty, prodId, whId]);
+      }
     }
 
     res.status(201).json({

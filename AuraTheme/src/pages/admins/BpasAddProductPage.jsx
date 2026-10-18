@@ -94,6 +94,10 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
     { id: 2, name: 'Oat Milk Substitution', price: 0.50, description: 'Dairy-free organic oat milk' },
   ]);
 
+  // Multi-Unit pricing & packaging state (AURA_v1 cost_price_by_units)
+  const [multiUnitRows, setMultiUnitRows] = useState([]);
+  const selectedUnit = Form.useWatch('unit', form);
+
   // Load Metadata
   useEffect(() => {
     const loadMeta = async () => {
@@ -125,6 +129,58 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
     };
     loadMeta();
   }, []);
+
+  // Sync multi-unit rows when selectedUnit or unitsList changes
+  useEffect(() => {
+    if (!selectedUnit || !unitsList.length) return;
+    const baseU = unitsList.find(u => u.id === selectedUnit || u.code === selectedUnit || u.name === selectedUnit);
+    if (!baseU) return;
+    const baseId = baseU.id;
+    const related = unitsList.filter(u => u.id === baseId || u.base_unit === baseId);
+
+    setMultiUnitRows(prev => {
+      return related.map(u => {
+        const existing = prev.find(p => p.unit_id === u.id || p.id === u.id);
+        const isBase = u.id === baseId;
+        return {
+          unit_id: u.id,
+          unit_code: u.code,
+          unit_name: u.name,
+          base_unit: u.base_unit,
+          operator: u.operator || '*',
+          operation_value: u.operation_value || '1',
+          unit_qty: isBase ? 1 : (parseFloat(u.operation_value) || 1),
+          cost: existing?.cost ?? (isBase ? form.getFieldValue('cost') || 1.5 : 0),
+          price: existing?.price ?? (isBase ? form.getFieldValue('price') || 3.0 : 0),
+          product_code: existing?.product_code || existing?.unit_barcode || ''
+        };
+      });
+    });
+  }, [selectedUnit, unitsList]);
+
+  // Load existing multi-unit pricing when editing product
+  useEffect(() => {
+    if (editProduct?.id) {
+      axios.get(`/api/admin/products/${editProduct.id}/units`)
+        .then(res => {
+          if (res.data?.status && Array.isArray(res.data.data?.units) && res.data.data.units.length > 0) {
+            setMultiUnitRows(res.data.data.units.map(u => ({
+              unit_id: u.id,
+              unit_code: u.code,
+              unit_name: u.name,
+              base_unit: u.base_unit,
+              operator: u.operator,
+              operation_value: u.operation_value,
+              unit_qty: u.unit_qty,
+              cost: u.unit_cost !== null ? u.unit_cost : (editProduct.cost || 0),
+              price: u.unit_price !== null ? u.unit_price : (editProduct.price || 0),
+              product_code: u.unit_barcode || ''
+            })));
+          }
+        })
+        .catch(err => console.warn('Product units fetch notice:', err.message));
+    }
+  }, [editProduct?.id]);
 
   // Initialize Form
   useEffect(() => {
@@ -258,10 +314,16 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
 
       // Attempt backend persistence
       try {
-        await axios.post('/api/admin/products', {
+        const payload = {
           ...values,
           image: coverImageUrl,
-        });
+          unitPrices: multiUnitRows
+        };
+        if (editProduct?.id) {
+          await axios.put(`/api/admin/products/${editProduct.id}`, payload);
+        } else {
+          await axios.post('/api/admin/products', payload);
+        }
       } catch (_) {}
 
       // Navigate back to product list
@@ -447,25 +509,16 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                           <Col xs={24} sm={12}>
                             <Form.Item
                               name="unit"
-                              label={<span style={{ fontWeight: 700 }}>Product Unit</span>}
-                              rules={[{ required: true }]}
+                              label={<span style={{ fontWeight: 700 }}>Base Unit (Root Measurement)</span>}
+                              rules={[{ required: true, message: 'Please select a base unit' }]}
+                              tooltip="Primary unit in which warehouse stock ledger balances are stored."
                             >
-                              <Select placeholder="Select unit">
-                                {unitsList.length > 0 ? (
-                                  unitsList.map((u) => (
-                                    <Option key={u.id || u.name} value={u.name || u.code}>
-                                      {u.name} ({u.code})
-                                    </Option>
-                                  ))
-                                ) : (
-                                  <>
-                                    <Option value="Pcs">Piece (Pcs)</Option>
-                                    <Option value="Box">Box (Box)</Option>
-                                    <Option value="Pack">Pack (Pack)</Option>
-                                    <Option value="Kg">Kilogram (Kg)</Option>
-                                    <Option value="Bottle">Bottle (Btl)</Option>
-                                  </>
-                                )}
+                              <Select placeholder="Select base unit">
+                                {unitsList.filter(u => !u.base_unit || u.base_unit === 0).map((u) => (
+                                  <Option key={u.id} value={u.id}>
+                                    {u.name} ({u.code})
+                                  </Option>
+                                ))}
                               </Select>
                             </Form.Item>
                           </Col>
@@ -476,11 +529,17 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                             <Form.Item
                               name="default_sale_unit"
                               label={<span style={{ fontWeight: 700 }}>Default Sale Unit</span>}
+                              tooltip="Default unit selected when adding to sales invoices or POS register."
                             >
-                              <Select defaultValue="Pcs">
-                                <Option value="Pcs">Piece (Pcs)</Option>
-                                <Option value="Box">Box</Option>
-                                <Option value="Pack">Pack</Option>
+                              <Select placeholder="Select sale unit">
+                                {unitsList.filter(u => {
+                                  const baseId = typeof selectedUnit === 'number' ? selectedUnit : unitsList.find(x => x.code === selectedUnit || x.name === selectedUnit)?.id;
+                                  return baseId ? (u.id === baseId || u.base_unit === baseId) : true;
+                                }).map((u) => (
+                                  <Option key={u.id} value={u.id}>
+                                    {u.name} ({u.code}) {u.base_unit ? `[${u.operation_value}x]` : '[Base]'}
+                                  </Option>
+                                ))}
                               </Select>
                             </Form.Item>
                           </Col>
@@ -489,15 +548,106 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                             <Form.Item
                               name="default_purchase_unit"
                               label={<span style={{ fontWeight: 700 }}>Default Purchase Unit</span>}
+                              tooltip="Default unit selected when placing vendor purchase orders."
                             >
-                              <Select defaultValue="Box">
-                                <Option value="Box">Box</Option>
-                                <Option value="Carton">Carton</Option>
-                                <Option value="Kg">Kilogram (Kg)</Option>
+                              <Select placeholder="Select purchase unit">
+                                {unitsList.filter(u => {
+                                  const baseId = typeof selectedUnit === 'number' ? selectedUnit : unitsList.find(x => x.code === selectedUnit || x.name === selectedUnit)?.id;
+                                  return baseId ? (u.id === baseId || u.base_unit === baseId) : true;
+                                }).map((u) => (
+                                  <Option key={u.id} value={u.id}>
+                                    {u.name} ({u.code}) {u.base_unit ? `[${u.operation_value}x]` : '[Base]'}
+                                  </Option>
+                                ))}
                               </Select>
                             </Form.Item>
                           </Col>
                         </Row>
+
+                        {/* Multi-Unit Pricing & Packaging Table (AURA_v1 cost_price_by_units) */}
+                        {multiUnitRows.length > 0 && (
+                          <div style={{ marginBottom: 20, background: '#f8fafc', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                              <span style={{ fontWeight: 700, fontSize: 13.5, color: '#1e293b' }}>
+                                📦 Multi-Unit Pricing & Packaging Barcodes (AURA_v1)
+                              </span>
+                              <Tag color="blue">{multiUnitRows.length} Units Configured</Tag>
+                            </div>
+                            <Table
+                              size="small"
+                              pagination={false}
+                              dataSource={multiUnitRows}
+                              rowKey="unit_id"
+                              columns={[
+                                {
+                                  title: 'Unit',
+                                  dataIndex: 'unit_name',
+                                  render: (name, r) => (
+                                    <div>
+                                      <strong>{name}</strong> <span style={{ color: '#64748b' }}>({r.unit_code})</span>
+                                      {r.base_unit ? (
+                                        <div style={{ fontSize: 11, color: '#0284c7' }}>
+                                          1 {r.unit_code} = {r.operation_value} {r.operator} Base
+                                        </div>
+                                      ) : (
+                                        <div style={{ fontSize: 11, color: '#16a34a' }}>Base Unit</div>
+                                      )}
+                                    </div>
+                                  )
+                                },
+                                {
+                                  title: 'Cost ($)',
+                                  dataIndex: 'cost',
+                                  width: 120,
+                                  render: (val, r, idx) => (
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={val}
+                                      onChange={(e) => {
+                                        const next = [...multiUnitRows];
+                                        next[idx].cost = parseFloat(e.target.value) || 0;
+                                        setMultiUnitRows(next);
+                                      }}
+                                    />
+                                  )
+                                },
+                                {
+                                  title: 'Price ($)',
+                                  dataIndex: 'price',
+                                  width: 120,
+                                  render: (val, r, idx) => (
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={val}
+                                      onChange={(e) => {
+                                        const next = [...multiUnitRows];
+                                        next[idx].price = parseFloat(e.target.value) || 0;
+                                        setMultiUnitRows(next);
+                                      }}
+                                    />
+                                  )
+                                },
+                                {
+                                  title: 'Packaging Barcode / SKU',
+                                  dataIndex: 'product_code',
+                                  render: (val, r, idx) => (
+                                    <Input
+                                      placeholder="Leave blank to use main code"
+                                      value={val}
+                                      onChange={(e) => {
+                                        const next = [...multiUnitRows];
+                                        next[idx].product_code = e.target.value;
+                                        setMultiUnitRows(next);
+                                      }}
+                                    />
+                                  )
+                                }
+                              ]}
+                            />
+                          </div>
+                        )}
 
                         <Row gutter={16}>
                           <Col xs={24} sm={8}>
