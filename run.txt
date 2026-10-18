@@ -130,4 +130,4 @@ Pre-configured VS Code tasks and debug profiles are now available in your worksp
 | **Admin Dashboard** | [http://localhost:3000/admins/dashboard](http://localhost:3000/admins/dashboard) | Requires Admin privileges |
 | **Admin Login** | [http://localhost:3000/admins/login](http://localhost:3000/admins/login) | Username: `admin` \| Password: `admin` |
 | **Digital E-Menu WebApp** | [http://localhost:3000/shop/sbc-store](http://localhost:3000/shop/sbc-store) | Storefront & QR ordering |
-| **Health Check API** | [http://localhost:3000/api/health](http://localhost:3000/api/health) | System status & uptime |
+| **Health Check API** | [http://localhost:3000/api/health](http://localhost:3000/api/health) | System status & uptime | 
