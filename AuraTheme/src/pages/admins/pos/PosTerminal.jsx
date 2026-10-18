@@ -184,6 +184,148 @@ const PosTerminal = () => {
   const adminTheme = useAdminTheme();
   const location = useLocation();
 
+  // Responsive device checks
+  const isDesktop = screens.lg ?? (typeof window !== 'undefined' ? window.innerWidth >= 992 : true);
+  const isMobile = !isDesktop;
+
+  // 1. Clock, Fullscreen & Audio State
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // 2. Register Shift Lifecycle State (Open & Close Register)
+  const [loadingRegister, setLoadingRegister] = useState(true);
+  const [currentRegister, setCurrentRegister] = useState(null);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [registerAlertDismissed, setRegisterAlertDismissed] = useState(false);
+  const [openRegisterCashInHand, setOpenRegisterCashInHand] = useState('');
+  const [closeRegisterModalVisible, setCloseRegisterModalVisible] = useState(false);
+  const [shiftSummary, setShiftSummary] = useState(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+
+  // 3. Products Catalog & Search State
+  const [products, setProducts] = useState(DEFAULT_SAMPLE_PRODUCTS);
+  const [categories, setCategories] = useState(DEFAULT_SAMPLE_CATEGORIES);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('coffee');
+  const [searchProductKeyword, setSearchProductKeyword] = useState('');
+  const [searchCategoryKeyword, setSearchCategoryKeyword] = useState('');
+  const searchInputRef = useRef(null);
+
+  // 4. Cart, Customer & Order State
+  const [cart, setCart] = useState([
+    {
+      id: 1,
+      code: 'BYD-01',
+      name: 'BYD Seal',
+      unit_price: 20000.0,
+      quantity: 1,
+      unit_name: 'Unit',
+      item_discount: 0,
+      item_note: '',
+    },
+    {
+      id: 2,
+      code: 'AV-12',
+      name: 'Avatar 12',
+      unit_price: 3.0,
+      quantity: 1,
+      unit_name: 'Unit',
+      item_discount: 0,
+      item_note: '',
+    },
+  ]);
+  const [orderDate, setOrderDate] = useState('18/10/2026 21:24');
+  const [selectedCustomerId, setSelectedCustomerId] = useState(1);
+  const [selectedCustomerName, setSelectedCustomerName] = useState('General Customer');
+  const [customers, setCustomers] = useState([
+    { id: 1, name: 'General Customer', phone: '012 888 999', email: 'customer@aura.com' },
+    { id: 2, name: 'Walk-in Customer', phone: '098 765 432' },
+  ]);
+  const [currentWarehouse, setCurrentWarehouse] = useState('HQ');
+  const [orderDiscountValue, setOrderDiscountValue] = useState(0);
+  const [orderDiscountType, setOrderDiscountType] = useState('fixed');
+  const [orderTaxRate, setOrderTaxRate] = useState(0);
+  const [shippingFee, setShippingFee] = useState(0);
+
+  // 5. Modals for Top Actions & Functions from cyspharma
+  const [shortcutsModalVisible, setShortcutsModalVisible] = useState(false);
+  const [calculatorModalVisible, setCalculatorModalVisible] = useState(false);
+  const [calcInput, setCalcInput] = useState('0');
+  const [kitchenDisplayVisible, setKitchenDisplayVisible] = useState(false);
+  const [billScreenVisible, setBillScreenVisible] = useState(false);
+  const [registerDetailsVisible, setRegisterDetailsVisible] = useState(false);
+  const [addExpenseModalVisible, setAddExpenseModalVisible] = useState(false);
+  const [todayProfitModalVisible, setTodayProfitModalVisible] = useState(false);
+  const [todaySaleModalVisible, setTodaySaleModalVisible] = useState(false);
+  const [listRegistersModalVisible, setListRegistersModalVisible] = useState(false);
+  const [posSettingsModalVisible, setPosSettingsModalVisible] = useState(false);
+  const [posSalesHistoryModalVisible, setPosSalesHistoryModalVisible] = useState(false);
+
+  // 6. Data Collections for Specialized POS Views
+  const [posSalesList, setPosSalesList] = useState([]);
+  const [posSalesLoading, setPosSalesLoading] = useState(false);
+  const [posSalesSearch, setPosSalesSearch] = useState('');
+  const [registersListData, setRegistersListData] = useState([]);
+  const [registersLoading, setRegistersLoading] = useState(false);
+  const [todayProfitData, setTodayProfitData] = useState({
+    gross_revenue: 3826.1,
+    total_cost: 1036.1,
+    net_profit: 2790.0,
+    margin_percentage: '72.9',
+  });
+  const [posSettingsData, setPosSettingsData] = useState({
+    exchange_rate: KHR_EXCHANGE_RATE,
+    default_warehouse: 'HQ Warehouse',
+    default_customer: 'General Customer',
+    default_biller: 'SBC Solutions',
+    receipt_width: '80mm',
+    auto_print: true,
+    sound_effects: true,
+    scanner_prefix: 'Enter',
+  });
+
+  // 7. Item-level Modals
+  const [editingItem, setEditingItem] = useState(null);
+  const [editItemModalVisible, setEditItemModalVisible] = useState(false);
+  const [commentingItem, setCommentingItem] = useState(null);
+  const [itemCommentModalVisible, setItemCommentModalVisible] = useState(false);
+  const [itemOptionsModalVisible, setItemOptionsModalVisible] = useState(false);
+
+  // 8. Order Adjustments Modals
+  const [orderDiscountModalVisible, setOrderDiscountModalVisible] = useState(false);
+  const [orderTaxModalVisible, setOrderTaxModalVisible] = useState(false);
+  const [deliveryFeeModalVisible, setDeliveryFeeModalVisible] = useState(false);
+  const [sellGiftCardModalVisible, setSellGiftCardModalVisible] = useState(false);
+
+  // 9. Customer & Manual Product Modals
+  const [quickAddCustomerVisible, setQuickAddCustomerVisible] = useState(false);
+  const [viewCustomerModalVisible, setViewCustomerModalVisible] = useState(false);
+  const [manualAddProductModalVisible, setManualAddProductModalVisible] = useState(false);
+
+  // 10. Held Orders State
+  const [heldOrders, setHeldOrders] = useState([]);
+  const [heldOrdersDrawerVisible, setHeldOrdersDrawerVisible] = useState(false);
+  const [mobileCartDrawerOpen, setMobileCartDrawerOpen] = useState(false);
+
+  // 11. Checkout Tender & Receipt State
+  const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [tenderedUSD, setTenderedUSD] = useState(0);
+  const [tenderedKHR, setTenderedKHR] = useState(0);
+  const [isSubmittingSale, setIsSubmittingSale] = useState(false);
+  const [completedInvoice, setCompletedInvoice] = useState(null);
+  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+
+  // 12. Form Instances
+  const [closeRegisterForm] = Form.useForm();
+  const [quickCustomerForm] = Form.useForm();
+  const [manualProductForm] = Form.useForm();
+  const [addExpenseForm] = Form.useForm();
+  const [posSettingsForm] = Form.useForm();
+  const [giftCardForm] = Form.useForm();
+
+  // URL Parameter Tab Synchronizer
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
@@ -193,20 +335,11 @@ const PosTerminal = () => {
     else if (tab === 'today-sale') setTodaySaleModalVisible(true);
   }, [location.search]);
 
-  // Responsive device checks
-  const isDesktop = screens.lg ?? (typeof window !== 'undefined' ? window.innerWidth >= 992 : true);
-  const isMobile = !isDesktop;
-
-  // Real-time Clock State
-  const [currentTime, setCurrentTime] = useState(new Date());
+  // Real-time Clock Timer
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
-  // Fullscreen & Sound State
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -219,18 +352,8 @@ const PosTerminal = () => {
   };
 
   // =========================================================================
-  // 1. REGISTER SHIFT LIFECYCLE STATE (Open & Close Register)
+  // 1. REGISTER SHIFT LIFECYCLE (Open & Close Register)
   // =========================================================================
-  const [loadingRegister, setLoadingRegister] = useState(true);
-  const [currentRegister, setCurrentRegister] = useState(null);
-  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
-  const [registerAlertDismissed, setRegisterAlertDismissed] = useState(false);
-  const [openRegisterCashInHand, setOpenRegisterCashInHand] = useState('');
-  const [closeRegisterModalVisible, setCloseRegisterModalVisible] = useState(false);
-  const [shiftSummary, setShiftSummary] = useState(null);
-  const [loadingSummary, setLoadingSummary] = useState(false);
-  const [closeRegisterForm] = Form.useForm();
-
   // Check if register is active on load
   const checkRegisterStatus = async () => {
     setLoadingRegister(true);
@@ -386,16 +509,8 @@ const PosTerminal = () => {
   };
 
   // =========================================================================
-  // 2. PRODUCT CATALOG & SEARCH & CATEGORIES STATE (Matching cyspharma)
+  // 2. PRODUCT CATALOG & SEARCH & CATEGORIES (Matching cyspharma)
   // =========================================================================
-  const [products, setProducts] = useState(DEFAULT_SAMPLE_PRODUCTS);
-  const [categories, setCategories] = useState(DEFAULT_SAMPLE_CATEGORIES);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('coffee'); // matches Coffee * in screenshot
-  const [searchProductKeyword, setSearchProductKeyword] = useState('');
-  const [searchCategoryKeyword, setSearchCategoryKeyword] = useState('');
-  const searchInputRef = useRef(null);
-
   // Fetch Products & Categories
   const fetchProductsAndCategories = async () => {
     setLoadingProducts(true);
@@ -591,113 +706,8 @@ const PosTerminal = () => {
   };
 
   // =========================================================================
-  // 3. CART & ORDER STATE (Matching Image 2 Cart Table & Summary)
+  // 3. CART ACTIONS & CALCULATIONS (Matching Image 2 Cart Table & Summary)
   // =========================================================================
-  // Initialize with the 2 items shown in Image 2: "BYD Seal" (20,000.00) & "Avatar 12" (3.00)
-  const [cart, setCart] = useState([
-    {
-      id: 1,
-      code: 'BYD-01',
-      name: 'BYD Seal',
-      unit_price: 20000.0,
-      quantity: 1,
-      unit_name: 'Unit',
-      item_discount: 0,
-      item_note: '',
-    },
-    {
-      id: 2,
-      code: 'AV-12',
-      name: 'Avatar 12',
-      unit_price: 3.0,
-      quantity: 1,
-      unit_name: 'Unit',
-      item_discount: 0,
-      item_note: '',
-    },
-  ]);
-
-  const [orderDate, setOrderDate] = useState('18/10/2026 21:24');
-  const [selectedCustomerId, setSelectedCustomerId] = useState(1);
-  const [selectedCustomerName, setSelectedCustomerName] = useState('General Customer');
-  const [customers, setCustomers] = useState([
-    { id: 1, name: 'General Customer', phone: '012 888 999', email: 'customer@aura.com' },
-    { id: 2, name: 'Walk-in Customer', phone: '098 765 432' },
-  ]);
-  const [currentWarehouse, setCurrentWarehouse] = useState('HQ');
-
-  const [orderDiscountValue, setOrderDiscountValue] = useState(0);
-  const [orderDiscountType, setOrderDiscountType] = useState('fixed');
-  const [orderTaxRate, setOrderTaxRate] = useState(0);
-  const [shippingFee, setShippingFee] = useState(0);
-
-  // Modals for Top Actions & Functions from cyspharma
-  const [shortcutsModalVisible, setShortcutsModalVisible] = useState(false);
-  const [calculatorModalVisible, setCalculatorModalVisible] = useState(false);
-  const [calcInput, setCalcInput] = useState('0');
-  const [kitchenDisplayVisible, setKitchenDisplayVisible] = useState(false);
-  const [billScreenVisible, setBillScreenVisible] = useState(false);
-  const [registerDetailsVisible, setRegisterDetailsVisible] = useState(false);
-  const [addExpenseModalVisible, setAddExpenseModalVisible] = useState(false);
-  const [todayProfitModalVisible, setTodayProfitModalVisible] = useState(false);
-  const [todaySaleModalVisible, setTodaySaleModalVisible] = useState(false);
-  const [listRegistersModalVisible, setListRegistersModalVisible] = useState(false);
-  const [posSettingsModalVisible, setPosSettingsModalVisible] = useState(false);
-  const [posSalesHistoryModalVisible, setPosSalesHistoryModalVisible] = useState(false);
-
-  // Data Collections for Specialized POS Views
-  const [posSalesList, setPosSalesList] = useState([]);
-  const [posSalesLoading, setPosSalesLoading] = useState(false);
-  const [posSalesSearch, setPosSalesSearch] = useState('');
-  const [registersListData, setRegistersListData] = useState([]);
-  const [registersLoading, setRegistersLoading] = useState(false);
-  const [todayProfitData, setTodayProfitData] = useState({
-    gross_revenue: 3826.1,
-    total_cost: 1036.1,
-    net_profit: 2790.0,
-    margin_percentage: '72.9'
-  });
-  const [posSettingsData, setPosSettingsData] = useState({
-    exchange_rate: KHR_EXCHANGE_RATE,
-    default_warehouse: 'HQ Warehouse',
-    default_customer: 'General Customer',
-    default_biller: 'SBC Solutions',
-    receipt_width: '80mm',
-    auto_print: true,
-    sound_effects: true,
-    scanner_prefix: 'Enter'
-  });
-
-  // Item-level Modals
-  const [editingItem, setEditingItem] = useState(null);
-  const [editItemModalVisible, setEditItemModalVisible] = useState(false);
-  const [commentingItem, setCommentingItem] = useState(null);
-  const [itemCommentModalVisible, setItemCommentModalVisible] = useState(false);
-  const [itemOptionsModalVisible, setItemOptionsModalVisible] = useState(false);
-
-  // Order Adjustments Modals
-  const [orderDiscountModalVisible, setOrderDiscountModalVisible] = useState(false);
-  const [orderTaxModalVisible, setOrderTaxModalVisible] = useState(false);
-  const [deliveryFeeModalVisible, setDeliveryFeeModalVisible] = useState(false);
-  const [sellGiftCardModalVisible, setSellGiftCardModalVisible] = useState(false);
-
-  // Customer & Manual Product Modals
-  const [quickAddCustomerVisible, setQuickAddCustomerVisible] = useState(false);
-  const [viewCustomerModalVisible, setViewCustomerModalVisible] = useState(false);
-  const [manualAddProductModalVisible, setManualAddProductModalVisible] = useState(false);
-
-  // Held Orders State
-  const [heldOrders, setHeldOrders] = useState([]);
-  const [heldOrdersDrawerVisible, setHeldOrdersDrawerVisible] = useState(false);
-  const [mobileCartDrawerOpen, setMobileCartDrawerOpen] = useState(false);
-
-  // Forms
-  const [quickCustomerForm] = Form.useForm();
-  const [manualProductForm] = Form.useForm();
-  const [addExpenseForm] = Form.useForm();
-  const [posSettingsForm] = Form.useForm();
-  const [giftCardForm] = Form.useForm();
-
   // Add Item to Cart
   const addToCart = (product) => {
     setCart((prev) => {
@@ -837,13 +847,6 @@ const PosTerminal = () => {
   // =========================================================================
   // 5. CHECKOUT & RECEIPT PRINTING MODAL
   // =========================================================================
-  const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('Cash'); // 'Cash' | 'KHQR' | 'Card' | 'Cheque'
-  const [tenderedUSD, setTenderedUSD] = useState(0);
-  const [tenderedKHR, setTenderedKHR] = useState(0);
-  const [isSubmittingSale, setIsSubmittingSale] = useState(false);
-  const [completedInvoice, setCompletedInvoice] = useState(null);
-  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
 
   const handleOpenCheckout = () => {
     if (cart.length === 0) {
