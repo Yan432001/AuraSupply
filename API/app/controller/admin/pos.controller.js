@@ -380,7 +380,12 @@ exports.getPosProducts = async (req, res) => {
       FROM aura_products p
       LEFT JOIN aura_categories c ON c.id = p.category_id
       LEFT JOIN aura_units u ON u.id = p.unit
-      LEFT JOIN aura_warehouses_products wp ON wp.product_id = p.id AND wp.warehouse_id = ?
+      LEFT JOIN (
+        SELECT product_id, SUM(quantity) as quantity
+        FROM aura_warehouses_products
+        WHERE warehouse_id = ?
+        GROUP BY product_id
+      ) wp ON wp.product_id = p.id
       WHERE 1=1
     `;
 
@@ -403,7 +408,7 @@ exports.getPosProducts = async (req, res) => {
     }
 
     const limit = parseInt(req.query.limit || '300', 10);
-    query += ` ORDER BY p.id DESC LIMIT ?`;
+    query += ` GROUP BY p.id ORDER BY p.id DESC LIMIT ?`;
     params.push(limit);
 
     const [products] = await pool.query(query, params);

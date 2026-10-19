@@ -41,8 +41,22 @@ const PosCatalog = ({
 }) => {
   const isDark = themeMode === 'dark';
 
+  // Deduplicate products defensively by unique id or code
+  const uniqueProducts = React.useMemo(() => {
+    const seen = new Set();
+    const list = [];
+    for (const p of products || []) {
+      const key = p.id ?? p.code;
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push(p);
+      }
+    }
+    return list;
+  }, [products]);
+
   // Filter products by selected category and search keyword
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = uniqueProducts.filter((p) => {
     const matchCategory =
       !selectedCategory ||
       selectedCategory === 'all' ||
@@ -159,14 +173,16 @@ const PosCatalog = ({
             transition: 'all 0.15s ease',
           }}
         >
-          All Items ({products.length})
+          All Items ({uniqueProducts.length})
         </button>
 
-        {categories.map((cat) => {
-          const isSelected = String(selectedCategory) === String(cat.id);
-          const count = products.filter(
-            (p) => String(p.category_id) === String(cat.id) || (p.category_name && p.category_name.toLowerCase() === cat.name.toLowerCase())
-          ).length;
+        {categories
+          .filter((cat) => cat.id !== 'all' && cat.name?.toLowerCase() !== 'all items')
+          .map((cat) => {
+            const isSelected = String(selectedCategory) === String(cat.id);
+            const count = uniqueProducts.filter(
+              (p) => String(p.category_id) === String(cat.id) || (p.category_name && p.category_name.toLowerCase() === cat.name?.toLowerCase())
+            ).length;
 
           return (
             <button
