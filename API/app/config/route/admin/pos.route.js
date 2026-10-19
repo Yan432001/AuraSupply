@@ -18,6 +18,19 @@ const {
   getPosSales,
   getPosSettings,
   updatePosSettings,
+  getMemberCards,
+  addMemberCard,
+  validateMemberCard,
+  getCoupons,
+  addCoupon,
+  validateCoupon,
+  getCustomerStocks,
+  addCustomerStock,
+  redeemCustomerStock,
+  getPrinters,
+  savePrinter,
+  deletePrinter,
+  getSaleReceipt,
 } = require("../../../controller/admin/pos.controller");
 
 module.exports = (app) => {
@@ -37,6 +50,27 @@ module.exports = (app) => {
 
   // POS Checkout & Order Finalization
   app.post("/api/admin/pos/checkout", checkoutPosSale);
+  app.get("/api/admin/pos/sales/:id/receipt", getSaleReceipt);
+
+  // POS Member Cards / Loyalty
+  app.get("/api/admin/pos/member-cards", getMemberCards);
+  app.post("/api/admin/pos/member-cards", addMemberCard);
+  app.post("/api/admin/pos/member-cards/validate", validateMemberCard);
+
+  // POS Coupons & Vouchers
+  app.get("/api/admin/pos/coupons", getCoupons);
+  app.post("/api/admin/pos/coupons", addCoupon);
+  app.post("/api/admin/pos/coupons/validate", validateCoupon);
+
+  // POS Customer Stocks (Held items / deposits)
+  app.get("/api/admin/pos/customer-stocks", getCustomerStocks);
+  app.post("/api/admin/pos/customer-stocks", addCustomerStock);
+  app.post("/api/admin/pos/customer-stocks/redeem", redeemCustomerStock);
+
+  // POS Printers Configuration
+  app.get("/api/admin/pos/printers", getPrinters);
+  app.post("/api/admin/pos/printers", savePrinter);
+  app.delete("/api/admin/pos/printers/:id", deletePrinter);
 
   // POS Today's Telemetry & Reporting
   app.get("/api/admin/pos/today-sale", getTodaySaleReport);

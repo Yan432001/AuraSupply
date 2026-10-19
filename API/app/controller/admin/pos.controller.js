@@ -880,3 +880,341 @@ exports.updatePosSettings = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// =========================================================================
+// 20. MEMBER CARDS & LOYALTY (Matching AURA_v1 member_cards.php)
+// =========================================================================
+exports.getMemberCards = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit || '50', 10);
+    const search = req.query.search ? `%${req.query.search}%` : null;
+
+    let query = `
+      SELECT g.*, c.name as customer_name, c.phone as customer_phone
+      FROM aura_gift_cards g
+      LEFT JOIN aura_companies c ON c.id = g.customer_id
+    `;
+    const params = [];
+
+    if (search) {
+      query += ` WHERE g.card_no LIKE ? OR g.customer LIKE ? OR c.name LIKE ? OR c.phone LIKE ?`;
+      params.push(search, search, search, search);
+    }
+
+    query += ` ORDER BY g.id DESC LIMIT ?`;
+    params.push(limit);
+
+    const [rows] = await pool.query(query, params);
+    return res.json({ success: true, cards: rows });
+  } catch (error) {
+    console.error('[POS] getMemberCards error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.addMemberCard = async (req, res) => {
+  try {
+    const { card_no, value, discount, customer_id, customer, expiry } = req.body;
+    const cardNum = card_no || Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString();
+    const val = parseFloat(value) || 0;
+    const disc = parseFloat(discount) || 0;
+    const exp = expiry || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const [result] = await pool.query(`
+      INSERT INTO aura_gift_cards (date, card_no, value, discount, customer_id, customer, balance, expiry, created_by)
+      VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [cardNum, val, disc, customer_id || null, customer || '-', val, exp, req.user?.id || 1]);
+
+    const [created] = await pool.query('SELECT * FROM aura_gift_cards WHERE id = ?', [result.insertId]);
+    return res.json({ success: true, message: 'Member Card issued successfully', card: created[0] });
+  } catch (error) {
+    console.error('[POS] addMemberCard error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.validateMemberCard = async (req, res) => {
+  try {
+    const { card_no } = req.body;
+    if (!card_no) return res.status(400).json({ success: false, message: 'Card number is required' });
+
+    const [rows] = await pool.query(`
+      SELECT g.*, c.name as customer_name, c.phone as customer_phone
+      FROM aura_gift_cards g
+      LEFT JOIN aura_companies c ON c.id = g.customer_id
+      WHERE g.card_no = ? AND (g.expiry IS NULL OR g.expiry >= CURDATE())
+      LIMIT 1
+    `, [card_no.trim()]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Member card not found or expired' });
+    }
+
+    const card = rows[0];
+    return res.json({
+      success: true,
+      card,
+      balance: parseFloat(card.balance) || 0,
+      discount_percentage: parseFloat(card.discount) || 0
+    });
+  } catch (error) {
+    console.error('[POS] validateMemberCard error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// =========================================================================
+// 21. COUPONS & PROMOTION VOUCHERS (Matching AURA_v1 coupon.php)
+// =========================================================================
+exports.getCoupons = async (req, res) => {
+  try {
+    const [coupons] = await pool.query(`
+      SELECT cp.*, c.name as customer_name
+      FROM aura_coupon cp
+      LEFT JOIN aura_companies c ON c.id = cp.customer_id
+      ORDER BY cp.id DESC LIMIT 50
+    `);
+    return res.json({ success: true, coupons });
+  } catch (error) {
+    console.error('[POS] getCoupons error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.addCoupon = async (req, res) => {
+  try {
+    const { card_no, value, expiry, customer_id, customer } = req.body;
+    const code = card_no || 'COUPON-' + Math.floor(1000 + Math.random() * 9000);
+    const val = parseFloat(value) || 0;
+    const exp = expiry || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const [result] = await pool.query(`
+      INSERT INTO aura_coupon (date, card_no, value, used, customer_id, customer, expiry, created_by)
+      VALUES (NOW(), ?, ?, 0, ?, ?, ?, ?)
+    `, [code, val, customer_id || null, customer || '-', exp, req.user?.id || 1]);
+
+    const [created] = await pool.query('SELECT * FROM aura_coupon WHERE id = ?', [result.insertId]);
+    return res.json({ success: true, message: 'Coupon created successfully', coupon: created[0] });
+  } catch (error) {
+    console.error('[POS] addCoupon error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.validateCoupon = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ success: false, message: 'Coupon code is required' });
+
+    const [rows] = await pool.query(`
+      SELECT * FROM aura_coupon 
+      WHERE card_no = ? AND used = 0 AND (expiry IS NULL OR expiry >= CURDATE())
+      LIMIT 1
+    `, [code.trim()]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invalid, used, or expired coupon code' });
+    }
+
+    const coupon = rows[0];
+    return res.json({
+      success: true,
+      coupon,
+      discount_value: parseFloat(coupon.value) || 0
+    });
+  } catch (error) {
+    console.error('[POS] validateCoupon error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// =========================================================================
+// 22. CUSTOMER STOCKS (Matching AURA_v1 customer_stocks.php)
+// =========================================================================
+exports.getCustomerStocks = async (req, res) => {
+  try {
+    const customerId = req.query.customer_id;
+    let query = `
+      SELECT cs.*, c.name as customer_name, c.phone as customer_phone,
+             w.name as warehouse_name
+      FROM aura_customer_stocks cs
+      LEFT JOIN aura_companies c ON c.id = cs.customer_id
+      LEFT JOIN aura_warehouses w ON w.id = cs.warehouse_id
+    `;
+    const params = [];
+    if (customerId) {
+      query += ` WHERE cs.customer_id = ?`;
+      params.push(customerId);
+    }
+    query += ` ORDER BY cs.id DESC LIMIT 50`;
+
+    const [stocks] = await pool.query(query, params);
+
+    // Fetch items for each customer stock
+    for (const stock of stocks) {
+      const [items] = await pool.query(`
+        SELECT csi.*, p.name as product_name, p.code as product_code, p.image as product_image
+        FROM aura_customer_stock_items csi
+        LEFT JOIN aura_products p ON p.id = csi.product_id
+        WHERE csi.customer_stock_id = ?
+      `, [stock.id]);
+      stock.items = items;
+    }
+
+    return res.json({ success: true, customer_stocks: stocks });
+  } catch (error) {
+    console.error('[POS] getCustomerStocks error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.addCustomerStock = async (req, res) => {
+  try {
+    const { customer_id, customer, items, note, warehouse_id, table_id } = req.body;
+    if (!customer_id || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Customer and items are required' });
+    }
+
+    const ref = 'CS-' + Date.now();
+    const [result] = await pool.query(`
+      INSERT INTO aura_customer_stocks (date, reference_no, customer_id, customer, warehouse_id, table_id, note, created_by, status)
+      VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, 'active')
+    `, [ref, customer_id, customer || '-', warehouse_id || 1, table_id || null, note || '', req.user?.id || 1]);
+
+    const stockId = result.insertId;
+
+    for (const it of items) {
+      await pool.query(`
+        INSERT INTO aura_customer_stock_items 
+        (customer_stock_id, product_id, quantity, warehouse_id, product_unit_code, serial_no)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [stockId, it.product_id || it.id, it.quantity || 1, warehouse_id || 1, it.unit_name || 'Unit', it.serial_no || '']);
+    }
+
+    return res.json({ success: true, message: 'Customer stock deposited successfully', stock_id: stockId, reference_no: ref });
+  } catch (error) {
+    console.error('[POS] addCustomerStock error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.redeemCustomerStock = async (req, res) => {
+  try {
+    const { stock_item_id, redeem_quantity } = req.body;
+    const qty = parseFloat(redeem_quantity) || 1;
+
+    const [rows] = await pool.query(`SELECT * FROM aura_customer_stock_items WHERE id = ?`, [stock_item_id]);
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'Stock item not found' });
+
+    const item = rows[0];
+    const rem = parseFloat(item.quantity) - qty;
+    if (rem < 0) return res.status(400).json({ success: false, message: 'Redeem quantity exceeds deposited quantity' });
+
+    if (rem === 0) {
+      await pool.query(`UPDATE aura_customer_stock_items SET quantity = 0 WHERE id = ?`, [stock_item_id]);
+    } else {
+      await pool.query(`UPDATE aura_customer_stock_items SET quantity = ? WHERE id = ?`, [rem, stock_item_id]);
+    }
+
+    return res.json({ success: true, message: 'Customer stock item redeemed successfully', remaining: rem });
+  } catch (error) {
+    console.error('[POS] redeemCustomerStock error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// =========================================================================
+// 23. PRINTERS CONFIGURATION (Matching AURA_v1 printers.php)
+// =========================================================================
+exports.getPrinters = async (req, res) => {
+  try {
+    const [printers] = await pool.query('SELECT * FROM aura_printers ORDER BY id ASC');
+    return res.json({ success: true, printers });
+  } catch (error) {
+    console.error('[POS] getPrinters error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.savePrinter = async (req, res) => {
+  try {
+    const { id, title, type, profile, char_per_line, path, ip_address, port } = req.body;
+    if (!title) return res.status(400).json({ success: false, message: 'Printer title is required' });
+
+    if (id) {
+      await pool.query(`
+        UPDATE aura_printers SET title=?, type=?, profile=?, char_per_line=?, path=?, ip_address=?, port=?
+        WHERE id = ?
+      `, [title, type || 'network', profile || 'default', char_per_line || 48, path || '', ip_address || '', port || 9100, id]);
+      return res.json({ success: true, message: 'Printer profile updated successfully' });
+    } else {
+      const [result] = await pool.query(`
+        INSERT INTO aura_printers (title, type, profile, char_per_line, path, ip_address, port)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [title, type || 'network', profile || 'default', char_per_line || 48, path || '', ip_address || '', port || 9100]);
+      return res.json({ success: true, message: 'Printer profile created successfully', id: result.insertId });
+    }
+  } catch (error) {
+    console.error('[POS] savePrinter error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.deletePrinter = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM aura_printers WHERE id = ?', [id]);
+    return res.json({ success: true, message: 'Printer profile deleted' });
+  } catch (error) {
+    console.error('[POS] deletePrinter error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// =========================================================================
+// 24. SALE RECEIPT DETAILS (For Standard, Dual, Tri-Currency & Kitchen Printing)
+// =========================================================================
+exports.getSaleReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [sales] = await pool.query(`
+      SELECT s.*, 
+             u.username as cashier_username, u.first_name as cashier_first_name, u.last_name as cashier_last_name,
+             c.name as customer_name, c.phone as customer_phone, c.address as customer_address,
+             b.name as biller_name, b.company as biller_company, b.address as biller_address, b.phone as biller_phone, b.logo as biller_logo
+      FROM aura_sales s
+      LEFT JOIN aura_users u ON u.id = s.created_by
+      LEFT JOIN aura_companies c ON c.id = s.customer_id
+      LEFT JOIN aura_companies b ON b.id = s.biller_id
+      WHERE s.id = ?
+      LIMIT 1
+    `, [id]);
+
+    if (sales.length === 0) {
+      return res.status(404).json({ success: false, message: 'Sale invoice not found' });
+    }
+
+    const sale = sales[0];
+
+    const [items] = await pool.query(`
+      SELECT si.*, p.name as product_name, p.code as product_code, p.image as product_image
+      FROM aura_sale_items si
+      LEFT JOIN aura_products p ON p.id = si.product_id
+      WHERE si.sale_id = ?
+    `, [id]);
+
+    const [payments] = await pool.query(`
+      SELECT * FROM aura_payments WHERE sale_id = ? ORDER BY id ASC
+    `, [id]);
+
+    return res.json({
+      success: true,
+      sale,
+      items,
+      payments
+    });
+  } catch (error) {
+    console.error('[POS] getSaleReceipt error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
