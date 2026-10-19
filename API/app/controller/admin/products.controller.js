@@ -368,6 +368,8 @@ exports.addProducts = async (req, res) => {
           `, [newId, v.name, safeCost, parseFloat(v.price) || safePrice, parseFloat(v.quantity) || 10]);
         }
       }
+    }
+
     // Save Multi-Unit Pricing (AURA_v1)
     if (Array.isArray(unitPrices) && unitPrices.length > 0) {
       for (const up of unitPrices) {
@@ -583,6 +585,8 @@ exports.updateProducts = async (req, res) => {
         VALUES (?, 1, ?, ?)
         ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)
       `, [id, parseFloat(quantity) || 0, parseFloat(cost) || 0]);
+    }
+
     // Update Multi-Unit Pricing (AURA_v1)
     if (Array.isArray(unitPrices)) {
       for (const up of unitPrices) {
