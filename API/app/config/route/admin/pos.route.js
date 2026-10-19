@@ -91,4 +91,5 @@ module.exports = (app) => {
   // POS Hardware & System Settings
   app.get("/api/admin/pos/settings", getPosSettings);
   app.post("/api/admin/pos/settings", updatePosSettings);
+  app.put("/api/admin/pos/settings", updatePosSettings);
 };

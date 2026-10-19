@@ -50,6 +50,8 @@ const PosCheckoutModal = ({
   onFinalizePayment,
   isSubmittingSale,
   selectedCustomerName,
+  billers = [],
+  selectedBillerId = null,
   t,
 }) => {
   const totalUSD = Math.max(0, parseFloat(grandTotal) || 0);
@@ -60,7 +62,8 @@ const PosCheckoutModal = ({
     : 0;
 
   // Header Selectors
-  const [biller, setBiller] = useState('SBC Solutions');
+  const currentBillerObj = billers.find((b) => b.id === selectedBillerId);
+  const [biller, setBiller] = useState(currentBillerObj?.name || currentBillerObj?.company || 'SBC Solutions');
   const [saleman, setSaleman] = useState('Default Cashier');
   const [project, setProject] = useState('Main Project');
   const [saleNote, setSaleNote] = useState('');
@@ -94,6 +97,9 @@ const PosCheckoutModal = ({
   // Reset or preset state when modal opens
   useEffect(() => {
     if (visible) {
+      if (currentBillerObj) {
+        setBiller(currentBillerObj.name || currentBillerObj.company);
+      }
       setPaidUSD(totalUSD > 0 ? totalUSD.toFixed(2) : '0');
       setPaidKHR('');
       setPaidBy('Cash');
@@ -111,7 +117,7 @@ const PosCheckoutModal = ({
       setSaleNote('');
       setStaffNote('');
     }
-  }, [visible, totalUSD]);
+  }, [visible, totalUSD, currentBillerObj]);
 
   // Compute Total Paid in USD across primary and additional payments
   const totalPayingUSD = useMemo(() => {
@@ -304,11 +310,18 @@ const PosCheckoutModal = ({
                 onChange={setBiller}
                 size="middle"
                 style={{ width: '100%' }}
-                options={[
-                  { value: 'SBC Solutions', label: 'SBC Solutions' },
-                  { value: 'Main Store', label: 'Main Store' },
-                  { value: 'Branch 1', label: 'Branch 1' },
-                ]}
+                options={
+                  billers.length > 0
+                    ? billers.map((b) => ({
+                        value: b.name || b.company,
+                        label: `🏬 ${b.name || b.company}`,
+                      }))
+                    : [
+                        { value: 'SBC Solutions', label: 'SBC Solutions' },
+                        { value: 'Main Store', label: 'Main Store' },
+                        { value: 'Branch 1', label: 'Branch 1' },
+                      ]
+                }
               />
             </div>
 

@@ -56,6 +56,18 @@ const PosRegistersListModal = ({
       render: (c, r) => c || r.user_id || 'Cashier',
     },
     {
+      title: 'Store / Biller',
+      dataIndex: 'biller_name',
+      key: 'biller_name',
+      render: (b) => (b ? <Tag color="blue" style={{ borderRadius: 6 }}>{b}</Tag> : <span style={{ color: '#94a3b8' }}>-</span>),
+    },
+    {
+      title: 'Warehouse',
+      dataIndex: 'warehouse_name',
+      key: 'warehouse_name',
+      render: (w) => (w ? <Tag color="cyan" style={{ borderRadius: 6 }}>{w}</Tag> : <span style={{ color: '#94a3b8' }}>-</span>),
+    },
+    {
       title: 'Open Time',
       dataIndex: 'date',
       key: 'date',

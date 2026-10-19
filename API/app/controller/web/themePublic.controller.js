@@ -1235,21 +1235,33 @@ const ThemePublicController = {
    */
   async getBillers(req, res) {
     try {
+      let filterSql = "WHERE c.group_name = 'biller'";
+      const params = [];
+
+      // Check scoping for standard biller user
+      const isSuperAdmin = req.user && (Number(req.user.group_id) === 1 || Number(req.user.group_id) === 2 || req.user.role === 'owner' || req.user.role === 'admin');
+      if (req.user && !isSuperAdmin && req.user.biller_id) {
+        filterSql += " AND c.id = ?";
+        params.push(req.user.biller_id);
+      }
+
       const [billers] = await db.query(`
         SELECT 
           c.id, c.code, c.name, c.company, c.slug, c.address,
+          c.warehouse_id, w.name AS warehouse_name, w.code AS warehouse_code,
           c.phone, c.email, c.city, c.country, c.logo, c.banner,
           c.currency_code, c.currency_symbol, c.rating, c.reviews_count,
           c.operating_hours,
           COUNT(DISTINCT pr.project_id) AS projects_count,
           COUNT(DISTINCT p.id) AS products_count
         FROM aura_companies c
+        LEFT JOIN aura_warehouses w ON w.id = c.warehouse_id
         LEFT JOIN aura_projects pr ON pr.biller_id = c.id
         LEFT JOIN aura_products p ON p.biller_id = c.id
-        WHERE c.group_name = 'biller' AND c.group_id IS NULL
-        GROUP BY c.id
+        ${filterSql}
+        GROUP BY c.id, c.warehouse_id, w.name, w.code
         ORDER BY c.id ASC
-      `);
+      `, params);
 
       return sendSuccess(res, billers, 'Billers fetched successfully');
     } catch (err) {

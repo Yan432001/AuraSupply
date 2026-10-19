@@ -29,6 +29,7 @@ import {
   CalculatorOutlined,
   HistoryOutlined,
   SwapOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 
 const PosHeader = ({
@@ -41,7 +42,13 @@ const PosHeader = ({
   setSoundEnabled,
   currentWarehouse,
   setCurrentWarehouse,
-  warehouses = ['HQ Warehouse', 'Branch 1', 'Main Store'],
+  warehouses = [],
+  selectedWarehouseId,
+  onSelectWarehouse,
+  billers = [],
+  selectedBillerId,
+  onSelectBiller,
+  isSuperAdmin = false,
   onOpenShortcuts,
   onOpenCalculator,
   onOpenExpense,
@@ -54,6 +61,7 @@ const PosHeader = ({
   onOpenCoupons,
   onOpenCustomerStocks,
   onOpenPrinters,
+  onOpenPosSettings,
   onInitiateCloseRegister,
   onExit,
   t,
@@ -119,6 +127,12 @@ const PosHeader = ({
       icon: <PrinterOutlined style={{ color: '#6366f1' }} />,
       label: t('printers_config', 'Receipt & Kitchen Printers'),
       onClick: onOpenPrinters,
+    },
+    {
+      key: 'pos-settings',
+      icon: <SettingOutlined style={{ color: '#2563eb' }} />,
+      label: t('pos_settings', 'POS Settings & Hardware Config'),
+      onClick: onOpenPosSettings,
     },
     { type: 'divider' },
     {
@@ -194,17 +208,45 @@ const PosHeader = ({
           </div>
         </div>
 
-        {/* Warehouse Selector */}
-        <Select
-          size="middle"
-          value={currentWarehouse}
-          onChange={setCurrentWarehouse}
-          style={{ width: 140 }}
-          bordered={false}
-          className="pos-header-select"
-          popupMatchSelectWidth={false}
-          options={warehouses.map((w) => ({ label: `🏬 ${w}`, value: w }))}
-        />
+        {/* Biller Selector (Super Admin / Admin) or Store Tag */}
+        {isSuperAdmin && billers.length > 0 ? (
+          <Select
+            size="middle"
+            value={selectedBillerId}
+            onChange={onSelectBiller}
+            style={{ minWidth: 160, maxWidth: 220 }}
+            className="pos-header-select"
+            popupMatchSelectWidth={false}
+            options={billers.map((b) => ({
+              label: `🏬 ${b.name || b.company}`,
+              value: b.id,
+            }))}
+          />
+        ) : (
+          <Tag color="blue" style={{ borderRadius: 6, fontWeight: 700, padding: '3px 10px', margin: 0, fontSize: 12 }}>
+            🏬 {billers.find((b) => b.id === selectedBillerId)?.name || user?.biller_name || 'My Store'}
+          </Tag>
+        )}
+
+        {/* Warehouse Selector (Super Admin / Admin) or Warehouse Tag */}
+        {isSuperAdmin && warehouses.length > 0 ? (
+          <Select
+            size="middle"
+            value={selectedWarehouseId}
+            onChange={onSelectWarehouse}
+            style={{ minWidth: 140, maxWidth: 190 }}
+            className="pos-header-select"
+            popupMatchSelectWidth={false}
+            options={warehouses.map((w) => ({
+              label: `📦 ${w.name || w.code}`,
+              value: w.id,
+            }))}
+          />
+        ) : (
+          <Tag color="cyan" style={{ borderRadius: 6, fontWeight: 700, padding: '3px 10px', margin: 0, fontSize: 12 }}>
+            📦 {warehouses.find((w) => w.id === selectedWarehouseId)?.name || currentWarehouse || 'Store Warehouse'}
+          </Tag>
+        )}
 
         {/* Register Active Badge */}
         {currentRegister && (
@@ -323,6 +365,19 @@ const PosHeader = ({
             onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
           >
             {isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+          </button>
+        </Tooltip>
+
+        {/* POS Settings & Hardware */}
+        <Tooltip title={t('pos_settings', 'POS Settings & Hardware Config')}>
+          <button
+            type="button"
+            onClick={onOpenPosSettings}
+            style={topBtnStyle}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
+          >
+            <SettingOutlined style={{ color: '#2563eb' }} />
           </button>
         </Tooltip>
 

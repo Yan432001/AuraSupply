@@ -28,6 +28,8 @@ const PosOpenRegisterView = ({
   khrExchangeRate = 4200,
   themeMode,
   adminTheme,
+  billerName,
+  warehouseName,
   onExit,
   t,
 }) => {
@@ -120,7 +122,19 @@ const PosOpenRegisterView = ({
               <div style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#f8fafc' : '#0f172a' }}>
                 {user?.name || user?.username || 'Cashier'}
               </div>
-              <div style={{ fontSize: 11, color: '#64748b' }}>Role: {user?.role || 'Staff / Cashier'}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, color: '#64748b' }}>Role: {user?.role || 'Staff / Cashier'}</span>
+                {billerName && (
+                  <Tag color="cyan" style={{ borderRadius: 6, margin: 0, fontSize: 10, lineHeight: '18px' }}>
+                    <ShopOutlined style={{ marginRight: 3 }} /> {billerName}
+                  </Tag>
+                )}
+                {warehouseName && (
+                  <Tag color="geekblue" style={{ borderRadius: 6, margin: 0, fontSize: 10, lineHeight: '18px' }}>
+                    {warehouseName}
+                  </Tag>
+                )}
+              </div>
             </div>
           </div>
 

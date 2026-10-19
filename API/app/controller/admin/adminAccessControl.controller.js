@@ -311,13 +311,15 @@ exports.updateUserBranches = async (req, res) => {
 exports.getBranches = async (req, res) => {
   try {
     const [branches] = await db.query(`
-      SELECT c.id, c.code, c.name, c.company_type, c.phone, c.email, c.address,
+      SELECT c.id, c.code, c.name, c.company, c.company_type, c.phone, c.email, c.address,
+             c.warehouse_id, w.name AS warehouse_name, w.code AS warehouse_code,
              c.status, c.manager_user_id, c.updated_at,
              u.username AS manager_username,
              u.first_name AS manager_name
       FROM aura_companies c
       LEFT JOIN aura_users u ON u.id = c.manager_user_id
-      WHERE c.company_type IN ('branch','store','shop','warehouse','biller')
+      LEFT JOIN aura_warehouses w ON w.id = c.warehouse_id
+      WHERE (c.company_type IN ('branch','store','shop','warehouse','biller') OR c.group_name = 'biller')
         AND c.deleted_at IS NULL
       ORDER BY c.id ASC
     `);
@@ -337,10 +339,12 @@ exports.createBranch = async (req, res) => {
     const {
       name,
       code,
+      company,
       company_type = 'branch',
       phone,
       email,
       address,
+      warehouse_id,
       manager_user_id
     } = req.body;
 
@@ -350,10 +354,10 @@ exports.createBranch = async (req, res) => {
 
     const [result] = await db.query(`
       INSERT INTO aura_companies (
-        group_name, company_type, name, code, phone, email, address,
-        manager_user_id, status, is_active, updated_at
-      ) VALUES ('biller', ?, ?, ?, ?, ?, ?, ?, 'active', 1, NOW())
-    `, [company_type, name.trim(), code.trim(), phone, email, address, manager_user_id || null]);
+        group_name, company_type, name, company, code, phone, email, address,
+        warehouse_id, manager_user_id, status, is_active, updated_at
+      ) VALUES ('biller', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, NOW())
+    `, [company_type, name.trim(), company || name.trim(), code.trim(), phone, email, address, warehouse_id || null, manager_user_id || null]);
 
     const newId = result.insertId;
 
@@ -362,7 +366,7 @@ exports.createBranch = async (req, res) => {
       tableName: 'aura_companies',
       action: 'create_branch',
       recordId: newId,
-      newValues: { name, code, company_type },
+      newValues: { name, code, company_type, warehouse_id },
       ipAddress: req.ip
     });
 
@@ -379,17 +383,19 @@ exports.createBranch = async (req, res) => {
 exports.updateBranch = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, code, company_type, phone, email, address, manager_user_id, status } = req.body;
+    const { name, code, company, company_type, phone, email, address, warehouse_id, manager_user_id, status } = req.body;
 
     const updates = [];
     const params = [];
 
     if (name !== undefined) { updates.push('name = ?'); params.push(name.trim()); }
     if (code !== undefined) { updates.push('code = ?'); params.push(code.trim()); }
+    if (company !== undefined) { updates.push('company = ?'); params.push(company); }
     if (company_type !== undefined) { updates.push('company_type = ?'); params.push(company_type); }
     if (phone !== undefined) { updates.push('phone = ?'); params.push(phone); }
     if (email !== undefined) { updates.push('email = ?'); params.push(email); }
     if (address !== undefined) { updates.push('address = ?'); params.push(address); }
+    if (warehouse_id !== undefined) { updates.push('warehouse_id = ?'); params.push(warehouse_id || null); }
     if (manager_user_id !== undefined) { updates.push('manager_user_id = ?'); params.push(manager_user_id || null); }
     if (status !== undefined) {
       updates.push('status = ?', 'is_active = ?');

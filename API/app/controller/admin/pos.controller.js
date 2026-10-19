@@ -10,20 +10,83 @@
 
 const { pool } = require('../../config/dbPool');
 
+// Scoping Helper: Super Admin & Admin have full access across all billers/warehouses.
+// Standard biller/branch users are strictly scoped to their assigned biller_id and warehouse_id.
+async function resolveScope(req) {
+  let user = req.user;
+  if (!user) {
+    const rawUid = req.headers['x-user-id'] || req.query.user_id || req.body?.user_id;
+    if (rawUid) {
+      const [uRows] = await pool.query(
+        `SELECT u.id, u.username, u.group_id, u.biller_id, u.warehouse_id, g.name as role 
+         FROM aura_users u 
+         LEFT JOIN aura_groups g ON g.id = u.group_id 
+         WHERE u.id = ? LIMIT 1`,
+        [rawUid]
+      );
+      if (uRows && uRows.length > 0) user = uRows[0];
+    }
+  }
+
+  const isSuperAdmin = user && (
+    Number(user.group_id) === 1 || 
+    Number(user.group_id) === 2 || 
+    user.role === 'owner' || 
+    user.role === 'admin' || 
+    user.role === 'developer' ||
+    user.Owner || 
+    user.Admin
+  );
+
+  let billerId = null;
+  let warehouseId = null;
+
+  if (isSuperAdmin) {
+    billerId = req.query.biller_id ? Number(req.query.biller_id) : (req.body?.biller_id ? Number(req.body.biller_id) : null);
+    warehouseId = req.query.warehouse_id ? Number(req.query.warehouse_id) : (req.body?.warehouse_id ? Number(req.body.warehouse_id) : null);
+  } else {
+    billerId = user?.biller_id ? Number(user.biller_id) : null;
+    warehouseId = user?.warehouse_id ? Number(user.warehouse_id) : null;
+  }
+
+  return {
+    user,
+    userId: user?.id || (req.query.user_id || req.body?.user_id || 1),
+    isSuperAdmin: !!isSuperAdmin,
+    billerId,
+    warehouseId,
+  };
+}
+
 // 1. Check current active register for user/biller
 exports.getCurrentRegister = async (req, res) => {
   try {
-    const userId = req.query.user_id || req.user?.id || 1;
+    const scope = await resolveScope(req);
+    const userId = req.query.user_id || scope.userId;
     
-    // Find latest open register for this cashier
-    const [rows] = await pool.query(
-      `SELECT r.*, u.username as cashier_username, u.first_name, u.last_name 
-       FROM aura_pos_register r
-       LEFT JOIN aura_users u ON u.id = r.user_id
-       WHERE r.user_id = ? AND r.status = 'open' 
-       ORDER BY r.id DESC LIMIT 1`,
-      [userId]
-    );
+    let sql = `
+      SELECT r.*, u.username as cashier_username, u.first_name, u.last_name,
+             c.name as biller_name, c.company as biller_company,
+             w.name as warehouse_name, w.code as warehouse_code
+      FROM aura_pos_register r
+      LEFT JOIN aura_users u ON u.id = r.user_id
+      LEFT JOIN aura_companies c ON c.id = r.biller_id
+      LEFT JOIN aura_warehouses w ON w.id = r.warehouse_id
+      WHERE r.status = 'open'
+    `;
+    const params = [];
+
+    if (!scope.isSuperAdmin && scope.billerId) {
+      sql += ` AND (r.biller_id = ? OR r.user_id = ?)`;
+      params.push(scope.billerId, userId);
+    } else {
+      sql += ` AND r.user_id = ?`;
+      params.push(userId);
+    }
+
+    sql += ` ORDER BY r.id DESC LIMIT 1`;
+
+    const [rows] = await pool.query(sql, params);
 
     if (rows.length > 0) {
       return res.json({
@@ -47,15 +110,30 @@ exports.getCurrentRegister = async (req, res) => {
 // 2. Open Cash Register Session
 exports.openRegister = async (req, res) => {
   try {
-    const { cash_in_hand, user_id, note, biller_id, warehouse_id } = req.body;
-    const uid = user_id || 1;
+    const scope = await resolveScope(req);
+    const { cash_in_hand, user_id, note } = req.body;
+    const uid = user_id || scope.userId;
     const cashAmount = parseFloat(cash_in_hand) || 0;
 
+    // Enforce scoping
+    let bid = scope.isSuperAdmin ? (req.body.biller_id || null) : scope.billerId;
+    let wid = scope.isSuperAdmin ? (req.body.warehouse_id || null) : scope.warehouseId;
+
+    // If warehouseId not provided but biller is set, resolve default warehouse for biller
+    if (!wid && bid) {
+      const [bRows] = await pool.query('SELECT warehouse_id FROM aura_companies WHERE id = ? LIMIT 1', [bid]);
+      if (bRows.length > 0 && bRows[0].warehouse_id) wid = bRows[0].warehouse_id;
+    }
+
     // Verify if already has an open register
-    const [existing] = await pool.query(
-      "SELECT id FROM aura_pos_register WHERE user_id = ? AND status = 'open' LIMIT 1",
-      [uid]
-    );
+    let checkSql = "SELECT id FROM aura_pos_register WHERE user_id = ? AND status = 'open' LIMIT 1";
+    const checkParams = [uid];
+    if (!scope.isSuperAdmin && scope.billerId) {
+      checkSql = "SELECT id FROM aura_pos_register WHERE (user_id = ? OR biller_id = ?) AND status = 'open' LIMIT 1";
+      checkParams.push(scope.billerId);
+    }
+
+    const [existing] = await pool.query(checkSql, checkParams);
 
     if (existing.length > 0) {
       return res.json({
@@ -67,13 +145,17 @@ exports.openRegister = async (req, res) => {
 
     const [result] = await pool.query(
       `INSERT INTO aura_pos_register 
-       (date, user_id, cash_in_hand, status, note, pushed) 
-       VALUES (NOW(), ?, ?, 'open', ?, 0)`,
-      [uid, cashAmount, note || '']
+       (date, user_id, biller_id, warehouse_id, cash_in_hand, status, note, pushed) 
+       VALUES (NOW(), ?, ?, ?, ?, 'open', ?, 0)`,
+      [uid, bid, wid, cashAmount, note || '']
     );
 
     const [newReg] = await pool.query(
-      "SELECT * FROM aura_pos_register WHERE id = ?",
+      `SELECT r.*, c.name as biller_name, w.name as warehouse_name
+       FROM aura_pos_register r
+       LEFT JOIN aura_companies c ON c.id = r.biller_id
+       LEFT JOIN aura_warehouses w ON w.id = r.warehouse_id
+       WHERE r.id = ?`,
       [result.insertId]
     );
 
@@ -270,10 +352,14 @@ exports.closeRegister = async (req, res) => {
   }
 };
 
-// 5. Products Catalog Feed for POS (with units and categories)
+// 5. Products Catalog Feed for POS (with units and categories, scoped by warehouse & biller)
 exports.getPosProducts = async (req, res) => {
   try {
+    const scope = await resolveScope(req);
     const { category_id, search } = req.query;
+
+    const warehouseId = scope.warehouseId || (req.query.warehouse_id ? Number(req.query.warehouse_id) : 1);
+    const billerId = scope.billerId || (req.query.biller_id ? Number(req.query.biller_id) : null);
 
     let query = `
       SELECT 
@@ -282,21 +368,28 @@ exports.getPosProducts = async (req, res) => {
         p.name, 
         p.price, 
         p.cost, 
-        p.quantity, 
+        COALESCE(wp.quantity, p.quantity, 0) as quantity, 
         p.image, 
         p.category_id, 
         p.unit as unit_id,
         p.sale_unit,
+        p.biller_id,
         c.name as category_name,
         u.name as unit_name,
         u.code as unit_code
       FROM aura_products p
       LEFT JOIN aura_categories c ON c.id = p.category_id
       LEFT JOIN aura_units u ON u.id = p.unit
+      LEFT JOIN aura_warehouses_products wp ON wp.product_id = p.id AND wp.warehouse_id = ?
       WHERE 1=1
     `;
 
-    const params = [];
+    const params = [warehouseId];
+
+    if (billerId) {
+      query += ` AND (p.biller_id IS NULL OR p.biller_id = ? OR p.biller_id = 0)`;
+      params.push(billerId);
+    }
 
     if (category_id && category_id !== 'all') {
       query += ` AND p.category_id = ?`;
@@ -309,7 +402,9 @@ exports.getPosProducts = async (req, res) => {
       params.push(term, term, term);
     }
 
-    query += ` ORDER BY p.id DESC LIMIT 300`;
+    const limit = parseInt(req.query.limit || '300', 10);
+    query += ` ORDER BY p.id DESC LIMIT ?`;
+    params.push(limit);
 
     const [products] = await pool.query(query, params);
 
@@ -466,11 +561,17 @@ exports.checkoutPosSale = async (req, res) => {
       user_id
     } = req.body;
 
-    const uid = user_id || 1;
+    const scope = await resolveScope(req);
+    const uid = user_id || scope.userId;
     const cid = customer_id || 1;
     const cname = customer_name || 'Walk-in Customer';
-    const bid = biller_id || 1;
-    const wid = warehouse_id || 1;
+    let bid = scope.isSuperAdmin ? (biller_id || 1) : (scope.billerId || biller_id || 1);
+    let wid = scope.isSuperAdmin ? (warehouse_id || 1) : (scope.warehouseId || warehouse_id || 1);
+
+    if (!wid && bid) {
+      const [bRows] = await connection.query('SELECT warehouse_id FROM aura_companies WHERE id = ? LIMIT 1', [bid]);
+      if (bRows.length > 0 && bRows[0].warehouse_id) wid = bRows[0].warehouse_id;
+    }
 
     // Generate Unique Invoice Ref (Format: POS-YYYYMMDD-XXXX)
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -538,11 +639,21 @@ exports.checkoutPosSale = async (req, res) => {
           ]
         );
 
-        // Stock deduction
+        // Overall product stock deduction
         await connection.query(
           `UPDATE aura_products SET quantity = GREATEST(0, quantity - ?) WHERE id = ?`,
           [baseQtyToDeduct, item.id]
         );
+
+        // Per-warehouse stock deduction
+        if (wid) {
+          await connection.query(
+            `INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity)
+             VALUES (?, ?, -?)
+             ON DUPLICATE KEY UPDATE quantity = quantity - ?`,
+            [item.id, wid, baseQtyToDeduct, baseQtyToDeduct]
+          );
+        }
       }
     }
 
@@ -568,9 +679,10 @@ exports.checkoutPosSale = async (req, res) => {
 
       await connection.query(
         `INSERT INTO aura_payments 
-         (date, sale_id, reference_no, amount, paid_by, type, created_by, note, pos_paid, cc_no, cc_holder, cheque_no) 
-         VALUES (NOW(), ?, ?, ?, ?, 'received', ?, ?, ?, ?, ?, ?)`,
+         (date, biller_id, sale_id, reference_no, amount, paid_by, type, created_by, note, pos_paid, cc_no, cc_holder, cheque_no) 
+         VALUES (NOW(), ?, ?, ?, ?, ?, 'received', ?, ?, ?, ?, ?, ?)`,
         [
+          bid,
           saleId,
           payRef,
           pAmt,
@@ -619,22 +731,39 @@ exports.checkoutPosSale = async (req, res) => {
 // 10. List All POS Registers (Shift History)
 exports.getRegistersList = async (req, res) => {
   try {
-    const { status, user_id, limit = 50 } = req.query;
+    const scope = await resolveScope(req);
+    const { status, user_id, biller_id, limit = 50 } = req.query;
     let query = `
-      SELECT r.*, u.username as cashier_username, u.first_name, u.last_name, u.email as cashier_email
+      SELECT r.*, u.username as cashier_username, u.first_name, u.last_name, u.email as cashier_email,
+             c.name as biller_name, c.company as biller_company,
+             w.name as warehouse_name, w.code as warehouse_code
       FROM aura_pos_register r
       LEFT JOIN aura_users u ON u.id = r.user_id
+      LEFT JOIN aura_companies c ON c.id = r.biller_id
+      LEFT JOIN aura_warehouses w ON w.id = r.warehouse_id
       WHERE 1=1
     `;
     const params = [];
+
+    if (!scope.isSuperAdmin && scope.billerId) {
+      query += ` AND (r.biller_id = ? OR r.user_id = ?)`;
+      params.push(scope.billerId, scope.userId);
+    } else {
+      if (biller_id) {
+        query += ` AND r.biller_id = ?`;
+        params.push(biller_id);
+      }
+      if (user_id) {
+        query += ` AND r.user_id = ?`;
+        params.push(user_id);
+      }
+    }
+
     if (status) {
       query += ` AND r.status = ?`;
       params.push(status);
     }
-    if (user_id) {
-      query += ` AND r.user_id = ?`;
-      params.push(user_id);
-    }
+
     query += ` ORDER BY r.id DESC LIMIT ?`;
     params.push(parseInt(limit, 10));
 
@@ -857,14 +986,40 @@ exports.deleteSuspendedSale = async (req, res) => {
 // 17. Get Recent POS Sales (Invoices History)
 exports.getPosSales = async (req, res) => {
   try {
+    const scope = await resolveScope(req);
     const limit = parseInt(req.query.limit || '50', 10);
-    const [sales] = await pool.query(`
-      SELECT s.*, u.username as cashier_username
+    const { biller_id, warehouse_id } = req.query;
+
+    let query = `
+      SELECT s.*, u.username as cashier_username,
+             c.name as biller_name, c.company as biller_company,
+             w.name as warehouse_name, w.code as warehouse_code
       FROM aura_sales s
       LEFT JOIN aura_users u ON u.id = s.created_by
-      WHERE s.pos = 1 OR s.pos IS NULL
-      ORDER BY s.id DESC LIMIT ?
-    `, [limit]);
+      LEFT JOIN aura_companies c ON c.id = s.biller_id
+      LEFT JOIN aura_warehouses w ON w.id = s.warehouse_id
+      WHERE (s.pos = 1 OR s.pos IS NULL)
+    `;
+    const params = [];
+
+    if (!scope.isSuperAdmin && scope.billerId) {
+      query += ` AND s.biller_id = ?`;
+      params.push(scope.billerId);
+    } else {
+      if (biller_id) {
+        query += ` AND s.biller_id = ?`;
+        params.push(biller_id);
+      }
+      if (warehouse_id) {
+        query += ` AND s.warehouse_id = ?`;
+        params.push(warehouse_id);
+      }
+    }
+
+    query += ` ORDER BY s.id DESC LIMIT ?`;
+    params.push(limit);
+
+    const [sales] = await pool.query(query, params);
 
     return res.json({
       success: true,
@@ -876,13 +1031,42 @@ exports.getPosSales = async (req, res) => {
   }
 };
 
-// 18. Get POS Settings
+// 18. Get POS Settings & Hardware / Configuration Master Data
 exports.getPosSettings = async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM aura_pos_settings LIMIT 1');
+    
+    // Fetch billers with linked warehouse
+    const [billers] = await pool.query(`
+      SELECT c.id, c.name, c.company, c.code, c.warehouse_id, w.name as warehouse_name, w.code as warehouse_code
+      FROM aura_companies c
+      LEFT JOIN aura_warehouses w ON w.id = c.warehouse_id
+      WHERE (c.group_name = 'biller' OR c.company_type = 'branch') AND (c.status = 'active' OR c.status IS NULL)
+      ORDER BY c.id ASC
+    `);
+
+    // Fetch active warehouses
+    const [warehouses] = await pool.query(`
+      SELECT id, name, code, address FROM aura_warehouses ORDER BY id ASC
+    `);
+
+    // Fetch catalog categories
+    const [categories] = await pool.query(`
+      SELECT id, name, code FROM aura_categories ORDER BY name ASC
+    `);
+
+    // Fetch customer directory
+    const [customers] = await pool.query(`
+      SELECT id, name, company, phone FROM aura_companies WHERE group_name = 'customer' ORDER BY id ASC LIMIT 100
+    `);
+
     return res.json({
       success: true,
-      settings: rows[0] || {}
+      settings: rows[0] || {},
+      billers,
+      warehouses,
+      categories,
+      customers
     });
   } catch (error) {
     console.error('[POS] getPosSettings error:', error);
@@ -890,14 +1074,37 @@ exports.getPosSettings = async (req, res) => {
   }
 };
 
-// 19. Update POS Settings
+// 19. Update POS Settings (Matching AURA_v1 Pos.php settings update)
 exports.updatePosSettings = async (req, res) => {
   try {
-    const settings = req.body;
-    await pool.query(`
-      UPDATE aura_pos_settings SET ? WHERE pos_id = 1
-    `, [settings]);
-    return res.json({ success: true, message: 'POS settings updated successfully' });
+    const rawSettings = req.body || {};
+    
+    // Allowed columns in aura_pos_settings
+    const [columns] = await pool.query('DESCRIBE aura_pos_settings');
+    const validFields = new Set(columns.map(c => c.Field));
+    
+    const updateData = {};
+    for (const [key, val] of Object.entries(rawSettings)) {
+      if (validFields.has(key) && key !== 'pos_id') {
+        updateData[key] = val;
+      }
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      const keys = Object.keys(updateData);
+      const setClause = keys.map(k => `\`${k}\` = ?`).join(', ');
+      const values = keys.map(k => updateData[k]);
+      values.push(1); // WHERE pos_id = 1
+
+      await pool.query(`UPDATE aura_pos_settings SET ${setClause} WHERE pos_id = ?`, values);
+    }
+
+    const [updated] = await pool.query('SELECT * FROM aura_pos_settings WHERE pos_id = 1');
+    return res.json({
+      success: true,
+      message: 'POS settings updated successfully',
+      settings: updated[0] || {}
+    });
   } catch (error) {
     console.error('[POS] updatePosSettings error:', error);
     return res.status(500).json({ success: false, message: error.message });

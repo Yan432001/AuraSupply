@@ -25,6 +25,7 @@ import CategoriesPage from './CategoriesPage';
 import UnitsManagement from './UnitsManagement';
 import InventoryReport from './InventoryReport';
 import SalesReport from './SalesReport';
+import PosSettingsPage from './pos/PosSettingsPage';
 import AdminErrorBoundary from '../../components/common/AdminErrorBoundary';
 
 const AdminDashboardRouter = () => {
@@ -231,8 +232,13 @@ const AdminDashboardRouter = () => {
     return <AdminDashboard />;
   }
   
-  // If the menu is 'system-settings', 'settings', or 'pos-settings', render SystemSettings
-  if (menuKey === 'system-settings' || menuKey === 'settings' || menuKey === 'pos-settings') {
+  // If the menu is 'pos-settings', render dedicated PosSettingsPage matching AURA_v1
+  if (menuKey === 'pos-settings') {
+    return <PosSettingsPage />;
+  }
+
+  // If the menu is 'system-settings' or 'settings', render SystemSettings
+  if (menuKey === 'system-settings' || menuKey === 'settings') {
     return <SystemSettings />;
   }
   

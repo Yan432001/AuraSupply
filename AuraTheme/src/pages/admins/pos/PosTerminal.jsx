@@ -189,6 +189,26 @@ export default function PosTerminal() {
     { id: 3, name: 'VIP Diamond Member', phone: '010 333 444', email: 'vip@aura.com', points: 1540, deposit: 120.0 },
   ]);
 
+  // Master Biller & Warehouse Scoping (Matching AURA_v1 permissions)
+  const [billers, setBillers] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [selectedBillerId, setSelectedBillerId] = useState(null);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
+
+  const isSuperAdmin = useMemo(() => {
+    return Boolean(
+      user?.Owner ||
+      user?.Admin ||
+      user?.isOwner ||
+      user?.isAdmin ||
+      Number(user?.group_id) === 1 ||
+      Number(user?.group_id) === 2 ||
+      user?.role === 'owner' ||
+      user?.role === 'admin' ||
+      user?.role === 'developer'
+    );
+  }, [user]);
+
   // Order Adjustments
   const [orderDiscountValue, setOrderDiscountValue] = useState(0);
   const [orderDiscountType, setOrderDiscountType] = useState('fixed');
@@ -227,16 +247,84 @@ export default function PosTerminal() {
   const [viewCustomerModalVisible, setViewCustomerModalVisible] = useState(false);
   const [manualAddProductModalVisible, setManualAddProductModalVisible] = useState(false);
 
-  // Configuration defaults
-  const [posSettingsData] = useState({
+  // Configuration defaults loaded from aura_pos_settings
+  const [posSettingsData, setPosSettingsData] = useState({
     exchange_rate: KHR_EXCHANGE_RATE,
-    default_warehouse: 'HQ Warehouse',
-    default_customer: 'General Customer',
-    default_biller: 'SBC Solutions',
+    default_warehouse: 1,
+    default_customer: 1,
+    default_biller: 1,
     receipt_width: '80mm',
     auto_print: true,
     sound_effects: true,
+    pro_limit: 30,
   });
+
+  // Fetch POS Settings, Billers, Warehouses & Customer directory on mount
+  useEffect(() => {
+    axios
+      .get('/api/admin/pos/settings')
+      .then((res) => {
+        if (res.data?.success) {
+          const s = res.data.settings || {};
+          const bList = res.data.billers || [];
+          const wList = res.data.warehouses || [];
+          setBillers(bList);
+          setWarehouses(wList);
+          setPosSettingsData((prev) => ({ ...prev, ...s }));
+
+          if (res.data.customers && res.data.customers.length > 0) {
+            setCustomers(res.data.customers);
+          }
+
+          // Initial Biller: Restricted for standard biller user, selectable for Super Admin
+          let initialBillerId = null;
+          if (!isSuperAdmin && user?.biller_id) {
+            initialBillerId = Number(user.biller_id);
+          } else if (s.default_biller) {
+            initialBillerId = Number(s.default_biller);
+          } else if (bList.length > 0) {
+            initialBillerId = bList[0].id;
+          }
+          setSelectedBillerId(initialBillerId);
+
+          // Initial Warehouse: Linked store warehouse
+          let initialWarehouseId = null;
+          if (!isSuperAdmin && user?.warehouse_id) {
+            initialWarehouseId = Number(user.warehouse_id);
+          } else {
+            const matchedBiller = bList.find((b) => b.id === initialBillerId);
+            if (matchedBiller?.warehouse_id) {
+              initialWarehouseId = Number(matchedBiller.warehouse_id);
+            } else if (s.default_warehouse) {
+              initialWarehouseId = Number(s.default_warehouse);
+            } else if (wList.length > 0) {
+              initialWarehouseId = wList[0].id;
+            }
+          }
+          setSelectedWarehouseId(initialWarehouseId);
+          const wObj = wList.find((w) => w.id === initialWarehouseId);
+          if (wObj) setCurrentWarehouse(wObj.name);
+        }
+      })
+      .catch((err) => console.warn('[POS] Failed to load POS settings:', err));
+  }, [user, isSuperAdmin]);
+
+  const handleSelectBiller = (billerId) => {
+    setSelectedBillerId(billerId);
+    const matched = billers.find((b) => b.id === billerId);
+    if (matched && matched.warehouse_id) {
+      const wid = Number(matched.warehouse_id);
+      setSelectedWarehouseId(wid);
+      const wObj = warehouses.find((w) => w.id === wid);
+      if (wObj) setCurrentWarehouse(wObj.name);
+    }
+  };
+
+  const handleSelectWarehouse = (warehouseId) => {
+    setSelectedWarehouseId(warehouseId);
+    const wObj = warehouses.find((w) => w.id === warehouseId);
+    if (wObj) setCurrentWarehouse(wObj.name);
+  };
 
   // Real-time Clock
   useEffect(() => {
@@ -278,7 +366,8 @@ export default function PosTerminal() {
     setLoadingRegister(true);
     try {
       const currentUserId = user?.id || 1;
-      const res = await axios.get(`/api/admin/pos/register/current?user_id=${currentUserId}`);
+      const billerParam = selectedBillerId ? `&biller_id=${selectedBillerId}` : '';
+      const res = await axios.get(`/api/admin/pos/register/current?user_id=${currentUserId}${billerParam}`);
       if (res.data?.success && res.data?.isOpen && res.data?.register) {
         setCurrentRegister(res.data.register);
         setIsRegisterOpen(true);
@@ -296,7 +385,7 @@ export default function PosTerminal() {
     } finally {
       setLoadingRegister(false);
     }
-  }, [user]);
+  }, [user, selectedBillerId]);
 
   useEffect(() => {
     checkRegisterStatus();
@@ -316,6 +405,8 @@ export default function PosTerminal() {
       const payload = {
         cash_in_hand: cashVal,
         user_id: user?.id || 1,
+        biller_id: selectedBillerId || 1,
+        warehouse_id: selectedWarehouseId || 1,
         note: openRegisterNote || 'Shift opened from Creative POS Terminal',
       };
 
@@ -326,6 +417,8 @@ export default function PosTerminal() {
           id: res.data.register_id || Date.now(),
           date: new Date().toISOString(),
           user_id: user?.id || 1,
+          biller_id: selectedBillerId || 1,
+          warehouse_id: selectedWarehouseId || 1,
           cash_in_hand: cashVal,
           status: 'open',
           note: openRegisterNote || '',
@@ -405,12 +498,18 @@ export default function PosTerminal() {
     }
   };
 
-  // Catalog Fetching
+  // Catalog Fetching (Warehouse & Biller scoped matching AURA_v1)
   const fetchCatalog = useCallback(async () => {
     setLoadingProducts(true);
     try {
       const [prodRes, catRes] = await Promise.all([
-        axios.get('/api/admin/pos/products'),
+        axios.get('/api/admin/pos/products', {
+          params: {
+            warehouse_id: selectedWarehouseId,
+            biller_id: selectedBillerId,
+            limit: posSettingsData?.pro_limit || 30,
+          },
+        }),
         axios.get('/api/admin/pos/categories'),
       ]);
 
@@ -429,7 +528,7 @@ export default function PosTerminal() {
     } finally {
       setLoadingProducts(false);
     }
-  }, []);
+  }, [selectedWarehouseId, selectedBillerId, posSettingsData?.pro_limit]);
 
   useEffect(() => {
     if (isRegisterOpen) {
@@ -601,14 +700,18 @@ export default function PosTerminal() {
       return;
     }
 
+    const currentBiller = billers.find((b) => b.id === selectedBillerId);
+    const currentWh = warehouses.find((w) => w.id === selectedWarehouseId);
+
     const billInvoice = {
       isBillPreview: true,
       reference_no: `BILL-${Date.now().toString().slice(-6)}`,
       date: new Date().toISOString(),
       customer_name: selectedCustomerName,
-      biller_name: posSettingsData.default_biller || 'SBC Solutions',
-      biller_address: 'Phnom Penh, Cambodia',
-      biller_phone: '012 345 678',
+      biller_name: currentBiller?.name || currentBiller?.company || posSettingsData.default_biller || 'SBC Solutions',
+      biller_address: currentBiller?.address || 'Phnom Penh, Cambodia',
+      biller_phone: currentBiller?.phone || '012 345 678',
+      warehouse_name: currentWh?.name || currentWarehouse,
       items: cart,
       subtotal: cartSubtotal,
       discount_amount: discountAmount,
@@ -634,11 +737,14 @@ export default function PosTerminal() {
           ? checkoutData.payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
           : checkoutData.tenderedUSD || grandTotalUSD;
 
+      const currentBiller = billers.find((b) => b.id === selectedBillerId);
+      const currentWh = warehouses.find((w) => w.id === selectedWarehouseId);
+
       const payload = {
         customer_id: selectedCustomerId,
         customer_name: selectedCustomerName,
-        biller_id: 1,
-        warehouse_id: 1,
+        biller_id: selectedBillerId || 1,
+        warehouse_id: selectedWarehouseId || 1,
         items: cart,
         subtotal: cartSubtotal,
         discount_amount: discountAmount,
@@ -668,7 +774,8 @@ export default function PosTerminal() {
         reference_no: res.data?.reference_no || `POS-${Date.now().toString().slice(-6)}`,
         date: new Date().toISOString(),
         customer_name: selectedCustomerName,
-        biller_name: checkoutData.biller || posSettingsData.default_biller || 'SBC Solutions',
+        biller_name: currentBiller?.name || currentBiller?.company || checkoutData.biller || posSettingsData.default_biller || 'SBC Solutions',
+        warehouse_name: currentWh?.name || currentWarehouse,
         items: cart,
         subtotal: cartSubtotal,
         discount_amount: discountAmount,
@@ -806,6 +913,8 @@ export default function PosTerminal() {
         setOpenRegisterNote={setOpenRegisterNote}
         handleOpenRegisterSubmit={handleOpenRegisterSubmit}
         khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
+        billerName={billers.find((b) => b.id === selectedBillerId)?.name || user?.biller_name || 'Main Store'}
+        warehouseName={warehouses.find((w) => w.id === selectedWarehouseId)?.name || currentWarehouse}
         onExit={() => navigate('/admins')}
         t={t}
       />
@@ -841,6 +950,14 @@ export default function PosTerminal() {
         setSoundEnabled={setSoundEnabled}
         currentWarehouse={currentWarehouse}
         setCurrentWarehouse={setCurrentWarehouse}
+        billers={billers}
+        selectedBillerId={selectedBillerId}
+        onSelectBiller={handleSelectBiller}
+        warehouses={warehouses}
+        selectedWarehouseId={selectedWarehouseId}
+        onSelectWarehouse={handleSelectWarehouse}
+        isSuperAdmin={isSuperAdmin}
+        onOpenPosSettings={() => navigate('/admins/pos/settings')}
         onOpenShortcuts={() => setShortcutsModalVisible(true)}
         onOpenCalculator={() => setCalculatorModalVisible(true)}
         onOpenExpense={() => setAddExpenseModalVisible(true)}
@@ -1074,6 +1191,8 @@ export default function PosTerminal() {
         onFinalizePayment={handleFinalizePayment}
         isSubmittingSale={isSubmittingSale}
         selectedCustomerName={selectedCustomerName}
+        billers={billers}
+        selectedBillerId={selectedBillerId}
         t={t}
       />
 
