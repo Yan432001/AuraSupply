@@ -75,8 +75,9 @@ const PosCloseRegisterModal = ({
       styles={{ body: { padding: '24px 28px' } }}
     >
       {loadingSummary ? (
-        <div style={{ padding: 40, textAlign: 'center' }}>
-          <Spin size="large" tip="Calculating shift summary and cash reconciliation..." />
+        <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <Spin size="large" />
+          <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Calculating shift summary and cash reconciliation...</span>
         </div>
       ) : (
         <div>

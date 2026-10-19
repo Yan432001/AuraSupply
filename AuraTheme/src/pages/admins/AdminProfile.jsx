@@ -161,8 +161,9 @@ export default function AdminProfile() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Spin size="large" tip={t('loading_user_profile', 'Loading user profile...')} />
+      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+        <Spin size="large" />
+        <span style={{ fontSize: 13, color: '#64748b' }}>{t('loading_user_profile', 'Loading user profile...')}</span>
       </div>
     );
   }

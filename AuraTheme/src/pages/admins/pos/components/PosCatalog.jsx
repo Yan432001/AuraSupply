@@ -214,8 +214,9 @@ const PosCatalog = ({
         }}
       >
         {loadingProducts ? (
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Spin size="large" tip="Loading catalog..." />
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+            <Spin size="large" />
+            <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Loading catalog...</span>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

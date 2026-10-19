@@ -186,8 +186,9 @@ export default function Shops() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '100px 0' }}>
-        <Spin size="large" tip={t('loading_suppliers', 'Loading verified suppliers from database...')} />
+      <div style={{ textAlign: 'center', padding: '100px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        <Spin size="large" />
+        <span style={{ fontSize: 13, color: '#64748b' }}>{t('loading_suppliers', 'Loading verified suppliers from database...')}</span>
       </div>
     );
   }

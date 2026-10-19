@@ -134,8 +134,9 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '100px 20px', textAlign: 'center' }}>
-        <Spin size="large" tip={t('loading_product_details', 'Loading product details from database...')} />
+      <div style={{ padding: '100px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        <Spin size="large" />
+        <span style={{ fontSize: 13, color: '#64748b' }}>{t('loading_product_details', 'Loading product details from database...')}</span>
       </div>
     );
   }
