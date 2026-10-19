@@ -11,11 +11,9 @@ import axios from 'axios';
 
 // Contexts & Hooks
 import { useAuth } from '../../../contexts/AuthContext';
-import { useTheme } from '../../../contexts/ThemeContext';
-import { useTranslation, useLanguage } from '../../../contexts/LanguageContext';
-import { useAdminTheme } from '../../../hooks/useAdminTheme';
+import { useTranslation } from '../../../contexts/LanguageContext';
 
-// Modular Creative POS Components
+// Modular Creative POS Components matching cyspharma & AURA_v1
 import PosHeader from './components/PosHeader';
 import PosCart from './components/PosCart';
 import PosCatalog from './components/PosCatalog';
@@ -31,7 +29,6 @@ import PosMemberCardModal from './components/PosMemberCardModal';
 import PosCouponModal from './components/PosCouponModal';
 import PosCustomerStockModal from './components/PosCustomerStockModal';
 import PosPrintersModal from './components/PosPrintersModal';
-import PosSettingsModal from './components/PosSettingsModal';
 import PosAddExpenseModal from './components/PosAddExpenseModal';
 import PosShortcutsModal from './components/PosShortcutsModal';
 import PosCalculatorModal from './components/PosCalculatorModal';
@@ -127,9 +124,7 @@ export default function PosTerminal() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { themeMode, toggleThemeMode } = useTheme();
   const { t } = useTranslation();
-  const adminTheme = useAdminTheme();
 
   // 1. Clock, Sound & Fullscreen
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -204,19 +199,18 @@ export default function PosTerminal() {
   const [heldOrders, setHeldOrders] = useState([]);
   const [mobileCartDrawerOpen, setMobileCartDrawerOpen] = useState(false);
 
-  // 6. Checkout & Receipt State
+  // 6. Checkout & Receipt State (Matching cyspharma Finalize Sale)
   const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
   const [isSubmittingSale, setIsSubmittingSale] = useState(false);
   const [completedInvoice, setCompletedInvoice] = useState(null);
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
 
-  // 7. Auxiliary Specialized Feature Modals
+  // 7. Auxiliary Feature Modals
   const [memberCardModalVisible, setMemberCardModalVisible] = useState(false);
   const [couponModalVisible, setCouponModalVisible] = useState(false);
   const [customerStockModalVisible, setCustomerStockModalVisible] = useState(false);
   const [printersModalVisible, setPrintersModalVisible] = useState(false);
   const [salesHistoryModalVisible, setSalesHistoryModalVisible] = useState(false);
-  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [addExpenseModalVisible, setAddExpenseModalVisible] = useState(false);
   const [shortcutsModalVisible, setShortcutsModalVisible] = useState(false);
   const [calculatorModalVisible, setCalculatorModalVisible] = useState(false);
@@ -233,8 +227,8 @@ export default function PosTerminal() {
   const [viewCustomerModalVisible, setViewCustomerModalVisible] = useState(false);
   const [manualAddProductModalVisible, setManualAddProductModalVisible] = useState(false);
 
-  // POS Settings configuration state
-  const [posSettingsData, setPosSettingsData] = useState({
+  // Configuration defaults
+  const [posSettingsData] = useState({
     exchange_rate: KHR_EXCHANGE_RATE,
     default_warehouse: 'HQ Warehouse',
     default_customer: 'General Customer',
@@ -272,8 +266,7 @@ export default function PosTerminal() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
-    if (tab === 'settings') setSettingsModalVisible(true);
-    else if (tab === 'sales') setSalesHistoryModalVisible(true);
+    if (tab === 'sales') setSalesHistoryModalVisible(true);
     else if (tab === 'registers') setListRegistersModalVisible(true);
     else if (tab === 'today-sale') setTodaySaleModalVisible(true);
   }, [location.search]);
@@ -412,9 +405,7 @@ export default function PosTerminal() {
     }
   };
 
-  // =========================================================================
-  // CATALOG FETCHING & BARCODE SCANNER
-  // =========================================================================
+  // Catalog Fetching
   const fetchCatalog = useCallback(async () => {
     setLoadingProducts(true);
     try {
@@ -634,10 +625,15 @@ export default function PosTerminal() {
     setReceiptModalVisible(true);
   };
 
-  // Finalize Checkout & Create Sale
+  // Finalize Checkout & Create Sale (Matching cyspharma / AURA_v1 Finalize Sale)
   const handleFinalizePayment = async (checkoutData) => {
     setIsSubmittingSale(true);
     try {
+      const totalPaidSum =
+        checkoutData.payments && checkoutData.payments.length > 0
+          ? checkoutData.payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+          : checkoutData.tenderedUSD || grandTotalUSD;
+
       const payload = {
         customer_id: selectedCustomerId,
         customer_name: selectedCustomerName,
@@ -645,18 +641,25 @@ export default function PosTerminal() {
         warehouse_id: 1,
         items: cart,
         subtotal: cartSubtotal,
-        discount_amount: discountAmount + (parseFloat(checkoutData.couponDiscount) || 0),
+        discount_amount: discountAmount,
         tax_amount: taxAmount,
         shipping_amount: shippingFee,
-        grand_total: Math.max(0, grandTotalUSD - (parseFloat(checkoutData.couponDiscount) || 0)),
-        paid_amount: grandTotalUSD,
-        paid_by: checkoutData.paymentMethod,
+        grand_total: grandTotalUSD,
+        paid_amount: totalPaidSum,
+        paid_by: checkoutData.paymentMethod || 'Cash',
         tendered_usd: checkoutData.tenderedUSD,
         tendered_khr: checkoutData.tenderedKHR,
         change_usd: checkoutData.changeUSD,
+        change_khr: checkoutData.changeKHR,
+        payments: checkoutData.payments,
+        sale_note: checkoutData.sale_note || '',
+        staff_note: checkoutData.staff_note || '',
         payment_note: checkoutData.paymentNote || '',
-        coupon_code: checkoutData.couponCode || '',
         member_card_no: checkoutData.memberCardNo || '',
+        cheque_no: checkoutData.chequeNo || '',
+        cc_no: checkoutData.ccNo || '',
+        cc_holder: checkoutData.ccHolder || '',
+        cc_type: checkoutData.ccType || '',
         user_id: user?.id || 1,
       };
 
@@ -665,18 +668,20 @@ export default function PosTerminal() {
         reference_no: res.data?.reference_no || `POS-${Date.now().toString().slice(-6)}`,
         date: new Date().toISOString(),
         customer_name: selectedCustomerName,
-        biller_name: posSettingsData.default_biller || 'SBC Solutions',
+        biller_name: checkoutData.biller || posSettingsData.default_biller || 'SBC Solutions',
         items: cart,
         subtotal: cartSubtotal,
         discount_amount: discountAmount,
         tax_amount: taxAmount,
         shipping_amount: shippingFee,
         grand_total: grandTotalUSD,
-        paid: grandTotalUSD,
+        paid: totalPaidSum,
         tendered_usd: checkoutData.tenderedUSD,
         tendered_khr: checkoutData.tenderedKHR,
         change_usd: checkoutData.changeUSD,
+        change_khr: checkoutData.changeKHR,
         paid_by: checkoutData.paymentMethod,
+        payments: checkoutData.payments,
       };
 
       setCompletedInvoice(invoiceData);
@@ -708,7 +713,6 @@ export default function PosTerminal() {
   // Keyboard Shortcuts Listener
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Don't intercept if typing in an input
       const target = e.target;
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
@@ -747,7 +751,6 @@ export default function PosTerminal() {
         setCouponModalVisible(false);
         setCustomerStockModalVisible(false);
         setPrintersModalVisible(false);
-        setSettingsModalVisible(false);
         setAddExpenseModalVisible(false);
         setShortcutsModalVisible(false);
         setCalculatorModalVisible(false);
@@ -760,7 +763,6 @@ export default function PosTerminal() {
         setViewCustomerModalVisible(false);
         setManualAddProductModalVisible(false);
       } else if (!isInput && e.key.length === 1 && searchInputRef.current) {
-        // Auto-focus barcode / product search on keypress
         searchInputRef.current.focus();
       }
     };
@@ -780,13 +782,13 @@ export default function PosTerminal() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: themeMode === 'dark' ? '#0f172a' : '#f8fafc',
-          color: themeMode === 'dark' ? '#e2e8f0' : '#1e293b',
+          background: '#f8fafc',
+          color: '#1e293b',
           gap: 16,
         }}
       >
         <Spin size="large" />
-        <span style={{ fontSize: 15, fontWeight: 600 }}>Loading POS Cash Register session...</span>
+        <span style={{ fontSize: 15, fontWeight: 700 }}>Loading POS Cash Register session...</span>
       </div>
     );
   }
@@ -804,8 +806,6 @@ export default function PosTerminal() {
         setOpenRegisterNote={setOpenRegisterNote}
         handleOpenRegisterSubmit={handleOpenRegisterSubmit}
         khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         onExit={() => navigate('/admins')}
         t={t}
       />
@@ -813,7 +813,7 @@ export default function PosTerminal() {
   }
 
   // =========================================================================
-  // CREATIVE POS TERMINAL MAIN VIEW (Responsive Two-Column Desktop / Mobile Drawer)
+  // CREATIVE POS TERMINAL MAIN VIEW (High-Contrast Professional Theme)
   // =========================================================================
   return (
     <div
@@ -825,12 +825,12 @@ export default function PosTerminal() {
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        background: themeMode === 'dark' ? '#0b1120' : '#f1f5f9',
-        color: themeMode === 'dark' ? '#f8fafc' : '#0f172a',
+        background: '#f1f5f9',
+        color: '#0f172a',
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
       }}
     >
-      {/* 1. CREATIVE GLASSMORPHIC POS TOP HEADER */}
+      {/* 1. PROFESSIONAL POS TOP HEADER (No Dark/Light, No Theme Settings) */}
       <PosHeader
         user={user}
         currentRegister={currentRegister}
@@ -839,9 +839,6 @@ export default function PosTerminal() {
         toggleFullscreen={toggleFullscreen}
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
-        themeMode={themeMode}
-        toggleThemeMode={toggleThemeMode}
-        adminTheme={adminTheme}
         currentWarehouse={currentWarehouse}
         setCurrentWarehouse={setCurrentWarehouse}
         onOpenShortcuts={() => setShortcutsModalVisible(true)}
@@ -852,7 +849,6 @@ export default function PosTerminal() {
         onOpenListRegisters={() => setListRegistersModalVisible(true)}
         onOpenRegisterDetails={() => setRegisterDetailsVisible(true)}
         onOpenSalesHistory={() => setSalesHistoryModalVisible(true)}
-        onOpenSettings={() => setSettingsModalVisible(true)}
         onOpenMemberCards={() => setMemberCardModalVisible(true)}
         onOpenCoupons={() => setCouponModalVisible(true)}
         onOpenCustomerStocks={() => setCustomerStockModalVisible(true)}
@@ -881,7 +877,8 @@ export default function PosTerminal() {
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
-              borderRight: `1px solid ${themeMode === 'dark' ? 'rgba(51, 65, 85, 0.5)' : '#e2e8f0'}`,
+              borderRight: '1px solid #cbd5e1',
+              background: '#ffffff',
             }}
           >
             <PosCart
@@ -922,8 +919,6 @@ export default function PosTerminal() {
               grandTotal={grandTotalUSD}
               khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
               thbExchangeRate={THB_EXCHANGE_RATE}
-              themeMode={themeMode}
-              adminTheme={adminTheme}
               t={t}
             />
           </div>
@@ -954,8 +949,6 @@ export default function PosTerminal() {
             catalogViewMode={catalogViewMode}
             setCatalogViewMode={setCatalogViewMode}
             khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-            themeMode={themeMode}
-            adminTheme={adminTheme}
             t={t}
           />
         </div>
@@ -969,9 +962,8 @@ export default function PosTerminal() {
               left: 0,
               right: 0,
               padding: '10px 16px',
-              background: themeMode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(16px)',
-              borderTop: `1px solid ${themeMode === 'dark' ? '#334155' : '#e2e8f0'}`,
+              background: '#ffffff',
+              borderTop: '1px solid #cbd5e1',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -985,7 +977,7 @@ export default function PosTerminal() {
               </div>
               <div style={{ fontSize: 18, fontWeight: 800, color: '#2563eb' }}>
                 ${grandTotalUSD.toFixed(2)}{' '}
-                <span style={{ fontSize: 12, fontWeight: 500, color: '#64748b' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
                   (៛{(grandTotalUSD * (posSettingsData.exchange_rate || KHR_EXCHANGE_RATE)).toLocaleString()})
                 </span>
               </div>
@@ -1063,8 +1055,6 @@ export default function PosTerminal() {
           grandTotal={grandTotalUSD}
           khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
           thbExchangeRate={THB_EXCHANGE_RATE}
-          themeMode={themeMode}
-          adminTheme={adminTheme}
           t={t}
         />
       </Drawer>
@@ -1073,18 +1063,17 @@ export default function PosTerminal() {
       {/* ALL MODALS & DIALOGS FROM AURA_V1 POS VIEWS */}
       {/* ========================================================================= */}
 
-      {/* 1. CHECKOUT PAYMENT MODAL (Cash, ABA KHQR, Cards, Gift Cards, Coupons) */}
+      {/* 1. CHECKOUT PAYMENT MODAL (cyspharma / AURA_v1 Finalize Sale layout) */}
       <PosCheckoutModal
         visible={checkoutModalVisible}
         onClose={() => setCheckoutModalVisible(false)}
         grandTotal={grandTotalUSD}
+        cartItems={cart}
         khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
         thbExchangeRate={THB_EXCHANGE_RATE}
         onFinalizePayment={handleFinalizePayment}
         isSubmittingSale={isSubmittingSale}
         selectedCustomerName={selectedCustomerName}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1099,8 +1088,6 @@ export default function PosTerminal() {
         }}
         khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
         thbExchangeRate={THB_EXCHANGE_RATE}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1112,8 +1099,6 @@ export default function PosTerminal() {
         loadingSummary={loadingSummary}
         onConfirmClose={handleConfirmCloseRegister}
         isClosing={isClosingRegister}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1123,8 +1108,6 @@ export default function PosTerminal() {
         onClose={() => setRegisterDetailsVisible(false)}
         shiftSummary={shiftSummary}
         currentRegister={currentRegister}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1133,8 +1116,6 @@ export default function PosTerminal() {
         visible={todaySaleModalVisible}
         onClose={() => setTodaySaleModalVisible(false)}
         khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1146,7 +1127,6 @@ export default function PosTerminal() {
           setCurrentRegister(reg);
           setRegisterDetailsVisible(true);
         }}
-        themeMode={themeMode}
         t={t}
       />
 
@@ -1157,8 +1137,9 @@ export default function PosTerminal() {
         onReprintReceipt={async (sale) => {
           try {
             const res = await axios.get(`/api/admin/pos/sales/${sale.id}/receipt`);
-            if (res.data?.success && res.data?.invoice) {
-              setCompletedInvoice(res.data.invoice);
+            if (res.data?.success) {
+              const inv = res.data.invoice || (res.data.sale ? { ...res.data.sale, items: res.data.items, payments: res.data.payments } : sale);
+              setCompletedInvoice(inv);
               setReceiptModalVisible(true);
             } else {
               setCompletedInvoice(sale);
@@ -1169,7 +1150,6 @@ export default function PosTerminal() {
             setReceiptModalVisible(true);
           }
         }}
-        themeMode={themeMode}
         t={t}
       />
 
@@ -1180,7 +1160,6 @@ export default function PosTerminal() {
         onSelectCardForSale={(card) => {
           message.success(`Card #${card.card_no} selected for sale!`);
         }}
-        themeMode={themeMode}
         t={t}
       />
 
@@ -1193,7 +1172,6 @@ export default function PosTerminal() {
           setOrderDiscountType('fixed');
           message.success(`Coupon applied: $${coupon.value} off`);
         }}
-        themeMode={themeMode}
         t={t}
       />
 
@@ -1215,7 +1193,6 @@ export default function PosTerminal() {
           });
           message.success('Stock deposit item added to cart for redemption ($0)!');
         }}
-        themeMode={themeMode}
         t={t}
       />
 
@@ -1223,50 +1200,34 @@ export default function PosTerminal() {
       <PosPrintersModal
         visible={printersModalVisible}
         onClose={() => setPrintersModalVisible(false)}
-        themeMode={themeMode}
         t={t}
       />
 
-      {/* 12. POS SETTINGS MODAL (settings.php) */}
-      <PosSettingsModal
-        visible={settingsModalVisible}
-        onClose={() => setSettingsModalVisible(false)}
-        posSettingsData={posSettingsData}
-        onSaveSettings={(newSettings) => {
-          setPosSettingsData(newSettings);
-        }}
-        themeMode={themeMode}
-        t={t}
-      />
-
-      {/* 13. DRAWER EXPENSE MODAL */}
+      {/* 12. DRAWER EXPENSE MODAL */}
       <PosAddExpenseModal
         visible={addExpenseModalVisible}
         onClose={() => setAddExpenseModalVisible(false)}
         onAddExpense={(expense) => {
           message.success(`Drawer cash expense of $${expense.amount} recorded!`);
         }}
-        themeMode={themeMode}
         t={t}
       />
 
-      {/* 14. SHORTCUTS CHEATSHEET MODAL */}
+      {/* 13. SHORTCUTS CHEATSHEET MODAL */}
       <PosShortcutsModal
         visible={shortcutsModalVisible}
         onClose={() => setShortcutsModalVisible(false)}
-        themeMode={themeMode}
         t={t}
       />
 
-      {/* 15. CALCULATOR MODAL */}
+      {/* 14. CALCULATOR MODAL */}
       <PosCalculatorModal
         visible={calculatorModalVisible}
         onClose={() => setCalculatorModalVisible(false)}
-        themeMode={themeMode}
         t={t}
       />
 
-      {/* 16. IN-CART EDIT ITEM MODAL */}
+      {/* 15. IN-CART EDIT ITEM MODAL */}
       <EditItemModal
         visible={editItemModalVisible}
         onClose={() => {
@@ -1278,10 +1239,9 @@ export default function PosTerminal() {
           setCart((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
           message.success('Item details updated');
         }}
-        themeMode={themeMode}
       />
 
-      {/* 17. IN-CART ITEM COMMENT MODAL */}
+      {/* 16. IN-CART ITEM COMMENT MODAL */}
       <ItemCommentModal
         visible={itemCommentModalVisible}
         onClose={() => {
@@ -1295,7 +1255,7 @@ export default function PosTerminal() {
         }}
       />
 
-      {/* 18. ORDER DISCOUNT MODAL */}
+      {/* 17. ORDER DISCOUNT MODAL */}
       <OrderDiscountModal
         visible={orderDiscountModalVisible}
         onClose={() => setOrderDiscountModalVisible(false)}
@@ -1307,7 +1267,7 @@ export default function PosTerminal() {
         }}
       />
 
-      {/* 19. ORDER TAX MODAL */}
+      {/* 18. ORDER TAX MODAL */}
       <OrderTaxModal
         visible={orderTaxModalVisible}
         onClose={() => setOrderTaxModalVisible(false)}
@@ -1317,7 +1277,7 @@ export default function PosTerminal() {
         }}
       />
 
-      {/* 20. DELIVERY FEE MODAL */}
+      {/* 19. DELIVERY FEE MODAL */}
       <DeliveryFeeModal
         visible={deliveryFeeModalVisible}
         onClose={() => setDeliveryFeeModalVisible(false)}
@@ -1327,7 +1287,7 @@ export default function PosTerminal() {
         }}
       />
 
-      {/* 21. QUICK ADD CUSTOMER MODAL */}
+      {/* 20. QUICK ADD CUSTOMER MODAL */}
       <QuickAddCustomerModal
         visible={quickAddCustomerVisible}
         onClose={() => setQuickAddCustomerVisible(false)}
@@ -1339,14 +1299,14 @@ export default function PosTerminal() {
         }}
       />
 
-      {/* 22. VIEW CUSTOMER DETAILS MODAL */}
+      {/* 21. VIEW CUSTOMER DETAILS MODAL */}
       <CustomerDetailsModal
         visible={viewCustomerModalVisible}
         onClose={() => setViewCustomerModalVisible(false)}
         customer={customers.find((c) => c.id === selectedCustomerId)}
       />
 
-      {/* 23. QUICK ADD NON-CATALOG PRODUCT */}
+      {/* 22. QUICK ADD NON-CATALOG PRODUCT */}
       <ManualAddProductModal
         visible={manualAddProductModalVisible}
         onClose={() => setManualAddProductModalVisible(false)}

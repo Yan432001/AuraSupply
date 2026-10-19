@@ -14,14 +14,11 @@ import {
   FullscreenOutlined,
   FullscreenExitOutlined,
   SoundOutlined,
-  MoonOutlined,
-  SunOutlined,
   ClockCircleOutlined,
   UnorderedListOutlined,
   DollarCircleOutlined,
   BarChartOutlined,
   PlusCircleOutlined,
-  SettingOutlined,
   LockOutlined,
   LogoutOutlined,
   GiftOutlined,
@@ -42,9 +39,6 @@ const PosHeader = ({
   toggleFullscreen,
   soundEnabled,
   setSoundEnabled,
-  themeMode,
-  toggleThemeMode,
-  adminTheme,
   currentWarehouse,
   setCurrentWarehouse,
   warehouses = ['HQ Warehouse', 'Branch 1', 'Main Store'],
@@ -56,7 +50,6 @@ const PosHeader = ({
   onOpenListRegisters,
   onOpenRegisterDetails,
   onOpenSalesHistory,
-  onOpenSettings,
   onOpenMemberCards,
   onOpenCoupons,
   onOpenCustomerStocks,
@@ -67,11 +60,10 @@ const PosHeader = ({
 }) => {
   const topBtnStyle = {
     height: 36,
-    borderRadius: 10,
-    background: themeMode === 'dark' ? 'rgba(30, 41, 59, 0.7)' : 'rgba(255, 255, 255, 0.85)',
-    color: adminTheme?.text || (themeMode === 'dark' ? '#f8fafc' : '#1e293b'),
-    border: `1px solid ${themeMode === 'dark' ? 'rgba(51, 65, 85, 0.6)' : 'rgba(226, 232, 240, 0.8)'}`,
-    backdropFilter: 'blur(12px)',
+    borderRadius: 8,
+    background: '#f8fafc',
+    color: '#1e293b',
+    border: '1px solid #cbd5e1',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -79,53 +71,48 @@ const PosHeader = ({
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
-    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+    padding: '0 10px',
+    transition: 'all 0.15s ease',
   };
 
+  // Dropdown menu items for all AURA_v1 POS views
   const moreMenuItems = [
     {
       key: 'register-details',
       icon: <DollarCircleOutlined style={{ color: '#10b981' }} />,
-      label: t('register_details', 'Register Shift Details'),
+      label: t('register_details', 'Register Details (Audit Current Shift)'),
       onClick: onOpenRegisterDetails,
     },
     {
-      key: 'list-registers',
-      icon: <UnorderedListOutlined style={{ color: '#3b82f6' }} />,
-      label: t('registers_list', 'Registers Shift History'),
-      onClick: onOpenListRegisters,
-    },
-    {
       key: 'today-sale',
-      icon: <BarChartOutlined style={{ color: '#06b6d4' }} />,
-      label: t('today_sale', "Today's Sales Summary"),
+      icon: <BarChartOutlined style={{ color: '#0ea5e9' }} />,
+      label: t('today_sale', "Today's Sales Performance"),
       onClick: onOpenTodaySale,
     },
     {
-      key: 'today-profit',
-      icon: <BarChartOutlined style={{ color: '#8b5cf6' }} />,
-      label: t('today_profit', "Today's Gross Profit"),
-      onClick: onOpenTodayProfit,
+      key: 'registers-list',
+      icon: <UnorderedListOutlined style={{ color: '#8b5cf6' }} />,
+      label: t('registers', 'Registers History & Archive'),
+      onClick: onOpenListRegisters,
     },
     { type: 'divider' },
     {
-      key: 'customer-stocks',
-      icon: <InboxOutlined style={{ color: '#f59e0b' }} />,
-      label: t('customer_stocks', 'Customer Stocks / Held Items'),
-      onClick: onOpenCustomerStocks,
-    },
-    {
       key: 'member-cards',
-      icon: <GiftOutlined style={{ color: '#ec4899' }} />,
-      label: t('member_cards', 'Member & VIP Loyalty Cards'),
+      icon: <GiftOutlined style={{ color: '#f59e0b' }} />,
+      label: t('member_cards', 'Member & VIP Cards (Loyalty)'),
       onClick: onOpenMemberCards,
     },
     {
       key: 'coupons',
-      icon: <TagOutlined style={{ color: '#14b8a6' }} />,
-      label: t('coupons_vouchers', 'Coupons & Vouchers'),
+      icon: <TagOutlined style={{ color: '#ec4899' }} />,
+      label: t('coupons', 'Promotional Coupons & Vouchers'),
       onClick: onOpenCoupons,
+    },
+    {
+      key: 'customer-stocks',
+      icon: <InboxOutlined style={{ color: '#14b8a6' }} />,
+      label: t('customer_stocks', 'Customer Held Goods & Deposits'),
+      onClick: onOpenCustomerStocks,
     },
     {
       key: 'printers',
@@ -137,7 +124,7 @@ const PosHeader = ({
     {
       key: 'sales-history',
       icon: <HistoryOutlined style={{ color: '#3b82f6' }} />,
-      label: t('sales_history', 'POS Invoices Archive'),
+      label: t('sales_history', 'POS Invoices Archive & Reprint'),
       onClick: onOpenSalesHistory,
     },
     {
@@ -151,12 +138,6 @@ const PosHeader = ({
       icon: <CalculatorOutlined style={{ color: '#f59e0b' }} />,
       label: t('calculator', 'Financial Scratchpad Calculator'),
       onClick: onOpenCalculator,
-    },
-    {
-      key: 'settings',
-      icon: <SettingOutlined style={{ color: '#64748b' }} />,
-      label: t('pos_settings', 'POS Hardware & General Settings'),
-      onClick: onOpenSettings,
     },
     { type: 'divider' },
     {
@@ -172,15 +153,15 @@ const PosHeader = ({
       style={{
         height: 60,
         padding: '0 16px',
-        background: themeMode === 'dark' ? '#0f172a' : '#ffffff',
-        borderBottom: `1px solid ${themeMode === 'dark' ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0'}`,
+        background: '#ffffff',
+        borderBottom: '1px solid #e2e8f0',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
       }}
     >
       {/* LEFT: Branding + Cashier Status + Warehouse Selector */}
@@ -191,12 +172,12 @@ const PosHeader = ({
             style={{
               width: 38,
               height: 38,
-              borderRadius: 12,
-              background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #06b6d4 100%)',
+              borderRadius: 10,
+              background: '#2563eb',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
+              boxShadow: '0 4px 10px rgba(37, 99, 235, 0.3)',
               color: '#ffffff',
               fontSize: 18,
             }}
@@ -204,11 +185,11 @@ const PosHeader = ({
             <ShopOutlined />
           </div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: '-0.3px', color: themeMode === 'dark' ? '#f8fafc' : '#0f172a', lineHeight: 1.1 }}>
+            <div style={{ fontSize: 16, fontWeight: 900, letterSpacing: '-0.3px', color: '#0f172a', lineHeight: 1.1 }}>
               AURA <span style={{ color: '#2563eb' }}>POS</span>
             </div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-              Creative Edition
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+              Terminal Edition
             </div>
           </div>
         </div>
@@ -227,7 +208,7 @@ const PosHeader = ({
 
         {/* Register Active Badge */}
         {currentRegister && (
-          <Tooltip title={`Shift opened at ${new Date(currentRegister.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} with Cash in Hand: $${parseFloat(currentRegister.cash_in_hand || 0).toFixed(2)}`}>
+          <Tooltip title={`Shift opened with Cash in Hand: $${parseFloat(currentRegister.cash_in_hand || 0).toFixed(2)}`}>
             <Tag
               color="success"
               style={{
@@ -239,12 +220,12 @@ const PosHeader = ({
                 alignItems: 'center',
                 gap: 5,
                 margin: 0,
-                border: 'none',
-                background: 'rgba(16, 185, 129, 0.12)',
-                color: '#10b981',
+                border: '1px solid #86efac',
+                background: '#f0fdf4',
+                color: '#15803d',
               }}
             >
-              <Badge status="processing" color="#10b981" />
+              <Badge status="processing" color="#16a34a" />
               <span>Shift #{currentRegister.id}</span>
             </Tag>
           </Tooltip>
@@ -259,17 +240,17 @@ const PosHeader = ({
           gap: 12,
           padding: '4px 14px',
           borderRadius: 20,
-          background: themeMode === 'dark' ? 'rgba(30, 41, 59, 0.5)' : '#f8fafc',
-          border: `1px solid ${themeMode === 'dark' ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0'}`,
+          background: '#f8fafc',
+          border: '1px solid #cbd5e1',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: themeMode === 'dark' ? '#cbd5e1' : '#475569' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#334155' }}>
           <ClockCircleOutlined style={{ color: '#2563eb' }} />
           <span>
             {currentTime.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} • {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </span>
         </div>
-        <div style={{ width: 1, height: 16, background: themeMode === 'dark' ? '#334155' : '#cbd5e1' }} />
+        <div style={{ width: 1, height: 16, background: '#cbd5e1' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Avatar
             size={22}
@@ -281,13 +262,13 @@ const PosHeader = ({
           >
             {user?.username ? user.username.charAt(0).toUpperCase() : 'C'}
           </Avatar>
-          <span style={{ fontSize: 12, fontWeight: 700, color: themeMode === 'dark' ? '#f1f5f9' : '#1e293b' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>
             {user?.name || user?.username || 'Cashier'}
           </span>
         </div>
       </div>
 
-      {/* RIGHT: Quick Action Utilities, Fullscreen, Audio, Theme, Menu, Close Register, Exit */}
+      {/* RIGHT: Quick Action Utilities, Fullscreen, Audio, Menu, Close Register, Exit (NO Dark/Light, NO Theme Setting) */}
       <Space size={8}>
         {/* Keyboard Shortcuts Trigger */}
         <Tooltip title="Keyboard Shortcuts (F1)">
@@ -296,10 +277,10 @@ const PosHeader = ({
             onClick={onOpenShortcuts}
             style={topBtnStyle}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = themeMode === 'dark' ? 'rgba(51, 65, 85, 0.6)' : 'rgba(226, 232, 240, 0.8)')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
           >
             <QuestionCircleOutlined />
-            <span style={{ fontSize: 11, color: '#94a3b8' }}>F1</span>
+            <span style={{ fontSize: 11, color: '#64748b' }}>F1</span>
           </button>
         </Tooltip>
 
@@ -310,7 +291,7 @@ const PosHeader = ({
             onClick={onOpenCalculator}
             style={topBtnStyle}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = themeMode === 'dark' ? 'rgba(51, 65, 85, 0.6)' : 'rgba(226, 232, 240, 0.8)')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
           >
             <CalculatorOutlined />
           </button>
@@ -323,25 +304,12 @@ const PosHeader = ({
             onClick={() => setSoundEnabled(!soundEnabled)}
             style={{
               ...topBtnStyle,
-              color: soundEnabled ? '#10b981' : '#94a3b8',
+              color: soundEnabled ? '#16a34a' : '#94a3b8',
             }}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = themeMode === 'dark' ? 'rgba(51, 65, 85, 0.6)' : 'rgba(226, 232, 240, 0.8)')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
           >
             <SoundOutlined />
-          </button>
-        </Tooltip>
-
-        {/* Dark/Light Mode Switcher */}
-        <Tooltip title={themeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
-          <button
-            type="button"
-            onClick={toggleThemeMode}
-            style={topBtnStyle}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = themeMode === 'dark' ? 'rgba(51, 65, 85, 0.6)' : 'rgba(226, 232, 240, 0.8)')}
-          >
-            {themeMode === 'dark' ? <SunOutlined style={{ color: '#f59e0b' }} /> : <MoonOutlined style={{ color: '#6366f1' }} />}
           </button>
         </Tooltip>
 
@@ -352,61 +320,53 @@ const PosHeader = ({
             onClick={toggleFullscreen}
             style={topBtnStyle}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = themeMode === 'dark' ? 'rgba(51, 65, 85, 0.6)' : 'rgba(226, 232, 240, 0.8)')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
           >
             {isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
           </button>
         </Tooltip>
 
-        {/* More Actions Dropdown (All AURA_v1 POS views in 1 click) */}
+        {/* More Actions Dropdown (All AURA_v1 POS views) */}
         <Dropdown menu={{ items: moreMenuItems }} trigger={['click']} placement="bottomRight">
           <Button
             type="default"
             style={{
               ...topBtnStyle,
               padding: '0 12px',
-              background: '#2563eb',
-              color: '#ffffff',
-              border: 'none',
-              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
+              border: '1px solid #cbd5e1',
             }}
           >
-            <UnorderedListOutlined />
-            <span>{t('pos_menu', 'POS Functions')}</span>
+            <SwapOutlined />
+            <span>POS Actions</span>
           </Button>
         </Dropdown>
 
-        {/* Quick Close Register Shift */}
-        <Tooltip title="Close Current Cash Register Shift">
-          <Button
-            danger
-            type="dashed"
-            onClick={onInitiateCloseRegister}
-            style={{
-              height: 36,
-              borderRadius: 10,
-              fontWeight: 700,
-              fontSize: 12,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-            }}
-          >
-            <LockOutlined />
-            <span>{t('close_shift', 'Close Shift')}</span>
-          </Button>
-        </Tooltip>
+        {/* Close Register Shift Button */}
+        <Button
+          danger
+          type="primary"
+          icon={<LockOutlined />}
+          onClick={onInitiateCloseRegister}
+          style={{
+            height: 36,
+            borderRadius: 8,
+            fontWeight: 700,
+            fontSize: 13,
+            boxShadow: '0 2px 8px rgba(239, 68, 68, 0.25)',
+          }}
+        >
+          Close Register
+        </Button>
 
         {/* Exit to Admin Dashboard */}
         <Tooltip title="Exit POS to Admin Dashboard">
           <Button
-            type="text"
-            onClick={onExit}
+            type="default"
             icon={<LogoutOutlined />}
+            onClick={onExit}
             style={{
-              height: 36,
-              borderRadius: 10,
-              color: '#94a3b8',
+              ...topBtnStyle,
+              padding: '0 10px',
             }}
           />
         </Tooltip>

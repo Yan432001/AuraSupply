@@ -546,22 +546,44 @@ exports.checkoutPosSale = async (req, res) => {
       }
     }
 
-    // 3. Record payment in aura_payments
-    const finalPaid = parseFloat(paid_amount) || parseFloat(grand_total) || 0;
-    await connection.query(
-      `INSERT INTO aura_payments 
-       (date, sale_id, reference_no, amount, paid_by, type, created_by, note, pos_paid) 
-       VALUES (NOW(), ?, ?, ?, ?, 'received', ?, ?, ?)`,
-      [
-        saleId,
-        `PAY-${referenceNo}`,
-        finalPaid,
-        paid_by || 'Cash',
-        uid,
-        payment_note || 'POS Receipt Checkout',
-        finalPaid
-      ]
-    );
+    // 3. Record payments in aura_payments (Multi-tender split or single payment)
+    const paymentRecords = Array.isArray(req.body.payments) && req.body.payments.length > 0
+      ? req.body.payments
+      : [{
+          amount: parseFloat(paid_amount) || parseFloat(grand_total) || 0,
+          paid_by: paid_by || 'Cash',
+          note: payment_note || 'POS Receipt Checkout',
+          cc_no: req.body.cc_no || '',
+          cc_holder: req.body.cc_holder || '',
+          paying_gift_card_no: req.body.member_card_no || '',
+          cheque_no: req.body.cheque_no || ''
+        }];
+
+    let totalPaidSum = 0;
+    for (let idx = 0; idx < paymentRecords.length; idx++) {
+      const p = paymentRecords[idx];
+      const pAmt = parseFloat(p.amount) || 0;
+      totalPaidSum += pAmt;
+      const payRef = `PAY-${referenceNo}-${idx + 1}`;
+
+      await connection.query(
+        `INSERT INTO aura_payments 
+         (date, sale_id, reference_no, amount, paid_by, type, created_by, note, pos_paid, cc_no, cc_holder, cheque_no) 
+         VALUES (NOW(), ?, ?, ?, ?, 'received', ?, ?, ?, ?, ?, ?)`,
+        [
+          saleId,
+          payRef,
+          pAmt,
+          p.paid_by || 'Cash',
+          uid,
+          p.note || payment_note || 'POS Tender',
+          pAmt,
+          p.cc_no || p.paying_gift_card_no || '',
+          p.cc_holder || '',
+          p.cheque_no || ''
+        ]
+      );
+    }
 
     await connection.commit();
 
@@ -578,9 +600,10 @@ exports.checkoutPosSale = async (req, res) => {
         tax_amount: parseFloat(tax_amount) || 0,
         shipping_amount: parseFloat(shipping_amount) || 0,
         grand_total: parseFloat(grand_total) || 0,
-        paid_amount: finalPaid,
-        change_amount: Math.max(0, finalPaid - (parseFloat(grand_total) || 0)),
-        paid_by: paid_by || 'Cash',
+        paid_amount: totalPaidSum,
+        change_amount: Math.max(0, totalPaidSum - (parseFloat(grand_total) || 0)),
+        paid_by: paymentRecords.map(p => p.paid_by).join(', ') || 'Cash',
+        payments: paymentRecords,
         items: items || []
       }
     });

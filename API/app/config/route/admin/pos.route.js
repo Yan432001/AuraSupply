@@ -50,6 +50,7 @@ module.exports = (app) => {
 
   // POS Checkout & Order Finalization
   app.post("/api/admin/pos/checkout", checkoutPosSale);
+  app.post("/api/admin/pos/sales/checkout", checkoutPosSale);
   app.get("/api/admin/pos/sales/:id/receipt", getSaleReceipt);
 
   // POS Member Cards / Loyalty
