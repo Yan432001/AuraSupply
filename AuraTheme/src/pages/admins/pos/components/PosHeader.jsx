@@ -30,6 +30,8 @@ import {
   HistoryOutlined,
   SwapOutlined,
   SettingOutlined,
+  DesktopOutlined,
+  FireOutlined,
 } from '@ant-design/icons';
 
 const PosHeader = ({
@@ -133,6 +135,19 @@ const PosHeader = ({
       icon: <SettingOutlined style={{ color: '#2563eb' }} />,
       label: t('pos_settings', 'POS Settings & Hardware Config'),
       onClick: onOpenPosSettings,
+    },
+    { type: 'divider' },
+    {
+      key: 'view-bill',
+      icon: <DesktopOutlined style={{ color: '#0284c7' }} />,
+      label: 'Customer Display / View Bill (Pole Screen)',
+      onClick: () => window.open('/pos/view-bill', '_blank', 'width=1280,height=800'),
+    },
+    {
+      key: 'kitchen-display',
+      icon: <FireOutlined style={{ color: '#ea580c' }} />,
+      label: 'Kitchen Display System (KDS)',
+      onClick: () => window.open('/pos/kitchen', '_blank'),
     },
     { type: 'divider' },
     {
@@ -369,6 +384,34 @@ const PosHeader = ({
             onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
           >
             {isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+          </button>
+        </Tooltip>
+
+        {/* Customer Pole Display / View Bill Screen */}
+        <Tooltip title="Launch Customer Display Screen (Dual Monitor)">
+          <button
+            type="button"
+            className="pos-press"
+            onClick={() => window.open('/pos/view-bill', '_blank', 'width=1280,height=800')}
+            style={topBtnStyle}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#0284c7')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
+          >
+            <DesktopOutlined style={{ color: '#0284c7' }} />
+          </button>
+        </Tooltip>
+
+        {/* Kitchen Display System (KDS) */}
+        <Tooltip title="Launch Kitchen Display System (KDS)">
+          <button
+            type="button"
+            className="pos-press"
+            onClick={() => window.open('/pos/kitchen', '_blank')}
+            style={topBtnStyle}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#ea580c')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
+          >
+            <FireOutlined style={{ color: '#ea580c' }} />
           </button>
         </Tooltip>
 

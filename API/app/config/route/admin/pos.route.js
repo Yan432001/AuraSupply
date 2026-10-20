@@ -31,6 +31,9 @@ const {
   savePrinter,
   deletePrinter,
   getSaleReceipt,
+  getKitchenOrders,
+  updateKitchenItemStatus,
+  completeKitchenOrder,
 } = require("../../../controller/admin/pos.controller");
 
 module.exports = (app) => {
@@ -84,6 +87,11 @@ module.exports = (app) => {
   app.post("/api/admin/pos/suspend", suspendSale);
   app.get("/api/admin/pos/suspended", getSuspendedSales);
   app.delete("/api/admin/pos/suspended/:id", deleteSuspendedSale);
+
+  // POS Kitchen Display System (KDS - Matching AURA_v1 Pos.php kitchen())
+  app.get("/api/admin/pos/kitchen/orders", getKitchenOrders);
+  app.put("/api/admin/pos/kitchen/item-status", updateKitchenItemStatus);
+  app.put("/api/admin/pos/kitchen/order-done", completeKitchenOrder);
 
   // POS Completed Sales History
   app.get("/api/admin/pos/sales", getPosSales);

@@ -566,7 +566,11 @@ exports.checkoutPosSale = async (req, res) => {
       paid_amount,
       paid_by,
       payment_note,
-      user_id
+      user_id,
+      table_id,
+      table_name,
+      suspend_note,
+      suspended_bill_id
     } = req.body;
 
     const scope = await resolveScope(req);
@@ -611,15 +615,16 @@ exports.checkoutPosSale = async (req, res) => {
     const finalOrderDiscount = parseFloat(order_discount) || (parseFloat(discount_amount) > finalProductDiscount ? parseFloat(discount_amount) - finalProductDiscount : parseFloat(discount_amount) || 0);
     const finalTotalDiscount = finalProductDiscount + finalOrderDiscount;
     const finalOrderDiscountId = order_discount_id || (finalOrderDiscount > 0 ? String(finalOrderDiscount) : null);
+    const tableRecordNote = table_name || suspend_note || null;
 
-    // 1. Insert into aura_sales
+    // 1. Insert into aura_sales (records table_name into suspend_note matching AURA_v1)
     const [saleResult] = await connection.query(
       `INSERT INTO aura_sales 
        (date, reference_no, customer_id, customer, biller_id, warehouse_id, 
         total, product_discount, order_discount_id, order_discount, total_discount, 
         product_tax, order_tax, total_tax, shipping, grand_total, 
-        paid, sale_status, payment_status, pos, created_by, note)
-       VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, 'completed', 'paid', 1, ?, ?)`,
+        paid, sale_status, payment_status, pos, created_by, note, suspend_note)
+       VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, 'completed', 'paid', 1, ?, ?, ?)`,
       [
         referenceNo,
         cid,
@@ -637,11 +642,28 @@ exports.checkoutPosSale = async (req, res) => {
         parseFloat(grand_total) || 0,
         parseFloat(paid_amount) || parseFloat(grand_total) || 0,
         uid,
-        payment_note || 'POS Terminal Sale'
+        payment_note || 'POS Terminal Sale',
+        tableRecordNote
       ]
     );
 
     const saleId = saleResult.insertId;
+
+    // 1b. If checkout fulfills an existing suspended/held table order, automatically clear it from suspended bills
+    if (suspended_bill_id) {
+      await connection.query('DELETE FROM aura_suspended_items WHERE suspend_id = ?', [suspended_bill_id]);
+      await connection.query('DELETE FROM aura_suspended_bills WHERE id = ?', [suspended_bill_id]);
+    } else if (table_name && table_name !== 'Takeaway / Walk-in') {
+      // Find open suspended bill for this table and clear it
+      const [matchedSuspended] = await connection.query(
+        'SELECT id FROM aura_suspended_bills WHERE table_name = ? OR suspend_note = ? ORDER BY id DESC LIMIT 1',
+        [table_name, table_name]
+      );
+      if (matchedSuspended.length > 0) {
+        await connection.query('DELETE FROM aura_suspended_items WHERE suspend_id = ?', [matchedSuspended[0].id]);
+        await connection.query('DELETE FROM aura_suspended_bills WHERE id = ?', [matchedSuspended[0].id]);
+      }
+    }
 
     // 2. Insert items into aura_sale_items and decrement product stock
     if (Array.isArray(items) && items.length > 0) {
@@ -963,19 +985,44 @@ exports.addPosExpense = async (req, res) => {
   }
 };
 
-// 14. Suspend Sale (Hold Bill)
+// 14. Suspend Sale (Hold Bill - Records Table & Customer Info)
 exports.suspendSale = async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    const { customer_id = 2, customer = 'General Customer', suspend_note = '', items = [], total = 0, biller_id = 1, warehouse_id = 1, user_id = 1 } = req.body;
-    const ref = `SUS-${Date.now().toString().slice(-6)}`;
+    const {
+      customer_id = 2,
+      customer = 'General Customer',
+      suspend_note = '',
+      table_name = '',
+      table_id = null,
+      items = [],
+      total = 0,
+      biller_id = 1,
+      warehouse_id = 1,
+      user_id = 1
+    } = req.body;
+
+    const ref = `HOLD-${Date.now().toString().slice(-6)}`;
+    const effectiveTableName = table_name || suspend_note || 'Walk-in';
 
     const [billResult] = await connection.query(`
       INSERT INTO aura_suspended_bills
-      (date, refer, customer_id, customer, count, total, biller_id, warehouse_id, created_by, suspend_note)
-      VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [ref, customer_id, customer, items.length, parseFloat(total) || 0, biller_id, warehouse_id, user_id, suspend_note]);
+      (date, refer, customer_id, customer, count, total, biller_id, warehouse_id, created_by, suspend_note, table_id, table_name, bill_status)
+      VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
+    `, [
+      ref,
+      customer_id,
+      customer,
+      items.length,
+      parseFloat(total) || 0,
+      biller_id,
+      warehouse_id,
+      user_id,
+      suspend_note || effectiveTableName,
+      table_id || null,
+      effectiveTableName
+    ]);
 
     const suspendId = billResult.insertId;
 
@@ -983,11 +1030,12 @@ exports.suspendSale = async (req, res) => {
       for (const item of items) {
         const qty = parseFloat(item.quantity) || 1;
         const price = parseFloat(item.unit_price || item.price) || 0;
+        const note = item.item_note || item.comment || '';
         await connection.query(`
           INSERT INTO aura_suspended_items
-          (suspend_id, product_id, product_code, product_name, unit_price, quantity, subtotal, product_unit_code)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [suspendId, item.id, item.code || '', item.name, price, qty, qty * price, item.unit_code || 'pcs']);
+          (suspend_id, product_id, product_code, product_name, unit_price, quantity, subtotal, product_unit_code, comment, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+        `, [suspendId, item.id, item.code || '', item.name, price, qty, qty * price, item.unit_code || 'pcs', note]);
       }
     }
 
@@ -996,7 +1044,8 @@ exports.suspendSale = async (req, res) => {
       success: true,
       message: 'Bill suspended successfully',
       suspend_id: suspendId,
-      reference: ref
+      reference: ref,
+      table_name: effectiveTableName
     });
   } catch (error) {
     await connection.rollback();
@@ -1011,7 +1060,8 @@ exports.suspendSale = async (req, res) => {
 exports.getSuspendedSales = async (req, res) => {
   try {
     const [bills] = await pool.query(`
-      SELECT b.*, u.username as cashier_username
+      SELECT b.*, u.username as cashier_username,
+             COALESCE(b.table_name, b.suspend_note, 'Walk-in') as display_table
       FROM aura_suspended_bills b
       LEFT JOIN aura_users u ON u.id = b.created_by
       ORDER BY b.id DESC LIMIT 50
@@ -1031,6 +1081,90 @@ exports.getSuspendedSales = async (req, res) => {
     });
   } catch (error) {
     console.error('[POS] getSuspendedSales error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 15b. Kitchen Display Feed (Matching AURA_v1 Pos.php kitchen())
+exports.getKitchenOrders = async (req, res) => {
+  try {
+    const scope = await resolveScope(req);
+    let whereClause = "1=1";
+    const params = [];
+    if (!scope.isSuperAdmin && scope.billerId) {
+      whereClause += " AND b.biller_id = ?";
+      params.push(scope.billerId);
+    }
+    if (!scope.isSuperAdmin && scope.warehouseId) {
+      whereClause += " AND b.warehouse_id = ?";
+      params.push(scope.warehouseId);
+    }
+
+    const [bills] = await pool.query(`
+      SELECT b.id, b.date, b.refer, b.customer_id, b.customer, b.count, b.total, 
+             b.table_id, COALESCE(b.table_name, b.suspend_note, 'Walk-in') as table_name,
+             b.biller_id, b.warehouse_id, b.created_by,
+             CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) AS raised_by,
+             u.username AS cashier_username
+      FROM aura_suspended_bills b
+      LEFT JOIN aura_users u ON u.id = b.created_by
+      WHERE ${whereClause}
+      ORDER BY b.id ASC
+    `, params);
+
+    const orders = [];
+    for (const b of bills) {
+      const [items] = await pool.query(`
+        SELECT si.id as s_id, si.suspend_id, si.product_id, si.product_code, si.product_name,
+               si.quantity, si.comment, COALESCE(si.status, 'pending') as status,
+               c.name as category_name,
+               CASE 
+                 WHEN LOWER(c.name) LIKE '%drink%' OR LOWER(c.name) LIKE '%beverage%' OR LOWER(c.name) LIKE '%bar%' OR LOWER(c.name) LIKE '%coffee%' THEN 'Bar'
+                 WHEN LOWER(c.name) LIKE '%bakery%' OR LOWER(c.name) LIKE '%dessert%' THEN 'Bakery'
+                 WHEN LOWER(c.name) LIKE '%grill%' OR LOWER(c.name) LIKE '%bbq%' THEN 'Grill'
+                 ELSE 'Kitchen'
+               END as stock_type
+        FROM aura_suspended_items si
+        LEFT JOIN aura_products p ON p.id = si.product_id
+        LEFT JOIN aura_categories c ON c.id = p.category_id
+        WHERE si.suspend_id = ?
+        ORDER BY si.id ASC
+      `, [b.id]);
+
+      orders.push({
+        ...b,
+        items
+      });
+    }
+
+    return res.json({ success: true, orders });
+  } catch (error) {
+    console.error('[POS] getKitchenOrders error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 15c. Update Kitchen Item Status (toggle pending/ready/done)
+exports.updateKitchenItemStatus = async (req, res) => {
+  try {
+    const { item_id, status = 'completed' } = req.body;
+    await pool.query('UPDATE aura_suspended_items SET status = ? WHERE id = ?', [status, item_id]);
+    return res.json({ success: true, message: 'Item status updated', status });
+  } catch (error) {
+    console.error('[POS] updateKitchenItemStatus error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 15d. Complete Entire Kitchen Order Ticket (Done)
+exports.completeKitchenOrder = async (req, res) => {
+  try {
+    const { order_id } = req.body;
+    await pool.query("UPDATE aura_suspended_items SET status = 'completed' WHERE suspend_id = ?", [order_id]);
+    await pool.query("UPDATE aura_suspended_bills SET bill_status = 'ready' WHERE id = ?", [order_id]);
+    return res.json({ success: true, message: 'Kitchen ticket marked as ready / done' });
+  } catch (error) {
+    console.error('[POS] completeKitchenOrder error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -1099,23 +1233,38 @@ exports.getPosSales = async (req, res) => {
 // 18. Get POS Settings & Hardware / Configuration Master Data
 exports.getPosSettings = async (req, res) => {
   try {
+    const scope = await resolveScope(req);
     const [rows] = await pool.query('SELECT * FROM aura_pos_settings LIMIT 1');
     
-    // Fetch billers with linked warehouse and branding colors
-    const [billers] = await pool.query(`
+    // Fetch billers (scoped if standard biller/branch user)
+    let billerQuery = `
       SELECT c.id, c.name, c.company, c.name_kh, c.company_kh, c.code, c.warehouse_id, 
              c.theme_color, c.vat_no, c.phone, c.email, c.address, c.address_kh, c.logo, c.logo_url,
              w.name as warehouse_name, w.code as warehouse_code
       FROM aura_companies c
       LEFT JOIN aura_warehouses w ON w.id = c.warehouse_id
       WHERE (c.group_name = 'biller' OR c.company_type = 'branch') AND (c.status = 'active' OR c.status IS NULL)
-      ORDER BY c.id ASC
-    `);
+    `;
+    const billerParams = [];
+    if (!scope.isSuperAdmin && scope.billerId) {
+      billerQuery += ' AND c.id = ?';
+      billerParams.push(scope.billerId);
+    }
+    billerQuery += ' ORDER BY c.id ASC';
+    const [billers] = await pool.query(billerQuery, billerParams);
 
-    // Fetch active warehouses
-    const [warehouses] = await pool.query(`
-      SELECT id, name, code, address FROM aura_warehouses ORDER BY id ASC
-    `);
+    // Fetch active warehouses (scoped to biller's own warehouse if standard biller)
+    let warehouseQuery = 'SELECT id, name, code, address FROM aura_warehouses';
+    const whParams = [];
+    if (!scope.isSuperAdmin && scope.warehouseId) {
+      warehouseQuery += ' WHERE id = ?';
+      whParams.push(scope.warehouseId);
+    } else if (!scope.isSuperAdmin && scope.billerId && billers.length > 0 && billers[0].warehouse_id) {
+      warehouseQuery += ' WHERE id = ?';
+      whParams.push(billers[0].warehouse_id);
+    }
+    warehouseQuery += ' ORDER BY id ASC';
+    const [warehouses] = await pool.query(warehouseQuery, whParams);
 
     // Fetch catalog categories
     const [categories] = await pool.query(`

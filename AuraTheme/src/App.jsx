@@ -46,6 +46,8 @@ import AdminProfile from './pages/admins/AdminProfile';
 import ModernAuraLogin from './pages/admins/auth/ModernAuraLogin';
 import PosTerminal from './pages/admins/pos/PosTerminal';
 import PosSettingsPage from './pages/admins/pos/PosSettingsPage';
+import PosViewBill from './pages/admins/pos/PosViewBill';
+import PosKitchenDisplay from './pages/admins/pos/PosKitchenDisplay';
 import { AdminModulesProvider } from './contexts/AdminModulesContext';
 
 // E-Menu Telegram Mini App Layout & Views
@@ -122,6 +124,10 @@ const AppContent = () => {
         <Route path="register" element={<Register />} />
       </Route>
 
+      {/* Standalone Fullscreen POS Secondary & Kitchen Displays */}
+      <Route path="/pos/view-bill" element={<PosViewBill />} />
+      <Route path="/pos/kitchen" element={<PosKitchenDisplay />} />
+
       {/* 4. Admin Management Routes */}
       <Route path="/admins" element={<ThemedAdminLayout />}>
         <Route index element={<AdminDashboardRouter />} />
@@ -129,6 +135,8 @@ const AppContent = () => {
         <Route path="dashboard" element={<AdminDashboardRouter />} />
         <Route path="pos" element={<PosTerminal />} />
         <Route path="pos/settings" element={<PosSettingsPage />} />
+        <Route path="pos/view-bill" element={<PosViewBill />} />
+        <Route path="pos/kitchen" element={<PosKitchenDisplay />} />
         <Route path="profile" element={<AdminProfile />} />
         <Route path="products" element={<AdminProducts />} />
         <Route path="products/add" element={<AdminProducts />} />

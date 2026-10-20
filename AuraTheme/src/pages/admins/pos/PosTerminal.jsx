@@ -671,8 +671,46 @@ export default function PosTerminal() {
     return Math.max(0, total);
   }, [cartSubtotal, orderDiscountAmount, taxAmount, shippingFee]);
 
-  // Hold Order (Hold Bill)
-  const handleHoldOrder = () => {
+  // Synchronize Live Cart state for Customer Pole Display (View Bill Screen)
+  useEffect(() => {
+    const displayPayload = {
+      items: cart,
+      customer_name: selectedCustomerName,
+      table_name: currentTable,
+      grossSubtotal,
+      productDiscountTotal,
+      orderDiscountAmount,
+      totalDiscount,
+      taxAmount,
+      shippingFee,
+      grandTotalUSD,
+      grandTotalKHR: Math.round(grandTotalUSD * (posSettingsData?.exchange_rate || KHR_EXCHANGE_RATE)),
+      timestamp: Date.now(),
+    };
+    try {
+      localStorage.setItem('aura_pos_customer_display', JSON.stringify(displayPayload));
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('aura_pos_cart');
+        bc.postMessage(displayPayload);
+        bc.close();
+      }
+    } catch (_) {}
+  }, [
+    cart,
+    selectedCustomerName,
+    currentTable,
+    grossSubtotal,
+    productDiscountTotal,
+    orderDiscountAmount,
+    totalDiscount,
+    taxAmount,
+    shippingFee,
+    grandTotalUSD,
+    posSettingsData?.exchange_rate,
+  ]);
+
+  // Hold Order (Hold Bill & Kitchen Dispatch)
+  const handleHoldOrder = async () => {
     if (cart.length === 0) {
       message.warning('Cart is empty, nothing to hold.');
       return;
@@ -685,6 +723,7 @@ export default function PosTerminal() {
       customer_id: selectedCustomerId,
       customer_name: selectedCustomerName,
       table: currentTable,
+      table_name: currentTable,
       cart: [...cart],
       total: grandTotalUSD,
       orderDiscountValue,
@@ -696,9 +735,25 @@ export default function PosTerminal() {
     const nextHolds = [newHold, ...heldOrders];
     setHeldOrders(nextHolds);
     localStorage.setItem('aura_pos_held_orders', JSON.stringify(nextHolds));
+
+    // Persist to backend for Kitchen Display System (KDS) & other cashier terminals
+    try {
+      await axios.post('/api/admin/pos/suspend', {
+        customer_id: selectedCustomerId,
+        customer: selectedCustomerName,
+        table_name: currentTable,
+        suspend_note: currentTable,
+        items: cart,
+        total: grandTotalUSD,
+        biller_id: selectedBillerId,
+        warehouse_id: selectedWarehouseId,
+        user_id: user?.id || 1,
+      });
+    } catch (_) {}
+
     clearCart();
     playPosAudio('success', soundEnabled);
-    message.success(`Sale placed on hold (#${newHold.reference})`);
+    message.success(`Sale placed on hold (#${newHold.reference}) for ${currentTable}`);
   };
 
   const resumeHeldOrder = (holdId) => {
@@ -812,6 +867,9 @@ export default function PosTerminal() {
         cc_no: checkoutData.ccNo || '',
         cc_holder: checkoutData.ccHolder || '',
         cc_type: checkoutData.ccType || '',
+        table_name: currentTable,
+        table_id: null,
+        suspend_note: currentTable,
         user_id: user?.id || 1,
       };
 
@@ -821,6 +879,7 @@ export default function PosTerminal() {
         date: new Date().toISOString(),
         customer_name: selectedCustomerName,
         customer: selectedCustomerName,
+        table_name: currentTable,
         items: cart,
         subtotal: cartSubtotal,
         discount_amount: discountAmount,
@@ -1087,13 +1146,13 @@ export default function PosTerminal() {
           />
         </div>
 
-        {/* RIGHT: ORDER DISPLAY AREA (CART, TOTALS, AND CHECKOUT) - ENLARGED */}
+        {/* RIGHT: ORDER DISPLAY AREA (CART, TOTALS, AND CHECKOUT) - PROPORTIONAL 38% SPLIT */}
         {isDesktop && (
           <div
             style={{
-              width: 540,
-              minWidth: 500,
-              maxWidth: 620,
+              width: '38%',
+              minWidth: 460,
+              maxWidth: 600,
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
