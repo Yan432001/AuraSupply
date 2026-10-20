@@ -588,12 +588,12 @@ export default function PosTerminal() {
   };
 
   // Cart Operations
-  const updateItemQuantity = (id, delta) => {
+  const updateItemQuantity = (idOrIndex, newQtyOrDelta) => {
     setCart((prev) =>
       prev
-        .map((item) => {
-          if (item.id === id) {
-            const nextQty = Math.max(0, item.quantity + delta);
+        .map((item, idx) => {
+          if (item.id === idOrIndex || idx === idOrIndex) {
+            const nextQty = Math.max(0, typeof newQtyOrDelta === 'number' ? newQtyOrDelta : (item.quantity || 1) + 1);
             return nextQty > 0 ? { ...item, quantity: nextQty } : null;
           }
           return item;
@@ -602,8 +602,19 @@ export default function PosTerminal() {
     );
   };
 
-  const removeItemFromCart = (id) => {
-    setCart((prev) => prev.filter((item) => item.id !== id));
+  const handleUpdateCartItem = (idOrIndex, updatedFields) => {
+    setCart((prev) =>
+      prev.map((item, idx) => {
+        if (item.id === idOrIndex || idx === idOrIndex) {
+          return { ...item, ...updatedFields };
+        }
+        return item;
+      })
+    );
+  };
+
+  const removeItemFromCart = (idOrIndex) => {
+    setCart((prev) => prev.filter((item, idx) => item.id !== idOrIndex && idx !== idOrIndex));
   };
 
   const clearCart = () => {
@@ -856,23 +867,34 @@ export default function PosTerminal() {
       } else if (e.key === 'F2') {
         e.preventDefault();
         setQuickAddCustomerVisible(true);
-      } else if (e.key === 'F4') {
+      } else if (e.key === 'F3') {
         e.preventDefault();
-        if (cart.length > 0 && window.confirm('Clear all items in cart?')) {
-          clearCart();
-        }
+        setManualAddProductModalVisible(true);
+      } else if (e.key === 'F4' || (e.code === 'Space' && !isInput)) {
+        e.preventDefault();
+        if (cart.length > 0) setCheckoutModalVisible(true);
+      } else if (e.key === 'F6') {
+        e.preventDefault();
+        handlePrintBill();
       } else if (e.key === 'F7') {
         e.preventDefault();
         handleHoldOrder();
       } else if (e.key === 'F8') {
         e.preventDefault();
-        handlePrintBill();
+        if (cart.length > 0 && window.confirm('Clear all items in cart?')) {
+          clearCart();
+        }
       } else if (e.key === 'F9') {
         e.preventDefault();
-        if (cart.length > 0) setCheckoutModalVisible(true);
+        navigate('/admins/pos/settings');
       } else if (e.key === 'F10') {
         e.preventDefault();
         setCalculatorModalVisible((prev) => !prev);
+      } else if (!isInput && e.key === 'Enter') {
+        if (cart.length > 0 && !checkoutModalVisible) {
+          e.preventDefault();
+          setCheckoutModalVisible(true);
+        }
       } else if (e.key === 'Escape') {
         setCheckoutModalVisible(false);
         setReceiptModalVisible(false);
@@ -1044,9 +1066,9 @@ export default function PosTerminal() {
         {isDesktop && (
           <div
             style={{
-              width: 520,
-              minWidth: 480,
-              maxWidth: 580,
+              width: 540,
+              minWidth: 500,
+              maxWidth: 620,
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
@@ -1059,6 +1081,7 @@ export default function PosTerminal() {
             <PosCart
               cart={cart}
               updateItemQuantity={updateItemQuantity}
+              onUpdateCartItem={handleUpdateCartItem}
               removeItemFromCart={removeItemFromCart}
               clearCart={clearCart}
               selectedCustomerId={selectedCustomerId}
@@ -1163,6 +1186,7 @@ export default function PosTerminal() {
         <PosCart
           cart={cart}
           updateItemQuantity={updateItemQuantity}
+          onUpdateCartItem={handleUpdateCartItem}
           removeItemFromCart={removeItemFromCart}
           clearCart={clearCart}
           selectedCustomerId={selectedCustomerId}

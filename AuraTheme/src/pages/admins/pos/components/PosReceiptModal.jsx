@@ -47,8 +47,8 @@ const PosReceiptModal = ({
   adminTheme,
   t,
 }) => {
-  // Transfer state: 'default' (Default Invoice) vs 'tax' (Tax Invoice) vs 'thermal' (80mm Slip)
-  const [invoiceType, setInvoiceType] = useState('default');
+  // Transfer state: 'thermal' (POS Receipt 80mm - Default) vs 'tax' (Tax Invoice) vs 'default' (Default A4 Invoice)
+  const [invoiceType, setInvoiceType] = useState('thermal');
   const [selectedColor, setSelectedColor] = useState(null);
 
   if (!invoice) return null;
@@ -62,9 +62,9 @@ const PosReceiptModal = ({
     billerInfo?.theme_color ||
     '#2563eb';
 
-  // Toggle / Transfer back and forth button handler
+  // Toggle / Transfer back and forth button handler (POS Receipt <-> Tax Invoice)
   const handleTransferBackAndForth = () => {
-    setInvoiceType((prev) => (prev === 'tax' ? 'default' : 'tax'));
+    setInvoiceType((prev) => (prev === 'thermal' ? 'tax' : 'thermal'));
   };
 
   const totalUSD = parseFloat(invoice.grand_total || invoice.total || 0);
@@ -170,21 +170,23 @@ const PosReceiptModal = ({
               gap: 6,
             }}
           >
-            {invoiceType === 'tax' ? (
-              <span>⇄ Transfer to Default Invoice (វិក្កយបត្រធម្មតា)</span>
-            ) : (
+            {invoiceType === 'thermal' ? (
               <span>⇄ Transfer to Tax Invoice (វិក្កយបត្រអាករ)</span>
+            ) : invoiceType === 'tax' ? (
+              <span>⇄ Transfer to POS Receipt (វិក្កយបត្រម៉ាស៊ីន)</span>
+            ) : (
+              <span>⇄ Transfer to POS Receipt (វិក្កយបត្រម៉ាស៊ីន)</span>
             )}
           </Button>
 
-          {/* 2. Format Segmented Switcher */}
+          {/* 2. Format Segmented Switcher (POS Receipt First) */}
           <Segmented
             value={invoiceType}
             onChange={setInvoiceType}
             options={[
+              { label: '🧾 POS Receipt (80mm)', value: 'thermal' },
               { label: '📄 Default Invoice', value: 'default' },
               { label: '🏛️ Tax Invoice', value: 'tax' },
-              { label: '🧾 Thermal (80mm)', value: 'thermal' },
             ]}
             style={{ fontWeight: 600 }}
           />
@@ -733,6 +735,24 @@ const PosReceiptModal = ({
                 <span>Subtotal:</span>
                 <span>${parseFloat(invoice.subtotal || totalUSD).toFixed(2)}</span>
               </div>
+              {parseFloat(invoice.discount_amount || invoice.discount || 0) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Discount:</span>
+                  <span>-${parseFloat(invoice.discount_amount || invoice.discount).toFixed(2)}</span>
+                </div>
+              )}
+              {parseFloat(invoice.tax_amount || invoice.tax || 0) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Tax / VAT (10%):</span>
+                  <span>+${parseFloat(invoice.tax_amount || invoice.tax).toFixed(2)}</span>
+                </div>
+              )}
+              {parseFloat(invoice.shipping_amount || invoice.shipping || 0) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Delivery / Shipping:</span>
+                  <span>+${parseFloat(invoice.shipping_amount || invoice.shipping).toFixed(2)}</span>
+                </div>
+              )}
               <div style={{ borderTop: '1px solid #000', margin: '4px 0', paddingTop: 4 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 900 }}>
                   <span>TOTAL (USD):</span>

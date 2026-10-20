@@ -893,5 +893,86 @@ body.admin-active.theme-dark {
   background: rgba(148, 163, 184, 0.6);
 }
 
+/* ==========================================================================
+   7. CREATIVE & USER-FRIENDLY POS TERMINAL STYLING & MICRO-INTERACTIONS
+   ========================================================================== */
+.pos-press {
+  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.12s ease !important;
+}
+.pos-press:active {
+  transform: scale(0.96) !important;
+}
+
+.pos-product-card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease !important;
+  will-change: transform;
+}
+.pos-product-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 12px 24px -4px rgba(37, 99, 235, 0.12), 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+  border-color: #3b82f6 !important;
+}
+.pos-product-card .pos-card-img {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.pos-product-card:hover .pos-card-img {
+  transform: scale(1.08) !important;
+}
+
+.pos-add-btn {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.pos-add-btn:active {
+  transform: scale(0.88) !important;
+}
+
+.pos-category-pill {
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.pos-category-pill:hover:not(.active) {
+  transform: translateY(-1px);
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+.pos-category-pill.active {
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+}
+
+.pos-stepper-btn {
+  transition: all 0.12s ease !important;
+}
+.pos-stepper-btn:hover {
+  background: rgba(37, 99, 235, 0.1) !important;
+  color: #2563eb !important;
+}
+.pos-stepper-btn:active {
+  transform: scale(0.9) !important;
+}
+
+.pos-checkout-btn {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #0284c7 100%) !important;
+  background-size: 200% 200% !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.pos-checkout-btn:hover:not(:disabled) {
+  background-position: 100% 100% !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45) !important;
+}
+.pos-checkout-btn:active:not(:disabled) {
+  transform: scale(0.98) !important;
+}
+
+@keyframes posPulseDot {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.pos-pulse-dot {
+  animation: posPulseDot 2s infinite ease-in-out;
+}
+
+
 
 

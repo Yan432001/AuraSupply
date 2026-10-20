@@ -316,6 +316,7 @@ const PosHeader = ({
         <Tooltip title="Keyboard Shortcuts (F1)">
           <button
             type="button"
+            className="pos-press"
             onClick={onOpenShortcuts}
             style={topBtnStyle}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
@@ -327,9 +328,10 @@ const PosHeader = ({
         </Tooltip>
 
         {/* Scratchpad Calculator */}
-        <Tooltip title="Financial Calculator">
+        <Tooltip title="Financial Calculator (F10)">
           <button
             type="button"
+            className="pos-press"
             onClick={onOpenCalculator}
             style={topBtnStyle}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
@@ -343,6 +345,7 @@ const PosHeader = ({
         <Tooltip title={soundEnabled ? 'Audio Beep Enabled' : 'Audio Beep Muted'}>
           <button
             type="button"
+            className="pos-press"
             onClick={() => setSoundEnabled(!soundEnabled)}
             style={{
               ...topBtnStyle,
@@ -359,6 +362,7 @@ const PosHeader = ({
         <Tooltip title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}>
           <button
             type="button"
+            className="pos-press"
             onClick={toggleFullscreen}
             style={topBtnStyle}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
@@ -369,9 +373,10 @@ const PosHeader = ({
         </Tooltip>
 
         {/* POS Settings & Hardware */}
-        <Tooltip title={t('pos_settings', 'POS Settings & Hardware Config')}>
+        <Tooltip title={t('pos_settings', 'POS Settings & Hardware Config (F9)')}>
           <button
             type="button"
+            className="pos-press"
             onClick={onOpenPosSettings}
             style={topBtnStyle}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
@@ -385,6 +390,7 @@ const PosHeader = ({
         <Dropdown menu={{ items: moreMenuItems }} trigger={['click']} placement="bottomRight">
           <Button
             type="default"
+            className="pos-press"
             style={{
               ...topBtnStyle,
               padding: '0 12px',
@@ -401,6 +407,7 @@ const PosHeader = ({
           danger
           type="primary"
           icon={<LockOutlined />}
+          className="pos-press"
           onClick={onInitiateCloseRegister}
           style={{
             height: 36,
@@ -418,6 +425,7 @@ const PosHeader = ({
           <Button
             type="default"
             icon={<LogoutOutlined />}
+            className="pos-press"
             onClick={onExit}
             style={{
               ...topBtnStyle,

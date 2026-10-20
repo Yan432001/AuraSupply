@@ -34,6 +34,7 @@ import {
 const PosCart = ({
   cart,
   updateItemQuantity,
+  onUpdateCartItem,
   removeItemFromCart,
   clearCart,
   selectedCustomerId,
@@ -230,179 +231,297 @@ const PosCart = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {cart.map((item, index) => {
               const lineTotal = ((parseFloat(item.unit_price || 0) * (item.quantity || 1)) - (parseFloat(item.item_discount || 0) * (item.quantity || 1)));
+
+              // Calculate special instruction / comment count
+              const commentCount = (() => {
+                if (Array.isArray(item.comments) && item.comments.length > 0) return item.comments.length;
+                const note = item.item_note || item.comment || '';
+                if (!note.trim()) return 0;
+                return note.split(/[,;\n]/).filter((s) => s.trim().length > 0).length || 1;
+              })();
+
               return (
                 <div
                   key={`${item.id}-${index}`}
                   style={{
-                    padding: '10px 12px',
-                    borderRadius: 12,
-                    background: isDark ? 'rgba(30, 41, 59, 0.5)' : '#ffffff',
+                    padding: '12px 14px',
+                    borderRadius: 14,
+                    background: isDark ? 'rgba(30, 41, 59, 0.6)' : '#ffffff',
                     border: `1px solid ${isDark ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0'}`,
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 6,
+                    gap: 8,
                     transition: 'all 0.15s ease',
-                    boxShadow: isDark ? 'none' : '0 2px 6px rgba(0,0,0,0.02)',
+                    boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)',
                   }}
                 >
-                  {/* Item Row 1: Name, Code, Badges, Remove Button */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ flex: 1, paddingRight: 8 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#f8fafc' : '#0f172a', lineHeight: 1.2 }}>
+                  {/* Item Row 1: Name, Code, Badges, Comments, Action Tools */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: isDark ? '#f8fafc' : '#0f172a', lineHeight: 1.25 }}>
                         {item.name}
                       </div>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 3 }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 3, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>{item.code}</span>
                         {item.unit_name && (
-                          <Tag style={{ fontSize: 10, borderRadius: 4, margin: 0, padding: '0 4px', background: isDark ? '#1e293b' : '#f1f5f9' }}>
+                          <Tag style={{ fontSize: 10, borderRadius: 4, margin: 0, padding: '0 5px', background: isDark ? '#1e293b' : '#f1f5f9' }}>
                             {item.unit_name}
                           </Tag>
                         )}
                         {item.item_discount > 0 && (
-                          <Tag color="red" style={{ fontSize: 10, borderRadius: 4, margin: 0, padding: '0 4px' }}>
+                          <Tag color="red" style={{ fontSize: 10, borderRadius: 4, margin: 0, padding: '0 4px', fontWeight: 700 }}>
                             -${parseFloat(item.item_discount).toFixed(2)} off
                           </Tag>
                         )}
                       </div>
-                      {item.item_note && (
-                        <div style={{ fontSize: 11, color: '#0284c7', fontStyle: 'italic', marginTop: 2 }}>
-                          💬 {item.item_note}
+
+                      {/* Comment tags below item title */}
+                      {commentCount > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                          {(item.item_note || item.comment).split(/[,;\n]/).map((n, i) => n.trim() && (
+                            <Tag
+                              key={i}
+                              color="success"
+                              style={{ borderRadius: 6, fontSize: 10.5, margin: 0, padding: '1px 6px', fontWeight: 600 }}
+                            >
+                              💬 {n.trim()}
+                            </Tag>
+                          ))}
                         </div>
                       )}
                     </div>
 
-                    {/* Remove Action */}
-                    <button
-                      type="button"
-                      onClick={() => removeItemFromCart(index)}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#ef4444',
-                        cursor: 'pointer',
-                        padding: 4,
-                        fontSize: 14,
-                        opacity: 0.8,
-                      }}
-                      title="Remove item"
-                    >
-                      <DeleteOutlined />
-                    </button>
-                  </div>
+                    {/* Action Tools: Comment (with Count Badge), Edit Pencil, Delete */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                      {/* Comment Icon with Comment Count Badge */}
+                      <Tooltip title={commentCount > 0 ? `${commentCount} Special Note(s)` : 'Add cooking / special note (cmModal)'}>
+                        <Badge count={commentCount} size="small" offset={[2, -2]}>
+                          <button
+                            type="button"
+                            onClick={() => onCommentItem(item, index)}
+                            style={{
+                              background: commentCount > 0 ? 'rgba(5, 150, 105, 0.12)' : 'transparent',
+                              border: `1px solid ${commentCount > 0 ? '#059669' : isDark ? '#334155' : '#cbd5e1'}`,
+                              color: commentCount > 0 ? '#059669' : '#64748b',
+                              cursor: 'pointer',
+                              fontSize: 13,
+                              width: 28,
+                              height: 28,
+                              borderRadius: 7,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <CommentOutlined />
+                          </button>
+                        </Badge>
+                      </Tooltip>
 
-                  {/* Item Row 2: Price, Quantity Stepper, Line Total, Modifier Tools */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 2 }}>
-                    {/* Unit Price */}
-                    <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#cbd5e1' : '#475569' }}>
-                      ${parseFloat(item.unit_price || 0).toFixed(2)}
-                    </div>
-
-                    {/* Quantity Stepper */}
-                    <div
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        background: isDark ? '#1e293b' : '#f1f5f9',
-                        borderRadius: 8,
-                        padding: '2px 4px',
-                        border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`,
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => updateItemQuantity(index, (item.quantity || 1) - 1)}
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 6,
-                          background: 'transparent',
-                          border: 'none',
-                          color: isDark ? '#f8fafc' : '#0f172a',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <MinusOutlined style={{ fontSize: 10 }} />
-                      </button>
-
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity || 1}
-                        onChange={(e) => updateItemQuantity(index, parseFloat(e.target.value) || 1)}
-                        style={{
-                          width: 38,
-                          textAlign: 'center',
-                          background: 'transparent',
-                          border: 'none',
-                          fontWeight: 800,
-                          fontSize: 13,
-                          color: isDark ? '#f8fafc' : '#0f172a',
-                          outline: 'none',
-                        }}
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => updateItemQuantity(index, (item.quantity || 1) + 1)}
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 6,
-                          background: 'transparent',
-                          border: 'none',
-                          color: isDark ? '#f8fafc' : '#0f172a',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <PlusOutlined style={{ fontSize: 10 }} />
-                      </button>
-                    </div>
-
-                    {/* Line Total & Tool Icons */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Tooltip title="Edit item unit, price or discount (prModal)">
+                      {/* Pencil Edit Icon (for advanced modal details) */}
+                      <Tooltip title="Advanced Item Details (prModal)">
                         <button
                           type="button"
                           onClick={() => onEditItem(item, index)}
                           style={{
                             background: 'transparent',
-                            border: 'none',
+                            border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
                             color: '#64748b',
                             cursor: 'pointer',
                             fontSize: 12,
-                            padding: 2,
+                            width: 28,
+                            height: 28,
+                            borderRadius: 7,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
                         >
                           <EditOutlined />
                         </button>
                       </Tooltip>
 
-                      <Tooltip title="Add item cooking / special note (cmModal)">
-                        <button
-                          type="button"
-                          onClick={() => onCommentItem(item, index)}
+                      {/* Remove Item Button */}
+                      <button
+                        type="button"
+                        onClick={() => removeItemFromCart(index)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          fontSize: 14,
+                          width: 28,
+                          height: 28,
+                          borderRadius: 7,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: 0.85,
+                        }}
+                        title="Remove item"
+                      >
+                        <DeleteOutlined />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Item Row 2: Direct Price & Discount Adjustments (NO PENCIL NEEDED) + Quantity Stepper + Line Total */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, paddingTop: 2 }}>
+                    {/* Direct Price & Discount Controls */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {/* Direct Unit Price Input */}
+                      <Tooltip title="Directly adjust unit price without opening pencil modal">
+                        <div
                           style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: '#64748b',
-                            cursor: 'pointer',
-                            fontSize: 12,
-                            padding: 2,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            background: isDark ? '#1e293b' : '#f8fafc',
+                            border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`,
+                            borderRadius: 8,
+                            padding: '1px 6px',
                           }}
                         >
-                          <CommentOutlined />
-                        </button>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginRight: 2 }}>$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.unit_price ?? ''}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              if (onUpdateCartItem) {
+                                onUpdateCartItem(index, { unit_price: val });
+                              }
+                            }}
+                            style={{
+                              width: 58,
+                              background: 'transparent',
+                              border: 'none',
+                              outline: 'none',
+                              fontWeight: 700,
+                              fontSize: 12.5,
+                              color: isDark ? '#f8fafc' : '#0f172a',
+                            }}
+                          />
+                        </div>
                       </Tooltip>
 
-                      <span style={{ fontSize: 14, fontWeight: 800, color: '#2563eb' }}>
+                      {/* Direct Item Discount Input */}
+                      <Tooltip title="Directly apply item discount ($) without opening pencil modal">
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            background: item.item_discount > 0 ? 'rgba(239, 68, 68, 0.08)' : isDark ? '#1e293b' : '#f8fafc',
+                            border: `1px solid ${item.item_discount > 0 ? '#fca5a5' : isDark ? '#334155' : '#cbd5e1'}`,
+                            borderRadius: 8,
+                            padding: '1px 6px',
+                          }}
+                        >
+                          <span style={{ fontSize: 10, fontWeight: 700, color: item.item_discount > 0 ? '#ef4444' : '#64748b', marginRight: 1 }}>-$</span>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            placeholder="Disc"
+                            value={item.item_discount || ''}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              if (onUpdateCartItem) {
+                                onUpdateCartItem(index, { item_discount: val });
+                              }
+                            }}
+                            style={{
+                              width: 44,
+                              background: 'transparent',
+                              border: 'none',
+                              outline: 'none',
+                              fontWeight: 700,
+                              fontSize: 12,
+                              color: item.item_discount > 0 ? '#ef4444' : isDark ? '#cbd5e1' : '#64748b',
+                            }}
+                          />
+                        </div>
+                      </Tooltip>
+                    </div>
+
+                    {/* Quantity Stepper & Line Total */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {/* Quantity Stepper */}
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          background: isDark ? '#1e293b' : '#f1f5f9',
+                          borderRadius: 9,
+                          padding: '2px',
+                          border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="pos-stepper-btn"
+                          onClick={() => updateItemQuantity(index, (item.quantity || 1) - 1)}
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 7,
+                            background: 'transparent',
+                            border: 'none',
+                            color: isDark ? '#f8fafc' : '#0f172a',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <MinusOutlined style={{ fontSize: 11 }} />
+                        </button>
+
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity || 1}
+                          onChange={(e) => updateItemQuantity(index, parseFloat(e.target.value) || 1)}
+                          style={{
+                            width: 38,
+                            textAlign: 'center',
+                            background: 'transparent',
+                            border: 'none',
+                            fontWeight: 800,
+                            fontSize: 13.5,
+                            color: isDark ? '#f8fafc' : '#0f172a',
+                            outline: 'none',
+                          }}
+                        />
+
+                        <button
+                          type="button"
+                          className="pos-stepper-btn"
+                          onClick={() => updateItemQuantity(index, (item.quantity || 1) + 1)}
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 7,
+                            background: 'transparent',
+                            border: 'none',
+                            color: isDark ? '#f8fafc' : '#0f172a',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <PlusOutlined style={{ fontSize: 11 }} />
+                        </button>
+                      </div>
+
+                      {/* Line Total */}
+                      <span style={{ fontSize: 15.5, fontWeight: 900, color: '#2563eb', minWidth: 68, textAlign: 'right' }}>
                         ${lineTotal.toFixed(2)}
                       </span>
                     </div>
@@ -426,14 +545,17 @@ const PosCart = ({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 10 }}>
           <Button
             size="small"
+            className="pos-press"
             icon={<PercentageOutlined />}
             onClick={onOpenOrderDiscount}
             style={{
               borderRadius: 8,
-              fontSize: 11,
-              fontWeight: 600,
+              fontSize: 11.5,
+              fontWeight: 700,
+              height: 30,
               color: orderDiscountValue > 0 ? '#ef4444' : undefined,
               borderColor: orderDiscountValue > 0 ? '#fca5a5' : undefined,
+              background: orderDiscountValue > 0 ? 'rgba(239, 68, 68, 0.08)' : undefined,
             }}
           >
             {orderDiscountValue > 0 ? `-${orderDiscountType === 'percentage' ? `${orderDiscountValue}%` : `$${orderDiscountValue}`}` : 'Discount'}
@@ -441,13 +563,17 @@ const PosCart = ({
 
           <Button
             size="small"
+            className="pos-press"
             icon={<TagOutlined />}
             onClick={onOpenOrderTax}
             style={{
               borderRadius: 8,
-              fontSize: 11,
-              fontWeight: 600,
+              fontSize: 11.5,
+              fontWeight: 700,
+              height: 30,
               color: orderTaxRate > 0 ? '#2563eb' : undefined,
+              borderColor: orderTaxRate > 0 ? '#93c5fd' : undefined,
+              background: orderTaxRate > 0 ? 'rgba(37, 99, 235, 0.08)' : undefined,
             }}
           >
             {orderTaxRate > 0 ? `Tax ${orderTaxRate}%` : 'Order Tax'}
@@ -455,13 +581,17 @@ const PosCart = ({
 
           <Button
             size="small"
+            className="pos-press"
             icon={<CarOutlined />}
             onClick={onOpenDeliveryFee}
             style={{
               borderRadius: 8,
-              fontSize: 11,
-              fontWeight: 600,
-              color: shippingFee > 0 ? '#f59e0b' : undefined,
+              fontSize: 11.5,
+              fontWeight: 700,
+              height: 30,
+              color: shippingFee > 0 ? '#d97706' : undefined,
+              borderColor: shippingFee > 0 ? '#fcd34d' : undefined,
+              background: shippingFee > 0 ? 'rgba(245, 158, 11, 0.08)' : undefined,
             }}
           >
             {shippingFee > 0 ? `+$${shippingFee}` : 'Shipping'}
@@ -469,7 +599,7 @@ const PosCart = ({
         </div>
 
         {/* Calculation Rows */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 12, color: '#64748b' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 12, color: '#64748b', marginBottom: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>Subtotal ({cart.reduce((s, i) => s + (i.quantity || 1), 0)} items)</span>
             <span style={{ fontWeight: 600, color: isDark ? '#cbd5e1' : '#334155' }}>${subtotal.toFixed(2)}</span>
@@ -497,73 +627,113 @@ const PosCart = ({
           )}
         </div>
 
-        <Divider style={{ margin: '8px 0', borderColor: isDark ? '#334155' : '#e2e8f0' }} />
-
-        {/* Grand Total Multi-Currency Display */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 10 }}>
+        {/* High-Contrast Creative Total Payable Card */}
+        <div
+          style={{
+            background: isDark ? 'rgba(30, 41, 59, 0.7)' : '#eff6ff',
+            border: `1px solid ${isDark ? '#334155' : '#bfdbfe'}`,
+            borderRadius: 14,
+            padding: '10px 14px',
+            marginBottom: 10,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.5px' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#2563eb', letterSpacing: '0.6px' }}>
               Total Payable
             </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#10b981' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#059669', marginTop: 2 }}>
               ៛{totalKHR.toLocaleString()} KHR <span style={{ fontSize: 11, color: '#64748b' }}>• ฿{totalTHB} THB</span>
             </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 900, color: '#2563eb', lineHeight: 1 }}>
-            ${grandTotal.toFixed(2)}
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 27, fontWeight: 900, color: '#1d4ed8', lineHeight: 1 }}>
+              ${grandTotal.toFixed(2)}
+            </div>
           </div>
         </div>
 
-        {/* 4. ACTION BUTTONS: Cancel, Hold, Print Bill, Checkout */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 6 }}>
-          <Button
-            danger
-            icon={<ClearOutlined />}
-            onClick={clearCart}
-            disabled={cart.length === 0}
-            style={{ borderRadius: 10, height: 38, fontWeight: 700, fontSize: 12 }}
-          >
-            Void
-          </Button>
+        {/* 4. ACTION BUTTONS: Void, Hold, Bill */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 8 }}>
+          <Tooltip title="Void / Clear Entire Cart (F8)">
+            <Button
+              danger
+              icon={<ClearOutlined />}
+              onClick={clearCart}
+              disabled={cart.length === 0}
+              className="pos-press"
+              style={{ borderRadius: 10, height: 38, fontWeight: 700, fontSize: 12 }}
+            >
+              Void <span style={{ fontSize: 10, opacity: 0.75 }}>F8</span>
+            </Button>
+          </Tooltip>
 
-          <Button
-            icon={<PauseCircleOutlined />}
-            onClick={onHoldOrder}
-            disabled={cart.length === 0}
-            style={{ borderRadius: 10, height: 38, fontWeight: 700, fontSize: 12, color: '#f59e0b', borderColor: '#fcd34d' }}
-          >
-            Hold
-          </Button>
+          <Tooltip title="Hold / Suspend Order (F7)">
+            <Button
+              icon={<PauseCircleOutlined />}
+              onClick={onHoldOrder}
+              disabled={cart.length === 0}
+              className="pos-press"
+              style={{ borderRadius: 10, height: 38, fontWeight: 700, fontSize: 12, color: '#d97706', borderColor: '#fcd34d' }}
+            >
+              Hold <span style={{ fontSize: 10, opacity: 0.75 }}>F7</span>
+            </Button>
+          </Tooltip>
 
-          <Button
-            icon={<PrinterOutlined />}
-            onClick={onPrintBill}
-            disabled={cart.length === 0}
-            style={{ borderRadius: 10, height: 38, fontWeight: 700, fontSize: 12, color: '#0284c7', borderColor: '#7dd3fc' }}
-          >
-            Bill
-          </Button>
+          <Tooltip title="Print Pre-check Table Bill (F6)">
+            <Button
+              icon={<PrinterOutlined />}
+              onClick={onPrintBill}
+              disabled={cart.length === 0}
+              className="pos-press"
+              style={{ borderRadius: 10, height: 38, fontWeight: 700, fontSize: 12, color: '#0284c7', borderColor: '#7dd3fc' }}
+            >
+              Bill <span style={{ fontSize: 10, opacity: 0.75 }}>F6</span>
+            </Button>
+          </Tooltip>
         </div>
 
-        {/* Primary Pay / Checkout Button */}
+        {/* Primary Pay / Checkout Button with Gradient & Shortcut Tag */}
         <Button
           type="primary"
           block
           size="large"
-          icon={<CreditCardOutlined />}
+          icon={<CreditCardOutlined style={{ fontSize: 18 }} />}
           onClick={onOpenCheckout}
           disabled={cart.length === 0}
+          className="pos-checkout-btn pos-press"
           style={{
-            height: 50,
+            height: 52,
             borderRadius: 14,
-            background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #0284c7 100%)',
             fontSize: 16,
             fontWeight: 800,
-            boxShadow: '0 6px 20px rgba(37, 99, 235, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            boxShadow: cart.length > 0 ? '0 8px 24px rgba(37, 99, 235, 0.45)' : 'none',
             border: 'none',
+            cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
           }}
         >
-          CHECK OUT (${grandTotal.toFixed(2)})
+          <span>CHECKOUT</span>
+          <span style={{ fontSize: 17, fontWeight: 900 }}>(${grandTotal.toFixed(2)})</span>
+          <Tag
+            style={{
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: 800,
+              padding: '1px 6px',
+              margin: 0,
+              background: 'rgba(255, 255, 255, 0.25)',
+              border: 'none',
+              color: '#ffffff',
+            }}
+          >
+            ↵ Enter / F4
+          </Tag>
         </Button>
       </div>
     </div>
