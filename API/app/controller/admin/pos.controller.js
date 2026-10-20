@@ -556,6 +556,9 @@ exports.checkoutPosSale = async (req, res) => {
       warehouse_id,
       items,
       subtotal,
+      product_discount,
+      order_discount,
+      order_discount_id,
       discount_amount,
       tax_amount,
       shipping_amount,
@@ -590,14 +593,33 @@ exports.checkoutPosSale = async (req, res) => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const referenceNo = `POS-${dateStr}-${randomSuffix}`;
 
+    // Compute accurate item discounts vs order discounts
+    let computedItemDiscounts = 0;
+    if (Array.isArray(items)) {
+      items.forEach((it) => {
+        const itPrice = parseFloat(it.unit_price || it.price) || 0;
+        const itQty = parseFloat(it.quantity) || 1;
+        let itDisc = parseFloat(it.item_discount) || 0;
+        if (it.discount_type === 'percent' && it.discount_val) {
+          itDisc = (itPrice * parseFloat(it.discount_val)) / 100;
+        }
+        computedItemDiscounts += itDisc * itQty;
+      });
+    }
+
+    const finalProductDiscount = parseFloat(product_discount) || computedItemDiscounts;
+    const finalOrderDiscount = parseFloat(order_discount) || (parseFloat(discount_amount) > finalProductDiscount ? parseFloat(discount_amount) - finalProductDiscount : parseFloat(discount_amount) || 0);
+    const finalTotalDiscount = finalProductDiscount + finalOrderDiscount;
+    const finalOrderDiscountId = order_discount_id || (finalOrderDiscount > 0 ? String(finalOrderDiscount) : null);
+
     // 1. Insert into aura_sales
     const [saleResult] = await connection.query(
       `INSERT INTO aura_sales 
        (date, reference_no, customer_id, customer, biller_id, warehouse_id, 
-        total, product_discount, order_discount, total_discount, 
+        total, product_discount, order_discount_id, order_discount, total_discount, 
         product_tax, order_tax, total_tax, shipping, grand_total, 
         paid, sale_status, payment_status, pos, created_by, note)
-       VALUES (NOW(), ?, ?, ?, ?, ?, ?, 0, ?, ?, 0, ?, ?, ?, ?, ?, 'completed', 'paid', 1, ?, ?)`,
+       VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, 'completed', 'paid', 1, ?, ?)`,
       [
         referenceNo,
         cid,
@@ -605,8 +627,10 @@ exports.checkoutPosSale = async (req, res) => {
         bid,
         wid,
         parseFloat(subtotal) || 0,
-        parseFloat(discount_amount) || 0,
-        parseFloat(discount_amount) || 0,
+        finalProductDiscount,
+        finalOrderDiscountId,
+        finalOrderDiscount,
+        finalTotalDiscount,
         parseFloat(tax_amount) || 0,
         parseFloat(tax_amount) || 0,
         parseFloat(shipping_amount) || 0,
@@ -624,23 +648,34 @@ exports.checkoutPosSale = async (req, res) => {
       for (const item of items) {
         const itemQty = parseFloat(item.quantity) || 1;
         const itemPrice = parseFloat(item.unit_price || item.price) || 0;
-        const subtotalItem = itemQty * itemPrice;
+        let itemDiscountUnit = parseFloat(item.item_discount) || 0;
+        if (item.discount_type === 'percent' && item.discount_val) {
+          itemDiscountUnit = (itemPrice * parseFloat(item.discount_val)) / 100;
+        }
+        const netUnitPrice = Math.max(0, itemPrice - itemDiscountUnit);
+        const subtotalItem = itemQty * netUnitPrice;
         const unitRatio = parseFloat(item.operation_value) || 1;
         const baseQtyToDeduct = itemQty * unitRatio;
+
+        const discountStr = item.discount_type === 'percent'
+          ? `${item.discount_val || 0}%`
+          : itemDiscountUnit > 0 ? `$${itemDiscountUnit.toFixed(2)}` : '0';
 
         await connection.query(
           `INSERT INTO aura_sale_items 
            (sale_id, product_id, product_code, product_name, product_type, 
-            unit_price, net_unit_price, quantity, warehouse_id, item_tax, 
+            unit_price, net_unit_price, discount, item_discount, quantity, warehouse_id, item_tax, 
             subtotal, real_unit_price, product_unit_id, product_unit_code, unit_quantity) 
-           VALUES (?, ?, ?, ?, 'standard', ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, 'standard', ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
           [
             saleId,
             item.id,
             item.code || '',
             item.name,
             itemPrice,
-            itemPrice,
+            netUnitPrice,
+            discountStr,
+            itemDiscountUnit * itemQty,
             itemQty,
             wid,
             subtotalItem,
@@ -734,7 +769,11 @@ exports.checkoutPosSale = async (req, res) => {
         biller_color: billerData.theme_color || '#2563eb',
         biller_logo: billerData.logo_url || billerData.logo || '',
         subtotal: parseFloat(subtotal) || 0,
-        discount_amount: parseFloat(discount_amount) || 0,
+        product_discount: finalProductDiscount,
+        order_discount: finalOrderDiscount,
+        order_discount_id: finalOrderDiscountId,
+        total_discount: finalTotalDiscount,
+        discount_amount: finalTotalDiscount,
         tax_amount: parseFloat(tax_amount) || 0,
         shipping_amount: parseFloat(shipping_amount) || 0,
         grand_total: parseFloat(grand_total) || 0,

@@ -31,14 +31,26 @@ const { Text, Title } = Typography;
 export const EditItemModal = ({ visible, onClose, item, onSave, themeMode }) => {
   const [form] = Form.useForm();
   const isDark = themeMode === 'dark';
+  const [discountType, setDiscountType] = useState('percent'); // 'percent' or 'fixed'
+  const [discountVal, setDiscountVal] = useState(0);
+  const [currentUnitPrice, setCurrentUnitPrice] = useState(0);
+  const [currentQty, setCurrentQty] = useState(1);
 
   useEffect(() => {
     if (visible && item) {
+      const uPrice = parseFloat(item.unit_price) || 0;
+      const initialType = item.discount_type || (item.item_discount > 0 && item.discount_val ? 'percent' : 'fixed');
+      const initialVal = item.discount_val !== undefined ? item.discount_val : (parseFloat(item.item_discount) || 0);
+
+      setDiscountType(initialType);
+      setDiscountVal(initialVal);
+      setCurrentUnitPrice(uPrice);
+      setCurrentQty(parseFloat(item.quantity) || 1);
+
       form.setFieldsValue({
         name: item.name,
-        unit_price: item.unit_price,
-        quantity: item.quantity,
-        item_discount: item.item_discount || 0,
+        unit_price: uPrice,
+        quantity: parseFloat(item.quantity) || 1,
         unit_name: item.unit_name || 'Unit',
         item_note: item.item_note || '',
         serial_no: item.serial_no || '',
@@ -46,12 +58,32 @@ export const EditItemModal = ({ visible, onClose, item, onSave, themeMode }) => 
     }
   }, [visible, item, form]);
 
+  // Compute live discount amounts
+  const isPercent = discountType === 'percent';
+  const calculatedDiscountUSD = isPercent
+    ? (currentUnitPrice * Math.min(100, Math.max(0, parseFloat(discountVal) || 0))) / 100
+    : Math.min(currentUnitPrice, Math.max(0, parseFloat(discountVal) || 0));
+  const percentEquivalent = currentUnitPrice > 0
+    ? ((calculatedDiscountUSD / currentUnitPrice) * 100).toFixed(1)
+    : 0;
+  const netUnitPrice = Math.max(0, currentUnitPrice - calculatedDiscountUSD);
+  const lineTotal = netUnitPrice * currentQty;
+
   const handleFinish = (values) => {
+    const uPrice = parseFloat(values.unit_price) || 0;
+    const qty = parseFloat(values.quantity) || 1;
+    const dVal = parseFloat(discountVal) || 0;
+    const finalDiscountUSD = isPercent
+      ? (uPrice * Math.min(100, Math.max(0, dVal))) / 100
+      : Math.min(uPrice, Math.max(0, dVal));
+
     onSave({
       ...item,
-      unit_price: parseFloat(values.unit_price) || 0,
-      quantity: parseFloat(values.quantity) || 1,
-      item_discount: parseFloat(values.item_discount) || 0,
+      unit_price: uPrice,
+      quantity: qty,
+      discount_type: discountType,
+      discount_val: dVal,
+      item_discount: finalDiscountUSD,
       unit_name: values.unit_name,
       item_note: values.item_note || '',
       serial_no: values.serial_no || '',
@@ -74,16 +106,109 @@ export const EditItemModal = ({ visible, onClose, item, onSave, themeMode }) => 
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} style={{ marginTop: 12 }}>
         <Form.Item name="unit_price" label="Unit Price ($)" rules={[{ required: true }]}>
-          <InputNumber style={{ width: '100%' }} min={0} step={0.01} precision={2} prefix="$" size="large" />
+          <InputNumber
+            style={{ width: '100%' }}
+            min={0}
+            step={0.01}
+            precision={2}
+            prefix="$"
+            size="large"
+            onChange={(val) => setCurrentUnitPrice(parseFloat(val) || 0)}
+          />
         </Form.Item>
 
         <Form.Item name="quantity" label="Quantity" rules={[{ required: true }]}>
-          <InputNumber style={{ width: '100%' }} min={0.01} step={1} size="large" />
+          <InputNumber
+            style={{ width: '100%' }}
+            min={0.01}
+            step={1}
+            size="large"
+            onChange={(val) => setCurrentQty(parseFloat(val) || 1)}
+          />
         </Form.Item>
 
-        <Form.Item name="item_discount" label="Item Discount ($)">
-          <InputNumber style={{ width: '100%' }} min={0} step={0.1} precision={2} prefix="$" size="large" />
-        </Form.Item>
+        {/* Item Discount Concept: Percentage (%) & Fixed Price ($) */}
+        <div style={{ marginBottom: 16 }}>
+          <Text strong style={{ display: 'block', marginBottom: 6 }}>
+            Item Discount (Percentage % or Price $):
+          </Text>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <Radio.Group
+              value={discountType}
+              onChange={(e) => setDiscountType(e.target.value)}
+              buttonStyle="solid"
+            >
+              <Radio.Button value="percent">Percentage (%)</Radio.Button>
+              <Radio.Button value="fixed">Fixed Price ($)</Radio.Button>
+            </Radio.Group>
+          </div>
+
+          <InputNumber
+            style={{ width: '100%' }}
+            min={0}
+            max={isPercent ? 100 : undefined}
+            step={isPercent ? 1 : 0.1}
+            precision={isPercent ? 1 : 2}
+            prefix={isPercent ? '%' : '$'}
+            size="large"
+            value={discountVal}
+            onChange={(val) => setDiscountVal(val)}
+            placeholder={isPercent ? "Enter discount percentage (e.g. 10%)" : "Enter discount price (e.g. $1.50)"}
+          />
+
+          {/* Quick preset buttons */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+            {isPercent
+              ? [5, 10, 15, 20, 25, 50].map((p) => (
+                  <Button key={p} size="small" onClick={() => setDiscountVal(p)}>
+                    {p}%
+                  </Button>
+                ))
+              : [0.5, 1, 2, 5, 10].map((d) => (
+                  <Button key={d} size="small" onClick={() => setDiscountVal(d)}>
+                    ${d}
+                  </Button>
+                ))}
+            <Button size="small" danger onClick={() => setDiscountVal(0)}>
+              Clear
+            </Button>
+          </div>
+
+          {/* Live Discount Calculation Box */}
+          <div
+            style={{
+              marginTop: 10,
+              padding: '10px 12px',
+              borderRadius: 8,
+              background: calculatedDiscountUSD > 0 ? '#fff1f2' : isDark ? '#1e293b' : '#f8fafc',
+              border: `1px solid ${calculatedDiscountUSD > 0 ? '#fecdd3' : isDark ? '#334155' : '#e2e8f0'}`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+              fontSize: 12,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>Original Price:</span>
+              <span style={{ fontWeight: 600 }}>${currentUnitPrice.toFixed(2)}</span>
+            </div>
+            {calculatedDiscountUSD > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#e11d48', fontWeight: 700 }}>
+                <span>Discount ({isPercent ? `${discountVal}%` : `$${parseFloat(discountVal).toFixed(2)}`}):</span>
+                <span>-${calculatedDiscountUSD.toFixed(2)} ({isPercent ? `${discountVal}%` : `${percentEquivalent}%`} off)</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>Net Unit Price:</span>
+              <span style={{ fontWeight: 700, color: '#2563eb' }}>${netUnitPrice.toFixed(2)}</span>
+            </div>
+            <Divider style={{ margin: '4px 0' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+              <span style={{ fontWeight: 700 }}>Line Total ({currentQty} {form.getFieldValue('unit_name') || 'Unit'}):</span>
+              <span style={{ fontWeight: 900, color: '#2563eb' }}>${lineTotal.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
 
         <Form.Item name="unit_name" label="Unit">
           <Select
@@ -173,8 +298,16 @@ export const ItemCommentModal = ({ visible, onClose, item, onSave }) => {
   );
 };
 
-// 3. ORDER DISCOUNT MODAL
-export const OrderDiscountModal = ({ visible, onClose, discountValue, discountType, onApply }) => {
+// 3. ORDER DISCOUNT MODAL (PERCENTAGES & PRICES CONCEPT)
+export const OrderDiscountModal = ({
+  visible,
+  onClose,
+  discountValue,
+  discountType,
+  onApply,
+  cartSubtotal = 0,
+  khrExchangeRate = 4200,
+}) => {
   const [type, setType] = useState(discountType || 'fixed');
   const [value, setValue] = useState(discountValue || 0);
 
@@ -184,6 +317,18 @@ export const OrderDiscountModal = ({ visible, onClose, discountValue, discountTy
       setValue(discountValue || 0);
     }
   }, [visible, discountValue, discountType]);
+
+  const subtotalNum = parseFloat(cartSubtotal) || 0;
+  const isPercent = type === 'percent';
+  const valNum = parseFloat(value) || 0;
+  const calculatedDiscountUSD = isPercent
+    ? (subtotalNum * Math.min(100, Math.max(0, valNum))) / 100
+    : Math.min(subtotalNum, Math.max(0, valNum));
+  const percentEquivalent = subtotalNum > 0
+    ? ((calculatedDiscountUSD / subtotalNum) * 100).toFixed(1)
+    : 0;
+  const payableAfterDiscount = Math.max(0, subtotalNum - calculatedDiscountUSD);
+  const calculatedDiscountKHR = Math.round(calculatedDiscountUSD * khrExchangeRate);
 
   const handleApply = () => {
     onApply(parseFloat(value) || 0, type);
@@ -197,53 +342,68 @@ export const OrderDiscountModal = ({ visible, onClose, discountValue, discountTy
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <PercentageOutlined style={{ color: '#e11d48' }} />
-          <span>Apply Order Discount</span>
+          <span>Apply Order Discount (% or $)</span>
         </div>
       }
       onOk={handleApply}
       okText="Apply Discount"
       okButtonProps={{ danger: true }}
+      destroyOnClose
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '12px 0' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '8px 0' }}>
+        {/* Toggle: Fixed Amount ($) vs Percentage (%) */}
         <div>
           <Text strong style={{ display: 'block', marginBottom: 6 }}>
-            Discount Type:
+            Discount Concept:
           </Text>
-          <Radio.Group value={type} onChange={(e) => setType(e.target.value)} buttonStyle="solid">
-            <Radio.Button value="fixed">Fixed Amount ($)</Radio.Button>
-            <Radio.Button value="percent">Percentage (%)</Radio.Button>
+          <Radio.Group
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            buttonStyle="solid"
+            style={{ width: '100%', display: 'flex' }}
+          >
+            <Radio.Button value="fixed" style={{ flex: 1, textAlign: 'center' }}>
+              Fixed Price ($ USD)
+            </Radio.Button>
+            <Radio.Button value="percent" style={{ flex: 1, textAlign: 'center' }}>
+              Percentage (%)
+            </Radio.Button>
           </Radio.Group>
         </div>
 
+        {/* Input Value */}
         <div>
           <Text strong style={{ display: 'block', marginBottom: 6 }}>
-            Discount Value:
+            {isPercent ? 'Discount Percentage (%):' : 'Discount Price ($ USD):'}
           </Text>
           <InputNumber
             style={{ width: '100%' }}
             size="large"
             min={0}
-            max={type === 'percent' ? 100 : 999999}
-            step={type === 'percent' ? 1 : 0.5}
-            prefix={type === 'fixed' ? '$' : '%'}
+            max={isPercent ? 100 : subtotalNum > 0 ? subtotalNum : 999999}
+            step={isPercent ? 1 : 0.5}
+            precision={isPercent ? 1 : 2}
+            prefix={isPercent ? '%' : '$'}
             value={value}
             onChange={(val) => setValue(val)}
+            placeholder={isPercent ? 'E.g. 10 for 10%' : 'E.g. 5.00 for $5.00'}
             autoFocus
           />
         </div>
 
+        {/* Quick Presets for both % and $ */}
         <div>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            Quick Presets:
+            Quick {isPercent ? 'Percentage' : 'Price'} Presets:
           </Text>
-          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-            {type === 'percent'
-              ? [5, 10, 15, 20, 50].map((p) => (
+          <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+            {isPercent
+              ? [5, 10, 15, 20, 25, 30, 50].map((p) => (
                   <Button key={p} size="small" onClick={() => setValue(p)}>
                     {p}%
                   </Button>
                 ))
-              : [1, 2, 5, 10, 20].map((d) => (
+              : [1, 2, 5, 10, 15, 20, 50].map((d) => (
                   <Button key={d} size="small" onClick={() => setValue(d)}>
                     ${d}
                   </Button>
@@ -251,6 +411,45 @@ export const OrderDiscountModal = ({ visible, onClose, discountValue, discountTy
             <Button size="small" danger onClick={() => setValue(0)}>
               Reset
             </Button>
+          </div>
+        </div>
+
+        {/* Live Calculation Preview Card */}
+        <div
+          style={{
+            padding: '12px 14px',
+            borderRadius: 10,
+            background: calculatedDiscountUSD > 0 ? '#fff1f2' : '#f8fafc',
+            border: `1px solid ${calculatedDiscountUSD > 0 ? '#fecdd3' : '#e2e8f0'}`,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 5,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+            <span style={{ color: '#64748b' }}>Cart Subtotal:</span>
+            <span style={{ fontWeight: 700 }}>${subtotalNum.toFixed(2)}</span>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#e11d48' }}>
+            <span style={{ fontWeight: 700 }}>
+              Discount ({isPercent ? `${valNum}%` : `$${valNum.toFixed(2)}`}):
+            </span>
+            <span style={{ fontWeight: 800 }}>
+              -${calculatedDiscountUSD.toFixed(2)} ({isPercent ? `${valNum}%` : `${percentEquivalent}%`} off)
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: '#94a3b8' }}>
+            <span>Dual Currency Savings:</span>
+            <span style={{ fontWeight: 600, color: '#e11d48' }}>-៛{calculatedDiscountKHR.toLocaleString()} KHR</span>
+          </div>
+
+          <Divider style={{ margin: '6px 0', borderColor: calculatedDiscountUSD > 0 ? '#fecdd3' : '#e2e8f0' }} />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+            <span style={{ fontWeight: 700, color: '#1e293b' }}>Net Total After Discount:</span>
+            <span style={{ fontWeight: 900, color: '#2563eb' }}>${payableAfterDiscount.toFixed(2)}</span>
           </div>
         </div>
       </div>

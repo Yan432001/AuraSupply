@@ -401,7 +401,11 @@ const PosReceiptModal = ({
                       <td style={{ padding: '8px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: 700 }}>{qty}</td>
                       <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #cbd5e1' }}>${price.toFixed(2)}</td>
                       <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #cbd5e1', color: disc > 0 ? '#ef4444' : '#64748b' }}>
-                        {disc > 0 ? `-$${disc.toFixed(2)}` : '$0.00'}
+                        {disc > 0
+                          ? (it.discount_type === 'percent'
+                              ? `-${it.discount_val}% (-$${disc.toFixed(2)})`
+                              : `-$${disc.toFixed(2)}`)
+                          : '$0.00'}
                       </td>
                       <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #cbd5e1', fontWeight: 800 }}>
                         ${lineTotal.toFixed(2)}
@@ -625,10 +629,10 @@ const PosReceiptModal = ({
                   <span style={{ color: '#64748b' }}>Subtotal:</span>
                   <strong>${parseFloat(invoice.subtotal || totalUSD).toFixed(2)}</strong>
                 </div>
-                {parseFloat(invoice.discount_amount || 0) > 0 && (
+                {parseFloat(invoice.discount_amount || invoice.total_discount || 0) > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#ef4444', marginBottom: 4 }}>
-                    <span>Order Discount:</span>
-                    <span>-${parseFloat(invoice.discount_amount).toFixed(2)}</span>
+                    <span>Discount {invoice.order_discount_id ? `(${invoice.order_discount_id})` : ''}:</span>
+                    <span style={{ fontWeight: 700 }}>-${parseFloat(invoice.discount_amount || invoice.total_discount).toFixed(2)}</span>
                   </div>
                 )}
                 {parseFloat(invoice.tax_amount || 0) > 0 && (
@@ -716,16 +720,30 @@ const PosReceiptModal = ({
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3, paddingTop: 4 }}>
-                {items.map((it, idx) => (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                    <span style={{ flex: 2, fontWeight: 600 }}>{it.name || it.product_name}</span>
-                    <span style={{ width: 35, textAlign: 'center' }}>{it.quantity || 1}</span>
-                    <span style={{ width: 50, textAlign: 'right' }}>${parseFloat(it.unit_price || it.price || 0).toFixed(2)}</span>
-                    <span style={{ width: 60, textAlign: 'right', fontWeight: 800 }}>
-                      ${((parseFloat(it.unit_price || it.price || 0) * (it.quantity || 1)) - (parseFloat(it.item_discount || 0) * (it.quantity || 1))).toFixed(2)}
-                    </span>
-                  </div>
-                ))}
+                {items.map((it, idx) => {
+                  const itPrice = parseFloat(it.unit_price || it.price || 0);
+                  const itQty = parseFloat(it.quantity || 1);
+                  const itDiscUnit = parseFloat(it.item_discount || 0);
+                  const itLineTotal = (itPrice - itDiscUnit) * itQty;
+
+                  return (
+                    <div key={idx} style={{ marginBottom: 3 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                        <span style={{ flex: 2, fontWeight: 600 }}>{it.name || it.product_name}</span>
+                        <span style={{ width: 35, textAlign: 'center' }}>{itQty}</span>
+                        <span style={{ width: 50, textAlign: 'right' }}>${itPrice.toFixed(2)}</span>
+                        <span style={{ width: 60, textAlign: 'right', fontWeight: 800 }}>
+                          ${itLineTotal.toFixed(2)}
+                        </span>
+                      </div>
+                      {itDiscUnit > 0 && (
+                        <div style={{ fontSize: 9.5, color: '#475569', paddingLeft: 4 }}>
+                          Disc: {it.discount_type === 'percent' ? `-${it.discount_val}% (-$${itDiscUnit.toFixed(2)})` : `-$${itDiscUnit.toFixed(2)}`}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -735,10 +753,12 @@ const PosReceiptModal = ({
                 <span>Subtotal:</span>
                 <span>${parseFloat(invoice.subtotal || totalUSD).toFixed(2)}</span>
               </div>
-              {parseFloat(invoice.discount_amount || invoice.discount || 0) > 0 && (
+              {parseFloat(invoice.discount_amount || invoice.discount || invoice.total_discount || 0) > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Discount:</span>
-                  <span>-${parseFloat(invoice.discount_amount || invoice.discount).toFixed(2)}</span>
+                  <span>Discount {invoice.order_discount_id ? `(${invoice.order_discount_id})` : ''}:</span>
+                  <span style={{ fontWeight: 700 }}>
+                    -${parseFloat(invoice.discount_amount || invoice.discount || invoice.total_discount).toFixed(2)}
+                  </span>
                 </div>
               )}
               {parseFloat(invoice.tax_amount || invoice.tax || 0) > 0 && (

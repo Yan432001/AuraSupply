@@ -624,31 +624,52 @@ export default function PosTerminal() {
     setShippingFee(0);
   };
 
-  // Totals Calculations
-  const cartSubtotal = useMemo(() => {
+  // Totals Calculations: Gross Subtotal, Product Discounts, Order Discounts, Taxes, Grand Total
+  const grossSubtotal = useMemo(() => {
     return cart.reduce((acc, item) => {
       const price = parseFloat(item.unit_price || 0);
-      const discount = parseFloat(item.item_discount || 0);
       const qty = parseFloat(item.quantity || 1);
-      return acc + Math.max(0, (price - discount) * qty);
+      return acc + (price * qty);
     }, 0);
   }, [cart]);
 
-  const discountAmount = useMemo(() => {
-    if (orderDiscountType === 'percent') {
-      return (cartSubtotal * Math.min(100, orderDiscountValue)) / 100;
+  const productDiscountTotal = useMemo(() => {
+    return cart.reduce((acc, item) => {
+      const price = parseFloat(item.unit_price || 0);
+      const qty = parseFloat(item.quantity || 1);
+      const isPercent = item.discount_type === 'percent';
+      const val = parseFloat(item.discount_val !== undefined ? item.discount_val : (item.item_discount || 0)) || 0;
+      const unitDiscount = isPercent
+        ? (price * Math.min(100, Math.max(0, val))) / 100
+        : Math.min(price, Math.max(0, val));
+      return acc + (unitDiscount * qty);
+    }, 0);
+  }, [cart]);
+
+  const cartSubtotal = useMemo(() => {
+    return Math.max(0, grossSubtotal - productDiscountTotal);
+  }, [grossSubtotal, productDiscountTotal]);
+
+  const orderDiscountAmount = useMemo(() => {
+    const isPercent = orderDiscountType === 'percent' || orderDiscountType === 'percentage';
+    if (isPercent) {
+      return (cartSubtotal * Math.min(100, Math.max(0, parseFloat(orderDiscountValue) || 0))) / 100;
     }
-    return Math.min(cartSubtotal, orderDiscountValue);
+    return Math.min(cartSubtotal, Math.max(0, parseFloat(orderDiscountValue) || 0));
   }, [cartSubtotal, orderDiscountType, orderDiscountValue]);
 
+  const totalDiscount = useMemo(() => {
+    return productDiscountTotal + orderDiscountAmount;
+  }, [productDiscountTotal, orderDiscountAmount]);
+
   const taxAmount = useMemo(() => {
-    return ((cartSubtotal - discountAmount) * orderTaxRate) / 100;
-  }, [cartSubtotal, discountAmount, orderTaxRate]);
+    return ((cartSubtotal - orderDiscountAmount) * orderTaxRate) / 100;
+  }, [cartSubtotal, orderDiscountAmount, orderTaxRate]);
 
   const grandTotalUSD = useMemo(() => {
-    const total = cartSubtotal - discountAmount + taxAmount + (parseFloat(shippingFee) || 0);
+    const total = cartSubtotal - orderDiscountAmount + taxAmount + (parseFloat(shippingFee) || 0);
     return Math.max(0, total);
-  }, [cartSubtotal, discountAmount, taxAmount, shippingFee]);
+  }, [cartSubtotal, orderDiscountAmount, taxAmount, shippingFee]);
 
   // Hold Order (Hold Bill)
   const handleHoldOrder = () => {
@@ -767,8 +788,12 @@ export default function PosTerminal() {
         biller_id: selectedBillerId || 1,
         warehouse_id: selectedWarehouseId || 1,
         items: cart,
-        subtotal: cartSubtotal,
-        discount_amount: discountAmount,
+        subtotal: grossSubtotal,
+        product_discount: productDiscountTotal,
+        order_discount: orderDiscountAmount,
+        order_discount_id: orderDiscountType === 'percent' ? `${orderDiscountValue}%` : `$${orderDiscountValue}`,
+        total_discount: totalDiscount,
+        discount_amount: totalDiscount,
         tax_amount: taxAmount,
         shipping_amount: shippingFee,
         grand_total: grandTotalUSD,
@@ -1109,10 +1134,13 @@ export default function PosTerminal() {
               onOpenDeliveryFee={() => setDeliveryFeeModalVisible(true)}
               orderDiscountValue={orderDiscountValue}
               orderDiscountType={orderDiscountType}
+              orderDiscountAmount={orderDiscountAmount}
+              productDiscountTotal={productDiscountTotal}
               orderTaxRate={orderTaxRate}
               shippingFee={shippingFee}
+              grossSubtotal={grossSubtotal}
               subtotal={cartSubtotal}
-              totalDiscount={discountAmount}
+              totalDiscount={totalDiscount}
               taxAmount={taxAmount}
               grandTotal={grandTotalUSD}
               khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
@@ -1217,10 +1245,13 @@ export default function PosTerminal() {
           onOpenDeliveryFee={() => setDeliveryFeeModalVisible(true)}
           orderDiscountValue={orderDiscountValue}
           orderDiscountType={orderDiscountType}
+          orderDiscountAmount={orderDiscountAmount}
+          productDiscountTotal={productDiscountTotal}
           orderTaxRate={orderTaxRate}
           shippingFee={shippingFee}
+          grossSubtotal={grossSubtotal}
           subtotal={cartSubtotal}
-          totalDiscount={discountAmount}
+          totalDiscount={totalDiscount}
           taxAmount={taxAmount}
           grandTotal={grandTotalUSD}
           khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
@@ -1239,6 +1270,9 @@ export default function PosTerminal() {
         onClose={() => setCheckoutModalVisible(false)}
         grandTotal={grandTotalUSD}
         cartItems={cart}
+        grossSubtotal={grossSubtotal}
+        totalDiscount={totalDiscount}
+        orderDiscountId={orderDiscountType === 'percent' ? `${orderDiscountValue}%` : (orderDiscountValue > 0 ? `$${parseFloat(orderDiscountValue).toFixed(2)}` : null)}
         khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
         thbExchangeRate={THB_EXCHANGE_RATE}
         onFinalizePayment={handleFinalizePayment}
@@ -1435,6 +1469,8 @@ export default function PosTerminal() {
         onClose={() => setOrderDiscountModalVisible(false)}
         discountValue={orderDiscountValue}
         discountType={orderDiscountType}
+        cartSubtotal={cartSubtotal}
+        khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
         onApply={(val, type) => {
           setOrderDiscountValue(val);
           setOrderDiscountType(type);

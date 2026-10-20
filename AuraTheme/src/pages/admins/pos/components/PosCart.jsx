@@ -9,6 +9,7 @@ import {
   Divider,
   Avatar,
   Badge,
+  Popover,
 } from 'antd';
 import {
   UserOutlined,
@@ -29,23 +30,24 @@ import {
   CheckCircleFilled,
   EnvironmentOutlined,
   SwapOutlined,
+  ThunderboltFilled,
 } from '@ant-design/icons';
 
 const PosCart = ({
-  cart,
+  cart = [],
   updateItemQuantity,
   onUpdateCartItem,
   removeItemFromCart,
   clearCart,
   selectedCustomerId,
   setSelectedCustomerId,
-  customers,
+  customers = [],
   onOpenQuickAddCustomer,
   onOpenViewCustomer,
   currentTable,
   setCurrentTable,
   tables = ['Takeaway / Walk-in', 'Table 1', 'Table 2', 'Table 3', 'Table 4', 'VIP Room 1', 'VIP Room 2'],
-  heldOrders,
+  heldOrders = [],
   resumeHeldOrder,
   onHoldOrder,
   onPrintBill,
@@ -55,14 +57,17 @@ const PosCart = ({
   onOpenOrderDiscount,
   onOpenOrderTax,
   onOpenDeliveryFee,
-  orderDiscountValue,
-  orderDiscountType,
-  orderTaxRate,
-  shippingFee,
-  subtotal,
-  totalDiscount,
-  taxAmount,
-  grandTotal,
+  orderDiscountValue = 0,
+  orderDiscountType = 'fixed',
+  orderDiscountAmount = 0,
+  productDiscountTotal = 0,
+  orderTaxRate = 0,
+  shippingFee = 0,
+  grossSubtotal = 0,
+  subtotal = 0,
+  totalDiscount = 0,
+  taxAmount = 0,
+  grandTotal = 0,
   khrExchangeRate = 4200,
   thbExchangeRate = 36.5,
   themeMode,
@@ -72,6 +77,8 @@ const PosCart = ({
   const isDark = themeMode === 'dark';
   const totalKHR = Math.round(grandTotal * khrExchangeRate);
   const totalTHB = (grandTotal * thbExchangeRate).toFixed(2);
+  const isOrderDiscountPercent = orderDiscountType === 'percent' || orderDiscountType === 'percentage';
+  const orderDiscountPercentEquiv = subtotal > 0 ? ((orderDiscountAmount / subtotal) * 100).toFixed(0) : 0;
 
   return (
     <div
@@ -230,7 +237,16 @@ const PosCart = ({
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {cart.map((item, index) => {
-              const lineTotal = ((parseFloat(item.unit_price || 0) * (item.quantity || 1)) - (parseFloat(item.item_discount || 0) * (item.quantity || 1)));
+              const unitPrice = parseFloat(item.unit_price || 0);
+              const qty = parseFloat(item.quantity || 1);
+              const isItemPercent = item.discount_type === 'percent';
+              const rawDiscountVal = parseFloat(item.discount_val !== undefined ? item.discount_val : (item.item_discount || 0)) || 0;
+              const discountUnitUSD = isItemPercent
+                ? (unitPrice * Math.min(100, Math.max(0, rawDiscountVal))) / 100
+                : Math.min(unitPrice, Math.max(0, rawDiscountVal));
+              const percentEquiv = unitPrice > 0 ? ((discountUnitUSD / unitPrice) * 100).toFixed(0) : 0;
+              const netUnitPrice = Math.max(0, unitPrice - discountUnitUSD);
+              const lineTotal = netUnitPrice * qty;
 
               // Calculate special instruction / comment count
               const commentCount = (() => {
@@ -268,9 +284,55 @@ const PosCart = ({
                             {item.unit_name}
                           </Tag>
                         )}
-                        {item.item_discount > 0 && (
-                          <Tag color="red" style={{ fontSize: 10, borderRadius: 4, margin: 0, padding: '0 4px', fontWeight: 700 }}>
-                            -${parseFloat(item.item_discount).toFixed(2)} off
+                        {/* Discount Badge showing both Percentage (%) and Price ($) */}
+                        {discountUnitUSD > 0 && (
+                          <Tag
+                            color="red"
+                            style={{
+                              fontSize: 11,
+                              borderRadius: 6,
+                              margin: 0,
+                              padding: '1px 7px',
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              background: isDark ? 'rgba(239, 68, 68, 0.15)' : '#fff1f2',
+                              border: '1px solid #fca5a5',
+                              color: '#dc2626',
+                            }}
+                          >
+                            <span>🏷️</span>
+                            <span>
+                              {isItemPercent
+                                ? `-${rawDiscountVal}% (-$${discountUnitUSD.toFixed(2)})`
+                                : `-$${discountUnitUSD.toFixed(2)} (-${percentEquiv}%)`}
+                            </span>
+                            <span style={{ fontSize: 9.5, opacity: 0.85 }}>off</span>
+                            <Tooltip title="Remove discount">
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (onUpdateCartItem) {
+                                    onUpdateCartItem(index, {
+                                      discount_val: 0,
+                                      discount_type: 'percent',
+                                      item_discount: 0,
+                                    });
+                                  }
+                                }}
+                                style={{
+                                  cursor: 'pointer',
+                                  marginLeft: 2,
+                                  fontWeight: 900,
+                                  color: '#dc2626',
+                                  lineHeight: 1,
+                                  fontSize: 12,
+                                }}
+                              >
+                                ×
+                              </span>
+                            </Tooltip>
                           </Tag>
                         )}
                       </div>
@@ -367,10 +429,10 @@ const PosCart = ({
                     </div>
                   </div>
 
-                  {/* Item Row 2: Direct Price & Discount Adjustments (NO PENCIL NEEDED) + Quantity Stepper + Line Total */}
+                  {/* Item Row 2: Direct Price & Dual Discount Control (% vs $) + Stepper + Line Total */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, paddingTop: 2 }}>
                     {/* Direct Price & Discount Controls */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       {/* Direct Unit Price Input */}
                       <Tooltip title="Directly adjust unit price without opening pencil modal">
                         <div
@@ -381,6 +443,7 @@ const PosCart = ({
                             border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`,
                             borderRadius: 8,
                             padding: '1px 6px',
+                            height: 28,
                           }}
                         >
                           <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginRight: 2 }}>$</span>
@@ -388,15 +451,22 @@ const PosCart = ({
                             type="number"
                             step="0.01"
                             min="0"
+                            className="pos-clean-number-input"
                             value={item.unit_price ?? ''}
                             onChange={(e) => {
                               const val = parseFloat(e.target.value) || 0;
+                              const updatedDiscountUSD = isItemPercent
+                                ? (val * Math.min(100, Math.max(0, rawDiscountVal))) / 100
+                                : Math.min(val, Math.max(0, rawDiscountVal));
                               if (onUpdateCartItem) {
-                                onUpdateCartItem(index, { unit_price: val });
+                                onUpdateCartItem(index, {
+                                  unit_price: val,
+                                  item_discount: updatedDiscountUSD,
+                                });
                               }
                             }}
                             style={{
-                              width: 58,
+                              width: 54,
                               background: 'transparent',
                               border: 'none',
                               outline: 'none',
@@ -408,29 +478,135 @@ const PosCart = ({
                         </div>
                       </Tooltip>
 
-                      {/* Direct Item Discount Input */}
-                      <Tooltip title="Directly apply item discount ($) without opening pencil modal">
+                      {/* Dual Discount Control (% vs $) with Segmented Switcher, Clean Input, and ⚡ Quick Presets */}
+                      <Tooltip title={`Discount Concept: ${isItemPercent ? 'Percentage (%)' : 'Fixed Price ($)'}. Click % or $ to switch.`}>
                         <div
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            background: item.item_discount > 0 ? 'rgba(239, 68, 68, 0.08)' : isDark ? '#1e293b' : '#f8fafc',
-                            border: `1px solid ${item.item_discount > 0 ? '#fca5a5' : isDark ? '#334155' : '#cbd5e1'}`,
+                            background: discountUnitUSD > 0
+                              ? (isDark ? 'rgba(239, 68, 68, 0.15)' : '#fff1f2')
+                              : (isDark ? '#1e293b' : '#f8fafc'),
+                            border: `1px solid ${
+                              discountUnitUSD > 0
+                                ? '#f43f5e'
+                                : (isDark ? '#334155' : '#cbd5e1')
+                            }`,
                             borderRadius: 8,
-                            padding: '1px 6px',
+                            padding: '2px 4px',
+                            height: 28,
+                            gap: 3,
+                            boxShadow: discountUnitUSD > 0 ? '0 0 0 1px rgba(244, 63, 94, 0.2)' : 'none',
+                            transition: 'all 0.15s ease',
                           }}
                         >
-                          <span style={{ fontSize: 10, fontWeight: 700, color: item.item_discount > 0 ? '#ef4444' : '#64748b', marginRight: 1 }}>-$</span>
+                          {/* Segmented Mode Switcher: [%] vs [$] */}
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              background: isDark ? '#0f172a' : '#e2e8f0',
+                              borderRadius: 6,
+                              padding: 1.5,
+                              gap: 1.5,
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!isItemPercent) {
+                                  const nextPercent = unitPrice > 0 ? Math.round((discountUnitUSD / unitPrice) * 100) : rawDiscountVal;
+                                  const nextDiscountUSD = (unitPrice * Math.min(100, Math.max(0, nextPercent))) / 100;
+                                  if (onUpdateCartItem) {
+                                    onUpdateCartItem(index, {
+                                      discount_type: 'percent',
+                                      discount_val: nextPercent,
+                                      item_discount: nextDiscountUSD,
+                                    });
+                                  }
+                                }
+                              }}
+                              style={{
+                                background: isItemPercent ? '#e11d48' : 'transparent',
+                                color: isItemPercent ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
+                                border: 'none',
+                                borderRadius: 4,
+                                fontSize: 10,
+                                fontWeight: 800,
+                                height: 20,
+                                padding: '0 5px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.12s ease',
+                              }}
+                              title="Percentage Discount (%)"
+                            >
+                              %
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isItemPercent) {
+                                  const nextFixed = parseFloat(discountUnitUSD.toFixed(2));
+                                  const nextDiscountUSD = Math.min(unitPrice, Math.max(0, nextFixed));
+                                  if (onUpdateCartItem) {
+                                    onUpdateCartItem(index, {
+                                      discount_type: 'fixed',
+                                      discount_val: nextFixed,
+                                      item_discount: nextDiscountUSD,
+                                    });
+                                  }
+                                }
+                              }}
+                              style={{
+                                background: !isItemPercent ? '#2563eb' : 'transparent',
+                                color: !isItemPercent ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
+                                border: 'none',
+                                borderRadius: 4,
+                                fontSize: 10,
+                                fontWeight: 800,
+                                height: 20,
+                                padding: '0 5px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.12s ease',
+                              }}
+                              title="Fixed Price Discount ($)"
+                            >
+                              $
+                            </button>
+                          </div>
+
+                          {/* Direct Input Value with clean number styling (no spinners) */}
                           <input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            placeholder="Disc"
-                            value={item.item_discount || ''}
+                            type="text"
+                            inputMode="decimal"
+                            className="pos-clean-number-input"
+                            placeholder={isItemPercent ? '0%' : '0.00'}
+                            value={rawDiscountVal > 0 ? `${rawDiscountVal}` : ''}
                             onChange={(e) => {
-                              const val = parseFloat(e.target.value) || 0;
+                              let rawText = e.target.value.trim();
+                              let isPercentInput = isItemPercent;
+                              if (rawText.includes('%')) {
+                                isPercentInput = true;
+                                rawText = rawText.replace('%', '').trim();
+                              } else if (rawText.startsWith('$')) {
+                                isPercentInput = false;
+                                rawText = rawText.replace('$', '').trim();
+                              }
+                              const val = parseFloat(rawText) || 0;
+                              const updatedDiscountUSD = isPercentInput
+                                ? (unitPrice * Math.min(100, Math.max(0, val))) / 100
+                                : Math.min(unitPrice, Math.max(0, val));
                               if (onUpdateCartItem) {
-                                onUpdateCartItem(index, { item_discount: val });
+                                onUpdateCartItem(index, {
+                                  discount_val: val,
+                                  discount_type: isPercentInput ? 'percent' : 'fixed',
+                                  item_discount: updatedDiscountUSD,
+                                });
                               }
                             }}
                             style={{
@@ -438,16 +614,168 @@ const PosCart = ({
                               background: 'transparent',
                               border: 'none',
                               outline: 'none',
-                              fontWeight: 700,
+                              fontWeight: 800,
                               fontSize: 12,
-                              color: item.item_discount > 0 ? '#ef4444' : isDark ? '#cbd5e1' : '#64748b',
+                              textAlign: 'center',
+                              color: discountUnitUSD > 0 ? '#dc2626' : (isDark ? '#cbd5e1' : '#64748b'),
                             }}
                           />
+
+                          {/* Quick Presets Popover ⚡ */}
+                          <Popover
+                            trigger="click"
+                            placement="bottom"
+                            content={
+                              <div style={{ width: 220, padding: 4 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>
+                                  Quick Discount for <span style={{ color: '#0f172a' }}>{item.name}</span>
+                                </div>
+
+                                {/* Percentage Presets */}
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#e11d48', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                  Percentage (%)
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, marginBottom: 8 }}>
+                                  {[5, 10, 15, 20, 50].map((pct) => (
+                                    <button
+                                      key={pct}
+                                      type="button"
+                                      className="pos-preset-chip"
+                                      onClick={() => {
+                                        const discUSD = (unitPrice * pct) / 100;
+                                        if (onUpdateCartItem) {
+                                          onUpdateCartItem(index, {
+                                            discount_type: 'percent',
+                                            discount_val: pct,
+                                            item_discount: discUSD,
+                                          });
+                                        }
+                                      }}
+                                      style={{
+                                        padding: '3px 0',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        borderRadius: 6,
+                                        border: rawDiscountVal === pct && isItemPercent ? '1.5px solid #e11d48' : '1px solid #e2e8f0',
+                                        background: rawDiscountVal === pct && isItemPercent ? '#ffe4e6' : '#f8fafc',
+                                        color: rawDiscountVal === pct && isItemPercent ? '#e11d48' : '#334155',
+                                      }}
+                                    >
+                                      {pct}%
+                                    </button>
+                                  ))}
+                                </div>
+
+                                {/* Fixed Dollar Presets */}
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#2563eb', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                  Fixed Dollar ($)
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, marginBottom: 10 }}>
+                                  {[0.5, 1, 2, 5, 10].map((fix) => (
+                                    <button
+                                      key={fix}
+                                      type="button"
+                                      className="pos-preset-chip"
+                                      onClick={() => {
+                                        const discUSD = Math.min(unitPrice, fix);
+                                        if (onUpdateCartItem) {
+                                          onUpdateCartItem(index, {
+                                            discount_type: 'fixed',
+                                            discount_val: fix,
+                                            item_discount: discUSD,
+                                          });
+                                        }
+                                      }}
+                                      style={{
+                                        padding: '3px 0',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        borderRadius: 6,
+                                        border: rawDiscountVal === fix && !isItemPercent ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                                        background: rawDiscountVal === fix && !isItemPercent ? '#eff6ff' : '#f8fafc',
+                                        color: rawDiscountVal === fix && !isItemPercent ? '#2563eb' : '#334155',
+                                      }}
+                                    >
+                                      ${fix}
+                                    </button>
+                                  ))}
+                                </div>
+
+                                {/* Clear Discount Button */}
+                                {discountUnitUSD > 0 && (
+                                  <Button
+                                    size="small"
+                                    danger
+                                    block
+                                    onClick={() => {
+                                      if (onUpdateCartItem) {
+                                        onUpdateCartItem(index, {
+                                          discount_type: 'percent',
+                                          discount_val: 0,
+                                          item_discount: 0,
+                                        });
+                                      }
+                                    }}
+                                    style={{ borderRadius: 6, fontSize: 11, fontWeight: 700, height: 26 }}
+                                  >
+                                    Clear Item Discount
+                                  </Button>
+                                )}
+                              </div>
+                            }
+                          >
+                            <button
+                              type="button"
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: discountUnitUSD > 0 ? '#f43f5e' : '#94a3b8',
+                                cursor: 'pointer',
+                                fontSize: 12,
+                                padding: '0 2px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                              title="Quick Discount Presets"
+                            >
+                              ⚡
+                            </button>
+                          </Popover>
+
+                          {/* Quick Clear "×" Button when discount > 0 */}
+                          {discountUnitUSD > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (onUpdateCartItem) {
+                                  onUpdateCartItem(index, {
+                                    discount_type: 'percent',
+                                    discount_val: 0,
+                                    item_discount: 0,
+                                  });
+                                }
+                              }}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#dc2626',
+                                cursor: 'pointer',
+                                fontSize: 13,
+                                fontWeight: 800,
+                                padding: '0 2px',
+                                lineHeight: 1,
+                              }}
+                              title="Reset discount to 0"
+                            >
+                              ×
+                            </button>
+                          )}
                         </div>
                       </Tooltip>
                     </div>
 
-                    {/* Quantity Stepper & Line Total */}
+                    {/* Quantity Stepper & Line Total (with strikethrough original when discounted) */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       {/* Quantity Stepper */}
                       <div
@@ -484,6 +812,7 @@ const PosCart = ({
                         <input
                           type="number"
                           min="1"
+                          className="pos-clean-number-input"
                           value={item.quantity || 1}
                           onChange={(e) => updateItemQuantity(index, parseFloat(e.target.value) || 1)}
                           style={{
@@ -520,10 +849,17 @@ const PosCart = ({
                         </button>
                       </div>
 
-                      {/* Line Total */}
-                      <span style={{ fontSize: 15.5, fontWeight: 900, color: '#2563eb', minWidth: 68, textAlign: 'right' }}>
-                        ${lineTotal.toFixed(2)}
-                      </span>
+                      {/* Line Total with Strikethrough Original Total if Discounted */}
+                      <div style={{ minWidth: 68, textAlign: 'right' }}>
+                        {discountUnitUSD > 0 && (
+                          <div style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through', lineHeight: 1.1 }}>
+                            ${(unitPrice * qty).toFixed(2)}
+                          </div>
+                        )}
+                        <div style={{ fontSize: 15.5, fontWeight: 900, color: '#2563eb', lineHeight: 1.2 }}>
+                          ${lineTotal.toFixed(2)}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -550,7 +886,7 @@ const PosCart = ({
             onClick={onOpenOrderDiscount}
             style={{
               borderRadius: 8,
-              fontSize: 11.5,
+              fontSize: 11,
               fontWeight: 700,
               height: 30,
               color: orderDiscountValue > 0 ? '#ef4444' : undefined,
@@ -558,7 +894,11 @@ const PosCart = ({
               background: orderDiscountValue > 0 ? 'rgba(239, 68, 68, 0.08)' : undefined,
             }}
           >
-            {orderDiscountValue > 0 ? `-${orderDiscountType === 'percentage' ? `${orderDiscountValue}%` : `$${orderDiscountValue}`}` : 'Discount'}
+            {orderDiscountValue > 0
+              ? (isOrderDiscountPercent
+                  ? `-${orderDiscountValue}% (-$${orderDiscountAmount.toFixed(2)})`
+                  : `-$${parseFloat(orderDiscountValue).toFixed(2)} (-${orderDiscountPercentEquiv}%)`)
+              : 'Discount (% / $)'}
           </Button>
 
           <Button
@@ -598,17 +938,51 @@ const PosCart = ({
           </Button>
         </div>
 
-        {/* Calculation Rows */}
+        {/* Calculation Rows: Subtotal, Item Discounts, Order Discount, Total Savings */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 12, color: '#64748b', marginBottom: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>Subtotal ({cart.reduce((s, i) => s + (i.quantity || 1), 0)} items)</span>
-            <span style={{ fontWeight: 600, color: isDark ? '#cbd5e1' : '#334155' }}>${subtotal.toFixed(2)}</span>
+            <span style={{ fontWeight: 600, color: isDark ? '#cbd5e1' : '#334155' }}>${(grossSubtotal || subtotal).toFixed(2)}</span>
           </div>
 
+          {/* Product Line-Item Discounts */}
+          {productDiscountTotal > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#e11d48' }}>
+              <span>Product Discounts (Items)</span>
+              <span style={{ fontWeight: 700 }}>-${productDiscountTotal.toFixed(2)}</span>
+            </div>
+          )}
+
+          {/* Order-Level Discount */}
+          {orderDiscountAmount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#e11d48' }}>
+              <span>
+                Order Discount ({isOrderDiscountPercent ? `${orderDiscountValue}%` : `$${parseFloat(orderDiscountValue).toFixed(2)}`})
+              </span>
+              <span style={{ fontWeight: 700 }}>
+                -${orderDiscountAmount.toFixed(2)} ({isOrderDiscountPercent ? `${orderDiscountValue}%` : `${orderDiscountPercentEquiv}%`} off)
+              </span>
+            </div>
+          )}
+
+          {/* Combined Total Discount */}
           {totalDiscount > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ef4444' }}>
-              <span>Total Discount</span>
-              <span style={{ fontWeight: 700 }}>-${totalDiscount.toFixed(2)}</span>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                color: '#ef4444',
+                fontWeight: 700,
+                background: 'rgba(239, 68, 68, 0.06)',
+                padding: '2px 6px',
+                borderRadius: 6,
+              }}
+            >
+              <span>Total Savings / Discount</span>
+              <span>
+                -${totalDiscount.toFixed(2)}
+                {(grossSubtotal || subtotal) > 0 ? ` (${(((totalDiscount) / (grossSubtotal || subtotal)) * 100).toFixed(0)}% off)` : ''}
+              </span>
             </div>
           )}
 

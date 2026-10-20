@@ -45,6 +45,9 @@ const PosCheckoutModal = ({
   onClose,
   grandTotal,
   cartItems = [],
+  grossSubtotal = 0,
+  totalDiscount = 0,
+  orderDiscountId = null,
   khrExchangeRate = 4200,
   thbExchangeRate = 36.5,
   onFinalizePayment,
@@ -381,6 +384,25 @@ const PosCheckoutModal = ({
                 </tr>
               </thead>
               <tbody>
+                {/* Total Discount Row (if any) */}
+                {totalDiscount > 0 && (
+                  <tr style={{ borderBottom: '1px solid #fecdd3', background: '#fff1f2' }}>
+                    <td style={{ padding: '8px 12px', fontWeight: 700, fontSize: 13, color: '#e11d48' }}>
+                      Discount {orderDiscountId ? `(${orderDiscountId})` : ''}
+                    </td>
+                    <td style={{ padding: '8px 12px', textAlign: 'center', borderLeft: '1px solid #fecdd3' }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: '#e11d48' }}>
+                        -${totalDiscount.toFixed(2)}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 12px', textAlign: 'center', borderLeft: '1px solid #fecdd3' }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: '#e11d48' }}>
+                        -៛{Math.round(totalDiscount * khrExchangeRate).toLocaleString()}
+                      </span>
+                    </td>
+                  </tr>
+                )}
+
                 {/* Total Payable Row */}
                 <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
                   <td style={{ padding: '8px 12px', fontWeight: 700, fontSize: 13, color: '#334155' }}>
