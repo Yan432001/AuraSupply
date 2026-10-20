@@ -37,12 +37,20 @@ exports.listSales = async (req, res) => {
     const total = countRows?.[0]?.total || 0;
 
     const sql = `
-      SELECT id, reference_no, date, customer, customer_id, biller,
-             grand_total, paid, (grand_total - paid) AS balance,
-             sale_status, payment_status, delivery_status, note
-      FROM aura_sales
+      SELECT s.id, s.reference_no, s.date, s.customer, s.customer_id, s.biller, s.biller_id,
+             s.grand_total, s.paid, (s.grand_total - s.paid) AS balance,
+             s.sale_status, s.payment_status, s.delivery_status, s.note,
+             b.theme_color AS biller_color, b.vat_no AS biller_vat_no,
+             b.name_kh AS biller_name_kh, b.company_kh AS biller_company_kh,
+             b.address_kh AS biller_address_kh, b.address AS biller_address,
+             b.phone AS biller_phone, b.email AS biller_email,
+             b.logo AS biller_logo, b.logo_url AS biller_logo_url,
+             c.vat_no AS customer_vat_no, c.address AS customer_address
+      FROM aura_sales s
+      LEFT JOIN aura_companies b ON s.biller_id = b.id
+      LEFT JOIN aura_companies c ON s.customer_id = c.id
       ${whereSql}
-      ORDER BY id DESC
+      ORDER BY s.id DESC
       LIMIT ? OFFSET ?
     `;
 
@@ -62,7 +70,19 @@ exports.listSales = async (req, res) => {
 exports.getSaleDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const [orderRows] = await db.query('SELECT * FROM aura_sales WHERE id = ? LIMIT 1', [id]);
+    const [orderRows] = await db.query(`
+      SELECT s.*, 
+             b.theme_color AS biller_color, b.vat_no AS biller_vat_no, 
+             b.name_kh AS biller_name_kh, b.company_kh AS biller_company_kh, 
+             b.address_kh AS biller_address_kh, b.address AS biller_address,
+             b.phone AS biller_phone, b.email AS biller_email,
+             b.logo AS biller_logo, b.logo_url AS biller_logo_url,
+             c.vat_no AS customer_vat_no, c.address AS customer_address
+      FROM aura_sales s
+      LEFT JOIN aura_companies b ON s.biller_id = b.id
+      LEFT JOIN aura_companies c ON s.customer_id = c.id
+      WHERE s.id = ? LIMIT 1
+    `, [id]);
 
     if (!orderRows || orderRows.length === 0) {
       return sendError(res, 'Order not found', 404);

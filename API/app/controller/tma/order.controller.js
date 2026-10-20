@@ -21,6 +21,17 @@ const orderHistory = [
     store_id: 1,
     store_name: "Aura Specialty Coffee",
     store_slug: "sbc-store",
+    biller_name: "Aura Specialty Coffee",
+    biller_company: "Aura Specialty Coffee Co., Ltd.",
+    biller_color: "#ea580c",
+    theme_color: "#ea580c",
+    biller_vat_no: "K001-929394959",
+    biller_name_kh: "អូរ៉ា កាហ្វេ ពិសេស",
+    biller_company_kh: "ក្រុមហ៊ុន អូរ៉ា កាហ្វេ ពិសេស ខូអិលធីឌី",
+    biller_address_kh: "អគារ ១២៨ មហាវិថីព្រះនរោត្តម ខណ្ឌដូនពេញ រាជធានីភ្នំពេញ",
+    biller_address: "No. 128, Preah Norodom Blvd, Daun Penh, Phnom Penh",
+    biller_phone: "+855 12 345 678",
+    biller_email: "coffee@auraglobal.com",
     createdAt: new Date(Date.now() - 3600000).toISOString(),
     status: "Confirmed",
     payment_status: "paid",
@@ -31,6 +42,7 @@ const orderHistory = [
       telegramId: 7812938,
       phone: "+855 12 888 777",
       address: "Table #04 (Dine-In)",
+      vat_no: "N/A",
       note: "Extra napkins & oat milk please"
     },
     items: [
@@ -56,6 +68,8 @@ const orderHistory = [
     subtotal: 12.25,
     deliveryFee: 0.00,
     discount: 0.00,
+    tax: 1.11,
+    tax_amount: 1.11,
     grandTotal: 12.25,
     store_notification: "Sent",
     statusHistory: [
@@ -69,6 +83,17 @@ const orderHistory = [
     store_id: 2,
     store_name: "Aura Artisan Bakery",
     store_slug: "aura-bakery",
+    biller_name: "Aura Artisan Bakery",
+    biller_company: "Aura Artisan Bakery & Viennoiserie",
+    biller_color: "#f43f5e",
+    theme_color: "#f43f5e",
+    biller_vat_no: "K002-887766554",
+    biller_name_kh: "អូរ៉ា នំបុ័ងសិប្បកម្ម",
+    biller_company_kh: "ក្រុមហ៊ុន អូរ៉ា នំបុ័ងសិប្បកម្ម ខូអិលធីឌី",
+    biller_address_kh: "ផ្លូវលេខ ២៤០ សង្កាត់ចតុមុខ ខណ្ឌដូនពេញ រាជធានីភ្នំពេញ",
+    biller_address: "Street 240, Daun Penh, Phnom Penh",
+    biller_phone: "+855 12 345 679",
+    biller_email: "bakery@auraglobal.com",
     createdAt: new Date(Date.now() - 86400000).toISOString(),
     status: "Completed",
     payment_status: "paid",
@@ -79,6 +104,7 @@ const orderHistory = [
       telegramId: 9912034,
       phone: "+855 77 123 456",
       address: "Takeaway Counter",
+      vat_no: "N/A",
       note: "Pack separately please"
     },
     items: [
@@ -169,16 +195,33 @@ const OrderController = {
             s.reference_no AS referenceNo,
             s.biller_id AS store_id,
             COALESCE(c.name, s.biller) AS store_name,
+            COALESCE(c.company, c.name, s.biller) AS biller_company,
+            c.theme_color AS biller_color,
+            c.vat_no AS biller_vat_no,
+            c.name_kh AS biller_name_kh,
+            c.company_kh AS biller_company_kh,
+            c.address_kh AS biller_address_kh,
+            c.address AS biller_address,
+            c.phone AS biller_phone,
+            c.email AS biller_email,
+            c.logo_url AS biller_logo,
             COALESCE(c.slug, 'sbc-store') AS store_slug,
             s.date AS createdAt,
             COALESCE(s.sale_status, 'completed') AS status,
             COALESCE(s.payment_status, 'paid') AS payment_status,
             s.customer AS customer_name,
             s.customer_id,
+            cust.vat_no AS customer_vat_no,
+            cust.address AS customer_address,
+            cust.phone AS customer_phone,
             COALESCE(s.grand_total, s.total, 0) AS grandTotal,
-            COALESCE(s.total, 0) AS total
+            COALESCE(s.total, 0) AS total,
+            COALESCE(s.total_tax, s.order_tax, 0) AS tax,
+            COALESCE(s.total_discount, s.order_discount, 0) AS discount,
+            COALESCE(s.shipping, 0) AS deliveryFee
           FROM aura_sales s
           LEFT JOIN aura_companies c ON c.id = s.biller_id
+          LEFT JOIN aura_companies cust ON cust.id = s.customer_id
           WHERE 1=1
         `;
         const params = [];
@@ -204,25 +247,83 @@ const OrderController = {
 
         const [rows] = await db.query(sql, params);
         if (rows && rows.length > 0) {
+          // Fetch items for these sales
+          const saleIds = rows.map((r) => r.id);
+          const placeholders = saleIds.map(() => '?').join(',');
+          let itemsMap = {};
+          try {
+            const [itemRows] = await db.query(
+              `SELECT id, sale_id, product_id, product_code, product_name, unit_price, quantity, subtotal, discount, item_discount 
+               FROM aura_sale_items WHERE sale_id IN (${placeholders})`,
+              saleIds
+            );
+            (itemRows || []).forEach((it) => {
+              if (!itemsMap[it.sale_id]) itemsMap[it.sale_id] = [];
+              itemsMap[it.sale_id].push({
+                id: it.id,
+                product_id: it.product_id,
+                product_code: it.product_code || '',
+                code: it.product_code || '',
+                name: it.product_name || 'Item',
+                product_name: it.product_name || 'Item',
+                quantity: parseFloat(it.quantity || 1),
+                unit_price: parseFloat(it.unit_price || 0),
+                price: parseFloat(it.unit_price || 0),
+                discount: parseFloat(it.discount || it.item_discount || 0),
+                item_discount: parseFloat(it.discount || it.item_discount || 0),
+                subtotal: parseFloat(it.subtotal || 0),
+              });
+            });
+          } catch (iErr) {
+            console.warn('Failed to load items for sales:', iErr.message);
+          }
+
           const formatted = rows.map((r) => ({
             id: r.id,
             referenceNo: r.referenceNo || `AUR-${r.id}`,
+            reference_no: r.referenceNo || `AUR-${r.id}`,
             store_id: r.store_id,
+            biller_id: r.store_id,
             store_name: r.store_name,
+            storeName: r.store_name,
             store_slug: r.store_slug,
+            biller_name: r.store_name,
+            biller_company: r.biller_company || r.store_name,
+            biller_color: r.biller_color || '#2563eb',
+            theme_color: r.biller_color || '#2563eb',
+            biller_vat_no: r.biller_vat_no || 'K001-929394959',
+            biller_name_kh: r.biller_name_kh || 'អូរ៉ា សឹបផ្លាយ',
+            biller_company_kh: r.biller_company_kh || 'អូរ៉ា សឹបផ្លាយ',
+            biller_address_kh: r.biller_address_kh || 'អគារ ១២៨ មហាវិថីព្រះនរោត្តម ខណ្ឌដូនពេញ រាជធានីភ្នំពេញ',
+            biller_address: r.biller_address || '#128 Preah Norodom Blvd, Daun Penh, Phnom Penh, Cambodia',
+            biller_phone: r.biller_phone || '+855 12 345 678',
+            biller_email: r.biller_email || 'billing@aurasupply.com',
+            biller_logo: r.biller_logo || null,
             createdAt: r.createdAt || new Date().toISOString(),
+            date: r.createdAt || new Date().toISOString(),
             status: (r.status || 'completed').charAt(0).toUpperCase() + (r.status || 'completed').slice(1),
             payment_status: r.payment_status || 'paid',
             orderType: 'delivery',
+            customer_name: r.customer_name || 'Walk-in Guest',
+            customer_company: r.customer_name || 'Walk-in Guest',
+            customer_phone: r.customer_phone || '+855 12 345 678',
+            customer_address: r.customer_address || 'Phnom Penh, Cambodia',
+            customer_vat_no: r.customer_vat_no || 'N/A',
             customer: {
-              name: r.customer_name || 'Wholesale Client',
-              phone: '+855 12 345 678',
-              address: 'Phnom Penh, Cambodia',
+              name: r.customer_name || 'Walk-in Guest',
+              phone: r.customer_phone || '+855 12 345 678',
+              address: r.customer_address || 'Phnom Penh, Cambodia',
+              vat_no: r.customer_vat_no || 'N/A',
             },
             subtotal: Number(r.total || 0),
-            deliveryFee: 0,
-            discount: 0,
+            deliveryFee: Number(r.deliveryFee || 0),
+            discount: Number(r.discount || 0),
+            tax: Number(r.tax || (r.grandTotal * 0.1 / 1.1) || 0),
+            tax_amount: Number(r.tax || (r.grandTotal * 0.1 / 1.1) || 0),
             grandTotal: Number(r.grandTotal || 0),
+            grand_total: Number(r.grandTotal || 0),
+            paid: Number(r.grandTotal || 0),
+            items: itemsMap[r.id] || [],
           }));
 
           return res.status(200).json({
@@ -254,6 +355,125 @@ const OrderController = {
   async getOrderById(req, res) {
     try {
       const { id } = req.params;
+
+      // 1. First check database
+      try {
+        const [rows] = await db.query(
+          `SELECT 
+            s.*,
+            s.reference_no AS referenceNo,
+            s.biller_id AS store_id,
+            COALESCE(c.name, s.biller) AS store_name,
+            COALESCE(c.company, c.name, s.biller) AS biller_company,
+            c.theme_color AS biller_color,
+            c.vat_no AS biller_vat_no,
+            c.name_kh AS biller_name_kh,
+            c.company_kh AS biller_company_kh,
+            c.address_kh AS biller_address_kh,
+            c.address AS biller_address,
+            c.phone AS biller_phone,
+            c.email AS biller_email,
+            c.logo_url AS biller_logo,
+            COALESCE(c.slug, 'sbc-store') AS store_slug,
+            s.date AS createdAt,
+            COALESCE(s.sale_status, 'completed') AS status,
+            COALESCE(s.payment_status, 'paid') AS payment_status,
+            s.customer AS customer_name,
+            s.customer_id,
+            cust.vat_no AS customer_vat_no,
+            cust.address AS customer_address,
+            cust.phone AS customer_phone,
+            COALESCE(s.grand_total, s.total, 0) AS grandTotal,
+            COALESCE(s.total, 0) AS total,
+            COALESCE(s.total_tax, s.order_tax, 0) AS tax,
+            COALESCE(s.total_discount, s.order_discount, 0) AS discount,
+            COALESCE(s.shipping, 0) AS deliveryFee
+          FROM aura_sales s
+          LEFT JOIN aura_companies c ON c.id = s.biller_id
+          LEFT JOIN aura_companies cust ON cust.id = s.customer_id
+          WHERE s.id = ? OR s.reference_no = ?
+          LIMIT 1`,
+          [id, id]
+        );
+
+        if (rows && rows.length > 0) {
+          const r = rows[0];
+          const [itemRows] = await db.query(
+            `SELECT id, sale_id, product_id, product_code, product_name, unit_price, quantity, subtotal, discount, item_discount 
+             FROM aura_sale_items WHERE sale_id = ?`,
+            [r.id]
+          );
+
+          const items = (itemRows || []).map((it) => ({
+            id: it.id,
+            product_id: it.product_id,
+            product_code: it.product_code || '',
+            code: it.product_code || '',
+            name: it.product_name || 'Item',
+            product_name: it.product_name || 'Item',
+            quantity: parseFloat(it.quantity || 1),
+            unit_price: parseFloat(it.unit_price || 0),
+            price: parseFloat(it.unit_price || 0),
+            discount: parseFloat(it.discount || it.item_discount || 0),
+            item_discount: parseFloat(it.discount || it.item_discount || 0),
+            subtotal: parseFloat(it.subtotal || 0),
+          }));
+
+          const formatted = {
+            id: r.id,
+            referenceNo: r.referenceNo || `AUR-${r.id}`,
+            reference_no: r.referenceNo || `AUR-${r.id}`,
+            store_id: r.store_id,
+            biller_id: r.store_id,
+            store_name: r.store_name,
+            storeName: r.store_name,
+            store_slug: r.store_slug,
+            biller_name: r.store_name,
+            biller_company: r.biller_company || r.store_name,
+            biller_color: r.biller_color || '#2563eb',
+            theme_color: r.biller_color || '#2563eb',
+            biller_vat_no: r.biller_vat_no || 'K001-929394959',
+            biller_name_kh: r.biller_name_kh || 'អូរ៉ា សឹបផ្លាយ',
+            biller_company_kh: r.biller_company_kh || 'អូរ៉ា សឹបផ្លាយ',
+            biller_address_kh: r.biller_address_kh || 'អគារ ១២៨ មហាវិថីព្រះនរោត្តម ខណ្ឌដូនពេញ រាជធានីភ្នំពេញ',
+            biller_address: r.biller_address || '#128 Preah Norodom Blvd, Daun Penh, Phnom Penh, Cambodia',
+            biller_phone: r.biller_phone || '+855 12 345 678',
+            biller_email: r.biller_email || 'billing@aurasupply.com',
+            biller_logo: r.biller_logo || null,
+            createdAt: r.createdAt || new Date().toISOString(),
+            date: r.createdAt || new Date().toISOString(),
+            status: (r.status || 'completed').charAt(0).toUpperCase() + (r.status || 'completed').slice(1),
+            payment_status: r.payment_status || 'paid',
+            orderType: 'delivery',
+            customer_name: r.customer_name || 'Walk-in Guest',
+            customer_company: r.customer_name || 'Walk-in Guest',
+            customer_phone: r.customer_phone || '+855 12 345 678',
+            customer_address: r.customer_address || 'Phnom Penh, Cambodia',
+            customer_vat_no: r.customer_vat_no || 'N/A',
+            customer: {
+              name: r.customer_name || 'Walk-in Guest',
+              phone: r.customer_phone || '+855 12 345 678',
+              address: r.customer_address || 'Phnom Penh, Cambodia',
+              vat_no: r.customer_vat_no || 'N/A',
+            },
+            subtotal: Number(r.total || 0),
+            deliveryFee: Number(r.deliveryFee || 0),
+            discount: Number(r.discount || 0),
+            tax: Number(r.tax || (r.grandTotal * 0.1 / 1.1) || 0),
+            tax_amount: Number(r.tax || (r.grandTotal * 0.1 / 1.1) || 0),
+            grandTotal: Number(r.grandTotal || 0),
+            grand_total: Number(r.grandTotal || 0),
+            paid: Number(r.grandTotal || 0),
+            items: items,
+          };
+
+          return res.status(200).json({ status: true, data: formatted });
+        }
+      } catch (dbErr) {
+        console.warn('DB getOrderById error:', dbErr.message);
+      }
+
+      // 2. Fallback to in-memory orderHistory
       const order = orderHistory.find(
         (o) => String(o.id) === String(id) || String(o.referenceNo).toLowerCase() === String(id).toLowerCase()
       );

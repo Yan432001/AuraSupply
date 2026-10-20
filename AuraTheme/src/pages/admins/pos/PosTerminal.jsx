@@ -708,9 +708,19 @@ export default function PosTerminal() {
       reference_no: `BILL-${Date.now().toString().slice(-6)}`,
       date: new Date().toISOString(),
       customer_name: selectedCustomerName,
+      customer: selectedCustomerName,
+      biller_id: selectedBillerId,
       biller_name: currentBiller?.name || currentBiller?.company || posSettingsData.default_biller || 'SBC Solutions',
+      biller_company: currentBiller?.company || currentBiller?.name || 'AURA Supply Co., Ltd.',
+      biller_name_kh: currentBiller?.name_kh || '',
+      biller_company_kh: currentBiller?.company_kh || '',
       biller_address: currentBiller?.address || 'Phnom Penh, Cambodia',
+      biller_address_kh: currentBiller?.address_kh || '',
       biller_phone: currentBiller?.phone || '012 345 678',
+      biller_email: currentBiller?.email || '',
+      biller_vat_no: currentBiller?.vat_no || '',
+      biller_color: currentBiller?.theme_color || '#2563eb',
+      biller_logo: currentBiller?.logo_url || currentBiller?.logo || '',
       warehouse_name: currentWh?.name || currentWarehouse,
       items: cart,
       subtotal: cartSubtotal,
@@ -770,12 +780,11 @@ export default function PosTerminal() {
       };
 
       const res = await axios.post('/api/admin/pos/sales/checkout', payload);
-      const invoiceData = res.data?.invoice || {
+      const baseInvoice = res.data?.invoice || {
         reference_no: res.data?.reference_no || `POS-${Date.now().toString().slice(-6)}`,
         date: new Date().toISOString(),
         customer_name: selectedCustomerName,
-        biller_name: currentBiller?.name || currentBiller?.company || checkoutData.biller || posSettingsData.default_biller || 'SBC Solutions',
-        warehouse_name: currentWh?.name || currentWarehouse,
+        customer: selectedCustomerName,
         items: cart,
         subtotal: cartSubtotal,
         discount_amount: discountAmount,
@@ -783,12 +792,30 @@ export default function PosTerminal() {
         shipping_amount: shippingFee,
         grand_total: grandTotalUSD,
         paid: totalPaidSum,
+        paid_amount: totalPaidSum,
         tendered_usd: checkoutData.tenderedUSD,
         tendered_khr: checkoutData.tenderedKHR,
         change_usd: checkoutData.changeUSD,
         change_khr: checkoutData.changeKHR,
         paid_by: checkoutData.paymentMethod,
         payments: checkoutData.payments,
+      };
+
+      const invoiceData = {
+        ...baseInvoice,
+        biller_id: selectedBillerId,
+        biller_name: currentBiller?.name || currentBiller?.company || baseInvoice.biller_name || 'AURA Supply',
+        biller_company: currentBiller?.company || currentBiller?.name || baseInvoice.biller_company || 'AURA Supply Co., Ltd.',
+        biller_name_kh: currentBiller?.name_kh || baseInvoice.biller_name_kh || '',
+        biller_company_kh: currentBiller?.company_kh || baseInvoice.biller_company_kh || '',
+        biller_address: currentBiller?.address || baseInvoice.biller_address || 'Phnom Penh, Cambodia',
+        biller_address_kh: currentBiller?.address_kh || baseInvoice.biller_address_kh || '',
+        biller_phone: currentBiller?.phone || baseInvoice.biller_phone || '012 345 678',
+        biller_email: currentBiller?.email || baseInvoice.biller_email || '',
+        biller_vat_no: currentBiller?.vat_no || baseInvoice.biller_vat_no || '',
+        biller_color: currentBiller?.theme_color || baseInvoice.biller_color || '#2563eb',
+        biller_logo: currentBiller?.logo_url || currentBiller?.logo || baseInvoice.biller_logo || '',
+        warehouse_name: currentWh?.name || currentWarehouse,
       };
 
       setCompletedInvoice(invoiceData);
@@ -975,7 +1002,7 @@ export default function PosTerminal() {
         t={t}
       />
 
-      {/* 2. MAIN POS WORKSPACE: CART (LEFT) & CATALOG (RIGHT) */}
+      {/* 2. MAIN POS WORKSPACE: ITEM DISPLAY (LEFT) & ORDER DISPLAY (RIGHT) */}
       <div
         style={{
           flex: 1,
@@ -984,18 +1011,49 @@ export default function PosTerminal() {
           position: 'relative',
         }}
       >
-        {/* DESKTOP SPLIT: LEFT CART PANEL */}
+        {/* LEFT: ITEM DISPLAY AREA (PRODUCT CATALOG & CATEGORIES) */}
+        <div
+          style={{
+            flex: 1,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          <PosCatalog
+            products={products}
+            categories={categories}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            searchProductKeyword={searchProductKeyword}
+            setSearchProductKeyword={setSearchProductKeyword}
+            searchInputRef={searchInputRef}
+            onBarcodeScanSubmit={handleBarcodeScanSubmit}
+            onAddToCart={handleAddToCart}
+            loadingProducts={loadingProducts}
+            onOpenManualAddProduct={() => setManualAddProductModalVisible(true)}
+            catalogViewMode={catalogViewMode}
+            setCatalogViewMode={setCatalogViewMode}
+            khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
+            t={t}
+          />
+        </div>
+
+        {/* RIGHT: ORDER DISPLAY AREA (CART, TOTALS, AND CHECKOUT) - ENLARGED */}
         {isDesktop && (
           <div
             style={{
-              width: 440,
-              minWidth: 420,
-              maxWidth: 480,
+              width: 520,
+              minWidth: 480,
+              maxWidth: 580,
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
-              borderRight: '1px solid #cbd5e1',
+              borderLeft: '1px solid #cbd5e1',
               background: '#ffffff',
+              boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.04)',
+              zIndex: 10,
             }}
           >
             <PosCart
@@ -1040,35 +1098,6 @@ export default function PosTerminal() {
             />
           </div>
         )}
-
-        {/* RIGHT CATALOG PANEL */}
-        <div
-          style={{
-            flex: 1,
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
-          <PosCatalog
-            products={products}
-            categories={categories}
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-            searchProductKeyword={searchProductKeyword}
-            setSearchProductKeyword={setSearchProductKeyword}
-            searchInputRef={searchInputRef}
-            onBarcodeScanSubmit={handleBarcodeScanSubmit}
-            onAddToCart={handleAddToCart}
-            loadingProducts={loadingProducts}
-            onOpenManualAddProduct={() => setManualAddProductModalVisible(true)}
-            catalogViewMode={catalogViewMode}
-            setCatalogViewMode={setCatalogViewMode}
-            khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-            t={t}
-          />
-        </div>
 
         {/* MOBILE BOTTOM CART FLOATING BAR */}
         {!isDesktop && (
@@ -1196,11 +1225,13 @@ export default function PosTerminal() {
         t={t}
       />
 
-      {/* 2. RECEIPT & THERMAL BILL MODAL (Standard, Dual-Currency, Tri-Currency, KOT) */}
+      {/* 2. RECEIPT & INVOICE MODAL (Default Invoice, Tax Invoice, Thermal Slip with Transfer Button) */}
       <PosReceiptModal
         visible={receiptModalVisible}
         onClose={() => setReceiptModalVisible(false)}
         invoice={completedInvoice}
+        billerColor={billers.find((b) => b.id === selectedBillerId)?.theme_color || completedInvoice?.biller_color || '#2563eb'}
+        billerInfo={billers.find((b) => b.id === selectedBillerId)}
         onNextSale={() => {
           setReceiptModalVisible(false);
           setCompletedInvoice(null);

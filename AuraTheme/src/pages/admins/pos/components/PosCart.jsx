@@ -79,7 +79,7 @@ const PosCart = ({
         flexDirection: 'column',
         height: '100%',
         background: isDark ? '#0f172a' : '#ffffff',
-        borderRight: `1px solid ${isDark ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0'}`,
+        borderLeft: `1px solid ${isDark ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0'}`,
       }}
     >
       {/* 1. TOP CONTROLS: Customer & Table / Order Type */}
@@ -222,8 +222,8 @@ const PosCart = ({
             <div style={{ fontSize: 14, fontWeight: 700, color: isDark ? '#e2e8f0' : '#475569' }}>
               Cart is Empty
             </div>
-            <div style={{ fontSize: 12, textAlign: 'center', maxWidth: 220 }}>
-              Scan barcodes or tap products from the catalog on the right
+            <div style={{ fontSize: 12, textAlign: 'center', maxWidth: 240, color: '#94a3b8' }}>
+              Scan barcodes or tap products from the catalog on the left
             </div>
           </div>
         ) : (

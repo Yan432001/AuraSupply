@@ -1247,9 +1247,10 @@ const ThemePublicController = {
 
       const [billers] = await db.query(`
         SELECT 
-          c.id, c.code, c.name, c.company, c.slug, c.address,
+          c.id, c.code, c.name, c.company, c.name_kh, c.company_kh, c.slug, c.address, c.address_kh,
           c.warehouse_id, w.name AS warehouse_name, w.code AS warehouse_code,
-          c.phone, c.email, c.city, c.country, c.logo, c.banner,
+          c.phone, c.email, c.city, c.country, c.logo, c.logo_url, c.banner,
+          c.vat_no, c.theme_color,
           c.currency_code, c.currency_symbol, c.rating, c.reviews_count,
           c.operating_hours,
           COUNT(DISTINCT pr.project_id) AS projects_count,

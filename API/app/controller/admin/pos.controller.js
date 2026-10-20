@@ -578,6 +578,13 @@ exports.checkoutPosSale = async (req, res) => {
       if (bRows.length > 0 && bRows[0].warehouse_id) wid = bRows[0].warehouse_id;
     }
 
+    const [billerRows] = await connection.query(
+      `SELECT id, name, company, name_kh, company_kh, address, address_kh, phone, email, vat_no, theme_color, logo, logo_url 
+       FROM aura_companies WHERE id = ? LIMIT 1`,
+      [bid]
+    );
+    const billerData = billerRows[0] || {};
+
     // Generate Unique Invoice Ref (Format: POS-YYYYMMDD-XXXX)
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -712,6 +719,20 @@ exports.checkoutPosSale = async (req, res) => {
         reference_no: referenceNo,
         date: new Date().toISOString(),
         customer: cname,
+        customer_name: cname,
+        customer_id: cid,
+        biller_id: bid,
+        biller_name: billerData.name || 'AURA Supply',
+        biller_company: billerData.company || billerData.name || 'AURA Supply Co., Ltd.',
+        biller_name_kh: billerData.name_kh || '',
+        biller_company_kh: billerData.company_kh || '',
+        biller_address: billerData.address || '',
+        biller_address_kh: billerData.address_kh || '',
+        biller_phone: billerData.phone || '',
+        biller_email: billerData.email || '',
+        biller_vat_no: billerData.vat_no || '',
+        biller_color: billerData.theme_color || '#2563eb',
+        biller_logo: billerData.logo_url || billerData.logo || '',
         subtotal: parseFloat(subtotal) || 0,
         discount_amount: parseFloat(discount_amount) || 0,
         tax_amount: parseFloat(tax_amount) || 0,
@@ -1041,9 +1062,11 @@ exports.getPosSettings = async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM aura_pos_settings LIMIT 1');
     
-    // Fetch billers with linked warehouse
+    // Fetch billers with linked warehouse and branding colors
     const [billers] = await pool.query(`
-      SELECT c.id, c.name, c.company, c.code, c.warehouse_id, w.name as warehouse_name, w.code as warehouse_code
+      SELECT c.id, c.name, c.company, c.name_kh, c.company_kh, c.code, c.warehouse_id, 
+             c.theme_color, c.vat_no, c.phone, c.email, c.address, c.address_kh, c.logo, c.logo_url,
+             w.name as warehouse_name, w.code as warehouse_code
       FROM aura_companies c
       LEFT JOIN aura_warehouses w ON w.id = c.warehouse_id
       WHERE (c.group_name = 'biller' OR c.company_type = 'branch') AND (c.status = 'active' OR c.status IS NULL)
@@ -1415,8 +1438,10 @@ exports.getSaleReceipt = async (req, res) => {
     const [sales] = await pool.query(`
       SELECT s.*, 
              u.username as cashier_username, u.first_name as cashier_first_name, u.last_name as cashier_last_name,
-             c.name as customer_name, c.phone as customer_phone, c.address as customer_address,
-             b.name as biller_name, b.company as biller_company, b.address as biller_address, b.phone as biller_phone, b.logo as biller_logo
+             c.name as customer_name, c.company as customer_company, c.phone as customer_phone, c.address as customer_address, c.vat_no as customer_vat_no,
+             b.name as biller_name, b.company as biller_company, b.name_kh as biller_name_kh, b.company_kh as biller_company_kh,
+             b.address as biller_address, b.address_kh as biller_address_kh, b.phone as biller_phone, b.email as biller_email,
+             b.logo as biller_logo, b.logo_url as biller_logo_url, b.vat_no as biller_vat_no, b.theme_color as biller_color
       FROM aura_sales s
       LEFT JOIN aura_users u ON u.id = s.created_by
       LEFT JOIN aura_companies c ON c.id = s.customer_id
