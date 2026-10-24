@@ -11,7 +11,7 @@ const DEFAULT_CMS_DATA = {
     tagline_en: "Artisan Coffee, Culinary Delights & Modern Lifestyle",
     tagline_km: "កាហ្វេរសជាតិដើម អាហារឆ្ងាញ់ និងទាន់សម័យ",
     logo_url: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=300&q=80",
-    favicon_url: "/favicon.ico",
+    favicon_url: "/aura.ico",
     phone: "+855 12 345 678",
     phone_secondary: "+855 23 999 888",
     email: "contact@auraglobal.com",

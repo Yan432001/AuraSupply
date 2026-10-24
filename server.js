@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
 
@@ -13,8 +14,31 @@ async function startServer() {
     : path.resolve(__dirname, 'dist');
   const isDev = process.env.NODE_ENV !== 'production' && process.env.SERVE_DIST !== 'true';
 
-  // Enable CORS and JSON body parser
-  app.use(cors());
+  // Secure CORS with Cookie & Credentials Support
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    process.env.FRONTEND_URL,
+    process.env.PUBLIC_APP_URL,
+    process.env.WEBAPP_URL
+  ].filter(Boolean);
+
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-session-check', 'X-Requested-With']
+  }));
+
+  // Parse HttpOnly and signed cookies
+  app.use(cookieParser());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
@@ -71,6 +95,14 @@ async function startServer() {
     console.log('[Route] Mounted /api (AuraTheme Public Endpoints)');
   } catch (err) {
     console.warn('[Route] Warning mounting AuraTheme public routes:', err.message);
+  }
+
+  // AuraTheme Public Website Authentication & Customer Sessions
+  try {
+    require('./API/app/config/route/web/webAuth.route')(app);
+    console.log('[Route] Mounted /api/web/auth (Website Auth Endpoints)');
+  } catch (err) {
+    console.warn('[Route] Warning mounting AuraTheme webAuth routes:', err.message);
   }
 
   // High-Volume Items & RBAC Architecture Routes

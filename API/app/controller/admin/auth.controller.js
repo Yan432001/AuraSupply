@@ -1,61 +1,58 @@
-const { db, access_token_key } = require("../../config/utill/helper");
-const { logError } = require("../../config/utill/logErr");
+/**
+ * Administrator Authentication & Session Controller
+ * Ported strictly from CodeIgniter 3 AURA_v1 (bpas/controllers/admin/Auth.php)
+ */
+
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const { db, access_token_key } = require("../../config/utill/helper");
+const { logError } = require("../../config/utill/logErr");
 const permissionsUtil = require("../../config/utill/permissions");
 const accessControlService = require("../../services/accessControl.service");
+const sessionService = require("../../services/session.service");
+const tokenService = require("../../services/token.service");
+const authConfig = require("../../config/auth.config");
+const Auth_Model = require("../../models/admins/auth.model");
 
 const JWT_SECRET = process.env.JWT_SECRET || access_token_key || "AURA_ERP_SECRET_TOKEN_2026";
-const ACCESS_TOKEN_EXPIRY = "7d";
+const ACCESS_TOKEN_EXPIRY = "2h";
 
 /**
- * GET /api/admin/auth/profile or GET /api/admin/auth/session
+ * GET /api/admin/auth/session or GET /api/admin/auth/profile
  * Return current authenticated session, role flags, and permissions ($this->GP)
  */
 exports.profile = async (req, res) => {
   try {
-    const userId = req.user_id || req.user?.id || req.profile?.id;
+    const userId = req.user_id || req.user?.id;
     if (!userId) {
       return res.status(401).json({ success: false, status: false, message: "Unauthenticated" });
     }
 
-    const sql = `
-      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.phone, u.gender,
-             u.group_id, u.active, u.biller_id, u.warehouse_id, u.company_id, u.avatar,
-             u.view_right, u.edit_right, u.show_cost, u.show_price,
-             g.name AS role, g.name AS group_name, g.description AS role_description, g.level AS group_level,
-             g.allow_admin_login, g.allow_web_login
-      FROM aura_users u
-      LEFT JOIN aura_groups g ON u.group_id = g.id
-      WHERE u.id = ? AND u.deleted_at IS NULL
-      LIMIT 1
-    `;
-    const [rows] = await db.query(sql, [userId]);
-    if (!rows || rows.length === 0) {
+    const user = await Auth_Model.findUserById(userId);
+    if (!user) {
+      sessionService.clearSessionCookie(res, 'admin');
       return res.status(404).json({ success: false, status: false, message: "User not found" });
     }
 
-    const user = rows[0];
     const roleName = (user.role || user.group_name || '').toLowerCase();
 
     // Block customer accounts from accessing administrative session/profile endpoints
-    if (req.originalUrl && req.originalUrl.includes('/admin')) {
-      if (roleName === 'customer' || Number(user.group_id) === 4 || Number(user.allow_admin_login) === 0) {
-        return res.status(403).json({
-          success: false,
-          status: false,
-          error: 'FORBIDDEN',
-          code: 'FORBIDDEN_CUSTOMER',
-          message: 'Access denied: Customer accounts are strictly prohibited from accessing administrative endpoints.'
-        });
-      }
+    if (roleName === 'customer' || Number(user.group_id) === 4 || Number(user.allow_admin_login) === 0) {
+      sessionService.clearSessionCookie(res, 'admin');
+      return res.status(403).json({
+        success: false,
+        status: false,
+        error: 'FORBIDDEN',
+        code: 'FORBIDDEN_CUSTOMER',
+        message: 'Access denied: Customer accounts are strictly prohibited from accessing administrative endpoints.'
+      });
     }
 
     const isOwner = Number(user.group_id) === 1 || Number(user.group_level) === 1 || roleName === 'owner';
     const isAdmin = Number(user.group_id) === 2 || Number(user.group_level) === 2 || roleName === 'admin';
 
-    // Retrieve group permissions ($this->GP)
+    // Retrieve group permissions ($this->GP) & allowed branches
     const GP = await permissionsUtil.getGroupPermissions(user.group_id);
     const allowedBranches = await accessControlService.getUserAllowedBranches(user.id, user.group_level);
 
@@ -89,7 +86,7 @@ exports.profile = async (req, res) => {
       Admin: isAdmin,
       Store: roleName === 'store',
       Supplier: roleName === 'supplier',
-      Customer: roleName === 'customer',
+      Customer: false,
       Salesman: roleName === 'salesman' || roleName === 'sale-agents',
       isOwner,
       isAdmin,
@@ -98,9 +95,15 @@ exports.profile = async (req, res) => {
       branches: allowedBranches
     };
 
-    res.json({
+    // Touch activity
+    if (req.token) {
+      sessionService.touchActivity(req.token);
+    }
+
+    return res.json({
       success: true,
       status: true,
+      authenticated: true,
       data: sessionUser,
       profile: sessionUser,
       user: sessionUser,
@@ -114,15 +117,16 @@ exports.profile = async (req, res) => {
 };
 
 /**
- * POST /api/admin/auth/login, POST /api/admin/login, POST /api/auth/login
+ * POST /api/admin/auth/login, POST /api/admin/login
  * Administrative Login & Session Creation
- * (Cloned from CodeIgniter 3 AURA_v1 Auth::login & Auth_model)
+ * Cloned from CodeIgniter 3 AURA_v1 Auth::login & Auth_model
  */
 exports.login = async (req, res) => {
   try {
     const { username, password, remember = false, remember_me = false } = req.body;
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
     const userAgent = req.headers['user-agent'] || 'Unknown';
+    const isRemember = Boolean(remember || remember_me);
 
     if (!username || !password) {
       return res.status(400).json({
@@ -134,28 +138,10 @@ exports.login = async (req, res) => {
     }
 
     const cleanLogin = username.trim().toLowerCase();
+    const user = await Auth_Model.findUserByIdentity(cleanLogin);
 
-    // Query aura_users joined with aura_groups
-    const query = `
-      SELECT u.*, 
-             g.name AS role, g.name AS group_name, g.description AS role_description, g.level AS group_level,
-             g.allow_admin_login, g.allow_web_login
-      FROM aura_users u
-      LEFT JOIN aura_groups g ON u.group_id = g.id
-      WHERE (LOWER(u.username) = ? OR LOWER(u.email) = ?) AND u.deleted_at IS NULL
-      LIMIT 1
-    `;
-    const [data] = await db.query(query, [cleanLogin, cleanLogin]);
-
-    if (!data || data.length === 0) {
-      // Record failed attempt
-      try {
-        await db.query(
-          "INSERT INTO aura_login_attempts (login, ip_address, area, time) VALUES (?, ?, 'admin', UNIX_TIMESTAMP())",
-          [cleanLogin, ipAddress]
-        );
-      } catch (_) {}
-
+    if (!user) {
+      await Auth_Model.recordLoginAttempt(cleanLogin, ipAddress, 'admin');
       return res.status(401).json({
         success: false,
         status: false,
@@ -164,9 +150,18 @@ exports.login = async (req, res) => {
       });
     }
 
-    const user = data[0];
+    // Check account lockout (15 minutes after 5 failed tries)
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      const remainingMinutes = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
+      return res.status(423).json({
+        success: false,
+        status: false,
+        code: 'ACCOUNT_LOCKED',
+        message: `Account is temporarily locked due to excessive failed attempts. Try again in ${remainingMinutes} minute(s).`
+      });
+    }
 
-    // Check account status
+    // Check account active status
     if (user.active === 0 || (user.status && user.status !== 'active')) {
       return res.status(403).json({
         success: false,
@@ -176,18 +171,17 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Admin Login Restriction: Strictly block customer accounts from administrative login
+    // Strictly block customer accounts from administrative login
     const roleName = (user.role || user.group_name || '').toLowerCase();
     const isCustomer = roleName === 'customer' || Number(user.group_id) === 4 || Number(user.allow_admin_login) === 0;
-    const isAdminRoute = req.originalUrl && (req.originalUrl.includes('/admin') || req.baseUrl.includes('/admin'));
 
-    if (isAdminRoute && isCustomer) {
+    if (isCustomer) {
       return res.status(403).json({
         success: false,
         status: false,
         error: 'FORBIDDEN',
         code: 'FORBIDDEN_CUSTOMER',
-        message: 'Access denied: Customer accounts are not permitted to log into the administrative portal.'
+        message: 'Access denied: Customer accounts are strictly prohibited from logging into the administrative portal.'
       });
     }
 
@@ -217,56 +211,44 @@ exports.login = async (req, res) => {
         needsUpgrade = true;
       }
     } else if (crypto.createHash('md5').update(password).digest('hex') === user.password || user.password === password) {
-      // Plain text or MD5 fallback, upgrade immediately
       isMatch = true;
       needsUpgrade = true;
     }
 
     if (!isMatch) {
-      try {
-        await db.query(
-          "INSERT INTO aura_login_attempts (login, ip_address, area, time) VALUES (?, ?, 'admin', UNIX_TIMESTAMP())",
-          [cleanLogin, ipAddress]
-        );
-      } catch (_) {}
-
-      return res.status(401).json({
-        success: false,
-        status: false,
-        message: "Invalid username or password",
-        error: { message: "Invalid username or password" }
-      });
+      await Auth_Model.recordLoginAttempt(cleanLogin, ipAddress, 'admin');
+      const newFailedCount = (user.failed_login_count || 0) + 1;
+      if (newFailedCount >= 5) {
+        await Auth_Model.lockAccount(user.id, 15);
+        return res.status(423).json({
+          success: false,
+          status: false,
+          code: 'ACCOUNT_LOCKED',
+          message: 'Account locked for 15 minutes due to too many failed login attempts.'
+        });
+      } else {
+        await db.query("UPDATE aura_users SET failed_login_count = ? WHERE id = ?", [newFailedCount, user.id]);
+        return res.status(401).json({
+          success: false,
+          status: false,
+          message: `Invalid credentials. ${5 - newFailedCount} attempt(s) remaining before temporary lockout.`
+        });
+      }
     }
 
-    // Transparently upgrade legacy hash to modern bcrypt
+    // Auto-upgrade legacy hash to modern bcrypt
     if (needsUpgrade) {
-      try {
-        const modernHash = await bcrypt.hash(password, 10);
-        await db.query("UPDATE aura_users SET password = ?, password_algo = 'bcrypt' WHERE id = ?", [modernHash, user.id]);
-      } catch (_) {}
+      const modernHash = await bcrypt.hash(password, 10);
+      await Auth_Model.upgradePasswordHash(user.id, modernHash);
     }
 
-    // Update last login telemetry
-    try {
-      const nowTs = Math.floor(Date.now() / 1000);
-      await db.query(
-        "UPDATE aura_users SET last_login = ?, last_login_at = NOW(), last_login_ip = ? WHERE id = ?",
-        [nowTs, ipAddress, user.id]
-      );
-      await db.query(
-        "INSERT INTO aura_user_logins (user_id, login, area, success, ip_address, user_agent, time) VALUES (?, ?, 'admin', 1, ?, ?, NOW())",
-        [user.id, user.username, ipAddress, userAgent]
-      );
-    } catch (_) {}
+    // Update telemetry & clear lockout
+    await Auth_Model.updateSuccessLogin(user.id, ipAddress, userAgent);
+    await Auth_Model.clearLoginAttempts(cleanLogin, ipAddress);
 
     // Group & Permissions ($this->GP in CodeIgniter 3)
     const isOwner = Number(user.group_id) === 1 || Number(user.group_level) === 1 || roleName === 'owner';
     const isAdmin = Number(user.group_id) === 2 || Number(user.group_level) === 2 || roleName === 'admin';
-    const isStore = roleName === 'store';
-    const isSupplier = roleName === 'supplier';
-    const isSalesman = roleName === 'salesman' || roleName === 'sale-agents';
-
-    // Retrieve group permissions from aura_permissions
     const GP = await permissionsUtil.getGroupPermissions(user.group_id);
     const allowedBranches = await accessControlService.getUserAllowedBranches(user.id, user.group_level);
 
@@ -274,7 +256,6 @@ exports.login = async (req, res) => {
       ? await permissionsUtil.getPermissionKeys()
       : Object.entries(GP).filter(([k, v]) => k !== 'group_id' && v == 1).map(([k]) => k);
 
-    // Complete session data cloned from CodeIgniter 3 Auth_model
     const sanitizedUser = {
       id: user.id,
       user_id: user.id,
@@ -299,10 +280,10 @@ exports.login = async (req, res) => {
       show_price: user.show_price,
       Owner: isOwner,
       Admin: isAdmin,
-      Store: isStore,
-      Supplier: isSupplier,
-      Customer: isCustomer,
-      Salesman: isSalesman,
+      Store: roleName === 'store',
+      Supplier: roleName === 'supplier',
+      Customer: false,
+      Salesman: roleName === 'salesman' || roleName === 'sale-agents',
       isOwner,
       isAdmin,
       GP: isOwner || isAdmin ? { all: 1 } : GP,
@@ -319,7 +300,7 @@ exports.login = async (req, res) => {
       allow_web_login: user.allow_web_login
     };
 
-    // Issue JWT access token (optimized compact payload)
+    // Issue JWT token
     const tokenPayload = {
       id: user.id,
       user_id: user.id,
@@ -328,7 +309,7 @@ exports.login = async (req, res) => {
       group_id: user.group_id,
       role: user.role || user.group_name || 'admin',
       level: user.group_level,
-      area: isCustomer ? 'website' : 'admin',
+      area: 'admin',
       data: {
         profile: {
           id: user.id,
@@ -340,10 +321,22 @@ exports.login = async (req, res) => {
       }
     };
 
-    const accessToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
+    const tokenExpiry = isRemember ? '30d' : ACCESS_TOKEN_EXPIRY;
+    const accessToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: tokenExpiry });
 
-    // Response structure formatted for all frontend consumers:
-    // Supports both direct root properties AND nested data: { token, user, group, permissions, branches }
+    // Register active session & inactivity tracking
+    await sessionService.registerSession({
+      userId: user.id,
+      token: accessToken,
+      area: 'admin',
+      remember: isRemember,
+      ipAddress,
+      userAgent
+    });
+
+    // Set secure HttpOnly, SameSite cookie
+    sessionService.setSessionCookie(res, 'admin', accessToken, isRemember);
+
     const responsePayload = {
       token: accessToken,
       accessToken,
@@ -381,12 +374,20 @@ exports.login = async (req, res) => {
  */
 exports.logout = async (req, res) => {
   try {
+    const token = req.token || req.headers.authorization?.replace('Bearer ', '') || req.cookies?.[authConfig.session.adminCookieName];
+    if (token) {
+      await sessionService.revokeSession(token);
+    }
+
     const userId = req.user_id || req.user?.id;
     if (userId) {
       try {
         await db.query("DELETE FROM aura_user_tokens WHERE user_id = ?", [userId]);
       } catch (_) {}
     }
+
+    // Clear admin HttpOnly cookie
+    sessionService.clearSessionCookie(res, 'admin');
 
     res.json({
       success: true,
@@ -399,100 +400,31 @@ exports.logout = async (req, res) => {
 };
 
 /**
- * Authentication middleware for routes
+ * POST /api/admin/auth/activity
+ * Activity heartbeat to touch last_activity
  */
-exports.token_key_login = () => {
-  return (req, res, next) => {
-    const authorization = req.headers.authorization;
-    let token = null;
-
-    if (authorization && authorization.startsWith("Bearer ")) {
-      token = authorization.split(" ")[1];
+exports.activity = async (req, res) => {
+  const token = req.token || req.headers.authorization?.replace('Bearer ', '') || req.cookies?.[authConfig.session.adminCookieName];
+  if (token) {
+    if (req.query.simulate_idle === '1') {
+      sessionService.expireSessionForTesting(token);
+      return res.json({ success: true, simulated_idle: true });
     }
-
-    const isSilent = req.query.silent === '1' || req.headers['x-session-check'] === '1';
-
-    if (!token) {
-      if (isSilent) {
-        return res.json({
-          success: false,
-          status: false,
-          authenticated: false,
-          message: "Unauthorized: Missing authentication token",
-          data: null
-        });
-      }
-      return res.status(401).json({
-        success: false,
-        status: false,
-        message: "Unauthorized: Missing authentication token"
-      });
-    }
-
-    jwt.verify(token, JWT_SECRET, (error, decoded) => {
-      if (error) {
-        if (isSilent) {
-          return res.json({
-            success: false,
-            status: false,
-            authenticated: false,
-            message: "Unauthorized: Invalid or expired token",
-            data: null
-          });
-        }
-        return res.status(401).json({
-          success: false,
-          status: false,
-          message: "Unauthorized: Invalid or expired token",
-          error: error.message
-        });
-      }
-
-      const decodedUser = decoded.data?.profile || decoded;
-      const role = (decodedUser.role || decodedUser.group_name || '').toLowerCase();
-      const isCustomer = role === 'customer' || Number(decodedUser.group_id) === 4;
-
-      if (req.originalUrl && req.originalUrl.includes('/admin') && isCustomer) {
-        return res.status(403).json({
-          success: false,
-          status: false,
-          error: 'FORBIDDEN',
-          code: 'FORBIDDEN_CUSTOMER',
-          message: 'Access denied: Customer accounts are strictly prohibited from accessing administrative endpoints.'
-        });
-      }
-
-      req.user_id = decoded.id || decoded.user_id || decoded.data?.profile?.id;
-      req.user = decodedUser;
-      next();
-    });
-  };
+    sessionService.touchActivity(token);
+  }
+  return res.json({ success: true, timestamp: Date.now() });
 };
 
 /**
- * POST /api/admin/auth/register
+ * Registration endpoint (staff only by owner/admin)
  */
 exports.register = async (req, res) => {
-  try {
-    const { username, password, email, first_name, last_name, phone, group_id = 2 } = req.body;
-    if (!username || !password || !email) {
-      return res.status(400).json({ success: false, message: "Username, email, and password are required" });
-    }
+  // Not used for public registration
+  res.status(501).json({ success: false, message: "Use admin user creation portal." });
+};
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const sql = `
-      INSERT INTO aura_users (username, password, email, first_name, last_name, phone, group_id, active, created_on)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 1, UNIX_TIMESTAMP())
-    `;
-    const [result] = await db.query(sql, [username, hashedPassword, email, first_name, last_name, phone, group_id]);
-
-    res.json({
-      success: true,
-      status: true,
-      message: "User registered successfully",
-      userId: result.insertId
-    });
-  } catch (err) {
-    logError("register.controller", err, res);
-  }
+// Export controller methods
+exports.token_key_login = () => {
+  const { verifyAdminSession } = require("../../middleware/auth.middleware");
+  return verifyAdminSession;
 };

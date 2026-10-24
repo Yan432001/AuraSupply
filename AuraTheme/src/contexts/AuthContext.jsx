@@ -1,5 +1,24 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+
+// Ensure all Axios HTTP requests carry secure cookies across origins
+axios.defaults.withCredentials = true;
+
+// Storage Keys
+const ADMIN_KEYS = {
+  token: 'aura_admin_token',
+  user: 'aura_admin_user',
+  activity: 'aura_admin_last_activity'
+};
+
+const WEB_KEYS = {
+  token: 'aura_web_token',
+  user: 'aura_web_user',
+  activity: 'aura_web_last_activity'
+};
+
+// Default Inactivity Idle Timeout: 20 Minutes (1200 seconds)
+const DEFAULT_INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000;
 
 // Helper to verify if JWT string is expired or malformed
 const isTokenExpired = (rawToken) => {
@@ -30,36 +49,85 @@ const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => {
-    const saved = localStorage.getItem('token');
-    if (!saved) return null;
-    if (isTokenExpired(saved)) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+  const [currentPath, setCurrentPath] = useState(() => (typeof window !== 'undefined' ? window.location.pathname : '/'));
+  const isAdminArea = currentPath.startsWith('/admins') || currentPath.startsWith('/pos');
+
+  // --------------------------------------------------------------------------
+  // 1. Admin Authentication State (aura_admin_*)
+  // --------------------------------------------------------------------------
+  const [adminToken, setAdminToken] = useState(() => {
+    const saved = localStorage.getItem(ADMIN_KEYS.token) || (!localStorage.getItem(WEB_KEYS.token) ? localStorage.getItem('token') : null);
+    if (!saved || isTokenExpired(saved)) {
+      localStorage.removeItem(ADMIN_KEYS.token);
+      localStorage.removeItem(ADMIN_KEYS.user);
       return null;
     }
     return saved;
   });
 
-  const [user, setUser] = useState(() => {
+  const [adminUser, setAdminUser] = useState(() => {
     try {
-      const savedToken = localStorage.getItem('token');
-      if (!savedToken || isTokenExpired(savedToken)) {
-        return null;
-      }
-      const savedUser = localStorage.getItem('user');
+      const savedToken = localStorage.getItem(ADMIN_KEYS.token) || (!localStorage.getItem(WEB_KEYS.token) ? localStorage.getItem('token') : null);
+      if (!savedToken || isTokenExpired(savedToken)) return null;
+      const savedUser = localStorage.getItem(ADMIN_KEYS.user) || (!localStorage.getItem(WEB_KEYS.user) ? localStorage.getItem('user') : null);
       return savedUser ? JSON.parse(savedUser) : null;
     } catch {
       return null;
     }
   });
 
-  const [loadingSession, setLoadingSession] = useState(() => {
-    const saved = localStorage.getItem('token');
-    return Boolean(saved && !isTokenExpired(saved));
+  // --------------------------------------------------------------------------
+  // 2. Website Customer Authentication State (aura_web_*)
+  // --------------------------------------------------------------------------
+  const [webToken, setWebToken] = useState(() => {
+    const saved = localStorage.getItem(WEB_KEYS.token);
+    if (!saved || isTokenExpired(saved)) {
+      localStorage.removeItem(WEB_KEYS.token);
+      localStorage.removeItem(WEB_KEYS.user);
+      return null;
+    }
+    return saved;
   });
 
-  // Support both flattened and wrapped session user payloads
+  const [webUser, setWebUser] = useState(() => {
+    try {
+      const savedToken = localStorage.getItem(WEB_KEYS.token);
+      if (!savedToken || isTokenExpired(savedToken)) return null;
+      const savedUser = localStorage.getItem(WEB_KEYS.user);
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [loadingSession, setLoadingSession] = useState(true);
+  const lastHeartbeatRef = useRef(0);
+
+  // Sync active path changes
+  useEffect(() => {
+    const onLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', onLocationChange);
+    return () => window.removeEventListener('popstate', onLocationChange);
+  }, []);
+
+  // Update Authorization header according to current section
+  useEffect(() => {
+    const activeToken = isAdminArea ? adminToken : (webToken || adminToken);
+    if (activeToken) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${activeToken}`;
+      // Legacy backward compatibility for older components reading localStorage('token')
+      localStorage.setItem('token', activeToken);
+    } else {
+      delete axios.defaults.headers.common['Authorization'];
+      localStorage.removeItem('token');
+    }
+  }, [isAdminArea, adminToken, webToken]);
+
+  // Active user depending on current section
+  const user = isAdminArea ? adminUser : (webUser || adminUser);
+  const token = isAdminArea ? adminToken : (webToken || adminToken);
   const effectiveUser = user?.user ? { ...user.user, ...user } : user;
 
   // Group Permissions ($this->GP in CodeIgniter 3)
@@ -99,7 +167,6 @@ export const AuthProvider = ({ children }) => {
     effectiveUser?.Salesman
   );
 
-  // Staff or Admin flag for ERP Operations Portal access
   const isStaffOrAdmin = Boolean(
     effectiveUser &&
     !isCustomer &&
@@ -119,25 +186,17 @@ export const AuthProvider = ({ children }) => {
   const canAccessOperationsPortal = isStaffOrAdmin;
 
   /**
-   * Check if current user has permission
-   * Modeled on CodeIgniter 3:
-   *   if ($this->Owner || $this->Admin || $this->GP['module-action'])
+   * Check if current user has permission ($this->GP)
    */
   const hasPermission = useCallback((permissionKey) => {
     if (!user) return false;
-    // Owner and Admin have access to everything
     if (isOwner || isAdmin) return true;
-
-    // Direct check in GP dictionary
     if (GP && (GP[permissionKey] === 1 || GP[permissionKey] === true || GP[permissionKey] === '1')) {
       return true;
     }
-
-    // Check in permissions array
     if (Array.isArray(user.permissions) && user.permissions.includes(permissionKey)) {
       return true;
     }
-
     return false;
   }, [user, isOwner, isAdmin, GP]);
 
@@ -149,148 +208,286 @@ export const AuthProvider = ({ children }) => {
     return keys.flat().every(k => hasPermission(k));
   }, [hasPermission]);
 
-  // Session Login
-  const login = useCallback((authPayload) => {
-    const rawToken = authPayload?.token || authPayload?.access_token;
-    const rawUser = authPayload?.user || authPayload?.profile || authPayload;
+  // --------------------------------------------------------------------------
+  // Admin Login & Logout Methods
+  // --------------------------------------------------------------------------
+  const loginAdmin = useCallback((authPayload) => {
+    const rawToken = authPayload?.token || authPayload?.access_token || authPayload?.data?.token;
+    const rawUser = authPayload?.user || authPayload?.profile || authPayload?.data?.user || authPayload;
 
     if (rawToken) {
-      setToken(rawToken);
+      setAdminToken(rawToken);
+      localStorage.setItem(ADMIN_KEYS.token, rawToken);
+      localStorage.setItem(ADMIN_KEYS.activity, String(Date.now()));
       localStorage.setItem('token', rawToken);
       axios.defaults.headers.common['Authorization'] = `Bearer ${rawToken}`;
     }
 
     if (rawUser) {
-      setUser(rawUser);
+      setAdminUser(rawUser);
+      localStorage.setItem(ADMIN_KEYS.user, JSON.stringify(rawUser));
       localStorage.setItem('user', JSON.stringify(rawUser));
     }
   }, []);
 
-  // Session Logout
-  const logout = useCallback(async () => {
+  const logoutAdmin = useCallback(async (reason = null) => {
     try {
-      const activeToken = token || localStorage.getItem('token');
+      const activeToken = adminToken || localStorage.getItem(ADMIN_KEYS.token);
       if (activeToken) {
         await axios.post('/api/admin/auth/logout', {}, {
           headers: { Authorization: `Bearer ${activeToken}` }
         }).catch(() => {});
       }
     } catch (_) {
-      // Ignore network errors on logout
+      // Ignore network errors
     } finally {
-      setUser(null);
-      setToken(null);
-      delete axios.defaults.headers.common['Authorization'];
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      setAdminUser(null);
+      setAdminToken(null);
+      localStorage.removeItem(ADMIN_KEYS.token);
+      localStorage.removeItem(ADMIN_KEYS.user);
+      localStorage.removeItem(ADMIN_KEYS.activity);
       localStorage.removeItem('aura_emenu_cart_v2');
 
-      // Navigate to admin login if inside admin panel
-      if (window.location.pathname.startsWith('/admins') && !window.location.pathname.startsWith('/admins/login')) {
-        window.location.href = '/admins/login';
+      const reasonQuery = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+      if (window.location.pathname.startsWith('/admins') || window.location.pathname.startsWith('/pos')) {
+        window.location.href = `/admins/login${reasonQuery}`;
       }
     }
-  }, [token]);
+  }, [adminToken]);
 
-  // Validate session on app initialization
-  useEffect(() => {
-    let isMounted = true;
-    const initSession = async () => {
-      const savedToken = localStorage.getItem('token');
-      if (!savedToken || isTokenExpired(savedToken)) {
-        if (savedToken) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          delete axios.defaults.headers.common['Authorization'];
-          if (isMounted) {
-            setUser(null);
-            setToken(null);
-          }
-        }
-        if (isMounted) setLoadingSession(false);
-        return;
+  // --------------------------------------------------------------------------
+  // Website Login & Logout Methods
+  // --------------------------------------------------------------------------
+  const loginWeb = useCallback((authPayload) => {
+    const rawToken = authPayload?.token || authPayload?.access_token || authPayload?.data?.token;
+    const rawUser = authPayload?.user || authPayload?.profile || authPayload?.data?.user || authPayload;
+
+    if (rawToken) {
+      setWebToken(rawToken);
+      localStorage.setItem(WEB_KEYS.token, rawToken);
+      localStorage.setItem(WEB_KEYS.activity, String(Date.now()));
+      if (!window.location.pathname.startsWith('/admins')) {
+        localStorage.setItem('token', rawToken);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${rawToken}`;
       }
+    }
 
-      axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+    if (rawUser) {
+      setWebUser(rawUser);
+      localStorage.setItem(WEB_KEYS.user, JSON.stringify(rawUser));
+      if (!window.location.pathname.startsWith('/admins')) {
+        localStorage.setItem('user', JSON.stringify(rawUser));
+      }
+    }
+  }, []);
 
-      let parsedUser = null;
-      try {
-        const savedUser = localStorage.getItem('user');
-        parsedUser = savedUser ? JSON.parse(savedUser) : null;
-      } catch (_) {}
+  const logoutWeb = useCallback(async (reason = null) => {
+    try {
+      const activeToken = webToken || localStorage.getItem(WEB_KEYS.token);
+      if (activeToken) {
+        await axios.post('/api/web/auth/logout', {}, {
+          headers: { Authorization: `Bearer ${activeToken}` }
+        }).catch(() => {});
+      }
+    } catch (_) {
+      // Ignore network errors
+    } finally {
+      setWebUser(null);
+      setWebToken(null);
+      localStorage.removeItem(WEB_KEYS.token);
+      localStorage.removeItem(WEB_KEYS.user);
+      localStorage.removeItem(WEB_KEYS.activity);
 
-      const isCustomerAccount = parsedUser?.role === 'customer' || Number(parsedUser?.group_id) === 4;
+      const reasonQuery = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+      if (!window.location.pathname.startsWith('/admins')) {
+        window.location.href = `/login${reasonQuery}`;
+      }
+    }
+  }, [webToken]);
 
-      try {
-        // Customer accounts authenticate via /api/auth/profile; Admin/staff via /api/admin/auth/session
-        // Pass ?silent=1 and x-session-check header so backend returns 200 with authenticated:false instead of logging 401 console errors on dead sessions
-        const baseEndpoint = isCustomerAccount ? '/api/auth/profile' : '/api/admin/auth/session';
-        const sessionEndpoint = `${baseEndpoint}?silent=1`;
-        const res = await axios.get(sessionEndpoint, {
-          headers: { 
-            Authorization: `Bearer ${savedToken}`,
-            'x-session-check': '1'
-          }
-        });
+  // Unified login & logout for backward compatibility
+  const login = useCallback((authPayload) => {
+    const isCustomerAccount = authPayload?.role === 'customer' || authPayload?.group_id === 4 || authPayload?.user?.role === 'customer';
+    if (isCustomerAccount) {
+      loginWeb(authPayload);
+    } else {
+      loginAdmin(authPayload);
+    }
+  }, [loginWeb, loginAdmin]);
 
-        if (res.data?.authenticated === false || (!res.data?.success && !res.data?.status)) {
-          if (isMounted) {
-            setUser(null);
-            setToken(null);
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            delete axios.defaults.headers.common['Authorization'];
-          }
-          return;
-        }
+  const logout = useCallback(async (reason = null) => {
+    if (window.location.pathname.startsWith('/admins') || window.location.pathname.startsWith('/pos')) {
+      await logoutAdmin(reason);
+    } else {
+      await logoutWeb(reason);
+    }
+  }, [logoutAdmin, logoutWeb]);
 
-        if (isMounted && (res.data?.success || res.data?.status) && res.data?.data) {
-          const payloadData = res.data.data;
-          const userObj = payloadData.user || payloadData.profile || payloadData;
-          const freshUser = {
-            ...userObj,
-            GP: payloadData.GP || userObj.GP || {},
-            permissions: payloadData.permissions || userObj.permissions || [],
-            group: payloadData.group || userObj.group || {},
-            group_name: payloadData.group?.name || userObj.group_name || userObj.role || 'owner',
-            group_id: payloadData.group?.id || userObj.group_id || 1,
-            allow_admin_login: payloadData.group?.allow_admin_login !== undefined
-              ? payloadData.group.allow_admin_login
-              : (userObj.allow_admin_login !== undefined ? userObj.allow_admin_login : 1)
-          };
-          setUser(freshUser);
-          localStorage.setItem('user', JSON.stringify(freshUser));
-        }
-      } catch (err) {
-        // If 401 Unauthorized, token has expired
-        if (err.response?.status === 401) {
-          if (isMounted) {
-            setUser(null);
-            setToken(null);
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            delete axios.defaults.headers.common['Authorization'];
-          }
-        } else if (err.response?.status === 403 && !isCustomerAccount) {
-          // If 403 when hitting admin session, account may be a customer or restricted
-          if (isMounted && parsedUser) {
-            setUser(parsedUser);
-          }
-        }
-      } finally {
-        if (isMounted) setLoadingSession(false);
+  // --------------------------------------------------------------------------
+  // 3. Automatic Logout After Inactivity Tracker (Requirement 5)
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    // Only track if an authenticated session exists
+    const hasActiveSession = Boolean(adminToken || webToken);
+    if (!hasActiveSession) return;
+
+    const handleUserInteraction = () => {
+      const now = Date.now();
+      const storageKey = isAdminArea ? ADMIN_KEYS.activity : WEB_KEYS.activity;
+      localStorage.setItem(storageKey, String(now));
+
+      // Throttled heartbeat ping every 2 minutes
+      if (now - lastHeartbeatRef.current > 120000) {
+        lastHeartbeatRef.current = now;
+        const heartbeatUrl = isAdminArea ? '/api/admin/auth/activity' : '/api/web/auth/activity';
+        axios.post(heartbeatUrl, {}, { headers: { 'x-session-check': '1' } }).catch(() => {});
       }
     };
 
-    initSession();
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+    activityEvents.forEach((ev) => window.addEventListener(ev, handleUserInteraction, { passive: true }));
+
+    // Periodic idle checker every 10 seconds
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      const storageKey = isAdminArea ? ADMIN_KEYS.activity : WEB_KEYS.activity;
+      const lastActivity = Number(localStorage.getItem(storageKey)) || now;
+      const idleTime = now - lastActivity;
+
+      if (idleTime >= DEFAULT_INACTIVITY_TIMEOUT_MS) {
+        // Inactivity exceeded -> trigger auto logout
+        if (isAdminArea && adminToken) {
+          logoutAdmin('inactivity');
+        } else if (!isAdminArea && webToken) {
+          logoutWeb('inactivity');
+        }
+      }
+    }, 10000);
+
+    return () => {
+      activityEvents.forEach((ev) => window.removeEventListener(ev, handleUserInteraction));
+      clearInterval(intervalId);
+    };
+  }, [adminToken, webToken, isAdminArea, logoutAdmin, logoutWeb]);
+
+  // --------------------------------------------------------------------------
+  // 4. Session Revalidation on Mount (Handles Refreshes & Direct URLs)
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    let isMounted = true;
+
+    const initSessions = async () => {
+      // 1. Validate Admin Session
+      const savedAdminToken = localStorage.getItem(ADMIN_KEYS.token);
+      if (savedAdminToken && !isTokenExpired(savedAdminToken)) {
+        try {
+          const res = await axios.get('/api/admin/auth/session?silent=1', {
+            headers: {
+              Authorization: `Bearer ${savedAdminToken}`,
+              'x-session-check': '1'
+            }
+          });
+
+          if (res.data?.authenticated === false || (!res.data?.success && !res.data?.status)) {
+            if (isMounted) {
+              setAdminUser(null);
+              setAdminToken(null);
+              localStorage.removeItem(ADMIN_KEYS.token);
+              localStorage.removeItem(ADMIN_KEYS.user);
+            }
+          } else if (res.data?.data) {
+            const payload = res.data.data;
+            const userObj = payload.user || payload.profile || payload;
+            const enrichedUser = {
+              ...userObj,
+              GP: payload.GP || userObj.GP || {},
+              permissions: payload.permissions || userObj.permissions || [],
+              branches: payload.branches || userObj.branches || []
+            };
+            if (isMounted) {
+              setAdminUser(enrichedUser);
+              localStorage.setItem(ADMIN_KEYS.user, JSON.stringify(enrichedUser));
+            }
+          }
+        } catch (_) {
+          // If server fails or rejects
+          if (isMounted) {
+            setAdminUser(null);
+            setAdminToken(null);
+            localStorage.removeItem(ADMIN_KEYS.token);
+            localStorage.removeItem(ADMIN_KEYS.user);
+          }
+        }
+      }
+
+      // 2. Validate Website Customer Session
+      const savedWebToken = localStorage.getItem(WEB_KEYS.token);
+      if (savedWebToken && !isTokenExpired(savedWebToken)) {
+        try {
+          const res = await axios.get('/api/web/auth/session?silent=1', {
+            headers: {
+              Authorization: `Bearer ${savedWebToken}`,
+              'x-session-check': '1'
+            }
+          });
+
+          if (res.data?.authenticated === false || (!res.data?.success && !res.data?.status)) {
+            if (isMounted) {
+              setWebUser(null);
+              setWebToken(null);
+              localStorage.removeItem(WEB_KEYS.token);
+              localStorage.removeItem(WEB_KEYS.user);
+            }
+          } else if (res.data?.data) {
+            const payload = res.data.data;
+            const userObj = payload.user || payload.profile || payload;
+            if (isMounted) {
+              setWebUser(userObj);
+              localStorage.setItem(WEB_KEYS.user, JSON.stringify(userObj));
+            }
+          }
+        } catch (_) {
+          if (isMounted) {
+            setWebUser(null);
+            setWebToken(null);
+            localStorage.removeItem(WEB_KEYS.token);
+            localStorage.removeItem(WEB_KEYS.user);
+          }
+        }
+      }
+
+      if (isMounted) {
+        setLoadingSession(false);
+      }
+    };
+
+    initSessions();
     return () => { isMounted = false; };
   }, []);
 
   return (
     <AuthContext.Provider
       value={{
+        // Active contextual session
         user,
         token,
+        isAuthenticated: Boolean(user && token),
+
+        // Isolated Admin Session
+        adminUser,
+        adminToken,
+        isAdminAuthenticated: Boolean(adminUser && adminToken),
+        loginAdmin,
+        logoutAdmin,
+
+        // Isolated Website Customer Session
+        webUser,
+        webToken,
+        isWebAuthenticated: Boolean(webUser && webToken),
+        loginWeb,
+        logoutWeb,
+
+        // Role & Permission Checks
         GP,
         isOwner,
         isAdmin,
@@ -303,10 +500,11 @@ export const AuthProvider = ({ children }) => {
         hasPermission,
         hasAnyPermission,
         hasAllPermissions,
+
+        // Universal Methods
         login,
         logout,
-        loadingSession,
-        isAuthenticated: Boolean(user && token)
+        loadingSession
       }}
     >
       {children}

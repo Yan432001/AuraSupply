@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS `aura_site_settings` (
   `tagline` VARCHAR(255) DEFAULT 'Commercial B2B Supply & Sourcing Network',
   `logo_url` VARCHAR(255) DEFAULT '/logos/aura-logo.svg',
   `logo_white_url` VARCHAR(255) DEFAULT '/logos/aura-logo-white.svg',
-  `favicon_url` VARCHAR(255) DEFAULT '/favicon.ico',
+  `favicon_url` VARCHAR(255) DEFAULT '/aura.ico',
   `address` VARCHAR(255) DEFAULT 'Building 45, Norodom Blvd, Daun Penh, Phnom Penh, Cambodia',
   `address_kh` VARCHAR(300) DEFAULT 'អគារ ៤៥ មហាវិថីព្រះនរោត្តម ដូនពេញ ភ្នំពេញ កម្ពុជា',
   `city` VARCHAR(100) DEFAULT 'Phnom Penh',

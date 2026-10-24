@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Space,
   Button,
@@ -64,10 +65,14 @@ const PosHeader = ({
   onOpenCustomerStocks,
   onOpenPrinters,
   onOpenPosSettings,
+  onOpenKitchen,
   onInitiateCloseRegister,
   onExit,
   t,
 }) => {
+  const navigate = useNavigate();
+  const handleKitchenClick = onOpenKitchen || (() => navigate('/admins/pos/kitchen'));
+
   const topBtnStyle = {
     height: 36,
     borderRadius: 8,
@@ -147,7 +152,7 @@ const PosHeader = ({
       key: 'kitchen-display',
       icon: <FireOutlined style={{ color: '#ea580c' }} />,
       label: 'Kitchen Display System (KDS)',
-      onClick: () => window.open('/pos/kitchen', '_blank'),
+      onClick: handleKitchenClick,
     },
     { type: 'divider' },
     {
@@ -402,11 +407,11 @@ const PosHeader = ({
         </Tooltip>
 
         {/* Kitchen Display System (KDS) */}
-        <Tooltip title="Launch Kitchen Display System (KDS)">
+        <Tooltip title="Kitchen Display System (KDS)">
           <button
             type="button"
             className="pos-press"
-            onClick={() => window.open('/pos/kitchen', '_blank')}
+            onClick={handleKitchenClick}
             style={topBtnStyle}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#ea580c')}
             onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}

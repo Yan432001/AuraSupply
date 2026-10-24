@@ -21,7 +21,8 @@ module.exports = (app) => {
   // --------------------------------------------------------------------------
   app.post('/api/admin/auth/login', authCtrl.login);
   app.post('/api/admin/login', authCtrl.login);
-  app.post('/api/admin/auth/logout', authenticate, authCtrl.logout);
+  app.post('/api/admin/auth/logout', authCtrl.logout);
+  app.post('/api/admin/logout', authCtrl.logout);
   app.post('/api/admin/auth/refresh', authCtrl.refreshToken);
   app.get('/api/admin/auth/session', authenticate, authCtrl.getProfile);
   app.get('/api/admin/auth/profile', authenticate, authCtrl.getProfile);

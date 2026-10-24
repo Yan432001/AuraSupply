@@ -1,3 +1,8 @@
+/**
+ * Public Website Authentication & Session Controller
+ * Ported strictly from CodeIgniter 3 AURA_v1 (bpas/controllers/Main.php & models/shop/Shop_model.php)
+ */
+
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -5,6 +10,9 @@ const { db, access_token_key } = require('../../config/utill/helper');
 const { sendSuccess, sendError } = require('../../config/utill/response');
 const tokenService = require('../../services/token.service');
 const accessControlService = require('../../services/accessControl.service');
+const sessionService = require('../../services/session.service');
+const authConfig = require('../../config/auth.config');
+const ShopAuth_Model = require('../../models/web/shopAuth.model');
 
 const JWT_SECRET = process.env.JWT_SECRET || access_token_key || 'AURA_ERP_SECRET_TOKEN_2026';
 const ACCESS_TOKEN_EXPIRY = '4h';
@@ -12,14 +20,6 @@ const ACCESS_TOKEN_EXPIRY = '4h';
 /**
  * POST /api/web/auth/register
  * Public Website Self-Registration for Customers and Suppliers
- *
- * Rules:
- *   - Only allowed for roles where aura_groups.allow_web_register = 1
- *   - Customer: status = 'active'
- *   - Supplier: status = 'pending' (requires_approval = 1, requires admin approval in /admins)
- *   - Hashed with bcrypt, password_algo = 'bcrypt', register_source = 'website'
- *   - Creates aura_user_profiles row
- *   - Issues email_verify token
  */
 exports.register = async (req, res) => {
   try {
@@ -59,11 +59,8 @@ exports.register = async (req, res) => {
     const group = groups[0];
 
     // Check unique email and username
-    const [existing] = await db.query(
-      'SELECT id, email, username FROM aura_users WHERE (LOWER(email) = ? OR LOWER(username) = ?) AND deleted_at IS NULL LIMIT 1',
-      [cleanEmail, cleanEmail]
-    );
-    if (existing && existing.length > 0) {
+    const existing = await ShopAuth_Model.findCustomerByIdentity(cleanEmail);
+    if (existing) {
       return sendError(res, 'An account with this email address already exists. Please sign in instead.', 409);
     }
 
@@ -73,67 +70,21 @@ exports.register = async (req, res) => {
     const username = `${baseUsername}_${uniqueSuffix}`;
 
     const hash = await bcrypt.hash(password, 10);
-
-    // Determine initial status based on approval requirement
     const initialStatus = Number(group.requires_approval) === 1 ? 'pending' : 'active';
 
-    // Insert into aura_users
-    const [userResult] = await db.query(`
-      INSERT INTO aura_users (
-        username, email, password, password_algo, group_id,
-        first_name, company, phone, status, register_source,
-        active, created_at
-      ) VALUES (?, ?, ?, 'bcrypt', ?, ?, ?, ?, ?, 'website', ?, NOW())
-    `, [
+    const newUserId = await ShopAuth_Model.registerCustomer({
       username,
-      cleanEmail,
-      hash,
-      group.id,
-      name.trim(),
-      company ? company.trim() : null,
-      phone.trim(),
-      initialStatus,
-      initialStatus === 'active' ? 1 : 0
-    ]);
-
-    const newUserId = userResult.insertId;
-
-    // Create aura_user_profiles row
-    await db.query(`
-      INSERT INTO aura_user_profiles (
-        user_id, contact_person, business_type, vat_no, address, updated_at
-      ) VALUES (?, ?, ?, ?, ?, NOW())
-    `, [
-      newUserId,
-      name.trim(),
-      business_type || null,
-      vat_no || null,
-      address || null
-    ]);
-
-    // Sync to RBAC users and user_group_mappings table if present
-    try {
-      const userUuid = crypto.randomUUID ? crypto.randomUUID() : `usr-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-      const [uRes] = await db.query(`
-        INSERT INTO users (uuid, username, email, password_hash, first_name, phone, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [userUuid, username, cleanEmail, hash, name.trim(), phone.trim(), initialStatus]);
-
-      const [ugRows] = await db.query("SELECT id FROM user_groups WHERE LOWER(code) = ? OR LOWER(name) = ? LIMIT 1", [cleanRole, cleanRole]);
-      if (ugRows && ugRows.length > 0) {
-        await db.query(`
-          INSERT INTO user_group_mappings (user_id, group_id, assigned_by)
-          VALUES (?, ?, ?)
-        `, [uRes.insertId, ugRows[0].id, uRes.insertId]);
-      }
-    } catch (_) {}
-
-    // Issue email verification token (valid for 24h)
-    const { plainToken } = await tokenService.issueToken({
-      userId: newUserId,
-      type: 'email_verify',
-      area: 'website',
-      expiresInSeconds: 86400
+      email: cleanEmail,
+      passwordHash: hash,
+      groupId: group.id,
+      firstName: name.trim(),
+      company: company ? company.trim() : null,
+      phone: phone.trim(),
+      status: initialStatus,
+      active: initialStatus === 'active' ? 1 : 0,
+      businessType: business_type,
+      vatNo: vat_no,
+      address
     });
 
     const isPending = initialStatus === 'pending';
@@ -147,8 +98,7 @@ exports.register = async (req, res) => {
       email: cleanEmail,
       role: group.name,
       status: initialStatus,
-      requiresApproval: isPending,
-      verificationToken: plainToken
+      requiresApproval: isPending
     }, message, null, 201);
   } catch (err) {
     console.error('[Web Register Error]', err);
@@ -159,54 +109,37 @@ exports.register = async (req, res) => {
 /**
  * POST /api/web/auth/login
  * Public Website Login for Buyers (Customers) and Suppliers
- *
- * Rules:
- *   - allow_web_login = 1 only. Staff accounts CANNOT log in on the website!
- *   - Migrated customers/suppliers have password '!': return prompt to use forgot-password
- *   - Checks website permission keys (web.catalog.view, web.rfq.create, web.orders.view, web.products.manage)
  */
 exports.login = async (req, res) => {
   try {
-    const { login, password, remember_me = false } = req.body;
+    const { login, username, email, password, remember = false, remember_me = false } = req.body;
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
     const userAgent = req.headers['user-agent'] || 'Unknown';
+    const isRemember = Boolean(remember || remember_me);
 
-    if (!login || !password) {
+    const rawLogin = login || username || email;
+    if (!rawLogin || !password) {
       return sendError(res, 'Email or username and password are required', 400);
     }
 
-    const cleanLogin = login.trim().toLowerCase();
+    const cleanLogin = rawLogin.trim().toLowerCase();
+    const user = await ShopAuth_Model.findCustomerByIdentity(cleanLogin);
 
-    // Query aura_users joined with aura_groups and aura_user_profiles
-    const [users] = await db.query(`
-      SELECT u.id, u.username, u.email, u.password, u.password_algo, u.group_id,
-             u.status, u.first_name, u.company, u.phone, u.failed_login_count, u.locked_until,
-             g.name AS group_name, g.description AS group_description, g.level AS group_level,
-             g.allow_web_login, g.allow_admin_login,
-             p.company_kh, p.vat_no, p.address
-      FROM aura_users u
-      JOIN aura_groups g ON g.id = u.group_id
-      LEFT JOIN aura_user_profiles p ON p.user_id = u.id
-      WHERE (LOWER(u.username) = ? OR LOWER(u.email) = ?) AND u.deleted_at IS NULL
-      LIMIT 1
-    `, [cleanLogin, cleanLogin]);
-
-    if (!users || users.length === 0) {
+    if (!user) {
       await db.query(`
         INSERT INTO aura_login_attempts (login, ip_address, area, time)
-        VALUES (?, ?, 'website', NOW())
+        VALUES (?, ?, 'website', UNIX_TIMESTAMP())
       `, [cleanLogin, ipAddress]);
       return sendError(res, 'Invalid credentials', 401);
     }
 
-    const user = users[0];
-
-    // Enforce Website Login Access
+    // Enforce Website Login Access (Staff cannot log in on public website)
     if (Number(user.allow_web_login) !== 1) {
       return sendError(
         res,
         'Staff accounts cannot log in to the public website. Please sign in via the administrative portal at /admins.',
-        403
+        403,
+        { code: 'FORBIDDEN_STAFF_ON_WEB' }
       );
     }
 
@@ -220,7 +153,7 @@ exports.login = async (req, res) => {
       );
     }
 
-    if (user.status !== 'active') {
+    if (user.status !== 'active' || user.active === 0) {
       return sendError(res, `Account is currently ${user.status}. Please contact support.`, 403);
     }
 
@@ -236,28 +169,36 @@ exports.login = async (req, res) => {
 
     // Password verification
     let passwordMatches = false;
-    if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$')) {
+    let needsUpgrade = false;
+
+    if (user.password && (user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$'))) {
       passwordMatches = await bcrypt.compare(password, user.password);
     } else {
       const sha1Hash = crypto.createHash('sha1').update(password).digest('hex');
       if (sha1Hash === user.password) {
         passwordMatches = true;
+        needsUpgrade = true;
       }
     }
 
     if (!passwordMatches) {
       await db.query(`
         INSERT INTO aura_login_attempts (login, ip_address, area, time)
-        VALUES (?, ?, 'website', NOW())
+        VALUES (?, ?, 'website', UNIX_TIMESTAMP())
       `, [cleanLogin, ipAddress]);
       return sendError(res, 'Invalid email or password', 401);
     }
 
+    if (needsUpgrade) {
+      const newHash = await bcrypt.hash(password, 10);
+      await db.query("UPDATE aura_users SET password = ?, password_algo = 'bcrypt' WHERE id = ?", [newHash, user.id]);
+    }
+
     // Record login in aura_user_logins (area='website', success=1)
     await db.query(`
-      INSERT INTO aura_user_logins (user_id, area, success, ip_address, user_agent, time)
-      VALUES (?, 'website', 1, ?, ?, NOW())
-    `, [user.id, ipAddress, userAgent]);
+      INSERT INTO aura_user_logins (user_id, login, area, success, ip_address, user_agent, time)
+      VALUES (?, ?, 'website', 1, ?, ?, NOW())
+    `, [user.id, user.username, ipAddress, userAgent]);
 
     await db.query(`
       UPDATE aura_users SET last_login_at = NOW(), last_login_ip = ? WHERE id = ?
@@ -266,47 +207,146 @@ exports.login = async (req, res) => {
     // Issue JWT access token
     const tokenPayload = {
       id: user.id,
+      user_id: user.id,
       username: user.username,
       email: user.email,
       group_id: user.group_id,
-      role: user.group_name,
+      role: user.group_name || 'customer',
       level: user.group_level,
       area: 'website'
     };
-    const accessToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
 
-    // Issue refresh token
-    const { plainToken: refreshToken } = await tokenService.issueToken({
+    const tokenExpiry = isRemember ? '30d' : ACCESS_TOKEN_EXPIRY;
+    const accessToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: tokenExpiry });
+
+    // Register active website session & inactivity tracking
+    await sessionService.registerSession({
       userId: user.id,
-      type: 'refresh',
+      token: accessToken,
       area: 'website',
-      expiresInSeconds: remember_me ? 30 * 24 * 3600 : 7 * 24 * 3600,
+      remember: isRemember,
       ipAddress,
       userAgent
     });
 
-    // Fetch allowed website permission keys (e.g. web.catalog.view, web.rfq.create, web.orders.view, web.products.manage)
+    // Set secure HttpOnly, SameSite website session cookie
+    sessionService.setSessionCookie(res, 'web', accessToken, isRemember);
+
+    // Fetch allowed website permission keys
     const allowedPermissions = await accessControlService.getUserAllowedPermissions(user.id, user.group_id, user.group_level);
+
+    const customerUserData = {
+      id: user.id,
+      user_id: user.id,
+      username: user.username,
+      email: user.email,
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      company: user.company,
+      phone: user.phone,
+      avatar: user.avatar,
+      role: user.group_name || 'customer',
+      group_name: user.group_name || 'customer',
+      group_id: user.group_id,
+      level: user.group_level,
+      address: user.address,
+      vat_no: user.vat_no
+    };
 
     return sendSuccess(res, {
       token: accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        name: user.first_name,
-        company: user.company,
-        phone: user.phone,
-        role: user.group_name,
-        level: user.group_level
-      },
+      access_token: accessToken,
+      user: customerUserData,
+      profile: customerUserData,
       permissions: allowedPermissions
     }, 'Welcome back to Aura Supply B2B');
   } catch (err) {
     console.error('[Web Login Error]', err);
     return sendError(res, 'Authentication failed due to server error', 500, err.message);
   }
+};
+
+/**
+ * GET /api/web/auth/session or GET /api/web/auth/profile
+ * Return website customer profile
+ */
+exports.profile = async (req, res) => {
+  try {
+    const userId = req.user_id || req.user?.id;
+    if (!userId) {
+      return sendError(res, 'Unauthenticated', 401);
+    }
+
+    const customer = await ShopAuth_Model.findCustomerById(userId);
+    if (!customer) {
+      sessionService.clearSessionCookie(res, 'web');
+      return sendError(res, 'Customer account not found', 404);
+    }
+
+    if (req.token) {
+      sessionService.touchActivity(req.token);
+    }
+
+    const customerData = {
+      id: customer.id,
+      user_id: customer.id,
+      username: customer.username,
+      email: customer.email,
+      name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || customer.username,
+      first_name: customer.first_name,
+      last_name: customer.last_name,
+      company: customer.company,
+      phone: customer.phone,
+      avatar: customer.avatar,
+      role: customer.group_name || 'customer',
+      group_name: customer.group_name || 'customer',
+      group_id: customer.group_id,
+      level: customer.group_level,
+      address: customer.address,
+      vat_no: customer.vat_no,
+      business_type: customer.business_type
+    };
+
+    return sendSuccess(res, {
+      user: customerData,
+      profile: customerData,
+      authenticated: true
+    });
+  } catch (err) {
+    console.error('[Web Profile Error]', err);
+    return sendError(res, 'Failed to fetch customer profile', 500, err.message);
+  }
+};
+
+/**
+ * POST /api/web/auth/logout
+ * Website customer logout
+ */
+exports.logout = async (req, res) => {
+  try {
+    const token = req.token || req.headers.authorization?.replace('Bearer ', '') || req.cookies?.[authConfig.session.webCookieName];
+    if (token) {
+      await sessionService.revokeSession(token);
+    }
+
+    sessionService.clearSessionCookie(res, 'web');
+    return sendSuccess(res, null, 'Logged out successfully from website session');
+  } catch (err) {
+    return sendError(res, 'Failed to logout', 500, err.message);
+  }
+};
+
+/**
+ * POST /api/web/auth/activity
+ * Website user activity heartbeat
+ */
+exports.activity = async (req, res) => {
+  const token = req.token || req.headers.authorization?.replace('Bearer ', '') || req.cookies?.[authConfig.session.webCookieName];
+  if (token) {
+    sessionService.touchActivity(token);
+  }
+  return sendSuccess(res, { timestamp: Date.now() });
 };
 
 /**

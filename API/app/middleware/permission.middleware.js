@@ -3,28 +3,61 @@ const { db, access_token_key } = require('../config/utill/helper');
 const { sendError } = require('../config/utill/response');
 const permissionsUtil = require('../config/utill/permissions');
 const accessControlService = require('../services/accessControl.service');
+const sessionService = require('../services/session.service');
+const authConfig = require('../config/auth.config');
 
 const JWT_SECRET = process.env.JWT_SECRET || access_token_key || 'AURA_ERP_SECRET_TOKEN_2026';
 
 /**
  * 1. Base Controller Authenticate Middleware
  * Cloned directly from CodeIgniter 3 (AURA_v1 MY_Controller::__construct):
- *   - Verifies session token
+ *   - Verifies session token (Bearer header OR HttpOnly cookies)
+ *   - Enforces automatic inactivity timeout
  *   - Defines $this->loggedIn, $this->Owner, $this->Admin, $this->Store, $this->GP
  *   - Injects complete session context into req.user & req.GP
  */
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
+    let token = null;
     let userId = null;
 
     const isSilent = req.query.silent === '1' || req.headers['x-session-check'] === '1';
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
+      token = authHeader.split(' ')[1];
+    } else if (req.cookies) {
+      const isAdminEndpoint = req.originalUrl && (req.originalUrl.includes('/admin') || req.baseUrl.includes('/admin'));
+      if (isAdminEndpoint && req.cookies[authConfig.session.adminCookieName]) {
+        token = req.cookies[authConfig.session.adminCookieName];
+      } else if (!isAdminEndpoint && req.cookies[authConfig.session.webCookieName]) {
+        token = req.cookies[authConfig.session.webCookieName];
+      } else {
+        token = req.cookies[authConfig.session.adminCookieName] || req.cookies[authConfig.session.webCookieName] || req.cookies['token'];
+      }
+    }
+
+    if (token) {
+      // Server-side Inactivity Check (Requirement 5)
+      const inactivity = await sessionService.validateInactivity(token);
+      if (!inactivity.valid) {
+        sessionService.clearSessionCookie(res, 'admin');
+        sessionService.clearSessionCookie(res, 'web');
+        if (isSilent) {
+          return res.json({ success: false, authenticated: false, code: inactivity.reason || 'SESSION_INACTIVE', message: inactivity.message, data: null });
+        }
+        return res.status(401).json({
+          success: false,
+          status: false,
+          code: inactivity.reason || 'SESSION_INACTIVE',
+          message: inactivity.message || 'Session expired due to inactivity. Please log in again.'
+        });
+      }
+
       try {
         const decoded = jwt.verify(token, JWT_SECRET);
         userId = decoded?.id || decoded?.user_id || decoded?.data?.profile?.id || decoded?.data?.id;
+        req.token = token;
       } catch (err) {
         if (isSilent) {
           return res.json({ success: false, authenticated: false, message: 'Session token expired or invalid.', data: null });
@@ -38,9 +71,9 @@ const authenticate = async (req, res, next) => {
       userId = 1;
     } else {
       if (isSilent) {
-        return res.json({ success: false, authenticated: false, message: 'Authentication required. No bearer token provided.', data: null });
+        return res.json({ success: false, authenticated: false, message: 'Authentication required. No session token provided.', data: null });
       }
-      return sendError(res, 'Authentication required. No bearer token provided.', 401);
+      return sendError(res, 'Authentication required. No session token provided.', 401);
     }
 
     if (!userId) {

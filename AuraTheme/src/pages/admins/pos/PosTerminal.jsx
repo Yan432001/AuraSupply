@@ -156,29 +156,45 @@ export default function PosTerminal() {
   const [catalogViewMode, setCatalogViewMode] = useState('grid');
   const searchInputRef = useRef(null);
 
-  // 5. Cart, Customers, Table & Orders State
-  const [cart, setCart] = useState([
-    {
-      id: 1,
-      code: 'BYD-01',
-      name: 'BYD Seal',
-      unit_price: 20000.0,
-      quantity: 1,
-      unit_name: 'Unit',
-      item_discount: 0,
-      item_note: '',
-    },
-    {
-      id: 2,
-      code: 'AV-12',
-      name: 'Avatar 12',
-      unit_price: 3.0,
-      quantity: 1,
-      unit_name: 'Unit',
-      item_discount: 0,
-      item_note: '',
-    },
-  ]);
+  // 5. Cart, Customers, Table & Orders State (Persisted across in-app navigation)
+  const [cart, setCart] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aura_pos_cart');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return [
+      {
+        id: 1,
+        code: 'BYD-01',
+        name: 'BYD Seal',
+        unit_price: 20000.0,
+        quantity: 1,
+        unit_name: 'Unit',
+        item_discount: 0,
+        item_note: '',
+      },
+      {
+        id: 2,
+        code: 'AV-12',
+        name: 'Avatar 12',
+        unit_price: 3.0,
+        quantity: 1,
+        unit_name: 'Unit',
+        item_discount: 0,
+        item_note: '',
+      },
+    ];
+  });
+
+  // Keep cart in sync with localStorage for seamless navigation between POS, Kitchen, and Settings
+  useEffect(() => {
+    try {
+      localStorage.setItem('aura_pos_cart', JSON.stringify(cart));
+    } catch (_) {}
+  }, [cart]);
   const [currentWarehouse, setCurrentWarehouse] = useState('HQ Warehouse');
   const [currentTable, setCurrentTable] = useState('Takeaway / Walk-in');
   const [selectedCustomerId, setSelectedCustomerId] = useState(1);
@@ -619,6 +635,9 @@ export default function PosTerminal() {
 
   const clearCart = () => {
     setCart([]);
+    try {
+      localStorage.removeItem('aura_pos_cart');
+    } catch (_) {}
     setOrderDiscountValue(0);
     setOrderTaxRate(0);
     setShippingFee(0);
@@ -1103,6 +1122,7 @@ export default function PosTerminal() {
         onOpenCoupons={() => setCouponModalVisible(true)}
         onOpenCustomerStocks={() => setCustomerStockModalVisible(true)}
         onOpenPrinters={() => setPrintersModalVisible(true)}
+        onOpenKitchen={() => navigate('/admins/pos/kitchen')}
         onInitiateCloseRegister={handleInitiateCloseRegister}
         onExit={() => navigate('/admins')}
         t={t}

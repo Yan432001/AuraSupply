@@ -993,7 +993,7 @@ export default function AdminSimpleDataManager() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item label="Favicon URL" name="favicon_url">
-                <Input placeholder="/favicon.ico" />
+                <Input placeholder="/aura.ico" />
               </Form.Item>
             </Col>
           </Row>

@@ -1,6 +1,6 @@
 import React from 'react';
-import { ConfigProvider, App as AntApp } from 'antd';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ConfigProvider, App as AntApp, Spin } from 'antd';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
@@ -57,11 +57,24 @@ import WebEMenuPage from './views/WebEMenuPage';
 import TelegramEntry from './views/TelegramEntry';
 import StoreNotFound from './views/StoreNotFound';
 
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const { user } = useAuth();
-  return user ? children : <Navigate to="/login" />;
+// Protected Route Component for Website Customer & B2B Portal
+const WebProtectedRoute = ({ children }) => {
+  const { isWebAuthenticated, webUser, user, loadingSession } = useAuth();
+  const location = useLocation();
+
+  if (loadingSession) {
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  const hasAccess = Boolean(isWebAuthenticated || webUser || (user && !location.pathname.startsWith('/admins')));
+  return hasAccess ? children : <Navigate to="/login" state={{ from: location }} replace />;
 };
+
+const ProtectedRoute = WebProtectedRoute;
 
 // Admin Theme Wrapper
 const AdminThemeWrapper = ({ children }) => {

@@ -3,32 +3,29 @@ const {
   register, 
   login, 
   logout,
+  activity,
   token_key_login 
 } = require("../../../controller/admin/auth.controller");
-const { authenticate } = require("../../../middleware/permission.middleware");
+const adminAuthCtrl = require("../../../controller/admin/adminAuth.controller");
+const { verifyAdminSession } = require("../../../middleware/auth.middleware");
 
 module.exports = (app) => {
-  // Login endpoints
+  // 1. Admin Login endpoints
   app.post("/api/admin/auth/login", login);
   app.post("/api/admin/login", login);
-  app.post("/api/auth/login", login);
 
-  // Logout endpoints
+  // 2. Admin Logout endpoints
   app.post("/api/admin/auth/logout", logout);
   app.post("/api/admin/logout", logout);
-  app.post("/api/auth/logout", logout);
 
-  // Profile & Session endpoints
-  app.get("/api/admin/auth/session", token_key_login(), profile);
-  app.get("/api/admin/auth/profile", token_key_login(), profile);
-  app.post("/api/admin/auth/profile", token_key_login(), profile);
-  app.get("/api/admin/profile", token_key_login(), profile);
-  app.post("/api/admin/profile", token_key_login(), profile);
-  app.get("/api/auth/profile", token_key_login(), profile);
-  app.post("/api/auth/profile", token_key_login(), profile);
+  // 3. Admin Profile & Session endpoints
+  app.get("/api/admin/auth/session", verifyAdminSession, profile);
+  app.get("/api/admin/auth/profile", verifyAdminSession, profile);
+  app.post("/api/admin/auth/profile", verifyAdminSession, profile);
+  app.get("/api/admin/profile", verifyAdminSession, profile);
+  app.post("/api/admin/profile", verifyAdminSession, profile);
 
-  // User Registration
-  app.post("/api/admin/auth/register", authenticate, register);
-  app.post("/api/admin/register", authenticate, register);
-  app.post("/api/auth/register", authenticate, register);
+  // 4. Admin Session Refresh & Heartbeat Activity
+  app.post("/api/admin/auth/refresh", adminAuthCtrl.refreshToken);
+  app.post("/api/admin/auth/activity", verifyAdminSession, activity);
 };

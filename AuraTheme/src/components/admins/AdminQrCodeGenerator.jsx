@@ -723,7 +723,7 @@ export default function AdminQrCodeGenerator() {
                             size={qrSize}
                             color={qrColor}
                             bgColor={qrBgColor}
-                            icon={showLogo ? (activeStore?.logo || '/favicon.ico') : undefined}
+                            icon={showLogo ? (activeStore?.logo || '/aura.ico') : undefined}
                             iconSize={qrSize / 5}
                             errorLevel={errorLevel}
                             bordered={false}

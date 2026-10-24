@@ -303,7 +303,7 @@ export default function AdminCmsManager() {
           </Col>
           <Col xs={24} md={12}>
             <Form.Item label="Favicon Icon URL" name="favicon_url">
-              <Input placeholder="/favicon.ico" />
+              <Input placeholder="/aura.ico" />
             </Form.Item>
           </Col>
         </Row>

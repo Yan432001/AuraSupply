@@ -28,7 +28,7 @@ import {
   BankOutlined,
   BarChartOutlined
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
@@ -38,7 +38,8 @@ const { Title, Text, Paragraph } = Typography;
 
 const ModernAuraLogin = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const location = useLocation();
+  const { loginAdmin, login } = useAuth();
   const adminTheme = useAdminTheme();
   const { currentLanguage, setLanguage, activeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
@@ -48,6 +49,11 @@ const ModernAuraLogin = () => {
   const [forgotModalVisible, setForgotModalVisible] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState(null);
+
+  // Check if user was logged out due to inactivity
+  const searchParams = new URLSearchParams(location.search);
+  const isInactiveLogout = searchParams.get('reason') === 'inactivity';
+  const from = location.state?.from?.pathname || '/admins/dashboard';
 
   const langList = Array.isArray(languages) && languages.length ? languages : SUPPORTED_LANGUAGES;
   const languageMenuItems = langList.map((lang) => {
@@ -105,9 +111,13 @@ const ModernAuraLogin = () => {
           return;
         }
 
-        login({ token, user: enrichedUser });
+        if (loginAdmin) {
+          loginAdmin({ token, user: enrichedUser });
+        } else {
+          login({ token, user: enrichedUser });
+        }
         message.success(`Welcome back, ${user.first_name || user.username || 'Admin'}!`);
-        navigate('/admins/dashboard');
+        navigate(from, { replace: true });
       } else {
         setErrorMessage(res.data?.message || 'Login failed. Please verify credentials.');
       }
@@ -430,6 +440,17 @@ const ModernAuraLogin = () => {
                 </Button>
               </Dropdown>
             </div>
+
+            {/* Inactivity Alert */}
+            {isInactiveLogout && (
+              <Alert
+                type="warning"
+                showIcon
+                message={t('session_expired_title', 'Session Expired')}
+                description={t('session_expired_inactivity', 'Your administrative session has expired due to inactivity. Please sign in again.')}
+                style={{ marginBottom: 24, borderRadius: 10 }}
+              />
+            )}
 
             {/* Error Message Alert */}
             {errorMessage && (

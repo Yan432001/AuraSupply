@@ -16,10 +16,12 @@ export const APIConfig = {
 
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
+  const authToken = localStorage.getItem('aura_web_token') || localStorage.getItem('aura_admin_token') || localStorage.getItem('token');
   const config = {
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {}),
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       ...options.headers
     },
     ...options
@@ -151,14 +153,14 @@ export async function fetchBranches() {
 
 // 12. Authentication & Customer Registration
 export async function loginUser(credentials) {
-  return request('/auth/login', {
+  return request('/web/auth/login', {
     method: 'POST',
     body: JSON.stringify(credentials)
   });
 }
 
 export async function registerCustomer(customerData) {
-  return request('/register', {
+  return request('/web/auth/register', {
     method: 'POST',
     body: JSON.stringify(customerData)
   });

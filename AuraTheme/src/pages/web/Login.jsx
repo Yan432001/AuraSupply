@@ -34,7 +34,7 @@ const { Title, Text, Paragraph } = Typography;
 
 export default function Login() {
   const [form] = Form.useForm();
-  const { login } = useAuth();
+  const { loginWeb, login } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,6 +42,10 @@ export default function Login() {
   const [errorMsg, setErrorMsg] = useState('');
   const [socialModalOpen, setSocialModalOpen] = useState(false);
   const [socialProvider, setSocialProvider] = useState('google');
+
+  // Detect auto-logout due to inactivity
+  const searchParams = new URLSearchParams(location.search);
+  const isInactiveLogout = searchParams.get('reason') === 'inactivity';
 
   // Destination after login
   const from = location.state?.from?.pathname || '/profile';
@@ -52,27 +56,33 @@ export default function Login() {
 
     try {
       const res = await loginUser({
+        login: values.emailOrUsername,
         username: values.emailOrUsername,
-        password: values.password
+        password: values.password,
+        remember_me: values.remember || false
       });
 
       if (res?.success && (res?.token || res?.data?.token)) {
         const token = res.token || res.data?.token;
         const profile = res.profile || res.data?.profile || res.user || res.data?.user || res.data || {};
-        localStorage.setItem('token', token);
         const userData = {
           id: profile.id,
           name: profile.first_name ? `${profile.first_name} ${profile.last_name || ''}`.trim() : (profile.username || profile.name || values.emailOrUsername),
           username: profile.username || values.emailOrUsername,
           email: profile.email || values.emailOrUsername,
-          role: profile.role || (profile.group_id === 1 ? 'admin' : profile.group_id === 2 ? 'owner' : 'customer'),
+          role: profile.role || profile.group_name || 'customer',
           group_id: profile.group_id,
           token: token,
           avatar: profile.avatar || null,
-          tier: profile.role === 'owner' ? 'Owner / Director' : 'Administrator'
+          tier: profile.role === 'supplier' ? 'Verified Supplier' : 'Valued Customer'
         };
 
-        login(userData);
+        if (loginWeb) {
+          loginWeb({ token, user: userData });
+        } else {
+          login(userData);
+        }
+
         message.success(`${t('welcome_back', 'Welcome back')}, ${userData.name}!`);
         setLoading(false);
 
@@ -83,7 +93,19 @@ export default function Login() {
         }
         return;
       } else {
-        setErrorMsg(res?.message || res?.error?.message || t('invalid_username_password', 'Invalid username or password'));
+        const msg = res?.message || res?.error?.message || t('invalid_username_password', 'Invalid username or password');
+        if (res?.code === 'FORBIDDEN_STAFF_ON_WEB' || msg.includes('Staff accounts cannot log in')) {
+          setErrorMsg(
+            <span>
+              Staff accounts cannot log in to the public website. Please sign in via the{' '}
+              <Link to="/admins/login" style={{ textDecoration: 'underline', fontWeight: 700 }}>
+                Administrative Portal (/admins)
+              </Link>.
+            </span>
+          );
+        } else {
+          setErrorMsg(msg);
+        }
         setLoading(false);
       }
     } catch (err) {
@@ -202,6 +224,16 @@ export default function Login() {
           <Divider style={{ margin: '14px 0 18px', fontSize: 11.5, color: '#94a3b8' }}>
             {t('or_sign_in_with_credentials', 'Or sign in with credentials')}
           </Divider>
+
+          {isInactiveLogout && (
+            <Alert
+              message={t('session_expired_title', 'Session Expired')}
+              description={t('session_expired_inactivity', 'Your session has expired due to inactivity. Please sign in again.')}
+              type="warning"
+              showIcon
+              style={{ marginBottom: 18, borderRadius: 10 }}
+            />
+          )}
 
           {errorMsg && (
             <Alert message={errorMsg} type="error" showIcon style={{ marginBottom: 18, borderRadius: 10 }} />
