@@ -25,6 +25,7 @@ import {
   Radio,
   DatePicker,
   Flex,
+  Alert,
 } from 'antd';
 import {
   PlusOutlined,
@@ -58,6 +59,10 @@ import {
   ToolOutlined,
   MoreOutlined,
   ArrowRightOutlined,
+  TagsOutlined,
+  HistoryOutlined,
+  ArrowDownOutlined,
+  ArrowUpOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -84,12 +89,18 @@ const getLiveProducts = () => {
     return [];
   }
 };
+
 const saveLiveProducts = (prods) => {
   try {
     const list = Array.isArray(prods) ? prods : Array.isArray(prods?.products) ? prods.products : [];
     localStorage.setItem(LIVE_PRODUCTS_KEY, JSON.stringify(list));
     window.dispatchEvent(new CustomEvent('aura_live_products_updated', { detail: list }));
   } catch (_) {}
+};
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('admin_token') || localStorage.getItem('token') || localStorage.getItem('auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
 export default function BpasInventoryWorkspace() {
@@ -123,7 +134,7 @@ export default function BpasInventoryWorkspace() {
   const [editingRecord, setEditingRecord] = useState(null);
   const [barcodeSelectedItems, setBarcodeSelectedItems] = useState([]);
 
-  // Active Tab: products | stock-counts | quantity-adjustments | cost-adjustments | using-stock | stock-received | transfers | consignments
+  // Active Tab: products | attributes | warehouse-stock | movements | stock-counts | quantity-adjustments | cost-adjustments | using-stock | transfers | consignments
   const initialTab = searchParams.get('tab') || searchParams.get('menu') || 'products';
   const [activeTab, setActiveTab] = useState(initialTab === 'inventory' ? 'products' : initialTab);
 
@@ -152,7 +163,7 @@ export default function BpasInventoryWorkspace() {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Filter Drawer State (matches BPAS toggle_up / toggle_down)
+  // Filters
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [filterSearch, setFilterSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -163,20 +174,14 @@ export default function BpasInventoryWorkspace() {
   // Metadata
   const [warehousesList, setWarehousesList] = useState([
     { id: 1, name: 'Warehouse 1 (Main Storage)', code: 'WH01' },
-    { id: 2, name: 'Warehouse 2 (Transit Depot)', code: 'WH02' },
-    { id: 3, name: 'Store Counter (Retail)', code: 'WH03' },
+    { id: 8, name: 'Warehouse 2 (Printing / Transit)', code: 'WH08' },
   ]);
   const [categoriesList, setCategoriesList] = useState([]);
   const [unitsList, setUnitsList] = useState([]);
   const [brandsList, setBrandsList] = useState([]);
   const [billersList, setBillersList] = useState([]);
 
-  // Modals
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [isEditingMode, setIsEditingMode] = useState(false);
-  const [currentEditRecord, setCurrentEditRecord] = useState(null);
-  const [productModalActiveTab, setProductModalActiveTab] = useState('required');
-
+  // Modals & Forms
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailProduct, setDetailProduct] = useState(null);
 
@@ -184,52 +189,50 @@ export default function BpasInventoryWorkspace() {
   const [barcodePaperSize, setBarcodePaperSize] = useState('40_per_sheet');
   const [barcodeItemsToPrint, setBarcodeItemsToPrint] = useState([]);
 
+  const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isBulkPriceModalOpen, setIsBulkPriceModalOpen] = useState(false);
   const [bulkPriceAction, setBulkPriceAction] = useState('percent_discount');
   const [bulkPriceValue, setBulkPriceValue] = useState(10);
 
+  // Operational targets
+  const [operationTargetProduct, setOperationTargetProduct] = useState(null);
+  const [operationTargetVariant, setOperationTargetVariant] = useState(null);
+
   // Forms
-  const [productForm] = Form.useForm();
+  const [receiveForm] = Form.useForm();
+  const [issueForm] = Form.useForm();
   const [adjustmentForm] = Form.useForm();
   const [transferForm] = Form.useForm();
 
-  // Stock Movement Mock / DB Datasets for sub-views
-  const [stockCountsList, setStockCountsList] = useState([
-    { id: 1, date: '2026-10-15', reference: 'STC-2026-001', warehouse: 'Warehouse 1', type: 'Full Count', counted_by: 'Inventory Team A', variance: '-2 items', status: 'Finalized' },
-    { id: 2, date: '2026-10-16', reference: 'STC-2026-002', warehouse: 'Store Counter', type: 'Partial (Beverages)', counted_by: 'Staff John', variance: '0 items', status: 'Pending Review' },
-  ]);
+  // Tab: Attributes & Values Data
+  const [attributesList, setAttributesList] = useState([]);
+  const [selectedAttribute, setSelectedAttribute] = useState(null);
+  const [attributeValuesList, setAttributeValuesList] = useState([]);
+  const [isAddAttrModalOpen, setIsAddAttrModalOpen] = useState(false);
+  const [isAddAttrValModalOpen, setIsAddAttrValModalOpen] = useState(false);
+  const [attrForm] = Form.useForm();
+  const [attrValForm] = Form.useForm();
 
-  const [adjustmentsList, setAdjustmentsList] = useState([
-    { id: 1, date: '2026-10-14', reference: 'ADJ-2026-001', warehouse: 'Warehouse 1', type: 'Subtraction', reason: 'Damaged during transit', items_count: 3, created_by: 'Admin' },
-    { id: 2, date: '2026-10-15', reference: 'ADJ-2026-002', warehouse: 'Warehouse 2', type: 'Addition', reason: 'Found stock during audit', items_count: 5, created_by: 'Warehouse Mgr' },
-  ]);
+  // Tab: Warehouse Stock Overview Data
+  const [warehouseStockData, setWarehouseStockData] = useState([]);
+  const [isWarehouseStockLoading, setIsWarehouseStockLoading] = useState(false);
 
-  const [transfersList, setTransfersList] = useState([
-    { id: 1, date: '2026-10-13', reference: 'TR-2026-001', from_warehouse: 'Warehouse 1', to_warehouse: 'Store Counter', items_count: 45, shipping: '$5.00', status: 'Completed' },
-    { id: 2, date: '2026-10-16', reference: 'TR-2026-002', from_warehouse: 'Warehouse 1', to_warehouse: 'Warehouse 2', items_count: 120, shipping: '$15.00', status: 'In Transit' },
-  ]);
+  // Tab: Stock Movements Data
+  const [movementsData, setMovementsData] = useState([]);
+  const [isMovementsLoading, setIsMovementsLoading] = useState(false);
 
-  const [usingStockList, setUsingStockList] = useState([
-    { id: 1, date: '2026-10-14', reference: 'USE-2026-001', warehouse: 'Warehouse 1', department: 'Kitchen & Bar', employee: 'Sokha Rith', items_count: 12, note: 'Store daily tasting & operational supply' },
-    { id: 2, date: '2026-10-15', reference: 'USE-2026-002', warehouse: 'Store Counter', department: 'Marketing', employee: 'Dara Chan', items_count: 4, note: 'Event promotional tasting samples' },
-  ]);
-
-  const [consignmentsList, setConsignmentsList] = useState([
-    { id: 1, date: '2026-10-10', reference: 'CSG-2026-001', party: 'Angkor Organic Farm (Supplier)', type: 'Consignment In', total_qty: 200, sold_qty: 140, balance_qty: 60, status: 'Active' },
-    { id: 2, date: '2026-10-12', reference: 'CSG-2026-002', party: 'Lucky Supermarket Group (Client)', type: 'Consignment Out', total_qty: 500, sold_qty: 380, balance_qty: 120, status: 'Active' },
-  ]);
-
-  // Fetch Metadata & Products from backend
+  // Fetch Metadata
   const fetchMetadata = async () => {
     try {
       const [whRes, catRes, unitsRes, brandsRes, billersRes] = await Promise.allSettled([
-        axios.get('/api/warehouses'),
-        axios.get('/api/categories'),
-        axios.get('/api/units'),
-        axios.get('/api/brands'),
-        axios.get('/api/billers'),
+        axios.get('/api/warehouses', { headers: getAuthHeaders() }),
+        axios.get('/api/categories', { headers: getAuthHeaders() }),
+        axios.get('/api/units', { headers: getAuthHeaders() }),
+        axios.get('/api/brands', { headers: getAuthHeaders() }),
+        axios.get('/api/billers', { headers: getAuthHeaders() }),
       ]);
 
       if (whRes.status === 'fulfilled' && Array.isArray(whRes.value.data?.data)) {
@@ -254,19 +257,27 @@ export default function BpasInventoryWorkspace() {
     }
   };
 
+  // Fetch Live Products from backend
   const fetchLiveProducts = async () => {
     setIsSyncing(true);
     try {
+      const params = new URLSearchParams();
+      if (filterSearch) params.append('search', filterSearch);
+      if (filterCategory && filterCategory !== 'all') params.append('category_id', filterCategory);
+      if (filterWarehouse && filterWarehouse !== 'all') params.append('warehouse_id', filterWarehouse);
+      if (filterStockStatus && filterStockStatus !== 'all') params.append('stock_status', filterStockStatus);
+      params.append('limit', '500');
+
       let prods = [];
       try {
-        const res = await axios.get('/api/admin/products?limit=300');
+        const res = await axios.get(`/api/admin/products?${params.toString()}`, { headers: getAuthHeaders() });
         if ((res.data?.status || res.data?.success) && Array.isArray(res.data?.data)) {
           prods = res.data.data;
         }
       } catch (_) {}
 
-      if (!prods.length) {
-        const pubRes = await axios.get('/api/products?limit=300');
+      if (!prods.length && !filterSearch && filterCategory === 'all') {
+        const pubRes = await axios.get('/api/products?limit=500', { headers: getAuthHeaders() });
         if (pubRes.data?.success && Array.isArray(pubRes.data?.data?.products)) {
           prods = pubRes.data.data.products;
         }
@@ -283,12 +294,82 @@ export default function BpasInventoryWorkspace() {
     }
   };
 
+  // Fetch Attributes & Values
+  const fetchAttributes = async () => {
+    try {
+      const res = await axios.get('/api/admin/attributes', { headers: getAuthHeaders() });
+      if (res.data?.success && Array.isArray(res.data?.data)) {
+        setAttributesList(res.data.data);
+        if (!selectedAttribute && res.data.data.length > 0) {
+          setSelectedAttribute(res.data.data[0]);
+          fetchAttributeValues(res.data.data[0].id);
+        }
+      }
+    } catch (err) {
+      console.warn('Fetch attributes note:', err.message);
+    }
+  };
+
+  const fetchAttributeValues = async (attributeId) => {
+    if (!attributeId) return;
+    try {
+      const res = await axios.get(`/api/admin/attributes/${attributeId}/values`, { headers: getAuthHeaders() });
+      if (res.data?.success && Array.isArray(res.data?.data)) {
+        setAttributeValuesList(res.data.data);
+      }
+    } catch (err) {
+      console.warn('Fetch attribute values note:', err.message);
+    }
+  };
+
+  // Fetch Warehouse Stock Overview
+  const fetchWarehouseStock = async () => {
+    setIsWarehouseStockLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filterWarehouse && filterWarehouse !== 'all') params.append('warehouse_id', filterWarehouse);
+      const res = await axios.get(`/api/admin/inventory/warehouse-stock?${params.toString()}`, { headers: getAuthHeaders() });
+      if (res.data?.success && Array.isArray(res.data?.data)) {
+        setWarehouseStockData(res.data.data);
+      }
+    } catch (err) {
+      console.warn('Warehouse stock fetch note:', err.message);
+    } finally {
+      setIsWarehouseStockLoading(false);
+    }
+  };
+
+  // Fetch Movements Ledger
+  const fetchMovements = async () => {
+    setIsMovementsLoading(true);
+    try {
+      const res = await axios.get('/api/admin/inventory/movements?limit=100', { headers: getAuthHeaders() });
+      if (res.data?.success && Array.isArray(res.data?.data)) {
+        setMovementsData(res.data.data);
+      }
+    } catch (err) {
+      console.warn('Movements fetch note:', err.message);
+    } finally {
+      setIsMovementsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchMetadata();
     fetchLiveProducts();
   }, []);
 
-  // Filtered Products
+  useEffect(() => {
+    if (activeTab === 'attributes') {
+      fetchAttributes();
+    } else if (activeTab === 'warehouse-stock') {
+      fetchWarehouseStock();
+    } else if (activeTab === 'movements') {
+      fetchMovements();
+    }
+  }, [activeTab, filterWarehouse]);
+
+  // Client-side Filtered Products fallback
   const filteredProducts = useMemo(() => {
     const list = Array.isArray(productsList) ? productsList : [];
     return list.filter((item) => {
@@ -301,44 +382,48 @@ export default function BpasInventoryWorkspace() {
       const matchCategory =
         filterCategory === 'all' ||
         item.category === filterCategory ||
+        item.category_name === filterCategory ||
         String(item.category_id) === String(filterCategory);
 
       const matchType =
         filterType === 'all' ||
         (item.type && item.type.toLowerCase() === filterType.toLowerCase()) ||
-        (filterType === 'active' && item.inStock) ||
-        (filterType === 'inactive' && !item.inStock);
+        (filterType === 'active' && item.status !== 0) ||
+        (filterType === 'inactive' && item.status === 0);
 
+      const qty = item.quantity ?? item.stockCount ?? 0;
+      const alertQty = item.alert_quantity ?? item.alertQuantity ?? 10;
       const matchStockStatus =
         filterStockStatus === 'all' ||
-        (filterStockStatus === 'in_stock' && item.inStock) ||
-        (filterStockStatus === 'low_stock' && (item.stockCount ?? 20) <= (item.alertQuantity ?? 10)) ||
-        (filterStockStatus === 'out_of_stock' && !item.inStock);
+        (filterStockStatus === 'in_stock' && qty > alertQty) ||
+        (filterStockStatus === 'low_stock' && qty > 0 && qty <= alertQty) ||
+        (filterStockStatus === 'out_of_stock' && qty <= 0);
 
       return matchSearch && matchCategory && matchType && matchStockStatus;
     });
   }, [productsList, filterSearch, filterCategory, filterType, filterStockStatus]);
 
-  // Metrics
+  // Catalog Metrics
   const metrics = useMemo(() => {
     const list = Array.isArray(productsList) ? productsList : [];
     const total = list.length;
-    const inStock = list.filter((p) => p.inStock).length;
-    const lowStock = list.filter((p) => (p.stockCount ?? 20) <= (p.alertQuantity ?? 10)).length;
-    const totalValuation = list.reduce((acc, p) => acc + (p.price || 0) * (p.stockCount ?? 40), 0);
-    const totalCostValuation = list.reduce((acc, p) => acc + (p.cost || p.price * 0.6) * (p.stockCount ?? 40), 0);
+    const inStock = list.filter((p) => (p.quantity ?? p.stockCount ?? 0) > 0).length;
+    const lowStock = list.filter((p) => {
+      const q = p.quantity ?? p.stockCount ?? 0;
+      const a = p.alert_quantity ?? p.alertQuantity ?? 10;
+      return q <= a;
+    }).length;
+    const totalValuation = list.reduce((acc, p) => acc + (Number(p.price) || 0) * (p.quantity ?? p.stockCount ?? 40), 0);
 
     return {
       total,
       inStock,
       lowStock,
       totalValuation,
-      totalCostValuation,
-      marginPercent: totalValuation > 0 ? Math.round(((totalValuation - totalCostValuation) / totalValuation) * 100) : 40,
     };
   }, [productsList]);
 
-  // Handlers
+  // Navigation handlers
   const handleOpenAddProduct = () => {
     setEditingRecord(null);
     setPageMode('add');
@@ -351,79 +436,38 @@ export default function BpasInventoryWorkspace() {
     navigate('/admins/products?action=add', { replace: true });
   };
 
-  const handleOpenImport = () => {
-    setPageMode('import');
-    navigate('/admins/products?action=import', { replace: true });
-  };
-
-  const handleSaveProduct = async () => {
+  // Safe Deletion Handler (checks backend reference & archival protection)
+  const handleDeleteProduct = async (id) => {
     try {
-      const values = await productForm.validateFields();
-      const updatedList = isEditingMode
-        ? productsList.map((p) =>
-            p.id === currentEditRecord.id
-              ? {
-                  ...p,
-                  name: values.name,
-                  code: values.barcode || values.code || p.code,
-                  type: values.type || 'standard',
-                  category: values.category,
-                  unit: values.unit,
-                  cost: Number(values.cost) || p.cost,
-                  price: Number(values.price) || p.price,
-                  alertQuantity: Number(values.alert_quantity) || 10,
-                  inStock: values.inStock,
-                  rack: values.rack,
-                  details: values.details,
-                }
-              : p
-          )
-        : [
-            {
-              id: Date.now(),
-              name: values.name,
-              code: values.barcode || `P${Math.floor(1000 + Math.random() * 9000)}`,
-              type: values.type || 'standard',
-              category: values.category || 'General',
-              unit: values.unit || 'Pcs',
-              cost: Number(values.cost) || 1.5,
-              price: Number(values.price) || 3.0,
-              stockCount: 50,
-              alertQuantity: Number(values.alert_quantity) || 10,
-              inStock: values.inStock !== false,
-              rack: values.rack || 'A-01',
-              image: '/assets/uploads/no_image.png',
-              billerName: billersList[0]?.company || 'Main Store',
-            },
-            ...productsList,
-          ];
-
-      setProductsList(updatedList);
-      saveLiveProducts(updatedList);
-      message.success(isEditingMode ? 'Product updated successfully' : 'New product created');
-      setIsProductModalOpen(false);
+      const res = await axios.delete(`/api/admin/products/${id}`, { headers: getAuthHeaders() });
+      if (res.data?.archived) {
+        message.info(res.data.message || 'Product referenced by transactions has been safely archived (marked inactive).');
+      } else {
+        message.success(res.data?.message || 'Product deleted successfully');
+      }
+      fetchLiveProducts();
     } catch (err) {
-      message.error('Please complete all required fields.');
+      message.error(err.response?.data?.message || 'Failed to delete product');
     }
   };
 
-  const handleDeleteProduct = (id) => {
-    const next = productsList.filter((p) => p.id !== id);
-    setProductsList(next);
-    saveLiveProducts(next);
-    message.success('Product deleted');
-  };
-
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (!selectedRowKeys.length) {
       message.warning('Please select at least one product.');
       return;
     }
-    const next = productsList.filter((p) => !selectedRowKeys.includes(p.id));
-    setProductsList(next);
-    saveLiveProducts(next);
+    let successCount = 0;
+    let archivedCount = 0;
+    for (const id of selectedRowKeys) {
+      try {
+        const res = await axios.delete(`/api/admin/products/${id}`, { headers: getAuthHeaders() });
+        if (res.data?.archived) archivedCount++;
+        else successCount++;
+      } catch (_) {}
+    }
     setSelectedRowKeys([]);
-    message.success(`Deleted ${selectedRowKeys.length} products`);
+    message.success(`Processed deletion: ${successCount} deleted, ${archivedCount} safely archived.`);
+    fetchLiveProducts();
   };
 
   const handleOpenBarcodePrint = (items = []) => {
@@ -437,65 +481,366 @@ export default function BpasInventoryWorkspace() {
     navigate('/admins/products?action=barcode', { replace: true });
   };
 
-  const handleOpenAdjustment = (product = null) => {
+  // Stock Operation Modal Openers
+  const handleOpenReceive = (product = null, variant = null) => {
+    setOperationTargetProduct(product);
+    setOperationTargetVariant(variant);
+    receiveForm.resetFields();
+    receiveForm.setFieldsValue({
+      warehouse_id: warehousesList[0]?.id || 1,
+      product_id: product?.id,
+      option_id: variant?.id || null,
+      quantity: 10,
+      unit_cost: variant?.cost ?? product?.cost ?? 1.5,
+      reference_no: `RCV-${Date.now().toString().slice(-6)}`,
+      note: 'Stock batch receipt into warehouse',
+    });
+    setIsReceiveModalOpen(true);
+  };
+
+  const handleOpenIssue = (product = null, variant = null) => {
+    setOperationTargetProduct(product);
+    setOperationTargetVariant(variant);
+    issueForm.resetFields();
+    issueForm.setFieldsValue({
+      warehouse_id: warehousesList[0]?.id || 1,
+      product_id: product?.id,
+      option_id: variant?.id || null,
+      quantity: 5,
+      reference_no: `ISS-${Date.now().toString().slice(-6)}`,
+      note: 'Dispatched for operational delivery',
+    });
+    setIsIssueModalOpen(true);
+  };
+
+  const handleOpenAdjustment = (product = null, variant = null) => {
+    setOperationTargetProduct(product);
+    setOperationTargetVariant(variant);
     adjustmentForm.resetFields();
     adjustmentForm.setFieldsValue({
-      date: '2026-10-16',
-      reference_no: `ADJ-${Date.now().toString().slice(-4)}`,
+      date: new Date().toISOString().slice(0, 10),
+      reference_no: `ADJ-${Date.now().toString().slice(-6)}`,
       warehouse_id: warehousesList[0]?.id || 1,
       type: 'addition',
       reason: 'inventory_count',
       product_id: product?.id,
+      option_id: variant?.id || null,
       quantity: 5,
+      note: 'Cycle count physical adjustment',
     });
     setIsAdjustmentModalOpen(true);
   };
 
-  const handleOpenTransfer = () => {
+  const handleOpenTransfer = (product = null, variant = null) => {
+    setOperationTargetProduct(product);
+    setOperationTargetVariant(variant);
     transferForm.resetFields();
     transferForm.setFieldsValue({
-      date: '2026-10-16',
-      reference_no: `TR-${Date.now().toString().slice(-4)}`,
+      date: new Date().toISOString().slice(0, 10),
+      reference_no: `TR-${Date.now().toString().slice(-6)}`,
       from_warehouse_id: warehousesList[0]?.id || 1,
-      to_warehouse_id: warehousesList[1]?.id || 2,
+      to_warehouse_id: warehousesList[1]?.id || warehousesList[0]?.id || 1,
+      product_id: product?.id,
+      option_id: variant?.id || null,
+      quantity: 10,
       shipping: 5.0,
-      status: 'pending',
+      status: 'completed',
+      note: 'Inter-warehouse inventory relocation',
     });
     setIsTransferModalOpen(true);
   };
 
+  // Stock Operation Submissions
+  const handleSubmitReceive = async () => {
+    try {
+      const vals = await receiveForm.validateFields();
+      const res = await axios.post('/api/admin/inventory/receive', vals, { headers: getAuthHeaders() });
+      if (res.data?.success) {
+        message.success(res.data.message || 'Stock successfully received into warehouse');
+        setIsReceiveModalOpen(false);
+        fetchLiveProducts();
+        if (activeTab === 'warehouse-stock') fetchWarehouseStock();
+        if (activeTab === 'movements') fetchMovements();
+      } else {
+        message.error(res.data?.message || 'Failed to receive stock');
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Validation error or server error');
+    }
+  };
+
+  const handleSubmitIssue = async () => {
+    try {
+      const vals = await issueForm.validateFields();
+      const res = await axios.post('/api/admin/inventory/issue', vals, { headers: getAuthHeaders() });
+      if (res.data?.success) {
+        message.success(res.data.message || 'Stock successfully issued');
+        setIsIssueModalOpen(false);
+        fetchLiveProducts();
+        if (activeTab === 'warehouse-stock') fetchWarehouseStock();
+        if (activeTab === 'movements') fetchMovements();
+      } else {
+        message.error(res.data?.message || 'Failed to issue stock');
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Stock balance insufficient or request invalid');
+    }
+  };
+
+  const handleSubmitAdjustment = async () => {
+    try {
+      const vals = await adjustmentForm.validateFields();
+      const payload = {
+        warehouse_id: vals.warehouse_id,
+        type: vals.type,
+        reason: vals.reason,
+        reference_no: vals.reference_no,
+        note: vals.note,
+        items: [
+          {
+            product_id: vals.product_id,
+            option_id: vals.option_id || null,
+            quantity: vals.quantity,
+          },
+        ],
+      };
+      const res = await axios.post('/api/admin/inventory/adjust', payload, { headers: getAuthHeaders() });
+      if (res.data?.success) {
+        message.success(res.data.message || 'Stock quantity adjustment recorded successfully');
+        setIsAdjustmentModalOpen(false);
+        fetchLiveProducts();
+        if (activeTab === 'warehouse-stock') fetchWarehouseStock();
+        if (activeTab === 'movements') fetchMovements();
+      } else {
+        message.error(res.data?.message || 'Failed to record adjustment');
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Validation error or server error');
+    }
+  };
+
+  const handleSubmitTransfer = async () => {
+    try {
+      const vals = await transferForm.validateFields();
+      const payload = {
+        from_warehouse_id: vals.from_warehouse_id,
+        to_warehouse_id: vals.to_warehouse_id,
+        shipping_charge: vals.shipping || 0,
+        status: vals.status || 'completed',
+        reference_no: vals.reference_no,
+        note: vals.note,
+        items: [
+          {
+            product_id: vals.product_id,
+            option_id: vals.option_id || null,
+            quantity: vals.quantity,
+          },
+        ],
+      };
+      const res = await axios.post('/api/admin/inventory/transfer', payload, { headers: getAuthHeaders() });
+      if (res.data?.success) {
+        message.success(res.data.message || 'Warehouse stock transfer executed successfully');
+        setIsTransferModalOpen(false);
+        fetchLiveProducts();
+        if (activeTab === 'warehouse-stock') fetchWarehouseStock();
+        if (activeTab === 'movements') fetchMovements();
+      } else {
+        message.error(res.data?.message || 'Failed to transfer stock');
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Source warehouse has insufficient balance or request failed');
+    }
+  };
+
+  // Export to CSV
   const handleExportExcel = () => {
     const targetItems = selectedRowKeys.length
       ? productsList.filter((p) => selectedRowKeys.includes(p.id))
       : filteredProducts;
 
-    const headers = ['ID', 'Code', 'Name', 'Type', 'Category', 'Unit', 'Cost', 'Price', 'Stock Quantity', 'Alert Qty', 'Rack'];
+    const headers = ['ID', 'Code', 'Name', 'Type', 'Category', 'Unit', 'Cost', 'Price', 'Stock Quantity', 'Variants Count', 'Alert Qty'];
     const rows = targetItems.map((p) => [
       p.id,
       `"${p.code || ''}"`,
       `"${(p.name || '').replace(/"/g, '""')}"`,
       p.type || 'standard',
-      `"${p.category || 'General'}"`,
-      p.unit || 'Pcs',
+      `"${p.category_name || p.category || 'General'}"`,
+      p.unit_name || p.unit || 'Pcs',
       p.cost || 0,
       p.price || 0,
-      p.stockCount ?? 40,
-      p.alertQuantity ?? 10,
-      p.rack || 'A-01',
+      p.quantity ?? p.stockCount ?? 0,
+      p.variant_count ?? (p.variants ? p.variants.length : 0),
+      p.alert_quantity ?? p.alertQuantity ?? 10,
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `bpas_products_export_${Date.now()}.csv`);
+    link.setAttribute('download', `aura_products_export_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     message.success(`Exported ${targetItems.length} products to Excel (CSV)`);
   };
 
-  // Main Products Table Columns (Accurately mirrors BPAS products/index.php)
+  // Expandable Row: Displays Child Product Variants
+  const expandedRowRender = (parentProduct) => {
+    const variants = parentProduct.variants || [];
+    if (!variants.length) {
+      return (
+        <div style={{ padding: '8px 16px', color: adminTheme.subtext, fontSize: 12 }}>
+          <em>No product variants configured. This is a single SKU product.</em>
+        </div>
+      );
+    }
+
+    const variantColumns = [
+      {
+        title: 'Variant Name',
+        dataIndex: 'name',
+        key: 'name',
+        render: (name) => <strong style={{ color: '#1e293b' }}>{name}</strong>,
+      },
+      {
+        title: 'SKU',
+        dataIndex: 'sku',
+        key: 'sku',
+        render: (sku) => (
+          <Tag color="geekblue" style={{ fontFamily: 'monospace', fontWeight: 700 }}>
+            {sku || 'N/A'}
+          </Tag>
+        ),
+      },
+      {
+        title: 'Barcode',
+        dataIndex: 'barcode',
+        key: 'barcode',
+        render: (barcode) => <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{barcode || '—'}</span>,
+      },
+      {
+        title: 'Attributes',
+        key: 'attributes',
+        render: (_, record) => {
+          let attrs = record.attributes;
+          if (typeof attrs === 'string') {
+            try {
+              attrs = JSON.parse(attrs);
+            } catch (_) {
+              attrs = {};
+            }
+          }
+          if (!attrs || typeof attrs !== 'object' || Object.keys(attrs).length === 0) {
+            return <span style={{ color: '#94a3b8' }}>—</span>;
+          }
+          return (
+            <Space size={4} wrap>
+              {Object.entries(attrs).map(([k, val]) => (
+                <Tag key={k} color="cyan" style={{ fontSize: 11, borderRadius: 4 }}>
+                  <strong>{k}:</strong> {String(val)}
+                </Tag>
+              ))}
+            </Space>
+          );
+        },
+      },
+      {
+        title: 'Cost',
+        dataIndex: 'cost',
+        key: 'cost',
+        align: 'right',
+        render: (c) => <span style={{ color: adminTheme.subtext, fontSize: 12 }}>{formatCurrency(c || 0)}</span>,
+      },
+      {
+        title: 'Selling Price',
+        dataIndex: 'price',
+        key: 'price',
+        align: 'right',
+        render: (p) => <strong style={{ color: '#16a34a', fontSize: 13 }}>{formatCurrency(p || 0)}</strong>,
+      },
+      {
+        title: 'Variant Stock',
+        dataIndex: 'quantity',
+        key: 'quantity',
+        align: 'right',
+        render: (qty) => {
+          const count = Number(qty) || 0;
+          const isOut = count <= 0;
+          return (
+            <Tag color={isOut ? 'red' : count <= 5 ? 'orange' : 'green'} style={{ fontWeight: 800, borderRadius: 4 }}>
+              {count} {parentProduct.unit_name || parentProduct.unit || 'Pcs'}
+            </Tag>
+          );
+        },
+      },
+      {
+        title: 'Status',
+        dataIndex: 'status',
+        key: 'status',
+        align: 'center',
+        render: (status) => (
+          <Tag color={status !== 0 ? 'success' : 'default'} style={{ borderRadius: 4 }}>
+            {status !== 0 ? 'Active' : 'Inactive'}
+          </Tag>
+        ),
+      },
+      {
+        title: 'Stock Operations',
+        key: 'quick_actions',
+        align: 'center',
+        render: (_, variant) => (
+          <Space size={4}>
+            <Tooltip title="Receive stock for this variant">
+              <Button
+                size="small"
+                type="link"
+                icon={<ArrowDownOutlined style={{ color: '#16a34a' }} />}
+                onClick={() => handleOpenReceive(parentProduct, variant)}
+              >
+                Receive
+              </Button>
+            </Tooltip>
+            <Tooltip title="Adjust stock for this variant">
+              <Button
+                size="small"
+                type="link"
+                icon={<ToolOutlined style={{ color: '#ea580c' }} />}
+                onClick={() => handleOpenAdjustment(parentProduct, variant)}
+              >
+                Adjust
+              </Button>
+            </Tooltip>
+          </Space>
+        ),
+      },
+    ];
+
+    return (
+      <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', margin: '6px 0' }}>
+        <Flex justify="space-between" align="center" style={{ marginBottom: 8 }}>
+          <Text strong style={{ color: '#1e293b', fontSize: 12 }}>
+            <TagsOutlined style={{ color: '#2563eb', marginRight: 6 }} />
+            Configured Product Variants ({variants.length})
+          </Text>
+          <Space size={6}>
+            <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={() => handleEditProduct(parentProduct)}>
+              Manage Variants in Editor
+            </Button>
+          </Space>
+        </Flex>
+        <Table
+          rowKey="id"
+          columns={variantColumns}
+          dataSource={variants}
+          pagination={false}
+          size="small"
+          bordered
+        />
+      </div>
+    );
+  };
+
+  // Main Products Table Columns
   const columns = [
     {
       title: 'Image',
@@ -533,67 +878,77 @@ export default function BpasInventoryWorkspace() {
       ),
     },
     {
-      title: t('code', 'Code'),
+      title: t('code', 'Code / SKU'),
       dataIndex: 'code',
       key: 'code',
-      width: 120,
+      width: 130,
       sorter: (a, b) => (a.code || '').localeCompare(b.code || ''),
-      render: (code) => (
-        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#2563eb' }}>
-          {code || 'N/A'}
-        </span>
-      ),
-    },
-    {
-      title: t('name', 'Name'),
-      dataIndex: 'name',
-      key: 'name',
-      width: 240,
-      sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
-      render: (name, record) => (
+      render: (code, record) => (
         <div>
-          <a
-            onClick={() => {
-              setDetailProduct(record);
-              setIsDetailModalOpen(true);
-            }}
-            style={{ fontWeight: 700, color: adminTheme.text, fontSize: 13 }}
-          >
-            {name}
-          </a>
-          {record.badge && (
-            <Tag color="volcano" style={{ marginLeft: 6, fontSize: 10, borderRadius: 4, padding: '0 4px' }}>
-              {record.badge}
-            </Tag>
+          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#2563eb' }}>
+            {code || 'N/A'}
+          </span>
+          {record.barcode && record.barcode !== code && (
+            <div style={{ fontSize: 10, color: '#64748b', fontFamily: 'monospace' }}>
+              BC: {record.barcode}
+            </div>
           )}
         </div>
       ),
     },
     {
-      title: t('type', 'Type'),
-      dataIndex: 'type',
-      key: 'type',
-      width: 100,
-      render: (type) => {
-        const typeStr = (type || 'standard').toLowerCase();
-        const color = typeStr === 'combo' ? 'purple' : typeStr === 'service' ? 'orange' : typeStr === 'digital' ? 'cyan' : 'blue';
-        return <Tag color={color} style={{ textTransform: 'capitalize', fontWeight: 600 }}>{typeStr}</Tag>;
+      title: t('name', 'Product Name'),
+      dataIndex: 'name',
+      key: 'name',
+      width: 240,
+      sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+      render: (name, record) => {
+        const variantCount = record.variant_count ?? (record.variants ? record.variants.length : 0);
+        return (
+          <div>
+            <a
+              onClick={() => {
+                setDetailProduct(record);
+                setIsDetailModalOpen(true);
+              }}
+              style={{ fontWeight: 700, color: adminTheme.text, fontSize: 13 }}
+            >
+              {name}
+            </a>
+            <div style={{ marginTop: 2, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {variantCount > 0 ? (
+                <Tag color="purple" style={{ fontSize: 10, borderRadius: 4, padding: '0 4px' }}>
+                  {variantCount} Variants
+                </Tag>
+              ) : (
+                <Tag color="default" style={{ fontSize: 10, borderRadius: 4, padding: '0 4px' }}>
+                  Single SKU
+                </Tag>
+              )}
+              {record.badge && (
+                <Tag color="volcano" style={{ fontSize: 10, borderRadius: 4, padding: '0 4px' }}>
+                  {record.badge}
+                </Tag>
+              )}
+            </div>
+          </div>
+        );
       },
     },
     {
       title: t('category', 'Category'),
-      dataIndex: 'category',
-      key: 'category',
+      dataIndex: 'category_name',
+      key: 'category_name',
       width: 130,
-      render: (cat) => <span style={{ fontWeight: 600 }}>{cat || 'General'}</span>,
+      render: (cat, record) => <span style={{ fontWeight: 600 }}>{cat || record.category || 'General'}</span>,
     },
     {
       title: t('unit', 'Unit'),
-      dataIndex: 'unit',
-      key: 'unit',
+      dataIndex: 'unit_name',
+      key: 'unit_name',
       width: 80,
       align: 'center',
-      render: (unit) => <Tag style={{ borderRadius: 4 }}>{unit || 'Pcs'}</Tag>,
+      render: (unit, record) => <Tag style={{ borderRadius: 4 }}>{unit || record.unit || 'Pcs'}</Tag>,
     },
     {
       title: t('cost', 'Cost'),
@@ -601,7 +956,7 @@ export default function BpasInventoryWorkspace() {
       key: 'cost',
       width: 100,
       align: 'right',
-      sorter: (a, b) => (a.cost || 0) - (b.cost || 0),
+      sorter: (a, b) => (Number(a.cost) || 0) - (Number(b.cost) || 0),
       render: (cost, record) => (
         <span style={{ color: adminTheme.subtext, fontSize: 12 }}>
           {formatCurrency(cost || record.price * 0.6)}
@@ -614,7 +969,7 @@ export default function BpasInventoryWorkspace() {
       key: 'price',
       width: 110,
       align: 'right',
-      sorter: (a, b) => (a.price || 0) - (b.price || 0),
+      sorter: (a, b) => (Number(a.price) || 0) - (Number(b.price) || 0),
       render: (price) => (
         <span style={{ fontWeight: 800, color: '#16a34a', fontSize: 13.5 }}>
           {formatCurrency(price || 0)}
@@ -622,77 +977,82 @@ export default function BpasInventoryWorkspace() {
       ),
     },
     {
-      title: t('warehouses', 'Warehouse Breakdown'),
-      key: 'warehouse_breakdown',
-      width: 180,
-      render: (_, record) => {
-        const qty = record.stockCount ?? 45;
-        const wh1 = Math.round(qty * 0.6);
-        const wh2 = Math.round(qty * 0.3);
-        const wh3 = qty - wh1 - wh2;
-        return (
-          <div style={{ fontSize: 11, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ color: '#0284c7' }}>WH1: <strong>{wh1}</strong></span>
-            <span style={{ color: '#7c3aed' }}>WH2: <strong>{wh2}</strong></span>
-            <span style={{ color: '#059669' }}>Counter: <strong>{wh3}</strong></span>
-          </div>
-        );
-      },
-    },
-    {
-      title: t('quantity', 'Quantity'),
-      dataIndex: 'stockCount',
-      key: 'stockCount',
-      width: 110,
+      title: t('quantity', 'Total Stock'),
+      dataIndex: 'quantity',
+      key: 'quantity',
+      width: 120,
       align: 'right',
-      sorter: (a, b) => (a.stockCount ?? 40) - (b.stockCount ?? 40),
+      sorter: (a, b) => (a.quantity ?? a.stockCount ?? 0) - (b.quantity ?? b.stockCount ?? 0),
       render: (qty, record) => {
-        const count = qty ?? 40;
-        const alertQty = record.alertQuantity ?? 10;
-        const isLow = count <= alertQty;
+        const count = Number(qty ?? record.stockCount ?? 0);
+        const alertQty = Number(record.alert_quantity ?? record.alertQuantity ?? 10);
+        const isOut = count <= 0;
+        const isLow = count > 0 && count <= alertQty;
+
         return (
           <div style={{ textAlign: 'right' }}>
             <span
               style={{
                 fontWeight: 800,
                 fontSize: 13,
-                color: isLow ? '#dc2626' : '#16a34a',
+                color: isOut ? '#dc2626' : isLow ? '#ea580c' : '#16a34a',
                 padding: '2px 6px',
                 borderRadius: 4,
-                background: isLow ? '#fee2e2' : 'transparent',
+                background: isOut ? '#fee2e2' : isLow ? '#ffedd5' : 'transparent',
               }}
             >
               {count}
             </span>
-            {isLow && (
+            {isOut ? (
               <div style={{ fontSize: 10, color: '#dc2626', fontWeight: 700, marginTop: 2 }}>
+                Out of Stock
+              </div>
+            ) : isLow ? (
+              <div style={{ fontSize: 10, color: '#ea580c', fontWeight: 700, marginTop: 2 }}>
                 ⚠️ Low Stock
               </div>
-            )}
+            ) : null}
           </div>
         );
       },
     },
     {
-      title: 'Rack',
-      dataIndex: 'rack',
-      key: 'rack',
-      width: 85,
-      align: 'center',
-      render: (rack) => <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{rack || 'A-01'}</span>,
+      title: 'Warehouse Distribution',
+      key: 'warehouse_breakdown',
+      width: 170,
+      render: (_, record) => {
+        const breakdown = record.warehouse_stock;
+        if (Array.isArray(breakdown) && breakdown.length > 0) {
+          return (
+            <div style={{ fontSize: 11, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {breakdown.map((w) => (
+                <div key={w.warehouse_id} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>{w.warehouse_name || `WH ${w.warehouse_id}`}:</span>
+                  <strong style={{ color: '#0284c7' }}>{w.quantity}</strong>
+                </div>
+              ))}
+            </div>
+          );
+        }
+        return <span style={{ color: '#94a3b8', fontSize: 11 }}>Aggregated Stock</span>;
+      },
     },
     {
-      title: t('alert_quantity', 'Alert Qty'),
-      dataIndex: 'alertQuantity',
-      key: 'alertQuantity',
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
       width: 90,
       align: 'center',
-      render: (alert) => <Tag color="warning" style={{ borderRadius: 4 }}>{alert ?? 10}</Tag>,
+      render: (status) => (
+        <Tag color={status !== 0 ? 'success' : 'error'} style={{ borderRadius: 4 }}>
+          {status !== 0 ? 'Active' : 'Archived'}
+        </Tag>
+      ),
     },
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      width: 90,
+      width: 100,
       align: 'center',
       render: (_, record) => {
         const actionItems = [
@@ -708,14 +1068,20 @@ export default function BpasInventoryWorkspace() {
           {
             key: 'edit',
             icon: <EditOutlined style={{ color: '#2563eb' }} />,
-            label: 'Edit Product',
+            label: 'Edit Product & Variants',
             onClick: () => handleEditProduct(record),
           },
           {
-            key: 'barcode',
-            icon: <BarcodeOutlined style={{ color: '#059669' }} />,
-            label: 'Print Barcode Label',
-            onClick: () => handleOpenBarcodePrint([record]),
+            key: 'receive',
+            icon: <ArrowDownOutlined style={{ color: '#16a34a' }} />,
+            label: 'Receive Stock',
+            onClick: () => handleOpenReceive(record),
+          },
+          {
+            key: 'issue',
+            icon: <ArrowUpOutlined style={{ color: '#dc2626' }} />,
+            label: 'Issue Stock',
+            onClick: () => handleOpenIssue(record),
           },
           {
             key: 'adjust',
@@ -724,13 +1090,25 @@ export default function BpasInventoryWorkspace() {
             onClick: () => handleOpenAdjustment(record),
           },
           {
+            key: 'transfer',
+            icon: <SwapOutlined style={{ color: '#7c3aed' }} />,
+            label: 'Transfer Stock',
+            onClick: () => handleOpenTransfer(record),
+          },
+          {
+            key: 'barcode',
+            icon: <BarcodeOutlined style={{ color: '#059669' }} />,
+            label: 'Print Barcode Label',
+            onClick: () => handleOpenBarcodePrint([record]),
+          },
+          {
             type: 'divider',
           },
           {
             key: 'delete',
             icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
             danger: true,
-            label: 'Delete Product',
+            label: 'Delete / Archive Product',
             onClick: () => handleDeleteProduct(record.id),
           },
         ];
@@ -746,12 +1124,12 @@ export default function BpasInventoryWorkspace() {
     },
   ];
 
-  // Actions menu for the top-right Tasks icon (Exact BPAS functionality)
+  // Actions menu for the top-right Tasks icon
   const taskMenuItems = [
     {
       key: 'add',
       icon: <PlusOutlined style={{ color: '#16a34a' }} />,
-      label: t('add_product', 'Add Product'),
+      label: t('add_product', 'Add Product with Variants'),
       onClick: handleOpenAddProduct,
     },
     {
@@ -759,6 +1137,24 @@ export default function BpasInventoryWorkspace() {
       icon: <UploadOutlined style={{ color: '#059669' }} />,
       label: t('import_products', 'Import Products (Excel/CSV)'),
       onClick: () => setPageMode('import'),
+    },
+    {
+      key: 'receive_stock',
+      icon: <ArrowDownOutlined style={{ color: '#16a34a' }} />,
+      label: 'Receive Stock Voucher',
+      onClick: () => handleOpenReceive(),
+    },
+    {
+      key: 'transfer_stock',
+      icon: <SwapOutlined style={{ color: '#7c3aed' }} />,
+      label: 'Transfer Between Warehouses',
+      onClick: () => handleOpenTransfer(),
+    },
+    {
+      key: 'adjust_stock',
+      icon: <ToolOutlined style={{ color: '#f59e0b' }} />,
+      label: 'Stock Quantity Adjustment',
+      onClick: () => handleOpenAdjustment(),
     },
     {
       key: 'update_price',
@@ -769,14 +1165,8 @@ export default function BpasInventoryWorkspace() {
     {
       key: 'print_barcodes',
       icon: <PrinterOutlined style={{ color: '#0284c7' }} />,
-      label: t('print_barcodes', 'Print Barcode Label'),
+      label: t('print_barcodes', 'Print Barcode Labels'),
       onClick: () => handleOpenBarcodePrint(),
-    },
-    {
-      key: 'price_list',
-      icon: <DollarOutlined style={{ color: '#f59e0b' }} />,
-      label: t('price_list', 'Price List'),
-      onClick: () => window.print(),
     },
     {
       key: 'export_excel',
@@ -853,7 +1243,7 @@ export default function BpasInventoryWorkspace() {
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* 1. BPAS Top Metric Ribbon */}
+      {/* 1. Top Metrics Cards */}
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} md={6}>
           <Card
@@ -865,7 +1255,7 @@ export default function BpasInventoryWorkspace() {
               title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>{t('total_catalog_items', 'TOTAL CATALOG ITEMS')}</span>}
               value={metrics.total}
               prefix={<BarcodeOutlined style={{ color: '#2563eb' }} />}
-              suffix={<span style={{ fontSize: 13, color: adminTheme.subtext }}>SKUs</span>}
+              suffix={<span style={{ fontSize: 13, color: adminTheme.subtext }}>Products</span>}
               valueStyle={{ fontWeight: 900, color: adminTheme.text }}
             />
           </Card>
@@ -877,10 +1267,10 @@ export default function BpasInventoryWorkspace() {
             styles={{ body: { padding: '16px 20px' } }}
           >
             <Statistic
-              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>{t('available_in_stock', 'AVAILABLE IN STOCK')}</span>}
+              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>{t('available_in_stock', 'IN STOCK')}</span>}
               value={metrics.inStock}
               prefix={<CheckCircleOutlined style={{ color: '#16a34a' }} />}
-              suffix={<span style={{ fontSize: 13, color: '#16a34a' }}>{t('active', 'Active')}</span>}
+              suffix={<span style={{ fontSize: 13, color: '#16a34a' }}>Available</span>}
               valueStyle={{ fontWeight: 900, color: '#16a34a' }}
             />
           </Card>
@@ -895,7 +1285,7 @@ export default function BpasInventoryWorkspace() {
               title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>{t('low_stock_warnings', 'LOW STOCK WARNINGS')}</span>}
               value={metrics.lowStock}
               prefix={<WarningOutlined style={{ color: '#ea580c' }} />}
-              suffix={<span style={{ fontSize: 13, color: '#ea580c' }}>{t('alert', 'Under Alert')}</span>}
+              suffix={<span style={{ fontSize: 13, color: '#ea580c' }}>Under Alert</span>}
               valueStyle={{ fontWeight: 900, color: '#ea580c' }}
             />
           </Card>
@@ -917,7 +1307,7 @@ export default function BpasInventoryWorkspace() {
         </Col>
       </Row>
 
-      {/* 2. Sub-Navigation Tabs across the top (BPAS Products Menus) */}
+      {/* 2. Sub-Navigation Tabs across the top */}
       <Card
         style={{ borderRadius: 12, border: `1px solid ${adminTheme.border}` }}
         styles={{ body: { padding: '10px 16px' } }}
@@ -936,39 +1326,28 @@ export default function BpasInventoryWorkspace() {
               {t('products', 'List Products')}
             </Button>
             <Button
-              type="default"
-              icon={<PlusOutlined />}
-              onClick={handleOpenAddProduct}
-              style={{ fontWeight: 700, borderColor: '#16a34a', color: '#16a34a' }}
-            >
-              {t('add_product', 'Add Product')}
-            </Button>
-            <Button
-              type="default"
-              icon={<UploadOutlined />}
-              onClick={() => setPageMode('import')}
+              type={activeTab === 'attributes' ? 'primary' : 'default'}
+              icon={<TagsOutlined />}
+              onClick={() => setActiveTab('attributes')}
               style={{ fontWeight: 700 }}
             >
-              {t('import_products', 'Import Products')}
+              Product Attributes & Values
             </Button>
             <Button
-              type="default"
-              icon={<PrinterOutlined />}
-              onClick={() => handleOpenBarcodePrint()}
+              type={activeTab === 'warehouse-stock' ? 'primary' : 'default'}
+              icon={<ApartmentOutlined />}
+              onClick={() => setActiveTab('warehouse-stock')}
               style={{ fontWeight: 700 }}
             >
-              {t('print_barcodes', 'Print Barcode Label')}
+              Warehouse Stock Breakdown
             </Button>
             <Button
-              type={activeTab === 'stock-counts' ? 'primary' : 'default'}
-              icon={<CheckSquareOutlined />}
-              onClick={() => {
-                setPageMode('list');
-                setActiveTab('stock-counts');
-              }}
+              type={activeTab === 'movements' ? 'primary' : 'default'}
+              icon={<HistoryOutlined />}
+              onClick={() => setActiveTab('movements')}
               style={{ fontWeight: 700 }}
             >
-              {t('stock_counts', 'Stock Counts')}
+              Stock Movements Ledger
             </Button>
             <Button
               type={activeTab === 'quantity-adjustments' ? 'primary' : 'default'}
@@ -976,23 +1355,7 @@ export default function BpasInventoryWorkspace() {
               onClick={() => setActiveTab('quantity-adjustments')}
               style={{ fontWeight: 700 }}
             >
-              {t('quantity_adjustments', 'Quantity Adjustments')}
-            </Button>
-            <Button
-              type={activeTab === 'cost-adjustments' ? 'primary' : 'default'}
-              icon={<DollarOutlined />}
-              onClick={() => setActiveTab('cost-adjustments')}
-              style={{ fontWeight: 700 }}
-            >
-              {t('cost_adjustments', 'Cost Adjustments')}
-            </Button>
-            <Button
-              type={activeTab === 'using-stock' ? 'primary' : 'default'}
-              icon={<InboxOutlined />}
-              onClick={() => setActiveTab('using-stock')}
-              style={{ fontWeight: 700 }}
-            >
-              {t('using_stock', 'Stock Using')}
+              Adjustments
             </Button>
             <Button
               type={activeTab === 'transfers' ? 'primary' : 'default'}
@@ -1000,19 +1363,19 @@ export default function BpasInventoryWorkspace() {
               onClick={() => setActiveTab('transfers')}
               style={{ fontWeight: 700 }}
             >
-              {t('transfers', 'Transfers')}
-            </Button>
-            <Button
-              type={activeTab === 'consignments' ? 'primary' : 'default'}
-              icon={<FileTextOutlined />}
-              onClick={() => setActiveTab('consignments')}
-              style={{ fontWeight: 700 }}
-            >
-              {t('consignments', 'Consignments')}
+              Transfers
             </Button>
           </Space>
 
           <Space size={8}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleOpenAddProduct}
+              style={{ fontWeight: 700, background: '#16a34a', borderColor: '#16a34a' }}
+            >
+              {t('add_product', 'Add Product')}
+            </Button>
             <Button
               icon={<SyncOutlined spin={isSyncing} />}
               onClick={fetchLiveProducts}
@@ -1020,18 +1383,11 @@ export default function BpasInventoryWorkspace() {
             >
               {t('sync_db', 'Sync DB')}
             </Button>
-            <Button
-              icon={<PrinterOutlined />}
-              onClick={() => handleOpenBarcodePrint()}
-              style={{ fontWeight: 700 }}
-            >
-              {t('barcodes', 'Barcodes')}
-            </Button>
           </Space>
         </Flex>
       </Card>
 
-      {/* 3. Main Box Container matching BPAS .box and .box-header */}
+      {/* 3. Main Workspace Container */}
       <Card
         style={{
           borderRadius: 14,
@@ -1050,39 +1406,49 @@ export default function BpasInventoryWorkspace() {
         }}
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <BarcodeOutlined style={{ color: '#2563eb', fontSize: 20 }} />
+            {activeTab === 'products' && <BarcodeOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+            {activeTab === 'attributes' && <TagsOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+            {activeTab === 'warehouse-stock' && <ApartmentOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+            {activeTab === 'movements' && <HistoryOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+            {activeTab === 'quantity-adjustments' && <ToolOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+            {activeTab === 'transfers' && <SwapOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+
             <span style={{ fontSize: 17, fontWeight: 800, color: '#2563eb' }}>
-              {t('products', 'Products')} ({filterWarehouse === 'all' ? t('all_warehouses', 'All Warehouses') : warehousesList.find((w) => String(w.id) === filterWarehouse)?.name || t('selected_warehouse', 'Selected Warehouse')})
+              {activeTab === 'products' && `Products Inventory (${filterWarehouse === 'all' ? 'All Warehouses' : warehousesList.find((w) => String(w.id) === filterWarehouse)?.name || 'Selected Warehouse'})`}
+              {activeTab === 'attributes' && 'Reusable Product Attributes & Values Manager'}
+              {activeTab === 'warehouse-stock' && 'Live Warehouse Stock Balance by Variant'}
+              {activeTab === 'movements' && 'Stock Movement Audit Ledger'}
+              {activeTab === 'quantity-adjustments' && 'Inventory Quantity Adjustments'}
+              {activeTab === 'transfers' && 'Warehouse Stock Transfers'}
             </span>
           </div>
         }
         extra={
           <Space size={10}>
-            {/* Toggle Search Filter Button (toggle_up / toggle_down in BPAS) */}
-            <Tooltip title={showFilterDrawer ? t('hide_filters', 'Hide Filters') : t('show_advanced_filters', 'Show Advanced Filters')}>
-              <Button
-                type="text"
-                icon={showFilterDrawer ? <UpOutlined /> : <DownOutlined />}
-                onClick={() => setShowFilterDrawer(!showFilterDrawer)}
-                style={{
-                  fontWeight: 700,
-                  color: showFilterDrawer ? '#2563eb' : adminTheme.subtext,
-                  border: `1px solid ${adminTheme.border}`,
-                  borderRadius: 8,
-                }}
-              >
-                {showFilterDrawer ? t('collapse_filters', 'Collapse Filters') : t('filter_products', 'Filter Products')}
-              </Button>
-            </Tooltip>
+            {activeTab === 'products' && (
+              <Tooltip title={showFilterDrawer ? t('hide_filters', 'Hide Filters') : t('show_advanced_filters', 'Show Advanced Filters')}>
+                <Button
+                  type="text"
+                  icon={showFilterDrawer ? <UpOutlined /> : <DownOutlined />}
+                  onClick={() => setShowFilterDrawer(!showFilterDrawer)}
+                  style={{
+                    fontWeight: 700,
+                    color: showFilterDrawer ? '#2563eb' : adminTheme.subtext,
+                    border: `1px solid ${adminTheme.border}`,
+                    borderRadius: 8,
+                  }}
+                >
+                  {showFilterDrawer ? t('collapse_filters', 'Collapse Filters') : t('filter_products', 'Filter Products')}
+                </Button>
+              </Tooltip>
+            )}
 
-            {/* Warehouse Dropdown Selector */}
             <Dropdown menu={{ items: warehouseMenuItems }} trigger={['click']}>
               <Button style={{ fontWeight: 700, borderRadius: 8 }} icon={<ApartmentOutlined />}>
                 {t('warehouses', 'Warehouses')} <DownOutlined style={{ fontSize: 10 }} />
               </Button>
             </Dropdown>
 
-            {/* Tasks Actions Menu Dropdown (Exact BPAS tasks-menus) */}
             <Dropdown menu={{ items: taskMenuItems }} trigger={['click']} placement="bottomRight">
               <Button
                 type="primary"
@@ -1099,8 +1465,8 @@ export default function BpasInventoryWorkspace() {
           </Space>
         }
       >
-        {/* Collapsible Advanced Filter Bar (Sliding drawer matching BPAS) */}
-        {showFilterDrawer && (
+        {/* Collapsible Filter Bar */}
+        {showFilterDrawer && activeTab === 'products' && (
           <div
             style={{
               padding: '16px 20px',
@@ -1114,10 +1480,10 @@ export default function BpasInventoryWorkspace() {
               <Col xs={24} sm={12} md={6}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-                    {t('product_name_code', 'Product Name / Code:')}
+                    Product Name / SKU / Barcode:
                   </label>
                   <Input
-                    placeholder={t('search_by_code_title', 'Search by code or title...')}
+                    placeholder="Search name, code, sku..."
                     prefix={<SearchOutlined />}
                     value={filterSearch}
                     onChange={(e) => setFilterSearch(e.target.value)}
@@ -1128,16 +1494,16 @@ export default function BpasInventoryWorkspace() {
               <Col xs={24} sm={12} md={6}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-                    {t('category', 'Category:')}
+                    Category:
                   </label>
                   <Select
                     value={filterCategory}
                     onChange={setFilterCategory}
                     style={{ width: '100%' }}
                   >
-                    <Option value="all">{t('all_categories', 'All Categories')}</Option>
+                    <Option value="all">All Categories</Option>
                     {categoriesList.map((cat) => (
-                      <Option key={cat.id || cat.name} value={cat.name || cat.id}>
+                      <Option key={cat.id || cat.name} value={cat.id || cat.name}>
                         {cat.name}
                       </Option>
                     ))}
@@ -1147,37 +1513,36 @@ export default function BpasInventoryWorkspace() {
               <Col xs={24} sm={12} md={6}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-                    {t('product_type', 'Product Type:')}
-                  </label>
-                  <Select
-                    value={filterType}
-                    onChange={setFilterType}
-                    style={{ width: '100%' }}
-                  >
-                    <Option value="all">{t('all_types', 'All Types')}</Option>
-                    <Option value="standard">{t('standard', 'Standard')}</Option>
-                    <Option value="combo">{t('combo', 'Combo')}</Option>
-                    <Option value="digital">{t('digital', 'Digital')}</Option>
-                    <Option value="service">{t('service', 'Service')}</Option>
-                    <Option value="active">{t('active_in_stock', 'Active (In Stock)')}</Option>
-                    <Option value="inactive">{t('inactive', 'Inactive')}</Option>
-                  </Select>
-                </div>
-              </Col>
-              <Col xs={24} sm={12} md={6}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
-                    {t('stock_status', 'Stock Status:')}
+                    Stock Status:
                   </label>
                   <Select
                     value={filterStockStatus}
                     onChange={setFilterStockStatus}
                     style={{ width: '100%' }}
                   >
-                    <Option value="all">{t('all_inventory', 'All Inventory')}</Option>
-                    <Option value="in_stock">{t('healthy_stock', 'Healthy Stock')}</Option>
-                    <Option value="low_stock">{t('low_stock', 'Low Stock (Under Alert)')}</Option>
-                    <Option value="out_of_stock">{t('out_of_stock', 'Out of Stock')}</Option>
+                    <Option value="all">All Inventory</Option>
+                    <Option value="in_stock">Healthy Stock</Option>
+                    <Option value="low_stock">Low Stock (Under Alert)</Option>
+                    <Option value="out_of_stock">Out of Stock</Option>
+                  </Select>
+                </div>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
+                    Warehouse:
+                  </label>
+                  <Select
+                    value={filterWarehouse}
+                    onChange={setFilterWarehouse}
+                    style={{ width: '100%' }}
+                  >
+                    <Option value="all">All Warehouses</Option>
+                    {warehousesList.map((wh) => (
+                      <Option key={wh.id} value={String(wh.id)}>
+                        {wh.name}
+                      </Option>
+                    ))}
                   </Select>
                 </div>
               </Col>
@@ -1193,27 +1558,30 @@ export default function BpasInventoryWorkspace() {
                   setFilterStockStatus('all');
                 }}
               >
-                {t('reset_filters', 'Reset Filters')}
+                Reset Filters
               </Button>
               <Button
                 type="primary"
                 icon={<FilterOutlined />}
-                onClick={() => setShowFilterDrawer(false)}
+                onClick={() => {
+                  setShowFilterDrawer(false);
+                  fetchLiveProducts();
+                }}
                 style={{ fontWeight: 700 }}
               >
-                {t('apply_filters', 'Apply Filters')} ({filteredProducts.length} {t('results', 'Results')})
+                Apply Filters ({filteredProducts.length} Results)
               </Button>
             </Flex>
           </div>
         )}
 
-        {/* Dynamic Content Based on Active Sub-view */}
+        {/* TAB 1: Products Table with Expandable Variants */}
         {activeTab === 'products' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <span style={{ fontSize: 13, color: adminTheme.subtext }}>
-                {t('showing', 'Showing')} <strong>{filteredProducts.length}</strong> {t('products_in_catalog', 'products in catalog')}
-                {selectedRowKeys.length > 0 && ` (${selectedRowKeys.length} ${t('selected', 'selected')})`}
+                Showing <strong>{filteredProducts.length}</strong> products in catalog
+                {selectedRowKeys.length > 0 && ` (${selectedRowKeys.length} selected)`}
               </span>
 
               {selectedRowKeys.length > 0 && (
@@ -1223,24 +1591,25 @@ export default function BpasInventoryWorkspace() {
                     icon={<PrinterOutlined />}
                     onClick={() => handleOpenBarcodePrint()}
                   >
-                    {t('print_labels', 'Print Labels')} ({selectedRowKeys.length})
+                    Print Labels ({selectedRowKeys.length})
                   </Button>
                   <Button
                     size="small"
                     icon={<FileExcelOutlined />}
                     onClick={handleExportExcel}
                   >
-                    {t('export_selected', 'Export Selected')}
+                    Export Selected
                   </Button>
                   <Popconfirm
-                    title={t('delete_selected_confirm', 'Delete selected products?')}
+                    title="Delete selected products?"
+                    description="Products referenced by transactions will be safely archived instead of deleted."
                     onConfirm={handleBulkDelete}
-                    okText={t('yes_delete', 'Yes, delete')}
-                    cancelText={t('cancel', 'Cancel')}
+                    okText="Yes, delete / archive"
+                    cancelText="Cancel"
                     okButtonProps={{ danger: true }}
                   >
                     <Button size="small" danger icon={<DeleteOutlined />}>
-                      {t('delete', 'Delete')} ({selectedRowKeys.length})
+                      Delete / Archive ({selectedRowKeys.length})
                     </Button>
                   </Popconfirm>
                 </Space>
@@ -1251,6 +1620,10 @@ export default function BpasInventoryWorkspace() {
               rowKey="id"
               columns={columns}
               dataSource={filteredProducts}
+              expandable={{
+                expandedRowRender,
+                rowExpandable: (record) => (record.variants && record.variants.length > 0) || (record.variant_count && record.variant_count > 0),
+              }}
               rowSelection={{
                 selectedRowKeys,
                 onChange: (keys) => setSelectedRowKeys(keys),
@@ -1267,182 +1640,417 @@ export default function BpasInventoryWorkspace() {
           </div>
         )}
 
-        {/* Sub-view: Stock Counts */}
-        {activeTab === 'stock-counts' && (
+        {/* TAB 2: Reusable Attributes & Values Manager */}
+        {activeTab === 'attributes' && (
+          <div>
+            <Alert
+              type="info"
+              showIcon
+              message="Manage reusable product attributes (e.g. Color, Size, Material, Style) and their valid options. These attributes are used by the Cartesian Variant Combination Generator when creating or editing products."
+              style={{ marginBottom: 16 }}
+            />
+            <Row gutter={[20, 20]}>
+              <Col xs={24} md={8}>
+                <Card
+                  title={<span style={{ fontWeight: 800 }}>Product Attributes</span>}
+                  extra={
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={() => {
+                        attrForm.resetFields();
+                        setIsAddAttrModalOpen(true);
+                      }}
+                    >
+                      Add Attribute
+                    </Button>
+                  }
+                  style={{ borderRadius: 10, border: `1px solid ${adminTheme.border}` }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {attributesList.map((attr) => {
+                      const isSelected = selectedAttribute?.id === attr.id;
+                      return (
+                        <div
+                          key={attr.id}
+                          onClick={() => {
+                            setSelectedAttribute(attr);
+                            fetchAttributeValues(attr.id);
+                          }}
+                          style={{
+                            padding: '10px 14px',
+                            borderRadius: 8,
+                            cursor: 'pointer',
+                            background: isSelected ? '#eff6ff' : '#f8fafc',
+                            border: `1px solid ${isSelected ? '#3b82f6' : '#e2e8f0'}`,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <div>
+                            <strong style={{ color: isSelected ? '#1d4ed8' : '#1e293b' }}>{attr.name}</strong>
+                            <div style={{ fontSize: 11, color: '#64748b' }}>Code: {attr.code || attr.name.toLowerCase()}</div>
+                          </div>
+                          <Tag color={isSelected ? 'blue' : 'default'}>
+                            {attr.values_count ?? 'Options'}
+                          </Tag>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              </Col>
+
+              <Col xs={24} md={16}>
+                <Card
+                  title={
+                    <span style={{ fontWeight: 800 }}>
+                      Attribute Values for: <span style={{ color: '#2563eb' }}>{selectedAttribute?.name || 'Select an Attribute'}</span>
+                    </span>
+                  }
+                  extra={
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<PlusOutlined />}
+                      disabled={!selectedAttribute}
+                      onClick={() => {
+                        attrValForm.resetFields();
+                        setIsAddAttrValModalOpen(true);
+                      }}
+                    >
+                      Add Value Option
+                    </Button>
+                  }
+                  style={{ borderRadius: 10, border: `1px solid ${adminTheme.border}` }}
+                >
+                  <Table
+                    rowKey="id"
+                    dataSource={attributeValuesList}
+                    pagination={false}
+                    size="small"
+                    columns={[
+                      {
+                        title: 'Value Name',
+                        dataIndex: 'value',
+                        key: 'value',
+                        render: (val, r) => (
+                          <Space>
+                            {r.color_code && (
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: '50%',
+                                  background: r.color_code,
+                                  border: '1px solid #cbd5e1',
+                                }}
+                              />
+                            )}
+                            <strong>{val || r.name}</strong>
+                          </Space>
+                        ),
+                      },
+                      {
+                        title: 'Color / Hex Code',
+                        dataIndex: 'color_code',
+                        key: 'color_code',
+                        render: (c) => (c ? <Tag color="default">{c}</Tag> : '—'),
+                      },
+                      {
+                        title: 'Sort Order',
+                        dataIndex: 'sort_order',
+                        key: 'sort_order',
+                        align: 'center',
+                        render: (s) => s ?? 0,
+                      },
+                      {
+                        title: 'Action',
+                        key: 'action',
+                        align: 'center',
+                        width: 90,
+                        render: (_, r) => (
+                          <Popconfirm
+                            title="Delete this attribute value?"
+                            onConfirm={async () => {
+                              try {
+                                await axios.delete(`/api/admin/attributes/${selectedAttribute.id}/values/${r.id}`, { headers: getAuthHeaders() });
+                                message.success('Attribute value deleted');
+                                fetchAttributeValues(selectedAttribute.id);
+                              } catch (err) {
+                                message.error('Failed to delete value');
+                              }
+                            }}
+                          >
+                            <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+                          </Popconfirm>
+                        ),
+                      },
+                    ]}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          </div>
+        )}
+
+        {/* TAB 3: Warehouse Stock Breakdown */}
+        {activeTab === 'warehouse-stock' && (
           <div>
             <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>{t('stock_counts_title', 'Stock Counts (Physical Inventory Audits)')}</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => message.info(t('initiating_stock_count', 'Initiating new stock count batch...'))}>
-                {t('start_new_stock_count', 'Start New Stock Count')}
+              <span style={{ fontSize: 13, color: adminTheme.subtext }}>
+                Real-time stock balances across warehouses and product variants
+              </span>
+              <Button icon={<SyncOutlined spin={isWarehouseStockLoading} />} onClick={fetchWarehouseStock}>
+                Refresh Balances
               </Button>
             </Flex>
             <Table
-              rowKey="id"
-              dataSource={stockCountsList}
+              rowKey={(r) => `${r.warehouse_id}_${r.product_id}_${r.option_id || 0}`}
+              loading={isWarehouseStockLoading}
+              dataSource={warehouseStockData}
               columns={[
-                { title: t('date', 'Date'), dataIndex: 'date', key: 'date', width: 120 },
-                { title: t('reference_no', 'Reference No'), dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: t('warehouse', 'Warehouse'), dataIndex: 'warehouse', key: 'warehouse', width: 180 },
-                { title: t('count_type', 'Count Type'), dataIndex: 'type', key: 'type', width: 160 },
-                { title: t('counted_by', 'Counted By'), dataIndex: 'counted_by', key: 'counted_by', width: 160 },
-                { title: t('variance', 'Variance'), dataIndex: 'variance', key: 'variance', width: 120, render: (v) => <Tag color={v === '0 items' ? 'green' : 'orange'}>{v}</Tag> },
-                { title: t('status', 'Status'), dataIndex: 'status', key: 'status', width: 130, render: (s) => <Tag color={s === 'Finalized' ? 'blue' : 'warning'}>{s}</Tag> },
                 {
-                  title: t('actions', 'Actions'),
-                  key: 'actions',
-                  width: 120,
-                  render: () => (
-                    <Space size={6}>
-                      <Button size="small" type="text" icon={<EyeOutlined />} />
-                      <Button size="small" type="text" icon={<PrinterOutlined />} />
+                  title: 'Warehouse',
+                  dataIndex: 'warehouse_name',
+                  key: 'warehouse_name',
+                  render: (w) => <strong style={{ color: '#0284c7' }}>{w}</strong>,
+                },
+                {
+                  title: 'Product',
+                  dataIndex: 'product_name',
+                  key: 'product_name',
+                  render: (p) => <span style={{ fontWeight: 700 }}>{p}</span>,
+                },
+                {
+                  title: 'Variant Name',
+                  dataIndex: 'variant_name',
+                  key: 'variant_name',
+                  render: (v) => (v ? <Tag color="purple">{v}</Tag> : <span style={{ color: '#94a3b8' }}>Parent SKU</span>),
+                },
+                {
+                  title: 'SKU / Barcode',
+                  key: 'sku',
+                  render: (_, r) => (
+                    <span style={{ fontFamily: 'monospace', fontSize: 11 }}>
+                      {r.variant_sku || r.product_code || '—'}
+                    </span>
+                  ),
+                },
+                {
+                  title: 'Available Quantity',
+                  dataIndex: 'quantity',
+                  key: 'quantity',
+                  align: 'right',
+                  sorter: (a, b) => (a.quantity || 0) - (b.quantity || 0),
+                  render: (qty, r) => {
+                    const count = Number(qty) || 0;
+                    const alertQty = Number(r.alert_quantity || 10);
+                    const isLow = count <= alertQty;
+                    return (
+                      <strong style={{ color: isLow ? '#dc2626' : '#16a34a', fontSize: 13 }}>
+                        {count} {r.unit_name || 'Pcs'}
+                      </strong>
+                    );
+                  },
+                },
+                {
+                  title: 'Alert Qty',
+                  dataIndex: 'alert_quantity',
+                  key: 'alert_quantity',
+                  align: 'center',
+                  render: (a) => <Tag color="warning">{a ?? 10}</Tag>,
+                },
+                {
+                  title: 'Stock Health',
+                  key: 'health',
+                  align: 'center',
+                  render: (_, r) => {
+                    const count = Number(r.quantity) || 0;
+                    const alertQty = Number(r.alert_quantity || 10);
+                    if (count <= 0) return <Tag color="error">Out of Stock</Tag>;
+                    if (count <= alertQty) return <Tag color="warning">Low Stock</Tag>;
+                    return <Tag color="success">Healthy</Tag>;
+                  },
+                },
+                {
+                  title: 'Quick Operations',
+                  key: 'ops',
+                  align: 'center',
+                  render: (_, r) => (
+                    <Space size={4}>
+                      <Button
+                        size="small"
+                        type="link"
+                        onClick={() => handleOpenReceive({ id: r.product_id, name: r.product_name }, r.option_id ? { id: r.option_id, name: r.variant_name } : null)}
+                      >
+                        Receive
+                      </Button>
+                      <Button
+                        size="small"
+                        type="link"
+                        onClick={() => handleOpenTransfer({ id: r.product_id, name: r.product_name }, r.option_id ? { id: r.option_id, name: r.variant_name } : null)}
+                      >
+                        Transfer
+                      </Button>
                     </Space>
                   ),
                 },
               ]}
-              pagination={false}
+              pagination={{ pageSize: 20 }}
             />
           </div>
         )}
 
-        {/* Sub-view: Quantity Adjustments */}
-        {activeTab === 'quantity-adjustments' && (
+        {/* TAB 4: Stock Movement Audit Ledger */}
+        {activeTab === 'movements' && (
           <div>
             <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>{t('quantity_adjustments_title', 'Quantity Adjustments (Damage, Loss, Surplus)')}</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenAdjustment()}>
-                {t('add_quantity_adjustment', 'Add Quantity Adjustment')}
+              <span style={{ fontSize: 13, color: adminTheme.subtext }}>
+                Complete immutable ledger trail of stock changes (receipts, issues, adjustments, transfers, sales)
+              </span>
+              <Button icon={<SyncOutlined spin={isMovementsLoading} />} onClick={fetchMovements}>
+                Refresh Ledger
               </Button>
             </Flex>
             <Table
               rowKey="id"
-              dataSource={adjustmentsList}
+              loading={isMovementsLoading}
+              dataSource={movementsData}
               columns={[
-                { title: t('date', 'Date'), dataIndex: 'date', key: 'date', width: 120 },
-                { title: t('reference_no', 'Reference No'), dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: t('warehouse', 'Warehouse'), dataIndex: 'warehouse', key: 'warehouse', width: 180 },
-                { title: t('adjustment_type', 'Adjustment Type'), dataIndex: 'type', key: 'type', width: 140, render: (t) => <Tag color={t === 'Addition' ? 'green' : 'red'}>{t}</Tag> },
-                { title: t('reason', 'Reason'), dataIndex: 'reason', key: 'reason', width: 220 },
-                { title: t('items_affected', 'Items Affected'), dataIndex: 'items_count', key: 'items_count', width: 120, align: 'right' },
-                { title: t('created_by', 'Created By'), dataIndex: 'created_by', key: 'created_by', width: 140 },
                 {
-                  title: t('actions', 'Actions'),
-                  key: 'actions',
-                  width: 100,
-                  render: () => <Button size="small" type="text" icon={<EyeOutlined />} />,
+                  title: 'Date & Time',
+                  dataIndex: 'created_at',
+                  key: 'created_at',
+                  width: 160,
+                  render: (dt) => <span style={{ fontSize: 12 }}>{dt ? new Date(dt).toLocaleString() : '—'}</span>,
+                },
+                {
+                  title: 'Reference No',
+                  dataIndex: 'reference_no',
+                  key: 'reference_no',
+                  width: 150,
+                  render: (ref) => <strong style={{ color: '#2563eb', fontFamily: 'monospace' }}>{ref || '—'}</strong>,
+                },
+                {
+                  title: 'Movement Type',
+                  dataIndex: 'type',
+                  key: 'type',
+                  width: 160,
+                  render: (type) => {
+                    const tStr = (type || '').toLowerCase();
+                    if (tStr.includes('receive') || tStr.includes('purchase')) {
+                      return <Tag color="green" icon={<ArrowDownOutlined />}>{type}</Tag>;
+                    }
+                    if (tStr.includes('issue') || tStr.includes('sale')) {
+                      return <Tag color="red" icon={<ArrowUpOutlined />}>{type}</Tag>;
+                    }
+                    if (tStr.includes('transfer')) {
+                      return <Tag color="purple" icon={<SwapOutlined />}>{type}</Tag>;
+                    }
+                    return <Tag color="orange" icon={<ToolOutlined />}>{type}</Tag>;
+                  },
+                },
+                {
+                  title: 'Warehouse',
+                  dataIndex: 'warehouse_name',
+                  key: 'warehouse_name',
+                  width: 160,
+                  render: (w) => <span>{w || 'Default Storage'}</span>,
+                },
+                {
+                  title: 'Product',
+                  dataIndex: 'product_name',
+                  key: 'product_name',
+                  render: (p) => <span style={{ fontWeight: 600 }}>{p}</span>,
+                },
+                {
+                  title: 'Variant',
+                  dataIndex: 'variant_name',
+                  key: 'variant_name',
+                  render: (v) => (v ? <Tag color="purple">{v}</Tag> : <span style={{ color: '#94a3b8' }}>—</span>),
+                },
+                {
+                  title: 'Quantity Change',
+                  dataIndex: 'quantity',
+                  key: 'quantity',
+                  align: 'right',
+                  render: (qty, r) => {
+                    const q = Number(qty) || 0;
+                    const isNeg = r.type === 'stock_issued' || r.type === 'transfer_out' || r.type === 'adjustment_sub' || r.type === 'sale';
+                    return (
+                      <strong style={{ color: isNeg ? '#dc2626' : '#16a34a', fontSize: 13 }}>
+                        {isNeg ? `-${q}` : `+${q}`}
+                      </strong>
+                    );
+                  },
+                },
+                {
+                  title: 'Unit Cost',
+                  dataIndex: 'unit_cost',
+                  key: 'unit_cost',
+                  align: 'right',
+                  render: (c) => (c ? formatCurrency(c) : '—'),
                 },
               ]}
-              pagination={false}
+              pagination={{ pageSize: 25 }}
             />
           </div>
         )}
 
-        {/* Sub-view: Cost Adjustments */}
-        {activeTab === 'cost-adjustments' && (
+        {/* TAB 5: Stock Adjustments */}
+        {activeTab === 'quantity-adjustments' && (
           <div>
             <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>{t('cost_adjustments_title', 'Cost Adjustments & Revaluation')}</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => message.info(t('opening_cost_revaluation', 'Opening cost revaluation form...'))}>
-                {t('add_cost_adjustment', 'Add Cost Adjustment')}
+              <Title level={4} style={{ margin: 0 }}>Stock Quantity Adjustments (Damage, Loss, Cycle Counts)</Title>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenAdjustment()}>
+                Add Quantity Adjustment
               </Button>
             </Flex>
             <Table
               rowKey="id"
               dataSource={[
-                { id: 1, date: '2026-10-14', reference: 'CADJ-2026-001', product: 'Arabica Coffee Beans 500g', old_cost: '$8.50', new_cost: '$9.20', reason: 'Supplier import tariff hike' },
-                { id: 2, date: '2026-10-15', reference: 'CADJ-2026-002', product: 'Takeaway Cup 16oz (Pack of 50)', old_cost: '$2.10', new_cost: '$1.95', reason: 'Bulk vendor volume rebate' },
+                { id: 1, date: '2026-10-24', reference: 'ADJ-2026-001', warehouse: 'Office Furniture (HQ)', type: 'addition', reason: 'Cycle count physical adjustment', items_count: 5 },
+                { id: 2, date: '2026-10-23', reference: 'ADJ-2026-002', warehouse: 'Printing (W2)', type: 'subtraction', reason: 'Damaged in Handling', items_count: 2 },
               ]}
               columns={[
-                { title: t('date', 'Date'), dataIndex: 'date', key: 'date', width: 120 },
-                { title: t('reference_no', 'Reference No'), dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: t('product', 'Product'), dataIndex: 'product', key: 'product', width: 260 },
-                { title: t('previous_cost', 'Previous Cost'), dataIndex: 'old_cost', key: 'old_cost', width: 130 },
-                { title: t('new_unit_cost', 'New Unit Cost'), dataIndex: 'new_cost', key: 'new_cost', width: 130, render: (c) => <strong style={{ color: '#16a34a' }}>{c}</strong> },
-                { title: t('reason_note', 'Reason / Note'), dataIndex: 'reason', key: 'reason' },
+                { title: 'Date', dataIndex: 'date', key: 'date', width: 120 },
+                { title: 'Reference No', dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
+                { title: 'Warehouse', dataIndex: 'warehouse', key: 'warehouse', width: 200 },
+                { title: 'Adjustment Type', dataIndex: 'type', key: 'type', width: 140, render: (t) => <Tag color={t === 'addition' ? 'green' : 'red'}>{t.toUpperCase()}</Tag> },
+                { title: 'Reason', dataIndex: 'reason', key: 'reason' },
+                { title: 'Quantity', dataIndex: 'items_count', key: 'items_count', width: 100, align: 'right', render: (q) => <strong>{q}</strong> },
               ]}
               pagination={false}
             />
           </div>
         )}
 
-        {/* Sub-view: Using Stock */}
-        {activeTab === 'using-stock' && (
-          <div>
-            <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>{t('stock_using_title', 'Stock Using (Internal Store Operational Consumption)')}</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => message.info(t('opening_stock_using', 'Opening stock using requisition...'))}>
-                {t('add_stock_using_entry', 'Add Stock Using Entry')}
-              </Button>
-            </Flex>
-            <Table
-              rowKey="id"
-              dataSource={usingStockList}
-              columns={[
-                { title: t('date', 'Date'), dataIndex: 'date', key: 'date', width: 120 },
-                { title: t('reference_no', 'Reference No'), dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: t('warehouse', 'Warehouse'), dataIndex: 'warehouse', key: 'warehouse', width: 160 },
-                { title: t('department', 'Department'), dataIndex: 'department', key: 'department', width: 160 },
-                { title: t('employee', 'Employee'), dataIndex: 'employee', key: 'employee', width: 160 },
-                { title: t('items_qty', 'Items Qty'), dataIndex: 'items_count', key: 'items_count', width: 100, align: 'right' },
-                { title: t('operational_purpose_note', 'Operational Purpose / Note'), dataIndex: 'note', key: 'note' },
-              ]}
-              pagination={false}
-            />
-          </div>
-        )}
-
-        {/* Sub-view: Transfers */}
+        {/* TAB 6: Warehouse Transfers */}
         {activeTab === 'transfers' && (
           <div>
             <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>{t('warehouse_transfers_title', 'Warehouse Transfers')}</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenTransfer}>
-                {t('create_transfer', 'Create Transfer')}
+              <Title level={4} style={{ margin: 0 }}>Warehouse Stock Transfers</Title>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenTransfer()}>
+                Create Transfer
               </Button>
             </Flex>
             <Table
               rowKey="id"
-              dataSource={transfersList}
-              columns={[
-                { title: t('date', 'Date'), dataIndex: 'date', key: 'date', width: 120 },
-                { title: t('transfer_no', 'Transfer No'), dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: t('from_warehouse', 'From Warehouse'), dataIndex: 'from_warehouse', key: 'from_warehouse', width: 180 },
-                { title: t('to_warehouse', 'To Warehouse'), dataIndex: 'to_warehouse', key: 'to_warehouse', width: 180 },
-                { title: t('total_items', 'Total Items'), dataIndex: 'items_count', key: 'items_count', width: 120, align: 'right' },
-                { title: t('shipping_charge', 'Shipping Charge'), dataIndex: 'shipping', key: 'shipping', width: 130, align: 'right' },
-                { title: t('status', 'Status'), dataIndex: 'status', key: 'status', width: 130, render: (s) => <Tag color={s === 'Completed' ? 'green' : 'orange'}>{s}</Tag> },
-                {
-                  title: t('actions', 'Actions'),
-                  key: 'actions',
-                  width: 100,
-                  render: () => <Button size="small" type="text" icon={<EyeOutlined />} />,
-                },
+              dataSource={[
+                { id: 1, date: '2026-10-24', reference: 'TR-2026-001', from_warehouse: 'Office Furniture (HQ)', to_warehouse: 'Printing (W2)', items_count: 10, shipping: '$5.00', status: 'Completed' },
               ]}
-              pagination={false}
-            />
-          </div>
-        )}
-
-        {/* Sub-view: Consignments */}
-        {activeTab === 'consignments' && (
-          <div>
-            <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>{t('consignments_title', 'Consignments (Supplier & Customer)')}</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => message.info(t('opening_consignment_entry', 'Opening consignment agreement entry...'))}>
-                {t('create_consignment', 'Create Consignment')}
-              </Button>
-            </Flex>
-            <Table
-              rowKey="id"
-              dataSource={consignmentsList}
               columns={[
-                { title: t('date', 'Date'), dataIndex: 'date', key: 'date', width: 120 },
-                { title: t('reference_no', 'Reference No'), dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: t('partner', 'Party / Partner'), dataIndex: 'party', key: 'party', width: 240 },
-                { title: t('agreement_type', 'Agreement Type'), dataIndex: 'type', key: 'type', width: 150, render: (t) => <Tag color={t === 'Consignment In' ? 'blue' : 'purple'}>{t}</Tag> },
-                { title: t('consigned_qty', 'Consigned Qty'), dataIndex: 'total_qty', key: 'total_qty', width: 120, align: 'right' },
-                { title: t('sold_qty', 'Sold / Reconciled'), dataIndex: 'sold_qty', key: 'sold_qty', width: 130, align: 'right' },
-                { title: t('current_balance', 'Current Balance'), dataIndex: 'balance_qty', key: 'balance_qty', width: 130, align: 'right', render: (b) => <strong style={{ color: '#2563eb' }}>{b}</strong> },
-                { title: t('status', 'Status'), dataIndex: 'status', key: 'status', width: 100, render: (s) => <Tag color="green">{s}</Tag> },
+                { title: 'Date', dataIndex: 'date', key: 'date', width: 120 },
+                { title: 'Transfer No', dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
+                { title: 'From Warehouse', dataIndex: 'from_warehouse', key: 'from_warehouse', width: 200 },
+                { title: 'To Warehouse', dataIndex: 'to_warehouse', key: 'to_warehouse', width: 200 },
+                { title: 'Quantity', dataIndex: 'items_count', key: 'items_count', width: 120, align: 'right', render: (q) => <strong>{q}</strong> },
+                { title: 'Shipping Charge', dataIndex: 'shipping', key: 'shipping', width: 130, align: 'right' },
+                { title: 'Status', dataIndex: 'status', key: 'status', width: 130, render: (s) => <Tag color="green">{s}</Tag> },
               ]}
               pagination={false}
             />
@@ -1450,206 +2058,388 @@ export default function BpasInventoryWorkspace() {
         )}
       </Card>
 
-      {/* MODAL 1: Add / Edit Product (Exact BPAS Tabs: Required, Details, Variants, Supplier, Promotion, Addon, Racks) */}
+      {/* MODAL: Receive Stock */}
       <Modal
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <BarcodeOutlined style={{ color: '#2563eb', fontSize: 20 }} />
-            <span style={{ fontSize: 17, fontWeight: 800 }}>
-              {isEditingMode ? `${t('edit_product', 'Edit Product')}: ${currentEditRecord?.name}` : t('add_new_product', 'Add New Product')}
-            </span>
+            <ArrowDownOutlined style={{ color: '#16a34a', fontSize: 20 }} />
+            <span style={{ fontSize: 17, fontWeight: 800 }}>Receive Stock into Warehouse</span>
           </div>
         }
-        open={isProductModalOpen}
-        onCancel={() => setIsProductModalOpen(false)}
-        width={850}
-        footer={[
-          <Button key="cancel" onClick={() => setIsProductModalOpen(false)}>
-            {t('cancel', 'Cancel')}
-          </Button>,
-          <Button key="save" type="primary" onClick={handleSaveProduct} style={{ fontWeight: 800 }}>
-            {isEditingMode ? t('save_changes', 'Save Changes') : t('create_product', 'Create Product')}
-          </Button>,
-        ]}
+        open={isReceiveModalOpen}
+        onCancel={() => setIsReceiveModalOpen(false)}
+        onOk={handleSubmitReceive}
+        width={560}
       >
-        <Tabs
-          activeKey={productModalActiveTab}
-          onChange={setProductModalActiveTab}
-          items={[
-            {
-              key: 'required',
-              label: t('required_fields', 'Required Fields'),
-              children: (
-                <Form form={productForm} layout="vertical">
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Form.Item name="type" label={t('product_type', 'Product Type')} rules={[{ required: true }]}>
-                        <Select>
-                          <Option value="standard">{t('standard', 'Standard')}</Option>
-                          <Option value="combo">{t('combo', 'Combo')}</Option>
-                          <Option value="digital">{t('digital', 'Digital')}</Option>
-                          <Option value="service">{t('service', 'Service')}</Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item name="name" label={t('product_name', 'Product Name')} rules={[{ required: true, message: t('enter_product_name', 'Please enter product name') }]}>
-                        <Input placeholder="e.g. Specialty Roasted Coffee" />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Form.Item name="barcode" label="Barcode / Product Code" rules={[{ required: true }]}>
-                        <Input
-                          placeholder="e.g. 88581023"
-                          suffix={
-                            <Button
-                              size="small"
-                              type="link"
-                              onClick={() => {
-                                const newCode = `8858${Math.floor(1000 + Math.random() * 9000)}`;
-                                productForm.setFieldsValue({ barcode: newCode });
-                                message.success(`Generated: ${newCode}`);
-                              }}
-                            >
-                              Generate
-                            </Button>
-                          }
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item name="category" label="Category" rules={[{ required: true }]}>
-                        <Select placeholder="Select category">
-                          {categoriesList.map((c) => (
-                            <Option key={c.id || c.name} value={c.name || c.id}>
-                              {c.name}
-                            </Option>
-                          ))}
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  <Row gutter={16}>
-                    <Col span={8}>
-                      <Form.Item name="unit" label="Product Unit" rules={[{ required: true }]}>
-                        <Select placeholder="Select unit">
-                          {unitsList.length > 0 ? (
-                            unitsList.map((u) => (
-                              <Option key={u.id || u.name} value={u.name || u.code}>
-                                {u.name}
-                              </Option>
-                            ))
-                          ) : (
-                            <>
-                              <Option value="Pcs">Pcs</Option>
-                              <Option value="Box">Box</Option>
-                              <Option value="Pack">Pack</Option>
-                              <Option value="Kg">Kg</Option>
-                              <Option value="Bottle">Bottle</Option>
-                            </>
-                          )}
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item name="cost" label="Product Cost ($)" rules={[{ required: true }]}>
-                        <InputNumber min={0} step={0.1} style={{ width: '100%' }} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item name="price" label="Product Price ($)" rules={[{ required: true }]}>
-                        <InputNumber min={0} step={0.1} style={{ width: '100%' }} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Form.Item name="alert_quantity" label="Alert Quantity (Low stock threshold)">
-                        <InputNumber min={0} style={{ width: '100%' }} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item name="rack" label="Rack Location">
-                        <Input placeholder="e.g. A-01, SHELF-2" />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  <Form.Item name="inStock" label="Live Availability Status" valuePropName="checked">
-                    <Switch checkedChildren="Available (In Stock)" unCheckedChildren="Out of Stock" />
-                  </Form.Item>
-                </Form>
-              ),
-            },
-            {
-              key: 'details',
-              label: 'Details & Description',
-              children: (
-                <Form form={productForm} layout="vertical">
-                  <Form.Item name="details" label="Product Description / Specification">
-                    <Input.TextArea rows={4} placeholder="Enter full product description, ingredients, brewing guides, or warranty info..." />
-                  </Form.Item>
-                  <Form.Item label="Product Image">
-                    <Input placeholder="Image URL (e.g. /assets/uploads/sample.png)" />
-                  </Form.Item>
-                </Form>
-              ),
-            },
-            {
-              key: 'variants',
-              label: 'Variants & Options',
-              children: (
-                <div>
-                  <Paragraph type="secondary">
-                    Configure SKU product variants like Size, Color, Volume, or Flavor attributes.
-                  </Paragraph>
-                  <Space style={{ marginBottom: 12 }}>
-                    <Input placeholder="Variant attribute e.g. Size: Large" />
-                    <Button type="dashed" icon={<PlusOutlined />}>Add Variant Option</Button>
-                  </Space>
-                  <Table
-                    size="small"
-                    dataSource={[
-                      { id: 1, name: 'Option 1 - 250g Pack', price: '$5.00', qty: 30 },
-                      { id: 2, name: 'Option 2 - 500g Pack', price: '$9.00', qty: 20 },
-                    ]}
-                    columns={[
-                      { title: 'Variant Name', dataIndex: 'name', key: 'name' },
-                      { title: 'Price', dataIndex: 'price', key: 'price' },
-                      { title: 'Stock Quantity', dataIndex: 'qty', key: 'qty' },
-                    ]}
-                    pagination={false}
-                  />
-                </div>
-              ),
-            },
-            {
-              key: 'racks',
-              label: 'Warehouse Racks',
-              children: (
-                <div>
-                  <Paragraph type="secondary">
-                    Set specific aisle and bin racks for each warehouse location.
-                  </Paragraph>
+        <Form form={receiveForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="warehouse_id" label="Warehouse" rules={[{ required: true }]}>
+                <Select placeholder="Select warehouse">
                   {warehousesList.map((wh) => (
-                    <Row key={wh.id} gutter={16} align="middle" style={{ marginBottom: 12 }}>
-                      <Col span={10}>
-                        <strong>{wh.name}</strong>
-                      </Col>
-                      <Col span={14}>
-                        <Input placeholder={`Rack bin in ${wh.name} (e.g. RACK-B2)`} defaultValue="A-01" />
-                      </Col>
-                    </Row>
+                    <Option key={wh.id} value={wh.id}>{wh.name}</Option>
                   ))}
-                </div>
-              ),
-            },
-          ]}
-        />
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="reference_no" label="Reference No" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="product_id" label="Product" rules={[{ required: true }]}>
+            <Select
+              showSearch
+              placeholder="Select product"
+              optionFilterProp="children"
+              onChange={(pid) => {
+                const prod = productsList.find((p) => p.id === pid);
+                setOperationTargetProduct(prod);
+                receiveForm.setFieldsValue({ option_id: null });
+              }}
+            >
+              {productsList.map((p) => (
+                <Option key={p.id} value={p.id}>{p.name} ({p.code})</Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          {operationTargetProduct?.variants && operationTargetProduct.variants.length > 0 && (
+            <Form.Item name="option_id" label="Target Variant">
+              <Select placeholder="Select variant (or leave blank for all)">
+                {operationTargetProduct.variants.map((v) => (
+                  <Option key={v.id} value={v.id}>{v.name} ({v.sku})</Option>
+                ))}
+              </Select>
+            </Form.Item>
+          )}
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="quantity" label="Quantity to Receive" rules={[{ required: true }]}>
+                <InputNumber min={1} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="unit_cost" label="Unit Cost ($)">
+                <InputNumber min={0} step={0.1} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="note" label="Receipt Note">
+            <Input.TextArea rows={2} placeholder="Supplier invoice, shipping details..." />
+          </Form.Item>
+        </Form>
       </Modal>
 
-      {/* MODAL 2: Product Detail Modal (BPAS modal_view.php) */}
+      {/* MODAL: Issue Stock */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <ArrowUpOutlined style={{ color: '#dc2626', fontSize: 20 }} />
+            <span style={{ fontSize: 17, fontWeight: 800 }}>Issue Stock from Warehouse</span>
+          </div>
+        }
+        open={isIssueModalOpen}
+        onCancel={() => setIsIssueModalOpen(false)}
+        onOk={handleSubmitIssue}
+        width={560}
+      >
+        <Form form={issueForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="warehouse_id" label="Warehouse" rules={[{ required: true }]}>
+                <Select placeholder="Select warehouse">
+                  {warehousesList.map((wh) => (
+                    <Option key={wh.id} value={wh.id}>{wh.name}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="reference_no" label="Reference No" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="product_id" label="Product" rules={[{ required: true }]}>
+            <Select
+              showSearch
+              placeholder="Select product"
+              optionFilterProp="children"
+              onChange={(pid) => {
+                const prod = productsList.find((p) => p.id === pid);
+                setOperationTargetProduct(prod);
+                issueForm.setFieldsValue({ option_id: null });
+              }}
+            >
+              {productsList.map((p) => (
+                <Option key={p.id} value={p.id}>{p.name} ({p.code})</Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          {operationTargetProduct?.variants && operationTargetProduct.variants.length > 0 && (
+            <Form.Item name="option_id" label="Target Variant">
+              <Select placeholder="Select variant (or leave blank for all)">
+                {operationTargetProduct.variants.map((v) => (
+                  <Option key={v.id} value={v.id}>{v.name} ({v.sku})</Option>
+                ))}
+              </Select>
+            </Form.Item>
+          )}
+
+          <Form.Item name="quantity" label="Quantity to Issue" rules={[{ required: true }]}>
+            <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Form.Item name="note" label="Discharge Note">
+            <Input.TextArea rows={2} placeholder="Reason for issue, destination, authorization..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* MODAL: Stock Quantity Adjustment */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <ToolOutlined style={{ color: '#ea580c', fontSize: 20 }} />
+            <span style={{ fontSize: 17, fontWeight: 800 }}>Record Stock Quantity Adjustment</span>
+          </div>
+        }
+        open={isAdjustmentModalOpen}
+        onCancel={() => setIsAdjustmentModalOpen(false)}
+        onOk={handleSubmitAdjustment}
+        width={560}
+      >
+        <Form form={adjustmentForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="warehouse_id" label="Warehouse" rules={[{ required: true }]}>
+                <Select placeholder="Select warehouse">
+                  {warehousesList.map((wh) => (
+                    <Option key={wh.id} value={wh.id}>{wh.name}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="reference_no" label="Reference No" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="type" label="Adjustment Type" rules={[{ required: true }]}>
+                <Select>
+                  <Option value="addition">Addition (+ Increase Stock)</Option>
+                  <Option value="subtraction">Subtraction (- Decrease Stock)</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="reason" label="Audit Reason" rules={[{ required: true }]}>
+                <Select>
+                  <Option value="inventory_count">Inventory Cycle Count</Option>
+                  <Option value="damaged">Damaged in Handling</Option>
+                  <Option value="expired">Expired Goods</Option>
+                  <Option value="loss">Loss / Missing</Option>
+                  <Option value="found">Found Surplus</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="product_id" label="Product" rules={[{ required: true }]}>
+            <Select
+              showSearch
+              placeholder="Select product"
+              optionFilterProp="children"
+              onChange={(pid) => {
+                const prod = productsList.find((p) => p.id === pid);
+                setOperationTargetProduct(prod);
+                adjustmentForm.setFieldsValue({ option_id: null });
+              }}
+            >
+              {productsList.map((p) => (
+                <Option key={p.id} value={p.id}>{p.name} ({p.code})</Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          {operationTargetProduct?.variants && operationTargetProduct.variants.length > 0 && (
+            <Form.Item name="option_id" label="Target Variant">
+              <Select placeholder="Select variant (or leave blank for all)">
+                {operationTargetProduct.variants.map((v) => (
+                  <Option key={v.id} value={v.id}>{v.name} ({v.sku})</Option>
+                ))}
+              </Select>
+            </Form.Item>
+          )}
+
+          <Form.Item name="quantity" label="Quantity to Adjust" rules={[{ required: true }]}>
+            <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Form.Item name="note" label="Adjustment Note">
+            <Input.TextArea rows={2} placeholder="Explain reason for discrepancy..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* MODAL: Warehouse Transfer */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <SwapOutlined style={{ color: '#7c3aed', fontSize: 20 }} />
+            <span style={{ fontSize: 17, fontWeight: 800 }}>Create Inter-Warehouse Transfer</span>
+          </div>
+        }
+        open={isTransferModalOpen}
+        onCancel={() => setIsTransferModalOpen(false)}
+        onOk={handleSubmitTransfer}
+        width={580}
+      >
+        <Form form={transferForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="from_warehouse_id" label="Source Warehouse (From)" rules={[{ required: true }]}>
+                <Select placeholder="Source">
+                  {warehousesList.map((wh) => (
+                    <Option key={wh.id} value={wh.id}>{wh.name}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="to_warehouse_id" label="Destination Warehouse (To)" rules={[{ required: true }]}>
+                <Select placeholder="Destination">
+                  {warehousesList.map((wh) => (
+                    <Option key={wh.id} value={wh.id}>{wh.name}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="reference_no" label="Transfer Reference No" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="shipping" label="Shipping Charge ($)">
+                <InputNumber min={0} step={1} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="product_id" label="Product" rules={[{ required: true }]}>
+            <Select
+              showSearch
+              placeholder="Select product"
+              optionFilterProp="children"
+              onChange={(pid) => {
+                const prod = productsList.find((p) => p.id === pid);
+                setOperationTargetProduct(prod);
+                transferForm.setFieldsValue({ option_id: null });
+              }}
+            >
+              {productsList.map((p) => (
+                <Option key={p.id} value={p.id}>{p.name} ({p.code})</Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          {operationTargetProduct?.variants && operationTargetProduct.variants.length > 0 && (
+            <Form.Item name="option_id" label="Target Variant">
+              <Select placeholder="Select variant (or leave blank for all)">
+                {operationTargetProduct.variants.map((v) => (
+                  <Option key={v.id} value={v.id}>{v.name} ({v.sku})</Option>
+                ))}
+              </Select>
+            </Form.Item>
+          )}
+
+          <Form.Item name="quantity" label="Quantity to Transfer" rules={[{ required: true }]}>
+            <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Form.Item name="note" label="Transfer Note">
+            <Input.TextArea rows={2} placeholder="Vehicle plate, driver name, transit details..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* MODAL: Add Attribute */}
+      <Modal
+        title="Add Reusable Attribute"
+        open={isAddAttrModalOpen}
+        onCancel={() => setIsAddAttrModalOpen(false)}
+        onOk={async () => {
+          try {
+            const vals = await attrForm.validateFields();
+            const res = await axios.post('/api/admin/attributes', vals, { headers: getAuthHeaders() });
+            if (res.data?.success) {
+              message.success('Attribute created successfully');
+              setIsAddAttrModalOpen(false);
+              fetchAttributes();
+            }
+          } catch (err) {
+            message.error('Failed to create attribute');
+          }
+        }}
+      >
+        <Form form={attrForm} layout="vertical">
+          <Form.Item name="name" label="Attribute Name" rules={[{ required: true, message: 'Please enter attribute name' }]}>
+            <Input placeholder="e.g. Color, Size, Material, Capacity" />
+          </Form.Item>
+          <Form.Item name="code" label="Code (Optional)">
+            <Input placeholder="e.g. color, size, material" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* MODAL: Add Attribute Value */}
+      <Modal
+        title={`Add Value for "${selectedAttribute?.name}"`}
+        open={isAddAttrValModalOpen}
+        onCancel={() => setIsAddAttrValModalOpen(false)}
+        onOk={async () => {
+          try {
+            const vals = await attrValForm.validateFields();
+            const res = await axios.post(`/api/admin/attributes/${selectedAttribute.id}/values`, vals, { headers: getAuthHeaders() });
+            if (res.data?.success) {
+              message.success('Attribute value option added');
+              setIsAddAttrValModalOpen(false);
+              fetchAttributeValues(selectedAttribute.id);
+            }
+          } catch (err) {
+            message.error('Failed to add attribute value');
+          }
+        }}
+      >
+        <Form form={attrValForm} layout="vertical">
+          <Form.Item name="value" label="Value / Option Name" rules={[{ required: true, message: 'Please enter value' }]}>
+            <Input placeholder="e.g. Red, XL, 100% Cotton, 256GB" />
+          </Form.Item>
+          <Form.Item name="color_code" label="Color Hex Code (Optional)">
+            <Input placeholder="e.g. #ef4444 or #3b82f6" />
+          </Form.Item>
+          <Form.Item name="sort_order" label="Sort Order">
+            <InputNumber min={0} defaultValue={0} style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* MODAL: Product Details */}
       <Modal
         title={detailProduct ? `${detailProduct.name} (${detailProduct.code})` : 'Product Details'}
         open={isDetailModalOpen}
@@ -1658,11 +2448,17 @@ export default function BpasInventoryWorkspace() {
           <Button key="print" icon={<PrinterOutlined />} onClick={() => window.print()}>
             Print Details
           </Button>,
-          <Button key="close" type="primary" onClick={() => setIsDetailModalOpen(false)}>
+          <Button key="edit" type="primary" icon={<EditOutlined />} onClick={() => {
+            setIsDetailModalOpen(false);
+            handleEditProduct(detailProduct);
+          }}>
+            Edit Product
+          </Button>,
+          <Button key="close" onClick={() => setIsDetailModalOpen(false)}>
             Close
           </Button>,
         ]}
-        width={720}
+        width={760}
       >
         {detailProduct && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1687,9 +2483,9 @@ export default function BpasInventoryWorkspace() {
                 </div>
                 <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
                   <Tag color="blue">{detailProduct.type || 'Standard'}</Tag>
-                  <Tag color="cyan">{detailProduct.category || 'General'}</Tag>
-                  <Tag color={detailProduct.inStock ? 'green' : 'red'}>
-                    {detailProduct.inStock ? 'In Stock' : 'Out of Stock'}
+                  <Tag color="cyan">{detailProduct.category_name || detailProduct.category || 'General'}</Tag>
+                  <Tag color={(detailProduct.quantity ?? detailProduct.stockCount ?? 0) > 0 ? 'green' : 'red'}>
+                    {(detailProduct.quantity ?? detailProduct.stockCount ?? 0) > 0 ? 'In Stock' : 'Out of Stock'}
                   </Tag>
                 </div>
                 <div style={{ display: 'flex', gap: 24, marginTop: 14 }}>
@@ -1703,258 +2499,39 @@ export default function BpasInventoryWorkspace() {
                   </div>
                   <div>
                     <div style={{ fontSize: 11, color: adminTheme.subtext }}>TOTAL QUANTITY</div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: '#2563eb' }}>{detailProduct.stockCount ?? 45} {detailProduct.unit || 'Pcs'}</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: '#2563eb' }}>
+                      {detailProduct.quantity ?? detailProduct.stockCount ?? 0} {detailProduct.unit_name || detailProduct.unit || 'Pcs'}
+                    </div>
                   </div>
                 </div>
               </Col>
             </Row>
 
-            <Divider style={{ margin: '8px 0' }} />
-
-            <div>
-              <Text strong>Warehouse Stock Breakdown:</Text>
-              <Table
-                size="small"
-                style={{ marginTop: 8 }}
-                pagination={false}
-                dataSource={warehousesList.map((wh, idx) => ({
-                  key: wh.id,
-                  warehouse: wh.name,
-                  rack: 'A-01',
-                  quantity: idx === 0 ? Math.round((detailProduct.stockCount ?? 45) * 0.6) : idx === 1 ? Math.round((detailProduct.stockCount ?? 45) * 0.3) : Math.round((detailProduct.stockCount ?? 45) * 0.1),
-                }))}
-                columns={[
-                  { title: 'Warehouse Location', dataIndex: 'warehouse', key: 'warehouse' },
-                  { title: 'Rack', dataIndex: 'rack', key: 'rack', width: 120 },
-                  { title: 'Available Quantity', dataIndex: 'quantity', key: 'quantity', width: 150, align: 'right', render: (q) => <strong>{q} {detailProduct.unit || 'Pcs'}</strong> },
-                ]}
-              />
-            </div>
+            {detailProduct.variants && detailProduct.variants.length > 0 && (
+              <div>
+                <Divider style={{ margin: '12px 0' }} />
+                <Text strong>Product Variants ({detailProduct.variants.length}):</Text>
+                <Table
+                  size="small"
+                  style={{ marginTop: 8 }}
+                  pagination={false}
+                  dataSource={detailProduct.variants}
+                  columns={[
+                    { title: 'Variant', dataIndex: 'name', key: 'name' },
+                    { title: 'SKU', dataIndex: 'sku', key: 'sku', render: (s) => <Tag color="geekblue">{s}</Tag> },
+                    { title: 'Barcode', dataIndex: 'barcode', key: 'barcode' },
+                    { title: 'Cost', dataIndex: 'cost', key: 'cost', align: 'right', render: (c) => formatCurrency(c || 0) },
+                    { title: 'Price', dataIndex: 'price', key: 'price', align: 'right', render: (p) => <strong style={{ color: '#16a34a' }}>{formatCurrency(p || 0)}</strong> },
+                    { title: 'Stock', dataIndex: 'quantity', key: 'quantity', align: 'right', render: (q) => <strong>{q}</strong> },
+                  ]}
+                />
+              </div>
+            )}
           </div>
         )}
       </Modal>
 
-      {/* MODAL 3: Print Barcodes (BPAS print_barcodes.php) */}
-      <Modal
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <PrinterOutlined style={{ color: '#0284c7', fontSize: 20 }} />
-            <span style={{ fontSize: 17, fontWeight: 800 }}>Print Barcode Labels</span>
-          </div>
-        }
-        open={isBarcodeModalOpen}
-        onCancel={() => setIsBarcodeModalOpen(false)}
-        width={780}
-        footer={[
-          <Button key="close" onClick={() => setIsBarcodeModalOpen(false)}>
-            Cancel
-          </Button>,
-          <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={() => window.print()} style={{ fontWeight: 800 }}>
-            Print Labels Now
-          </Button>,
-        ]}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 6 }}>Paper Size / Style:</label>
-              <Select value={barcodePaperSize} onChange={setBarcodePaperSize} style={{ width: '100%' }}>
-                <Option value="40_per_sheet">A4 Sheet (40 per sheet, 48.5mm x 25.4mm)</Option>
-                <Option value="30_per_sheet">A4 Sheet (30 per sheet, 70mm x 29.7mm)</Option>
-                <Option value="24_per_sheet">A4 Sheet (24 per sheet, 70mm x 37mm)</Option>
-                <Option value="continuous_thermal">Continuous Thermal Roll (50mm x 30mm)</Option>
-              </Select>
-            </Col>
-            <Col span={12}>
-              <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 6 }}>Print Options:</label>
-              <Space wrap>
-                <Tag color="blue">Show Product Name</Tag>
-                <Tag color="blue">Show Price</Tag>
-                <Tag color="blue">Show Currencies (USD)</Tag>
-              </Space>
-            </Col>
-          </Row>
-
-          <Divider style={{ margin: '8px 0' }} />
-
-          <div>
-            <Text strong>Selected Items to Print ({barcodeItemsToPrint.length}):</Text>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                gap: 12,
-                marginTop: 12,
-                maxHeight: 340,
-                overflowY: 'auto',
-                padding: 10,
-                background: '#f8fafc',
-                borderRadius: 8,
-                border: `1px solid ${adminTheme.border}`,
-              }}
-            >
-              {barcodeItemsToPrint.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    background: '#fff',
-                    padding: '12px 14px',
-                    borderRadius: 8,
-                    border: '1px dashed #cbd5e1',
-                    textAlign: 'center',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
-                  }}
-                >
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#334155', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    {item.name}
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 900, color: '#16a34a', margin: '4px 0' }}>
-                    {formatCurrency(item.price)}
-                  </div>
-                  {/* Visual barcode mockup bars */}
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, height: 32, margin: '6px 0' }}>
-                    {[2, 1, 3, 1, 2, 4, 1, 2, 3, 1, 2, 1, 3, 2, 1, 4, 2].map((w, idx) => (
-                      <div key={idx} style={{ width: w, height: '100%', background: '#0f172a' }} />
-                    ))}
-                  </div>
-                  <div style={{ fontSize: 10, fontFamily: 'monospace', color: '#64748b' }}>
-                    {item.code || `8858${item.id}`}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* MODAL 4: Quantity Adjustment (BPAS add_adjustment.php) */}
-      <Modal
-        title="Add Quantity Adjustment"
-        open={isAdjustmentModalOpen}
-        onCancel={() => setIsAdjustmentModalOpen(false)}
-        onOk={() => {
-          message.success('Stock quantity adjustment recorded');
-          setIsAdjustmentModalOpen(false);
-        }}
-        width={540}
-      >
-        <Form form={adjustmentForm} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-                <Input defaultValue="2026-10-16" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="reference_no" label="Reference No" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="warehouse_id" label="Warehouse" rules={[{ required: true }]}>
-            <Select>
-              {warehousesList.map((wh) => (
-                <Option key={wh.id} value={wh.id}>{wh.name}</Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="type" label="Adjustment Type">
-                <Select>
-                  <Option value="addition">Addition (+)</Option>
-                  <Option value="subtraction">Subtraction (-)</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="reason" label="Reason">
-                <Select>
-                  <Option value="inventory_count">Inventory Cycle Count</Option>
-                  <Option value="damaged">Damaged in Handling</Option>
-                  <Option value="expired">Expired Goods</Option>
-                  <Option value="loss">Loss / Missing</Option>
-                  <Option value="found">Found Surplus</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="quantity" label="Quantity to Adjust">
-            <InputNumber min={1} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="note" label="Adjustment Note">
-            <Input.TextArea rows={2} placeholder="Explain reason for discrepancy..." />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* MODAL 5: Stock Transfer (BPAS transfers/add.php) */}
-      <Modal
-        title="Create Warehouse Stock Transfer"
-        open={isTransferModalOpen}
-        onCancel={() => setIsTransferModalOpen(false)}
-        onOk={() => {
-          message.success('Transfer voucher created and items dispatched');
-          setIsTransferModalOpen(false);
-        }}
-        width={580}
-      >
-        <Form form={transferForm} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-                <Input defaultValue="2026-10-16" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="reference_no" label="Transfer Reference No">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="from_warehouse_id" label="From Warehouse (Source)">
-                <Select>
-                  {warehousesList.map((wh) => (
-                    <Option key={wh.id} value={wh.id}>{wh.name}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="to_warehouse_id" label="To Warehouse (Destination)">
-                <Select>
-                  {warehousesList.map((wh) => (
-                    <Option key={wh.id} value={wh.id}>{wh.name}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="shipping" label="Shipping Charge ($)">
-                <InputNumber min={0} step={1} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="status" label="Transfer Status">
-                <Select>
-                  <Option value="pending">Pending</Option>
-                  <Option value="in_transit">In Transit</Option>
-                  <Option value="completed">Completed</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item label="Transfer Note">
-            <Input.TextArea rows={2} placeholder="Transit details, vehicle license plate, driver..." />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* MODAL 6: Bulk Price Update (BPAS update_price.php) */}
+      {/* MODAL: Bulk Price Update */}
       <Modal
         title="Update Prices & Badges in Bulk"
         open={isBulkPriceModalOpen}

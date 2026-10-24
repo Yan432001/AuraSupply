@@ -52,6 +52,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage, useTranslation, SUPPORTED_LANGUAGES } from '../../contexts/LanguageContext';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { WALLPAPER_PRESETS } from '../../utils/uiTheme';
+import PasswordComplexityIndicator, { passwordComplexityRule } from '../../components/common/PasswordComplexityIndicator';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -91,6 +92,7 @@ export default function AdminProfile() {
 
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
+  const newPasswordAdmin = Form.useWatch('new_password', passwordForm);
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -101,6 +103,7 @@ export default function AdminProfile() {
         const u = payload.user || payload.profile || payload;
         setProfileData(u);
         profileForm.setFieldsValue({
+          username: u.username || '',
           first_name: u.first_name || '',
           last_name: u.last_name || '',
           phone: u.phone || '',
@@ -459,6 +462,7 @@ export default function AdminProfile() {
                   layout="vertical"
                   onFinish={handleUpdateProfile}
                   initialValues={{
+                    username: u.username || '',
                     first_name: u.first_name || '',
                     last_name: u.last_name || '',
                     phone: u.phone || '',
@@ -466,6 +470,31 @@ export default function AdminProfile() {
                     avatar: u.avatar || '',
                   }}
                 >
+                  <Row gutter={16}>
+                    <Col xs={24} sm={12}>
+                      <Form.Item
+                        label={t('username', 'Username')}
+                        name="username"
+                        rules={[
+                          { required: true, message: t('username_required', 'Please enter a username') },
+                          { min: 3, message: t('username_min_3', 'Username must be at least 3 characters') },
+                          { max: 30, message: t('username_max_30', 'Username cannot exceed 30 characters') },
+                          {
+                            pattern: /^[a-zA-Z0-9_.-]+$/,
+                            message: t('username_invalid_chars', 'Only letters, numbers, underscores, dots, and hyphens are allowed'),
+                          },
+                        ]}
+                      >
+                        <Input placeholder={t('enter_username', 'Enter username')} prefix={<UserOutlined />} />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                      <Form.Item label={t('email_address', 'Email Address')}>
+                        <Input value={u.email} disabled prefix={<MailOutlined />} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+
                   <Row gutter={16}>
                     <Col xs={24} sm={12}>
                       <Form.Item label={t('first_name', 'First Name')} name="first_name">
@@ -543,11 +572,15 @@ export default function AdminProfile() {
                     name="new_password"
                     rules={[
                       { required: true, message: t('enter_new_password', 'Please enter a new password') },
-                      { min: 6, message: t('password_min_6', 'Password must be at least 6 characters') },
+                      passwordComplexityRule(t),
                     ]}
                   >
-                    <Input.Password prefix={<KeyOutlined />} placeholder={t('enter_new_password_placeholder', 'Enter new password (min. 6 characters)')} />
+                    <Input.Password prefix={<KeyOutlined />} placeholder={t('enter_new_password_placeholder', 'Enter new password (min. 8 characters)')} />
                   </Form.Item>
+
+                  <div style={{ marginBottom: 18 }}>
+                    <PasswordComplexityIndicator password={newPasswordAdmin} t={t} />
+                  </div>
 
                   <Form.Item
                     label={t('confirm_new_password', 'Confirm New Password')}

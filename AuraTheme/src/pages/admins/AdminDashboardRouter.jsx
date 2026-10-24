@@ -8,6 +8,7 @@ import AdminCmsManager from './cms/AdminCmsManager';
 import AdminSimpleDataManager from './AdminSimpleDataManager';
 import AdminProductsManager from './AdminProductsManager';
 import BpasInventoryWorkspace from './BpasInventoryWorkspace';
+import BpasPurchasesWorkspace from './BpasPurchasesWorkspace';
 import AdminModulesManager from './AdminModulesManager';
 import AdminBranchesManager from './AdminBranchesManager';
 import AdminFrontEndManager from './AdminFrontEndManager';
@@ -18,6 +19,8 @@ import { LockOutlined, ControlOutlined } from '@ant-design/icons';
 import { getModuleByKey } from '../../data/erpModules';
 
 import OrdersManagement from './OrdersManagement';
+import SalesListPage from './sales/SalesListPage';
+import AddSalePage from './sales/AddSalePage';
 import CustomersManagement from './CustomersManagement';
 import UserManagement from './UserManagement';
 import AdminAccessControlManager from './AdminAccessControlManager';
@@ -26,6 +29,8 @@ import UnitsManagement from './UnitsManagement';
 import InventoryReport from './InventoryReport';
 import SalesReport from './SalesReport';
 import PosSettingsPage from './pos/PosSettingsPage';
+import AccountingWorkspace from './accounting/AccountingWorkspace';
+import AssetWorkspace from './assets/AssetWorkspace';
 import AdminErrorBoundary from '../../components/common/AdminErrorBoundary';
 
 const AdminDashboardRouter = () => {
@@ -153,6 +158,65 @@ const AdminDashboardRouter = () => {
     return <BpasInventoryWorkspace />;
   }
 
+  // Purchases & Procurement (AURA_v1 BPAS Procurement UI)
+  if (
+    moduleKey === 'procurement' ||
+    moduleKey === 'purchases' ||
+    menuKey === 'purchases' ||
+    menuKey === 'purchases-list' ||
+    menuKey === 'add-purchase' ||
+    menuKey === 'purchase-orders' ||
+    menuKey === 'purchase-requests' ||
+    menuKey === 'report-purchases' ||
+    menuKey === 'report-daily-purchases'
+  ) {
+    return <BpasPurchasesWorkspace />;
+  }
+
+  // Accounting & General Ledger (AURA_v1 BPAS Accounting Architecture)
+  if (
+    moduleKey === 'accounting' ||
+    moduleKey === 'accounts' ||
+    menuKey === 'accounting' ||
+    menuKey === 'chart-of-accounts' ||
+    menuKey === 'journal-entries' ||
+    menuKey === 'general-ledger' ||
+    menuKey === 'ledger' ||
+    menuKey === 'cash-book' ||
+    menuKey === 'bank-reconcile' ||
+    menuKey === 'balance-sheet' ||
+    menuKey === 'profit-loss' ||
+    menuKey === 'trial-balance' ||
+    menuKey === 'ar-ap-aging' ||
+    menuKey === 'accounts-receivable' ||
+    menuKey === 'accounts-payable' ||
+    menuKey === 'financial-reports'
+  ) {
+    return <AccountingWorkspace />;
+  }
+
+  // Fixed Assets & Equipment Management (AURA_v1)
+  if (
+    moduleKey === 'asset' ||
+    moduleKey === 'assets' ||
+    menuKey === 'assets' ||
+    menuKey === 'assets-list' ||
+    menuKey === 'list-assets' ||
+    menuKey === 'add-asset' ||
+    menuKey === 'asset-depreciation' ||
+    menuKey === 'asset-evaluation' ||
+    menuKey === 'asset-expenses' ||
+    menuKey === 'asset-stock-using' ||
+    menuKey === 'asset-categories' ||
+    menuKey === 'asset-assignments' ||
+    menuKey === 'asset-transfers' ||
+    menuKey === 'asset-maintenance' ||
+    menuKey === 'asset-disposals' ||
+    menuKey === 'asset-reports'
+  ) {
+    return <AssetWorkspace />;
+  }
+
   // Categories
   if (menuKey === 'categories' || (moduleKey === 'settings' && menuKey === 'categories')) {
     return <CategoriesPage />;
@@ -163,18 +227,30 @@ const AdminDashboardRouter = () => {
     return <UnitsManagement />;
   }
 
-  // Sales Orders & Invoices (including POS counter sales)
+  // Add Sale Page
+  if (menuKey === 'add-sale' || menuKey === 'create-sale') {
+    return <AddSalePage />;
+  }
+
+  // Sales Orders, Commercial Invoices & POS Sales
   if (
-    menuKey === 'orders' ||
+    moduleKey === 'sales' ||
+    menuKey === 'sales' ||
+    menuKey === 'sales-list' ||
+    menuKey === 'list-sales' ||
     menuKey === 'sales-orders' ||
     menuKey === 'sales-invoices' ||
     menuKey === 'pos-sales' ||
     menuKey === 'list_pos' ||
     menuKey === 'list-pos' ||
     menuKey === 'list_POS' ||
-    (moduleKey === 'sales' && (menuKey === 'sales-orders' || menuKey === 'sales-invoices')) ||
     (moduleKey === 'pos' && (menuKey === 'list_pos' || menuKey === 'list-pos' || menuKey === 'list_POS' || menuKey === 'pos-sales'))
   ) {
+    return <SalesListPage />;
+  }
+
+  // Legacy Orders Management Fallback
+  if (menuKey === 'orders') {
     return <OrdersManagement />;
   }
 

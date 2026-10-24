@@ -19,6 +19,9 @@ import {
   DatePicker,
   Upload,
   Flex,
+  Modal,
+  Alert,
+  Tooltip,
 } from 'antd';
 import {
   PlusOutlined,
@@ -33,6 +36,8 @@ import {
   ReloadOutlined,
   FileTextOutlined,
   InboxOutlined,
+  ThunderboltOutlined,
+  ApartmentOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
@@ -42,27 +47,6 @@ import { useTranslation } from '../../contexts/LanguageContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
-
-const LIVE_PRODUCTS_KEY = 'aura_admin_live_products_v2';
-const getLiveProducts = () => {
-  try {
-    const raw = localStorage.getItem(LIVE_PRODUCTS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed;
-    if (Array.isArray(parsed?.products)) return parsed.products;
-    return [];
-  } catch {
-    return [];
-  }
-};
-const saveLiveProducts = (prods) => {
-  try {
-    const list = Array.isArray(prods) ? prods : Array.isArray(prods?.products) ? prods.products : [];
-    localStorage.setItem(LIVE_PRODUCTS_KEY, JSON.stringify(list));
-    window.dispatchEvent(new CustomEvent('aura_live_products_updated', { detail: list }));
-  } catch (_) {}
-};
 
 export default function BpasAddProductPage({ onBack, editProduct = null }) {
   const adminTheme = useAdminTheme();
@@ -76,37 +60,37 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
   const [unitsList, setUnitsList] = useState([]);
   const [brandsList, setBrandsList] = useState([]);
   const [warehousesList, setWarehousesList] = useState([]);
+  const [attributesList, setAttributesList] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cover image preview
   const [coverImageUrl, setCoverImageUrl] = useState(editProduct?.image || '');
 
   // Variants state
-  const [variantRows, setVariantRows] = useState([
-    { id: 1, name: 'Standard (Default)', warehouse_id: 1, priceAddition: 0, quantity: 50, barcode: '88581001' },
-    { id: 2, name: 'Large Pack', warehouse_id: 1, priceAddition: 2.5, quantity: 30, barcode: '88581002' },
-  ]);
+  const [variantRows, setVariantRows] = useState([]);
   const [newVariantName, setNewVariantName] = useState('');
 
-  // Add-on state
-  const [addOnRows, setAddOnRows] = useState([
-    { id: 1, name: 'Extra Shot Espresso', price: 0.75, description: 'Single rich espresso shot' },
-    { id: 2, name: 'Oat Milk Substitution', price: 0.50, description: 'Dairy-free organic oat milk' },
-  ]);
+  // Variant generator state & modal
+  const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
+  const [selectedAttributes, setSelectedAttributes] = useState([]); // [{ name: "Color", values: ["Red", "Blue"] }]
 
   // Multi-Unit pricing & packaging state (AURA_v1 cost_price_by_units)
   const [multiUnitRows, setMultiUnitRows] = useState([]);
   const selectedUnit = Form.useWatch('unit', form);
+  const watchCode = Form.useWatch('code', form);
+  const watchPrice = Form.useWatch('price', form);
+  const watchCost = Form.useWatch('cost', form);
 
-  // Load Metadata
+  // Load Metadata & Attributes
   useEffect(() => {
     const loadMeta = async () => {
       try {
-        const [whRes, catRes, unitsRes, brandsRes] = await Promise.allSettled([
+        const [whRes, catRes, unitsRes, brandsRes, attrRes] = await Promise.allSettled([
           axios.get('/api/warehouses'),
           axios.get('/api/categories'),
           axios.get('/api/units'),
           axios.get('/api/brands'),
+          axios.get('/api/admin/attributes'),
         ]);
 
         if (whRes.status === 'fulfilled' && Array.isArray(whRes.value.data?.data)) {
@@ -122,6 +106,9 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
         if (brandsRes.status === 'fulfilled') {
           const raw = brandsRes.value.data?.data || brandsRes.value.data;
           if (Array.isArray(raw)) setBrandsList(raw);
+        }
+        if (attrRes.status === 'fulfilled' && Array.isArray(attrRes.value.data?.data)) {
+          setAttributesList(attrRes.value.data.data);
         }
       } catch (err) {
         console.warn('Metadata note in Add Product:', err.message);
@@ -158,182 +145,227 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
     });
   }, [selectedUnit, unitsList]);
 
-  // Load existing multi-unit pricing when editing product
+  // Load existing product details and variants when editing product
   useEffect(() => {
     if (editProduct?.id) {
-      axios.get(`/api/admin/products/${editProduct.id}/units`)
+      axios.get(`/api/admin/products/${editProduct.id}`)
         .then(res => {
-          if (res.data?.status && Array.isArray(res.data.data?.units) && res.data.data.units.length > 0) {
-            setMultiUnitRows(res.data.data.units.map(u => ({
-              unit_id: u.id,
-              unit_code: u.code,
-              unit_name: u.name,
-              base_unit: u.base_unit,
-              operator: u.operator,
-              operation_value: u.operation_value,
-              unit_qty: u.unit_qty,
-              cost: u.unit_cost !== null ? u.unit_cost : (editProduct.cost || 0),
-              price: u.unit_price !== null ? u.unit_price : (editProduct.price || 0),
-              product_code: u.unit_barcode || ''
-            })));
+          if (res.data?.success && res.data?.data) {
+            const p = res.data.data;
+            form.setFieldsValue({
+              type: p.type || 'standard',
+              code: p.code,
+              name: p.name,
+              category_id: p.category_id,
+              unit: p.unit || 1,
+              currency: p.currency || 'USD',
+              price: parseFloat(p.price) || 0,
+              cost: parseFloat(p.cost) || 0,
+              alert_quantity: parseFloat(p.alert_quantity) || 10,
+              tax_rate: p.tax_rate ? String(p.tax_rate) : '0',
+              tax_method: p.tax_method || 'exclusive',
+              rack: p.rack || 'A-01',
+              details: p.details || p.product_details || '',
+              inStock: p.quantity > 0,
+              featured: Boolean(p.featured),
+              brand: p.brand || '',
+              biller_id: p.biller_id || 1,
+            });
+            setCoverImageUrl(p.image || '');
+
+            if (Array.isArray(p.variants) && p.variants.length > 0) {
+              setVariantRows(p.variants.map((v, idx) => ({
+                id: v.id || `var_${idx}`,
+                name: v.name,
+                sku: v.sku || `${p.code}-${v.name.replace(/[^a-zA-Z0-9]+/g, '-')}`,
+                barcode: v.barcode || v.sku || '',
+                cost: parseFloat(v.cost) || parseFloat(p.cost) || 0,
+                price: parseFloat(v.price) || parseFloat(p.price) || 0,
+                quantity: parseFloat(v.quantity) || 0,
+                warehouse_id: v.warehouse_id || 1,
+                status: v.status !== 0 ? 1 : 0,
+                attributes: v.attributes || null
+              })));
+            }
           }
         })
-        .catch(err => console.warn('Product units fetch notice:', err.message));
-    }
-  }, [editProduct?.id]);
-
-  // Initialize Form
-  useEffect(() => {
-    if (editProduct) {
-      form.setFieldsValue({
-        type: editProduct.type || 'standard',
-        code: editProduct.code,
-        name: editProduct.name,
-        category: editProduct.category,
-        unit: editProduct.unit || 'Pcs',
-        default_sale_unit: editProduct.unit || 'Pcs',
-        default_purchase_unit: editProduct.unit || 'Pcs',
-        currency: 'USD',
-        price: editProduct.price || 3.0,
-        cost: editProduct.cost || 1.5,
-        alert_quantity: editProduct.alertQuantity || 10,
-        tax_rate: '0',
-        tax_method: 'inclusive',
-        rack: editProduct.rack || 'A-01',
-        details: editProduct.description || editProduct.details || '',
-        inStock: editProduct.inStock !== false,
-        featured: editProduct.featured || false,
-        hide_pos: false,
-        hide_shop: false,
-      });
-      setCoverImageUrl(editProduct.image || '');
+        .catch(err => console.warn('Edit product fetch error:', err.message));
     } else {
-      const generatedCode = `8858${Math.floor(1000 + Math.random() * 9000)}`;
+      const generatedCode = `PRD-${Date.now().toString().slice(-6)}`;
       form.setFieldsValue({
         type: 'standard',
         code: generatedCode,
         name: '',
-        category: 'Coffee & Beverages',
-        unit: 'Pcs',
-        default_sale_unit: 'Pcs',
-        default_purchase_unit: 'Box',
+        category_id: 1,
+        unit: 1,
         currency: 'USD',
-        price: 3.5,
-        cost: 1.8,
+        price: 25.0,
+        cost: 10.0,
         alert_quantity: 10,
         tax_rate: '0',
-        tax_method: 'inclusive',
+        tax_method: 'exclusive',
         rack: 'A-01',
         inStock: true,
         featured: false,
-        hide_pos: false,
-        hide_shop: false,
+        biller_id: 1,
       });
     }
   }, [editProduct]);
 
   // Code generator
   const handleRandomCode = () => {
-    const code = `8858${Math.floor(1000 + Math.random() * 9000)}`;
+    const code = `PRD-${Date.now().toString().slice(-6)}`;
     form.setFieldsValue({ code });
     message.success(`Generated Barcode Code: ${code}`);
   };
 
-  // Add Variant Row
-  const handleAddVariant = () => {
+  // Add Manual Variant Row
+  const handleAddManualVariant = () => {
     if (!newVariantName.trim()) {
-      message.warning('Please enter a variant name.');
+      message.warning('Please enter a variant combination name (e.g. Red / XL).');
       return;
     }
-    const newId = Date.now();
+    const currentCode = form.getFieldValue('code') || 'PRD';
+    const currentPrice = form.getFieldValue('price') || 0;
+    const currentCost = form.getFieldValue('cost') || 0;
+    const vName = newVariantName.trim();
+    const vSku = `${currentCode}-${vName.replace(/[^a-zA-Z0-9]+/g, '-').toUpperCase()}`;
+
+    // Check duplicate combination
+    if (variantRows.some(r => r.name.toLowerCase() === vName.toLowerCase())) {
+      message.error(`Variant combination '${vName}' already exists in this product.`);
+      return;
+    }
+
     setVariantRows((prev) => [
       ...prev,
       {
-        id: newId,
-        name: newVariantName.trim(),
-        warehouse_id: 1,
-        priceAddition: 0,
-        quantity: 20,
-        barcode: `8858${Math.floor(1000 + Math.random() * 9000)}`,
+        id: `manual_${Date.now()}`,
+        name: vName,
+        sku: vSku,
+        barcode: vSku,
+        cost: parseFloat(currentCost) || 0,
+        price: parseFloat(currentPrice) || 0,
+        quantity: 10,
+        warehouse_id: warehousesList[0]?.id || 1,
+        status: 1,
+        attributes: null
       },
     ]);
     setNewVariantName('');
   };
 
-  // Handle Submit Form
+  // Generate Cartesian Combinations
+  const handleGenerateCombinations = async () => {
+    if (selectedAttributes.length === 0) {
+      message.warning('Please select at least one attribute to generate variants.');
+      return;
+    }
+
+    const currentCode = form.getFieldValue('code') || 'PRD';
+    const currentPrice = form.getFieldValue('price') || 0;
+    const currentCost = form.getFieldValue('cost') || 0;
+
+    try {
+      const res = await axios.post('/api/admin/attributes/generate-combinations', {
+        attributeSelections: selectedAttributes,
+        baseSku: currentCode,
+        basePrice: parseFloat(currentPrice) || 0,
+        baseCost: parseFloat(currentCost) || 0,
+      });
+
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        const generated = res.data.data.map(g => ({
+          ...g,
+          warehouse_id: warehousesList[0]?.id || 1,
+        }));
+
+        setVariantRows(generated);
+        setIsGeneratorOpen(false);
+        message.success(`Successfully generated ${generated.length} variant combinations!`);
+      }
+    } catch (err) {
+      message.error('Failed to generate variant combinations: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  // Handle Submit Form with full variant and warehouse persistence
   const handleSubmitProduct = async () => {
     try {
       const values = await form.validateFields();
-      setIsSubmitting(true);
 
-      const liveProducts = getLiveProducts();
-      let updated;
-      if (editProduct) {
-        updated = liveProducts.map((p) =>
-          p.id === editProduct.id
-            ? {
-                ...p,
-                name: values.name,
-                code: values.code,
-                type: values.type,
-                category: values.category,
-                unit: values.unit,
-                cost: Number(values.cost) || p.cost,
-                price: Number(values.price) || p.price,
-                alertQuantity: Number(values.alert_quantity) || 10,
-                rack: values.rack,
-                inStock: values.inStock,
-                image: coverImageUrl || p.image,
-                details: values.details,
-              }
-            : p
-        );
-        message.success(`Product "${values.name}" updated successfully!`);
-      } else {
-        const newProduct = {
-          id: Date.now(),
-          name: values.name,
-          code: values.code,
-          type: values.type || 'standard',
-          category: values.category || 'General',
-          unit: values.unit || 'Pcs',
-          cost: Number(values.cost) || 1.8,
-          price: Number(values.price) || 3.5,
-          stockCount: 50,
-          alertQuantity: Number(values.alert_quantity) || 10,
-          rack: values.rack || 'A-01',
-          inStock: values.inStock !== false,
-          image: coverImageUrl || '/assets/uploads/no_image.png',
-          details: values.details || '',
-        };
-        updated = [newProduct, ...liveProducts];
-        message.success(`Product "${values.name}" added to catalog!`);
+      // Check variant duplicate SKUs and combinations before submit
+      if (variantRows.length > 0) {
+        const seenNames = new Set();
+        const seenSkus = new Set();
+        for (const v of variantRows) {
+          const vName = (v.name || '').trim().toLowerCase();
+          if (!vName) {
+            message.error('Every variant must have a valid name.');
+            return;
+          }
+          if (seenNames.has(vName)) {
+            message.error(`Duplicate variant combination '${v.name}' detected.`);
+            return;
+          }
+          seenNames.add(vName);
+
+          const vSku = (v.sku || '').trim().toLowerCase();
+          if (vSku) {
+            if (seenSkus.has(vSku)) {
+              message.error(`Duplicate SKU '${v.sku}' detected among variants.`);
+              return;
+            }
+            seenSkus.add(vSku);
+          }
+        }
       }
 
-      saveLiveProducts(updated);
+      setIsSubmitting(true);
 
-      // Attempt backend persistence
-      try {
-        const payload = {
-          ...values,
-          image: coverImageUrl,
-          unitPrices: multiUnitRows
-        };
-        if (editProduct?.id) {
-          await axios.put(`/api/admin/products/${editProduct.id}`, payload);
-        } else {
-          await axios.post('/api/admin/products', payload);
+      const payload = {
+        ...values,
+        image: coverImageUrl,
+        category_id: values.category_id || 1,
+        price: parseFloat(values.price) || 0,
+        cost: parseFloat(values.cost) || 0,
+        alert_quantity: parseFloat(values.alert_quantity) || 10,
+        variants: variantRows.map(v => ({
+          id: typeof v.id === 'number' ? v.id : undefined,
+          name: v.name,
+          sku: v.sku,
+          barcode: v.barcode,
+          cost: parseFloat(v.cost) || 0,
+          price: parseFloat(v.price) || 0,
+          quantity: parseFloat(v.quantity) || 0,
+          warehouse_id: v.warehouse_id || warehousesList[0]?.id || 1,
+          status: v.status !== 0 ? 1 : 0,
+          attributes: v.attributes || null
+        })),
+        unitPrices: multiUnitRows
+      };
+
+      if (editProduct?.id) {
+        const res = await axios.put(`/api/admin/products/${editProduct.id}`, payload);
+        if (res.data?.success || res.data?.status) {
+          message.success(`Product "${values.name}" updated successfully!`);
         }
-      } catch (_) {}
+      } else {
+        const res = await axios.post('/api/admin/products', payload);
+        if (res.data?.success || res.data?.status) {
+          message.success(`Product "${values.name}" added to inventory catalog!`);
+        }
+      }
 
-      // Navigate back to product list
+      // Return to product list
       if (onBack) {
         onBack();
       } else {
         navigate('/admins/products');
       }
     } catch (err) {
-      message.error('Please verify all required fields in the form.');
+      console.error('Submit product error:', err);
+      message.error(err.response?.data?.message || err.message || 'Please check all required fields.');
     } finally {
       setIsSubmitting(false);
     }
@@ -341,18 +373,17 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* 1. BPAS Breadcrumb Header */}
-      {/* 1. BPAS Breadcrumb Header */}
+      {/* 1. Header Navigation */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '12px 20px',
+          padding: '14px 20px',
           background: adminTheme.card,
           border: `1px solid ${adminTheme.border}`,
-          borderRadius: 8,
-          borderLeft: '4px solid #428bca',
+          borderRadius: 12,
+          borderLeft: '4px solid #3b82f6',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -366,7 +397,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
           >
             {t('back_to_products', 'Back to Products')}
           </Button>
-          <h2 style={{ color: '#428bca', fontSize: 19, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h2 style={{ color: '#2563eb', fontSize: 18, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
             <PlusOutlined style={{ fontSize: 16 }} />
             {editProduct ? `${t('edit_product', 'Edit Product')}: ${editProduct.name}` : t('add_product', 'Add Product')}
           </h2>
@@ -383,31 +414,26 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
             onClick={handleSubmitProduct}
             style={{
               fontWeight: 800,
-              background: '#428bca',
-              borderColor: '#357ebd',
-              boxShadow: '0 2px 8px rgba(66, 139, 202, 0.3)',
+              background: '#2563eb',
+              borderColor: '#1d4ed8',
+              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)',
             }}
           >
-            {editProduct ? t('save_changes', 'Save Changes') : t('add_product', 'Add Product')}
+            {editProduct ? t('save_changes', 'Save Changes') : t('save_product', 'Save Product')}
           </Button>
         </Space>
       </div>
 
-      {/* 2. Main Box Container matching BPAS .box and .box-content */}
+      {/* 2. Main Box Container */}
       <Card
         style={{
-          borderRadius: 8,
+          borderRadius: 12,
           border: `1px solid ${adminTheme.border}`,
           boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
         }}
         styles={{ body: { padding: '24px' } }}
       >
-        <p style={{ color: '#64748b', fontSize: 13, marginBottom: 18 }}>
-          Please fill in the information below. The field labels marked with * are required input fields.
-        </p>
-
         <Form form={form} layout="vertical">
-          {/* BPAS Tabs: Required | Details | Accounting | Variants | Supplier | Promotion | Shop | Add On | Racks */}
           <Tabs
             activeKey={activeTab}
             onChange={setActiveTab}
@@ -421,24 +447,19 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                 children: (
                   <div style={{ paddingTop: 12 }}>
                     <Row gutter={24}>
-                      {/* Left Column: Core Fields */}
                       <Col xs={24} md={15}>
                         <Row gutter={16}>
                           <Col xs={24} sm={12}>
                             <Form.Item
                               name="type"
-                              label={<span style={{ fontWeight: 700 }}>Product Type</span>}
+                              label={<span style={{ fontWeight: 700 }}>{t('product_type', 'Product Type')}</span>}
                               rules={[{ required: true }]}
                             >
-                              <Select
-                                onChange={(val) => setProductType(val)}
-                                style={{ width: '100%' }}
-                              >
-                                <Option value="standard">Standard Product</Option>
-                                <Option value="combo">Combo / Meal Deal</Option>
+                              <Select onChange={(val) => setProductType(val)} style={{ width: '100%' }}>
+                                <Option value="standard">Standard Product (Single or Variants)</Option>
+                                <Option value="combo">Combo Item</Option>
                                 <Option value="digital">Digital Product</Option>
                                 <Option value="service">Service Item</Option>
-                                <Option value="bom">Bill of Materials (BOM)</Option>
                               </Select>
                             </Form.Item>
                           </Col>
@@ -446,62 +467,40 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                           <Col xs={24} sm={12}>
                             <Form.Item
                               name="code"
-                              label={<span style={{ fontWeight: 700 }}>Barcode / Product Code</span>}
-                              rules={[{ required: true, message: 'Please enter or generate a code' }]}
+                              label={<span style={{ fontWeight: 700 }}>{t('sku_barcode_code', 'Parent SKU / Code')}</span>}
+                              rules={[{ required: true, message: 'Please enter a unique SKU/code' }]}
+                              extra={
+                                <a onClick={handleRandomCode} style={{ fontSize: 11.5, color: '#2563eb' }}>
+                                  <BarcodeOutlined /> {t('auto_generate_code', 'Generate Unique Code')}
+                                </a>
+                              }
                             >
-                              <Input
-                                placeholder="Scan or generate barcode"
-                                suffix={
-                                  <Button
-                                    size="small"
-                                    type="text"
-                                    icon={<ReloadOutlined style={{ color: '#2563eb' }} />}
-                                    onClick={handleRandomCode}
-                                    title="Generate Random Code"
-                                  >
-                                    Generate
-                                  </Button>
-                                }
-                              />
+                              <Input placeholder="e.g. TSHIRT-001" />
                             </Form.Item>
                           </Col>
                         </Row>
 
-                        <Row gutter={16}>
-                          <Col xs={24}>
-                            <Form.Item
-                              name="name"
-                              label={<span style={{ fontWeight: 700 }}>Product Name</span>}
-                              rules={[{ required: true, message: 'Please enter product name' }]}
-                            >
-                              <Input placeholder="e.g. Specialty Roasted Arabica Blend 250g" size="large" />
-                            </Form.Item>
-                          </Col>
-                        </Row>
+                        <Form.Item
+                          name="name"
+                          label={<span style={{ fontWeight: 700 }}>{t('product_name', 'Product Name')}</span>}
+                          rules={[{ required: true, message: 'Please enter product title' }]}
+                        >
+                          <Input placeholder="e.g. Aura Premium Cotton T-Shirt" size="large" />
+                        </Form.Item>
 
                         <Row gutter={16}>
                           <Col xs={24} sm={12}>
                             <Form.Item
-                              name="category"
-                              label={<span style={{ fontWeight: 700 }}>Category</span>}
+                              name="category_id"
+                              label={<span style={{ fontWeight: 700 }}>{t('category', 'Category')}</span>}
                               rules={[{ required: true }]}
                             >
-                              <Select placeholder="Select category" showSearch>
-                                {categoriesList.length > 0 ? (
-                                  categoriesList.map((cat) => (
-                                    <Option key={cat.id || cat.name} value={cat.name || cat.id}>
-                                      {cat.name}
-                                    </Option>
-                                  ))
-                                ) : (
-                                  <>
-                                    <Option value="Coffee & Beverages">Coffee & Beverages</Option>
-                                    <Option value="Bakery & Pastries">Bakery & Pastries</Option>
-                                    <Option value="Tea & Herbal">Tea & Herbal</Option>
-                                    <Option value="Syrups & Ingredients">Syrups & Ingredients</Option>
-                                    <Option value="Packaging & Cups">Packaging & Cups</Option>
-                                  </>
-                                )}
+                              <Select placeholder="Select category" showSearch optionFilterProp="children">
+                                {categoriesList.map((cat) => (
+                                  <Option key={cat.id} value={cat.id}>
+                                    {cat.name}
+                                  </Option>
+                                ))}
                               </Select>
                             </Form.Item>
                           </Col>
@@ -509,12 +508,11 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                           <Col xs={24} sm={12}>
                             <Form.Item
                               name="unit"
-                              label={<span style={{ fontWeight: 700 }}>Base Unit (Root Measurement)</span>}
-                              rules={[{ required: true, message: 'Please select a base unit' }]}
-                              tooltip="Primary unit in which warehouse stock ledger balances are stored."
+                              label={<span style={{ fontWeight: 700 }}>{t('base_unit', 'Base Unit')}</span>}
+                              rules={[{ required: true }]}
                             >
                               <Select placeholder="Select base unit">
-                                {unitsList.filter(u => !u.base_unit || u.base_unit === 0).map((u) => (
+                                {unitsList.map((u) => (
                                   <Option key={u.id} value={u.id}>
                                     {u.name} ({u.code})
                                   </Option>
@@ -525,141 +523,11 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                         </Row>
 
                         <Row gutter={16}>
-                          <Col xs={24} sm={12}>
-                            <Form.Item
-                              name="default_sale_unit"
-                              label={<span style={{ fontWeight: 700 }}>Default Sale Unit</span>}
-                              tooltip="Default unit selected when adding to sales invoices or POS register."
-                            >
-                              <Select placeholder="Select sale unit">
-                                {unitsList.filter(u => {
-                                  const baseId = typeof selectedUnit === 'number' ? selectedUnit : unitsList.find(x => x.code === selectedUnit || x.name === selectedUnit)?.id;
-                                  return baseId ? (u.id === baseId || u.base_unit === baseId) : true;
-                                }).map((u) => (
-                                  <Option key={u.id} value={u.id}>
-                                    {u.name} ({u.code}) {u.base_unit ? `[${u.operation_value}x]` : '[Base]'}
-                                  </Option>
-                                ))}
-                              </Select>
-                            </Form.Item>
-                          </Col>
-
-                          <Col xs={24} sm={12}>
-                            <Form.Item
-                              name="default_purchase_unit"
-                              label={<span style={{ fontWeight: 700 }}>Default Purchase Unit</span>}
-                              tooltip="Default unit selected when placing vendor purchase orders."
-                            >
-                              <Select placeholder="Select purchase unit">
-                                {unitsList.filter(u => {
-                                  const baseId = typeof selectedUnit === 'number' ? selectedUnit : unitsList.find(x => x.code === selectedUnit || x.name === selectedUnit)?.id;
-                                  return baseId ? (u.id === baseId || u.base_unit === baseId) : true;
-                                }).map((u) => (
-                                  <Option key={u.id} value={u.id}>
-                                    {u.name} ({u.code}) {u.base_unit ? `[${u.operation_value}x]` : '[Base]'}
-                                  </Option>
-                                ))}
-                              </Select>
-                            </Form.Item>
-                          </Col>
-                        </Row>
-
-                        {/* Multi-Unit Pricing & Packaging Table (AURA_v1 cost_price_by_units) */}
-                        {multiUnitRows.length > 0 && (
-                          <div style={{ marginBottom: 20, background: '#f8fafc', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                              <span style={{ fontWeight: 700, fontSize: 13.5, color: '#1e293b' }}>
-                                📦 Multi-Unit Pricing & Packaging Barcodes (AURA_v1)
-                              </span>
-                              <Tag color="blue">{multiUnitRows.length} Units Configured</Tag>
-                            </div>
-                            <Table
-                              size="small"
-                              pagination={false}
-                              dataSource={multiUnitRows}
-                              rowKey="unit_id"
-                              scroll={{ x: 650 }}
-                              columns={[
-                                {
-                                  title: 'Unit',
-                                  dataIndex: 'unit_name',
-                                  render: (name, r) => (
-                                    <div>
-                                      <strong>{name}</strong> <span style={{ color: '#64748b' }}>({r.unit_code})</span>
-                                      {r.base_unit ? (
-                                        <div style={{ fontSize: 11, color: '#0284c7' }}>
-                                          1 {r.unit_code} = {r.operation_value} {r.operator} Base
-                                        </div>
-                                      ) : (
-                                        <div style={{ fontSize: 11, color: '#16a34a' }}>Base Unit</div>
-                                      )}
-                                    </div>
-                                  )
-                                },
-                                {
-                                  title: 'Cost ($)',
-                                  dataIndex: 'cost',
-                                  width: 120,
-                                  render: (val, r, idx) => (
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      value={val}
-                                      onChange={(e) => {
-                                        const next = [...multiUnitRows];
-                                        next[idx].cost = parseFloat(e.target.value) || 0;
-                                        setMultiUnitRows(next);
-                                      }}
-                                    />
-                                  )
-                                },
-                                {
-                                  title: 'Price ($)',
-                                  dataIndex: 'price',
-                                  width: 120,
-                                  render: (val, r, idx) => (
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      value={val}
-                                      onChange={(e) => {
-                                        const next = [...multiUnitRows];
-                                        next[idx].price = parseFloat(e.target.value) || 0;
-                                        setMultiUnitRows(next);
-                                      }}
-                                    />
-                                  )
-                                },
-                                {
-                                  title: 'Packaging Barcode / SKU',
-                                  dataIndex: 'product_code',
-                                  render: (val, r, idx) => (
-                                    <Input
-                                      placeholder="Leave blank to use main code"
-                                      value={val}
-                                      onChange={(e) => {
-                                        const next = [...multiUnitRows];
-                                        next[idx].product_code = e.target.value;
-                                        setMultiUnitRows(next);
-                                      }}
-                                    />
-                                  )
-                                }
-                              ]}
-                            />
-                          </div>
-                        )}
-
-                        <Row gutter={16}>
                           <Col xs={24} sm={8}>
-                            <Form.Item
-                              name="currency"
-                              label={<span style={{ fontWeight: 700 }}>Currency</span>}
-                            >
+                            <Form.Item name="currency" label={<span style={{ fontWeight: 700 }}>Currency</span>}>
                               <Select defaultValue="USD">
                                 <Option value="USD">USD ($)</Option>
                                 <Option value="KHR">KHR (៛)</Option>
-                                <Option value="THB">THB (฿)</Option>
                               </Select>
                             </Form.Item>
                           </Col>
@@ -667,7 +535,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                           <Col xs={24} sm={8}>
                             <Form.Item
                               name="cost"
-                              label={<span style={{ fontWeight: 700 }}>Product Cost ($)</span>}
+                              label={<span style={{ fontWeight: 700 }}>Cost Price ($)</span>}
                               rules={[{ required: true }]}
                             >
                               <InputNumber min={0} step={0.1} style={{ width: '100%' }} />
@@ -689,32 +557,29 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                           <Col xs={24} sm={12}>
                             <Form.Item
                               name="alert_quantity"
-                              label={<span style={{ fontWeight: 700 }}>Alert Quantity (Low Stock Threshold)</span>}
+                              label={<span style={{ fontWeight: 700 }}>Low Stock Alert Threshold</span>}
                             >
                               <InputNumber min={0} defaultValue={10} style={{ width: '100%' }} />
                             </Form.Item>
                           </Col>
 
                           <Col xs={24} sm={12}>
-                            <Form.Item
-                              name="rack"
-                              label={<span style={{ fontWeight: 700 }}>Rack / Shelf Location</span>}
-                            >
-                              <Input placeholder="e.g. A-01, SHELF-B" />
+                            <Form.Item name="rack" label={<span style={{ fontWeight: 700 }}>Rack / Shelf Location</span>}>
+                              <Input placeholder="e.g. RACK-A-01" />
                             </Form.Item>
                           </Col>
                         </Row>
 
                         <Form.Item
                           name="inStock"
-                          label={<span style={{ fontWeight: 700 }}>Live Store Availability</span>}
+                          label={<span style={{ fontWeight: 700 }}>Status Availability</span>}
                           valuePropName="checked"
                         >
-                          <Switch checkedChildren="Active (In Stock)" unCheckedChildren="Inactive (Out of Stock)" />
+                          <Switch checkedChildren="Active" unCheckedChildren="Inactive" defaultChecked />
                         </Form.Item>
                       </Col>
 
-                      {/* Right Column: Image Preview & Media */}
+                      {/* Right Column: Image */}
                       <Col xs={24} md={9}>
                         <div
                           style={{
@@ -748,37 +613,24 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                                 alt="Product Cover"
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 onError={(e) => {
-                                  e.currentTarget.onerror = null;
-                                  e.currentTarget.src = '/assets/uploads/no_image.png';
+                                  e.target.src = '/placeholder.png';
                                 }}
                               />
                             ) : (
-                              <div style={{ textAlign: 'center', color: adminTheme.subtext }}>
-                                <InboxOutlined style={{ fontSize: 36, color: '#94a3b8' }} />
-                                <div style={{ fontSize: 12, marginTop: 4 }}>No Image Selected</div>
+                              <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                                <InboxOutlined style={{ fontSize: 36, display: 'block', marginBottom: 6 }} />
+                                <span style={{ fontSize: 12 }}>No image provided</span>
                               </div>
                             )}
                           </div>
 
-                          <Form.Item label="Image URL / Path">
+                          <Form.Item label={<span style={{ fontSize: 12, fontWeight: 600 }}>Image URL or Path</span>}>
                             <Input
-                              placeholder="e.g. /assets/uploads/products/coffee.jpg"
+                              placeholder="https://example.com/item.png or /assets/uploads/image.png"
                               value={coverImageUrl}
                               onChange={(e) => setCoverImageUrl(e.target.value)}
                             />
                           </Form.Item>
-
-                          <Divider style={{ margin: '12px 0' }} />
-
-                          <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 8 }}>
-                            Catalog Display Badges
-                          </label>
-                          <Space wrap>
-                            <Tag color="volcano" style={{ cursor: 'pointer' }}>🔥 Hot Deal</Tag>
-                            <Tag color="green" style={{ cursor: 'pointer' }}>⚡ Best Seller</Tag>
-                            <Tag color="blue" style={{ cursor: 'pointer' }}>✨ New Arrival</Tag>
-                            <Tag color="purple" style={{ cursor: 'pointer' }}>👑 VIP Choice</Tag>
-                          </Space>
                         </div>
                       </Col>
                     </Row>
@@ -786,149 +638,232 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                 ),
               },
 
-              // TAB 2: DETAILS
-              {
-                key: 'details',
-                label: <span style={{ fontWeight: 700, padding: '0 4px' }}>{t('details', 'Details')}</span>,
-                children: (
-                  <div style={{ paddingTop: 12 }}>
-                    <Row gutter={16}>
-                      <Col xs={24} sm={8}>
-                        <Form.Item name="item_code" label="Item Code / Supplier Code">
-                          <Input placeholder="e.g. VEN-904" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={8}>
-                        <Form.Item name="serial" label="Serial Number">
-                          <Input placeholder="e.g. SN-2026-X1" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={8}>
-                        <Form.Item name="batch_number" label="Batch / Lot Number">
-                          <Input placeholder="e.g. LOT-202610" />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-
-                    <Row gutter={16}>
-                      <Col xs={24} sm={8}>
-                        <Form.Item name="second_name" label="Second Name (Khmer / Local Title)">
-                          <Input placeholder="ឈ្មោះផលិតផលជាភាសាខ្មែរ" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={8}>
-                        <Form.Item name="weight" label="Weight (Kg)">
-                          <Input placeholder="e.g. 0.25" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={8}>
-                        <Form.Item name="barcode_symbology" label="Barcode Symbology">
-                          <Select defaultValue="code128">
-                            <Option value="code128">Code128</Option>
-                            <Option value="ean13">EAN-13</Option>
-                            <Option value="ean8">EAN-8</Option>
-                            <Option value="upca">UPC-A</Option>
-                          </Select>
-                        </Form.Item>
-                      </Col>
-                    </Row>
-
-                    <Form.Item name="details" label="Product Description & Brewing Guide">
-                      <Input.TextArea rows={5} placeholder="Provide tasting notes, origins, brewing guide, and warranty information..." />
-                    </Form.Item>
-                  </div>
-                ),
-              },
-
-              // TAB 3: ACCOUNTING
-              {
-                key: 'accounting',
-                label: <span style={{ fontWeight: 700 }}>{t('accounting', 'Accounting')}</span>,
-                children: (
-                  <div style={{ paddingTop: 12 }}>
-                    <Paragraph type="secondary">
-                      Map this product to default double-entry general ledger accounts for automated billing and inventory journals.
-                    </Paragraph>
-                    <Row gutter={16}>
-                      <Col xs={24} sm={12}>
-                        <Form.Item label={t('sales_revenue_account', 'Sales / Revenue Account')}>
-                          <Select defaultValue="411000">
-                            <Option value="411000">411000 - Sales Revenue (Merchandise)</Option>
-                            <Option value="412000">412000 - Service & Labor Income</Option>
-                          </Select>
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={12}>
-                        <Form.Item label={t('cogs_account', 'Cost of Goods Sold (COGS) Account')}>
-                          <Select defaultValue="511000">
-                            <Option value="511000">511000 - Cost of Goods Sold (COGS)</Option>
-                            <Option value="512000">512000 - Direct Material Usage</Option>
-                          </Select>
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Row gutter={16}>
-                      <Col xs={24} sm={12}>
-                        <Form.Item label={t('inventory_asset_account', 'Inventory Asset Account')}>
-                          <Select defaultValue="113000">
-                            <Option value="113000">113000 - Finished Goods Inventory</Option>
-                            <Option value="113100">113100 - Raw Materials & Ingredients</Option>
-                          </Select>
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={12}>
-                        <Form.Item label={t('inventory_adj_account', 'Inventory Adjustment Account')}>
-                          <Select defaultValue="513000">
-                            <Option value="513000">513000 - Inventory Adjustment Variance</Option>
-                            <Option value="514000">514000 - Inventory Shrinkage & Loss</Option>
-                          </Select>
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                  </div>
-                ),
-              },
-
-              // TAB 4: VARIANTS
+              // TAB 2: PRODUCT VARIANTS (Cartesian Generator & Variant Manager)
               {
                 key: 'variants',
-                label: <span style={{ fontWeight: 700 }}>{t('variants', 'Variants')}</span>,
+                label: (
+                  <span style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ApartmentOutlined />
+                    {t('product_variants', 'Product Variants')}
+                    {variantRows.length > 0 && <Tag color="blue">{variantRows.length}</Tag>}
+                  </span>
+                ),
                 children: (
                   <div style={{ paddingTop: 12 }}>
-                    <Paragraph type="secondary">
-                      Create SKU variations (e.g. Size, Flavor, Bean Grind) with customized price adjustments and barcode tags.
-                    </Paragraph>
+                    <div
+                      style={{
+                        padding: '14px 18px',
+                        background: '#f8fafc',
+                        borderRadius: 10,
+                        border: '1px solid #e2e8f0',
+                        marginBottom: 18,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: 12,
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 800, color: '#0f172a', fontSize: 14 }}>
+                          Multi-Variant Management & Attribute Matrix
+                        </div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>
+                          Define multiple variations (Color, Size, Material, etc.) with unique SKUs, barcodes, prices, and stock.
+                        </div>
+                      </div>
 
-                    <Space style={{ marginBottom: 16 }}>
+                      <Space size={10} wrap>
+                        <Button
+                          type="primary"
+                          icon={<ThunderboltOutlined />}
+                          onClick={() => setIsGeneratorOpen(true)}
+                          style={{ fontWeight: 700, background: '#2563eb' }}
+                        >
+                          Generate Variant Combinations
+                        </Button>
+                      </Space>
+                    </div>
+
+                    {/* Manual Variant Add Bar */}
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
                       <Input
-                        placeholder="New option name (e.g. Whole Bean 500g)"
+                        placeholder="Manual variant name (e.g. Red / Size 42)"
                         value={newVariantName}
                         onChange={(e) => setNewVariantName(e.target.value)}
-                        style={{ width: 300 }}
+                        style={{ width: 280 }}
+                        onPressEnter={handleAddManualVariant}
                       />
-                      <Button type="primary" icon={<PlusOutlined />} onClick={handleAddVariant}>
-                        {t('add_variant_row', 'Add Variant Row')}
+                      <Button icon={<PlusOutlined />} onClick={handleAddManualVariant} style={{ fontWeight: 600 }}>
+                        Add Single Variant
                       </Button>
-                    </Space>
+                    </div>
 
+                    {/* Variants Table */}
                     <Table
                       rowKey="id"
                       dataSource={variantRows}
-                      scroll={{ x: 600 }}
+                      pagination={false}
+                      scroll={{ x: 900 }}
                       columns={[
-                        { title: t('variant_name', 'Variant Name'), dataIndex: 'name', key: 'name', render: (t) => <strong>{t}</strong> },
-                        { title: t('barcode', 'Barcode'), dataIndex: 'barcode', key: 'barcode', render: (b) => <Tag color="blue">{b}</Tag> },
                         {
-                          title: t('price_addition', 'Price Addition ($)'),
-                          dataIndex: 'priceAddition',
-                          key: 'priceAddition',
-                          render: (p) => <span style={{ color: '#16a34a', fontWeight: 700 }}>+{formatCurrency(p)}</span>,
+                          title: 'Variant Combination',
+                          dataIndex: 'name',
+                          key: 'name',
+                          render: (name, record, idx) => (
+                            <div>
+                              <Input
+                                value={name}
+                                onChange={(e) => {
+                                  const updated = [...variantRows];
+                                  updated[idx].name = e.target.value;
+                                  setVariantRows(updated);
+                                }}
+                                style={{ fontWeight: 700 }}
+                              />
+                              {record.attributes && (
+                                <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                                  {Object.entries(record.attributes).map(([k, v]) => (
+                                    <Tag key={k} color="blue" style={{ fontSize: 10 }}>
+                                      {k}: {v}
+                                    </Tag>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ),
                         },
-                        { title: t('default_qty', 'Default Qty'), dataIndex: 'quantity', key: 'quantity', align: 'right' },
                         {
-                          title: t('action', 'Action'),
-                          key: 'action',
+                          title: 'Unique SKU',
+                          dataIndex: 'sku',
+                          key: 'sku',
+                          width: 170,
+                          render: (sku, record, idx) => (
+                            <Input
+                              value={sku}
+                              placeholder="Unique SKU"
+                              onChange={(e) => {
+                                const updated = [...variantRows];
+                                updated[idx].sku = e.target.value;
+                                setVariantRows(updated);
+                              }}
+                            />
+                          ),
+                        },
+                        {
+                          title: 'Barcode',
+                          dataIndex: 'barcode',
+                          key: 'barcode',
+                          width: 150,
+                          render: (bc, record, idx) => (
+                            <Input
+                              value={bc}
+                              placeholder="Barcode"
+                              onChange={(e) => {
+                                const updated = [...variantRows];
+                                updated[idx].barcode = e.target.value;
+                                setVariantRows(updated);
+                              }}
+                            />
+                          ),
+                        },
+                        {
+                          title: 'Cost ($)',
+                          dataIndex: 'cost',
+                          key: 'cost',
+                          width: 110,
+                          render: (cost, record, idx) => (
+                            <InputNumber
+                              min={0}
+                              step={0.5}
+                              value={cost}
+                              onChange={(val) => {
+                                const updated = [...variantRows];
+                                updated[idx].cost = val;
+                                setVariantRows(updated);
+                              }}
+                            />
+                          ),
+                        },
+                        {
+                          title: 'Selling Price ($)',
+                          dataIndex: 'price',
+                          key: 'price',
+                          width: 120,
+                          render: (price, record, idx) => (
+                            <InputNumber
+                              min={0}
+                              step={0.5}
+                              value={price}
+                              onChange={(val) => {
+                                const updated = [...variantRows];
+                                updated[idx].price = val;
+                                setVariantRows(updated);
+                              }}
+                            />
+                          ),
+                        },
+                        {
+                          title: 'Initial Stock',
+                          dataIndex: 'quantity',
+                          key: 'quantity',
+                          width: 110,
+                          render: (qty, record, idx) => (
+                            <InputNumber
+                              min={0}
+                              value={qty}
+                              onChange={(val) => {
+                                const updated = [...variantRows];
+                                updated[idx].quantity = val;
+                                setVariantRows(updated);
+                              }}
+                            />
+                          ),
+                        },
+                        {
+                          title: 'Warehouse',
+                          dataIndex: 'warehouse_id',
+                          key: 'warehouse_id',
+                          width: 160,
+                          render: (whId, record, idx) => (
+                            <Select
+                              value={whId || warehousesList[0]?.id || 1}
+                              onChange={(val) => {
+                                const updated = [...variantRows];
+                                updated[idx].warehouse_id = val;
+                                setVariantRows(updated);
+                              }}
+                              style={{ width: '100%' }}
+                            >
+                              {warehousesList.map((wh) => (
+                                <Option key={wh.id} value={wh.id}>
+                                  {wh.name}
+                                </Option>
+                              ))}
+                            </Select>
+                          ),
+                        },
+                        {
+                          title: 'Active',
+                          dataIndex: 'status',
+                          key: 'status',
                           width: 80,
+                          render: (status, record, idx) => (
+                            <Switch
+                              size="small"
+                              checked={status !== 0}
+                              onChange={(checked) => {
+                                const updated = [...variantRows];
+                                updated[idx].status = checked ? 1 : 0;
+                                setVariantRows(updated);
+                              }}
+                            />
+                          ),
+                        },
+                        {
+                          title: 'Action',
+                          key: 'action',
+                          width: 60,
                           align: 'center',
                           render: (_, __, idx) => (
                             <Button
@@ -941,189 +876,136 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                           ),
                         },
                       ]}
-                      pagination={false}
                     />
+
+                    {variantRows.length > 0 && (
+                      <div style={{ marginTop: 14, textAlign: 'right', fontWeight: 700, color: '#334155' }}>
+                        Total Variant Stock Units: <Tag color="green" style={{ fontSize: 13, fontWeight: 800 }}>
+                          {variantRows.reduce((acc, v) => acc + (parseFloat(v.quantity) || 0), 0)}
+                        </Tag>
+                      </div>
+                    )}
                   </div>
                 ),
               },
 
-              // TAB 5: SUPPLIER
+              // TAB 3: DETAILS & DESCRIPTIONS
               {
-                key: 'supplier',
-                label: <span style={{ fontWeight: 700 }}>{t('supplier', 'Supplier')}</span>,
+                key: 'details',
+                label: <span style={{ fontWeight: 700 }}>{t('details_spec', 'Details & Specs')}</span>,
                 children: (
                   <div style={{ paddingTop: 12 }}>
-                    <Row gutter={16}>
-                      <Col xs={24} sm={12}>
-                        <Form.Item label={t('primary_supplier', 'Primary Supplier')}>
-                          <Select defaultValue="1">
-                            <Option value="1">Angkor Harvest Coffee Farm (Kampot)</Option>
-                            <Option value="2">Mondulkiri Organic Co-op</Option>
-                            <Option value="3">Golden Packaging Supplies Co.</Option>
-                          </Select>
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={6}>
-                        <Form.Item label={t('supplier_part_no', 'Supplier Part / Item No')}>
-                          <Input placeholder="e.g. SUP-COF-01" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={6}>
-                        <Form.Item label={t('supplier_purchase_price', 'Supplier Purchase Price ($)')}>
-                          <InputNumber min={0} defaultValue={1.8} style={{ width: '100%' }} />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                  </div>
-                ),
-              },
-
-              // TAB 6: PROMOTION
-              {
-                key: 'promotion',
-                label: <span style={{ fontWeight: 700 }}>{t('promotion', 'Promotion')}</span>,
-                children: (
-                  <div style={{ paddingTop: 12 }}>
-                    <Paragraph type="secondary">
-                      Schedule special temporary promotional prices with start and end dates.
-                    </Paragraph>
-                    <Row gutter={16} align="middle">
-                      <Col xs={24} sm={8}>
-                        <Form.Item label={t('promotional_price', 'Promotional Discount Price ($)')}>
-                          <InputNumber min={0} placeholder="e.g. 2.99" style={{ width: '100%' }} />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={8}>
-                        <Form.Item label={t('promotion_start_date', 'Promotion Start Date')}>
-                          <DatePicker style={{ width: '100%' }} />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={8}>
-                        <Form.Item label={t('promotion_end_date', 'Promotion End Date')}>
-                          <DatePicker style={{ width: '100%' }} />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                  </div>
-                ),
-              },
-
-              // TAB 7: SHOP / WEB
-              {
-                key: 'shop',
-                label: <span style={{ fontWeight: 700 }}>{t('shop', 'Shop')}</span>,
-                children: (
-                  <div style={{ paddingTop: 12 }}>
-                    <Row gutter={24}>
-                      <Col xs={24} sm={8}>
-                        <Form.Item name="featured" label={t('featured_home', 'Featured on Public Home Page')} valuePropName="checked">
-                          <Switch checkedChildren={t('featured', 'Featured')} unCheckedChildren={t('standard', 'Standard')} />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={8}>
-                        <Form.Item name="hide_pos" label={t('hide_pos', 'Hide from Cashier POS Terminal')} valuePropName="checked">
-                          <Switch checkedChildren={t('hidden_in_pos', 'Hidden in POS')} unCheckedChildren={t('visible_in_pos', 'Visible in POS')} />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={8}>
-                        <Form.Item name="hide_shop" label={t('hide_shop', 'Hide from E-Menu & Public Web')} valuePropName="checked">
-                          <Switch checkedChildren={t('hidden_online', 'Hidden Online')} unCheckedChildren={t('visible_online', 'Visible Online')} />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                  </div>
-                ),
-              },
-
-              // TAB 8: ADD ON
-              {
-                key: 'add_on',
-                label: <span style={{ fontWeight: 700 }}>{t('add_on', 'Add On')}</span>,
-                children: (
-                  <div style={{ paddingTop: 12 }}>
-                    <Paragraph type="secondary">
-                      Available toppings, milk substitutions, extra shots, or condiment add-ons for counter ordering.
-                    </Paragraph>
-                    <Table
-                      rowKey="id"
-                      dataSource={addOnRows}
-                      scroll={{ x: 500 }}
-                      columns={[
-                        { title: 'Add On Name', dataIndex: 'name', key: 'name', render: (t) => <strong>{t}</strong> },
-                        { title: 'Additional Price', dataIndex: 'price', key: 'price', render: (p) => <Tag color="green">+{formatCurrency(p)}</Tag> },
-                        { title: 'Description', dataIndex: 'description', key: 'description' },
-                      ]}
-                      pagination={false}
-                    />
-                  </div>
-                ),
-              },
-
-              // TAB 9: RACKS
-              {
-                key: 'racks',
-                label: <span style={{ fontWeight: 700 }}>Racks</span>,
-                children: (
-                  <div style={{ paddingTop: 12 }}>
-                    <Paragraph type="secondary">
-                      Set aisle and bin racks for each warehouse location.
-                    </Paragraph>
-                    {(warehousesList.length > 0 ? warehousesList : [
-                      { id: 1, name: 'Warehouse 1 (Main Storage)' },
-                      { id: 2, name: 'Warehouse 2 (Transit Depot)' },
-                      { id: 3, name: 'Store Counter (Retail)' },
-                    ]).map((wh) => (
-                      <Row key={wh.id} gutter={16} align="middle" style={{ marginBottom: 12 }}>
-                        <Col span={10}>
-                          <strong>{wh.name}</strong>
-                        </Col>
-                        <Col span={14}>
-                          <Input placeholder={`Rack bin in ${wh.name} (e.g. RACK-B2)`} defaultValue="A-01" />
-                        </Col>
-                      </Row>
-                    ))}
+                    <Form.Item name="details" label="Short Description">
+                      <Input.TextArea rows={3} placeholder="Brief summary for catalog previews..." />
+                    </Form.Item>
+                    <Form.Item name="product_details" label="Detailed Specifications & Attributes">
+                      <Input.TextArea rows={6} placeholder="Full product specifications, care instructions, warranty details..." />
+                    </Form.Item>
                   </div>
                 ),
               },
             ]}
           />
-
-          <Divider style={{ margin: '16px 0' }} />
-
-          {/* Bottom Action Footer */}
-          <Flex justify="space-between" align="center">
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => {
-                if (onBack) onBack();
-                else navigate('/admins/products');
-              }}
-            >
-              Cancel & Return
-            </Button>
-
-            <Space size={12}>
-              <Button onClick={() => form.resetFields()}>
-                Reset Form
-              </Button>
-              <Button
-                type="primary"
-                icon={<CheckOutlined />}
-                loading={isSubmitting}
-                onClick={handleSubmitProduct}
-                style={{
-                  fontWeight: 800,
-                  background: '#2563eb',
-                  paddingInline: 28,
-                  height: 40,
-                }}
-              >
-                {editProduct ? 'Update Product' : 'Add Product'}
-              </Button>
-            </Space>
-          </Flex>
         </Form>
       </Card>
+
+      {/* 3. Cartesian Variant Generator Modal */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 800 }}>
+            <ThunderboltOutlined style={{ color: '#2563eb' }} />
+            <span>Generate Variant Combinations</span>
+          </div>
+        }
+        open={isGeneratorOpen}
+        onCancel={() => setIsGeneratorOpen(false)}
+        width={680}
+        footer={[
+          <Button key="cancel" onClick={() => setIsGeneratorOpen(false)}>
+            Cancel
+          </Button>,
+          <Button
+            key="generate"
+            type="primary"
+            icon={<CheckOutlined />}
+            onClick={handleGenerateCombinations}
+            style={{ fontWeight: 700, background: '#2563eb' }}
+          >
+            Generate Combinations
+          </Button>,
+        ]}
+      >
+        <Alert
+          type="info"
+          showIcon
+          message="Cartesian Attribute Combination Generator"
+          description="Select attributes (e.g. Color, Size, Material) and choose which values apply to this product. The system will automatically build the matrix with derived SKUs and attribute combinations."
+          style={{ marginBottom: 18 }}
+        />
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {attributesList.map((attr) => {
+            const currentSel = selectedAttributes.find((s) => s.name === attr.name);
+            const currentVals = currentSel ? currentSel.values : [];
+
+            return (
+              <div
+                key={attr.id}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: 10,
+                  border: '1px solid #e2e8f0',
+                  background: currentVals.length > 0 ? '#f0f9ff' : '#ffffff',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ fontWeight: 800, fontSize: 13, color: '#0f172a' }}>{attr.name}</span>
+                  {currentVals.length > 0 && (
+                    <Tag color="blue">{currentVals.length} selected</Tag>
+                  )}
+                </div>
+
+                <Select
+                  mode="multiple"
+                  placeholder={`Select ${attr.name} options...`}
+                  style={{ width: '100%' }}
+                  value={currentVals}
+                  onChange={(vals) => {
+                    setSelectedAttributes((prev) => {
+                      const next = prev.filter((p) => p.name !== attr.name);
+                      if (vals.length > 0) {
+                        next.push({ name: attr.name, values: vals });
+                      }
+                      return next;
+                    });
+                  }}
+                >
+                  {(attr.values || []).map((val) => (
+                    <Option key={val.id} value={val.value}>
+                      {val.color_code ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <span
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: '50%',
+                              backgroundColor: val.color_code,
+                              border: '1px solid #cbd5e1',
+                            }}
+                          />
+                          {val.value}
+                        </span>
+                      ) : (
+                        val.value
+                      )}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+            );
+          })}
+        </div>
+      </Modal>
     </div>
   );
 }

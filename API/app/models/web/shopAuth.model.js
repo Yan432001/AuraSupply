@@ -109,16 +109,24 @@ class ShopAuth_Model {
    */
   static async updateCustomerProfile(userId, profileData) {
     try {
-      if (profileData.first_name || profileData.phone || profileData.company) {
+      if (profileData.username || profileData.first_name || profileData.last_name || profileData.phone || profileData.company) {
         await db.query(`
           UPDATE aura_users
-          SET first_name = COALESCE(?, first_name),
+          SET username = COALESCE(?, username),
+              first_name = COALESCE(?, first_name),
               last_name = COALESCE(?, last_name),
               phone = COALESCE(?, phone),
               company = COALESCE(?, company),
               updated_at = NOW()
           WHERE id = ?
-        `, [profileData.first_name, profileData.last_name, profileData.phone, profileData.company, userId]);
+        `, [
+          profileData.username ? profileData.username.trim() : null,
+          profileData.first_name ? profileData.first_name.trim() : null,
+          profileData.last_name ? profileData.last_name.trim() : null,
+          profileData.phone ? profileData.phone.trim() : null,
+          profileData.company ? profileData.company.trim() : null,
+          userId
+        ]);
       }
 
       await db.query(`

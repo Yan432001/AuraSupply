@@ -14,15 +14,22 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
+import { useAdminTheme } from '../../../../hooks/useAdminTheme';
 
 const PosSalesHistoryModal = ({
   visible,
   onClose,
   onReprintReceipt,
-  themeMode,
+  themeMode: propThemeMode,
+  adminTheme: propAdminTheme,
   t,
 }) => {
-  const isDark = themeMode === 'dark';
+  const hookAdminTheme = useAdminTheme();
+  const adminTheme = propAdminTheme || hookAdminTheme;
+  const isDark = Boolean(adminTheme.isDark || propThemeMode === 'dark');
+  const primaryColor = adminTheme.primary || '#2563eb';
+  const textColor = adminTheme.text || (isDark ? '#f8fafc' : '#0f172a');
+  const subtextColor = adminTheme.subtext || (isDark ? '#94a3b8' : '#64748b');
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -144,11 +151,11 @@ const PosSalesHistoryModal = ({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: isDark ? '#f8fafc' : '#0f172a' }}>
-            <HistoryOutlined style={{ color: '#2563eb', marginRight: 8 }} />
+          <div style={{ fontSize: 18, fontWeight: 800, color: textColor }}>
+            <HistoryOutlined style={{ color: primaryColor, marginRight: 8 }} />
             POS Completed Sales History
           </div>
-          <div style={{ fontSize: 12, color: '#94a3b8' }}>
+          <div style={{ fontSize: 12, color: subtextColor }}>
             Browse past transactions, check payment details, and reprint receipts
           </div>
         </div>

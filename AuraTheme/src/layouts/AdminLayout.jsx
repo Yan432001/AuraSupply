@@ -309,7 +309,9 @@ const AdminLayout = () => {
     return (
       <NotificationProvider>
         <div
-          className="admin-active pos-standalone-viewport"
+          className={`admin-layout admin-active pos-standalone-viewport ${themeMode === 'dark' ? 'dark theme-dark' : 'light theme-light'}`}
+          data-theme={themePreset || 'default'}
+          data-mode={themeMode === 'dark' ? 'dark' : 'light'}
           style={{
             width: '100vw',
             height: '100vh',

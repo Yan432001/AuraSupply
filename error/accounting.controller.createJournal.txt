@@ -1,0 +1,2 @@
+[24/10/2026 21:05:44]Journal entry is unbalanced! Total Debits ($100.00) must equal Total Credits ($50.00). Variance: $50.00.
+[24/10/2026 21:12:14]Journal entry is unbalanced! Total Debits ($500.00) must equal Total Credits ($300.00). Variance: $200.00.

@@ -1,0 +1,24 @@
+[24/10/2026 20:36:05]Error: Cannot delete sale #SALE-202610-0057 because it has 1 associated payment records. Please delete payments first or cancel the sale.
+    at Object.deleteSale (C:\AuraSupply\API\app\models\admins\sales.model.js:1262:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.deleteSale (C:\AuraSupply\API\app\controller\admin\sales.controller.js:229:20)
+[24/10/2026 20:36:17]Error: Cannot delete sale #SALE-202610-0058 because it has 1 associated payment records. Please delete payments first or cancel the sale.
+    at Object.deleteSale (C:\AuraSupply\API\app\models\admins\sales.model.js:1262:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.deleteSale (C:\AuraSupply\API\app\controller\admin\sales.controller.js:229:20)
+[24/10/2026 20:36:44]Error: Cannot delete sale #SALE-202610-0059 because it has 1 associated payment records. Please delete payments first or cancel the sale.
+    at Object.deleteSale (C:\AuraSupply\API\app\models\admins\sales.model.js:1262:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.deleteSale (C:\AuraSupply\API\app\controller\admin\sales.controller.js:229:20)
+[24/10/2026 20:37:10]Error: Cannot delete sale #SALE-202610-0060 because it has 1 associated payment records. Please delete payments first or cancel the sale.
+    at Object.deleteSale (C:\AuraSupply\API\app\models\admins\sales.model.js:1262:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.deleteSale (C:\AuraSupply\API\app\controller\admin\sales.controller.js:229:20)
+[24/10/2026 20:37:22]Error: Cannot delete sale #SALE-202610-0061 because it has 1 associated payment records. Please delete payments first or cancel the sale.
+    at Object.deleteSale (C:\AuraSupply\API\app\models\admins\sales.model.js:1262:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.deleteSale (C:\AuraSupply\API\app\controller\admin\sales.controller.js:229:20)
+[24/10/2026 20:38:22]Error: Cannot delete sale #SALE-202610-0062 because it has 1 associated payment records. Please delete payments first or cancel the sale.
+    at Object.deleteSale (C:\AuraSupply\API\app\models\admins\sales.model.js:1262:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.deleteSale (C:\AuraSupply\API\app\controller\admin\sales.controller.js:229:20)

@@ -48,6 +48,13 @@ import PosTerminal from './pages/admins/pos/PosTerminal';
 import PosSettingsPage from './pages/admins/pos/PosSettingsPage';
 import PosViewBill from './pages/admins/pos/PosViewBill';
 import PosKitchenDisplay from './pages/admins/pos/PosKitchenDisplay';
+import BpasPurchasesWorkspace from './pages/admins/BpasPurchasesWorkspace';
+import AccountingWorkspace from './pages/admins/accounting/AccountingWorkspace';
+import AssetWorkspace from './pages/admins/assets/AssetWorkspace';
+import SalesListPage from './pages/admins/sales/SalesListPage';
+import AddSalePage from './pages/admins/sales/AddSalePage';
+import EditSalePage from './pages/admins/sales/EditSalePage';
+import SaleDetailPage from './pages/admins/sales/SaleDetailPage';
 import { AdminModulesProvider } from './contexts/AdminModulesContext';
 
 // E-Menu Telegram Mini App Layout & Views
@@ -157,6 +164,31 @@ const AppContent = () => {
         <Route path="products/print_barcodes" element={<AdminProducts />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="customers" element={<CustomersManagement />} />
+        <Route path="purchases" element={<BpasPurchasesWorkspace />} />
+        <Route path="purchases/add" element={<BpasPurchasesWorkspace />} />
+        <Route path="accounting" element={<AccountingWorkspace initialTab="dashboard" />} />
+        <Route path="accounting/accounts" element={<AccountingWorkspace initialTab="accounts" />} />
+        <Route path="accounting/journals" element={<AccountingWorkspace initialTab="journals" />} />
+        <Route path="accounting/journals/add" element={<AccountingWorkspace initialTab="add-journal" />} />
+        <Route path="accounting/ledger" element={<AccountingWorkspace initialTab="ledger" />} />
+        <Route path="accounting/cash-bank" element={<AccountingWorkspace initialTab="cash-bank" />} />
+        <Route path="accounting/ar" element={<AccountingWorkspace initialTab="ar" />} />
+        <Route path="accounting/ap" element={<AccountingWorkspace initialTab="ap" />} />
+        <Route path="accounting/reports" element={<AccountingWorkspace initialTab="reports" />} />
+        <Route path="assets" element={<AssetWorkspace initialTab="dashboard" />} />
+        <Route path="assets/register" element={<AssetWorkspace initialTab="register" />} />
+        <Route path="assets/add" element={<AssetWorkspace initialTab="add-asset" />} />
+        <Route path="assets/categories" element={<AssetWorkspace initialTab="categories" />} />
+        <Route path="assets/assignments" element={<AssetWorkspace initialTab="assignments" />} />
+        <Route path="assets/transfers" element={<AssetWorkspace initialTab="transfers" />} />
+        <Route path="assets/maintenance" element={<AssetWorkspace initialTab="maintenance" />} />
+        <Route path="assets/depreciation" element={<AssetWorkspace initialTab="depreciation" />} />
+        <Route path="assets/disposals" element={<AssetWorkspace initialTab="disposals" />} />
+        <Route path="assets/reports" element={<AssetWorkspace initialTab="reports" />} />
+        <Route path="sales" element={<SalesListPage />} />
+        <Route path="sales/add" element={<AddSalePage />} />
+        <Route path="sales/edit/:id" element={<EditSalePage />} />
+        <Route path="sales/view/:id" element={<SaleDetailPage />} />
         <Route path="orders" element={<OrdersManagement />} />
         <Route path="qrcode" element={<AdminQrCodeGeneratorPage />} />
         <Route path="qr-generator" element={<AdminQrCodeGeneratorPage />} />

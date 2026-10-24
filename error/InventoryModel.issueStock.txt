@@ -1,0 +1,24 @@
+[24/10/2026 16:52:29]Error: Insufficient variant stock in warehouse (30 available, 999 requested). Negative stock prevented.
+    at InventoryModel.issueStock (C:\AuraSupply\API\app\models\admins\inventory.model.js:1075:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.issueStock (C:\AuraSupply\API\app\controller\admin\inventoryOperations.controller.js:45:20)
+[24/10/2026 16:59:18]Error: Insufficient variant stock in warehouse (30 available, 999 requested). Negative stock prevented.
+    at InventoryModel.issueStock (C:\AuraSupply\API\app\models\admins\inventory.model.js:1075:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.issueStock (C:\AuraSupply\API\app\controller\admin\inventoryOperations.controller.js:45:20)
+[24/10/2026 17:16:36]Error: Insufficient variant stock in warehouse (30 available, 999 requested). Negative stock prevented.
+    at InventoryModel.issueStock (C:\AuraSupply\API\app\models\admins\inventory.model.js:1075:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.issueStock (C:\AuraSupply\API\app\controller\admin\inventoryOperations.controller.js:45:20)
+[24/10/2026 20:55:05]Error: Insufficient product stock in warehouse (500 available, 5555555555555555 requested). Negative stock prevented.
+    at InventoryModel.issueStock (C:\AuraSupply\API\app\models\admins\inventory.model.js:1086:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.issueStock (C:\AuraSupply\API\app\controller\admin\inventoryOperations.controller.js:45:20)
+[24/10/2026 20:55:07]Error: Insufficient product stock in warehouse (500 available, 5555555555555555 requested). Negative stock prevented.
+    at InventoryModel.issueStock (C:\AuraSupply\API\app\models\admins\inventory.model.js:1086:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.issueStock (C:\AuraSupply\API\app\controller\admin\inventoryOperations.controller.js:45:20)
+[24/10/2026 20:55:07]Error: Insufficient product stock in warehouse (500 available, 5555555555555555 requested). Negative stock prevented.
+    at InventoryModel.issueStock (C:\AuraSupply\API\app\models\admins\inventory.model.js:1086:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.issueStock (C:\AuraSupply\API\app\controller\admin\inventoryOperations.controller.js:45:20)

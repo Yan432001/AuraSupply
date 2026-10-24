@@ -1,0 +1,1 @@
+[24/10/2026 21:27:26]Unknown column 'assigned_by' in 'field list'

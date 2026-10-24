@@ -123,6 +123,7 @@ async function startServer() {
     'products',
     'categories',
     'orders',
+    'sales',
     'customers',
     'suppliers',
     'purchases',
@@ -142,7 +143,11 @@ async function startServer() {
     'systemSettings',
     'language',
     'bpasErpData',
-    'pos'
+    'pos',
+    'attributes',
+    'inventoryOperations',
+    'accounting',
+    'asset'
   ];
 
   for (const routeName of adminRoutes) {

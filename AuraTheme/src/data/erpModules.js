@@ -114,8 +114,8 @@ export const erpModules = [
         leaf('quotes-comparison', 'Quotes Comparison', 'Compare multi-vendor price quotations side-by-side.'),
       ]),
       group('sales-orders-group', 'Orders & Invoices', 'Commercial sales execution.', [
-        leaf('sales-order', 'Sales Orders', 'Review customer sales orders ready for pick and pack.'),
-        leaf('sales-list', 'List Sales', 'Browse sales invoices, receipts, and order statuses.', { route: '/admins/orders' }),
+        leaf('add-sale', 'Add Sale', 'Create and issue a new commercial sales order or invoice.', { route: '/admins/sales/add' }),
+        leaf('sales-list', 'List Sales', 'Browse sales invoices, receipts, and order statuses.', { route: '/admins/sales' }),
         leaf('monthly-auto-invoice', 'Monthly Auto Invoice', 'Automate recurring monthly retainer and subscription invoices.'),
         leaf('tax-invoices', 'List Invoices (Tax)', 'Generate and file official tax compliance invoices.'),
       ]),

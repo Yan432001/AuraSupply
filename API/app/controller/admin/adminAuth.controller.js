@@ -274,21 +274,48 @@ const { profile: getProfile } = require('./auth.controller');
 exports.getProfile = getProfile;
 exports.profile = getProfile;
 
+function validatePasswordComplexity(pw) {
+  if (!pw || typeof pw !== 'string' || pw.length < 8) return false;
+  const hasUpper = /[A-Z]/.test(pw);
+  const hasLower = /[a-z]/.test(pw);
+  const hasNumber = /[0-9]/.test(pw);
+  const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(pw);
+  return hasUpper && hasLower && hasNumber && hasSymbol;
+}
+
+exports.validatePasswordComplexity = validatePasswordComplexity;
+
 exports.updateProfile = async (req, res) => {
   try {
     const userId = req.user_id || req.user?.id;
-    const { first_name, last_name, phone, gender, avatar } = req.body;
+    const { first_name, last_name, phone, gender, avatar, username } = req.body;
+
+    if (username) {
+      const cleanUsername = username.trim().toLowerCase();
+      if (!/^[a-zA-Z0-9_.-]{3,30}$/.test(cleanUsername)) {
+        return sendError(res, 'Username must be 3-30 characters and contain only letters, numbers, underscores, dots, or hyphens.', 400);
+      }
+      const [existing] = await db.query('SELECT id FROM aura_users WHERE LOWER(username) = ? AND id != ? LIMIT 1', [cleanUsername, userId]);
+      if (existing && existing.length > 0) {
+        return sendError(res, `Username '${username}' is already taken. Please choose another username.`, 409);
+      }
+    }
+
     await db.query(`
       UPDATE aura_users
-      SET first_name = COALESCE(?, first_name),
+      SET username = COALESCE(?, username),
+          first_name = COALESCE(?, first_name),
           last_name = COALESCE(?, last_name),
           phone = COALESCE(?, phone),
           gender = COALESCE(?, gender),
           avatar = COALESCE(?, avatar),
           updated_at = NOW()
       WHERE id = ?
-    `, [first_name, last_name, phone, gender, avatar, userId]);
-    return sendSuccess(res, null, 'Profile updated successfully');
+    `, [username ? username.trim() : null, first_name, last_name, phone, gender, avatar, userId]);
+
+    const [rows] = await db.query('SELECT id, username, email, first_name, last_name, phone, avatar FROM aura_users WHERE id = ? LIMIT 1', [userId]);
+
+    return sendSuccess(res, rows[0], 'Profile updated successfully');
   } catch (err) {
     return sendError(res, 'Failed to update profile', 500, err.message);
   }
@@ -297,16 +324,39 @@ exports.updateProfile = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const userId = req.user_id || req.user?.id;
-    const { old_password, new_password } = req.body;
-    if (!old_password || !new_password) {
-      return sendError(res, 'Current and new password are required', 400);
+    const currentPassword = req.body.current_password || req.body.old_password;
+    const newPassword = req.body.new_password;
+
+    if (!currentPassword || !newPassword) {
+      return sendError(res, 'Current password and new password are required', 400);
     }
+
+    // Password Complexity: Uppercase, Lowercase, Number, Symbol, min 8 chars
+    if (!validatePasswordComplexity(newPassword)) {
+      return sendError(
+        res,
+        'New password must be at least 8 characters long and contain uppercase letters (A-Z), lowercase letters (a-z), numbers (0-9), and symbols/special characters (!@#$%^&*).',
+        400,
+        { code: 'PASSWORD_COMPLEXITY_FAILED' }
+      );
+    }
+
     const [rows] = await db.query('SELECT password FROM aura_users WHERE id = ?', [userId]);
     if (!rows || rows.length === 0) return sendError(res, 'User not found', 404);
-    const isMatch = await bcrypt.compare(old_password, rows[0].password);
+
+    let isMatch = false;
+    if (rows[0].password && (rows[0].password.startsWith('$2a$') || rows[0].password.startsWith('$2b$') || rows[0].password.startsWith('$2y$'))) {
+      isMatch = await bcrypt.compare(currentPassword, rows[0].password);
+    } else {
+      const sha1 = crypto.createHash('sha1').update(currentPassword).digest('hex');
+      if (sha1 === rows[0].password || rows[0].password === currentPassword) {
+        isMatch = true;
+      }
+    }
+
     if (!isMatch) return sendError(res, 'Current password is incorrect', 401);
 
-    const hash = await bcrypt.hash(new_password, 10);
+    const hash = await bcrypt.hash(newPassword, 10);
     await db.query('UPDATE aura_users SET password = ?, password_algo = "bcrypt", updated_at = NOW() WHERE id = ?', [hash, userId]);
     return sendSuccess(res, null, 'Password updated successfully');
   } catch (err) {

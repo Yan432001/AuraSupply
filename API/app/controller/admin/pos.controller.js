@@ -413,9 +413,10 @@ exports.getPosProducts = async (req, res) => {
 
     const [products] = await pool.query(query, params);
 
-    // Fetch multi-units for each product
+    // Fetch multi-units & product variants for each product
     const productIds = products.map(p => p.id);
     let multiUnitsMap = {};
+    let variantsMap = {};
 
     if (productIds.length > 0) {
       const [unitRows] = await pool.query(
@@ -432,13 +433,53 @@ exports.getPosProducts = async (req, res) => {
         }
         multiUnitsMap[row.product_id].push(row);
       });
+
+      // Fetch variants with warehouse-specific stock
+      const [variantRows] = await pool.query(
+        `SELECT pv.*, COALESCE(wpv.quantity, pv.quantity, 0) AS warehouse_quantity
+         FROM aura_product_variants pv
+         LEFT JOIN aura_warehouses_products_variants wpv 
+           ON wpv.option_id = pv.id AND wpv.warehouse_id = ?
+         WHERE pv.product_id IN (?)
+         ORDER BY pv.id ASC`,
+        [warehouseId, productIds]
+      );
+
+      variantRows.forEach(v => {
+        if (!variantsMap[v.product_id]) {
+          variantsMap[v.product_id] = [];
+        }
+        let parsedAttrs = {};
+        if (typeof v.attributes === 'string') {
+          try { parsedAttrs = JSON.parse(v.attributes); } catch (_) {}
+        } else if (typeof v.attributes === 'object' && v.attributes !== null) {
+          parsedAttrs = v.attributes;
+        }
+
+        variantsMap[v.product_id].push({
+          id: v.id,
+          product_id: v.product_id,
+          name: v.name,
+          sku: v.sku || v.barcode || '',
+          barcode: v.barcode || v.sku || '',
+          price: parseFloat(v.price) > 0 ? parseFloat(v.price) : 0,
+          cost: parseFloat(v.cost) || 0,
+          quantity: parseFloat(v.warehouse_quantity) || 0,
+          attributes: parsedAttrs
+        });
+      });
     }
+
+    const [settingsRows] = await pool.query('SELECT overselling FROM aura_settings LIMIT 1');
+    const overselling = settingsRows[0]?.overselling ? 1 : 0;
 
     const items = products.map(p => ({
       ...p,
       price: parseFloat(p.price) || 0,
       cost: parseFloat(p.cost) || 0,
       quantity: parseFloat(p.quantity) || 0,
+      variants: variantsMap[p.id] || [],
+      has_variants: (variantsMap[p.id] || []).length > 0,
       image_url: p.image && p.image !== 'no_image.png' 
         ? (p.image.startsWith('http') || p.image.startsWith('/assets') ? p.image : `/assets/uploads/${p.image}`)
         : null,
@@ -465,7 +506,8 @@ exports.getPosProducts = async (req, res) => {
     return res.json({
       success: true,
       count: items.length,
-      products: items
+      products: items,
+      overselling
     });
   } catch (error) {
     console.error('[POS] getPosProducts error:', error);
@@ -598,11 +640,13 @@ exports.checkoutPosSale = async (req, res) => {
     const referenceNo = `POS-${dateStr}-${randomSuffix}`;
 
     // Compute accurate item discounts vs order discounts
+    let computedSubtotal = 0;
     let computedItemDiscounts = 0;
     if (Array.isArray(items)) {
       items.forEach((it) => {
         const itPrice = parseFloat(it.unit_price || it.price) || 0;
         const itQty = parseFloat(it.quantity) || 1;
+        computedSubtotal += itQty * itPrice;
         let itDisc = parseFloat(it.item_discount) || 0;
         if (it.discount_type === 'percent' && it.discount_val) {
           itDisc = (itPrice * parseFloat(it.discount_val)) / 100;
@@ -616,6 +660,14 @@ exports.checkoutPosSale = async (req, res) => {
     const finalTotalDiscount = finalProductDiscount + finalOrderDiscount;
     const finalOrderDiscountId = order_discount_id || (finalOrderDiscount > 0 ? String(finalOrderDiscount) : null);
     const tableRecordNote = table_name || suspend_note || null;
+
+    const finalSubtotal = parseFloat(subtotal) || computedSubtotal;
+    const finalTax = parseFloat(tax_amount) || parseFloat(req.body.order_tax_amount) || 0;
+    const finalShipping = parseFloat(shipping_amount) || parseFloat(req.body.shipping) || 0;
+    const calculatedGrandTotal = parseFloat(grand_total) > 0 
+      ? parseFloat(grand_total) 
+      : Math.max(0, finalSubtotal - finalTotalDiscount + finalTax + finalShipping);
+    const finalPaid = parseFloat(paid_amount) > 0 ? parseFloat(paid_amount) : calculatedGrandTotal;
 
     // 1. Insert into aura_sales (records table_name into suspend_note matching AURA_v1)
     const [saleResult] = await connection.query(
@@ -631,16 +683,16 @@ exports.checkoutPosSale = async (req, res) => {
         cname,
         bid,
         wid,
-        parseFloat(subtotal) || 0,
+        finalSubtotal,
         finalProductDiscount,
         finalOrderDiscountId,
         finalOrderDiscount,
         finalTotalDiscount,
-        parseFloat(tax_amount) || 0,
-        parseFloat(tax_amount) || 0,
-        parseFloat(shipping_amount) || 0,
-        parseFloat(grand_total) || 0,
-        parseFloat(paid_amount) || parseFloat(grand_total) || 0,
+        finalTax,
+        finalTax,
+        finalShipping,
+        calculatedGrandTotal,
+        finalPaid,
         uid,
         payment_note || 'POS Terminal Sale',
         tableRecordNote
@@ -665,11 +717,56 @@ exports.checkoutPosSale = async (req, res) => {
       }
     }
 
-    // 2. Insert items into aura_sale_items and decrement product stock
+    // 2. Insert items into aura_sale_items, update inventory ledger and deduct stock
+    const [settingsRows] = await connection.query('SELECT overselling FROM aura_settings LIMIT 1');
+    const allowOverselling = settingsRows[0]?.overselling == 1;
+
     if (Array.isArray(items) && items.length > 0) {
+      // Server-side inventory validation
+      if (!allowOverselling) {
+        for (const item of items) {
+          const prodId = item.product_id || item.id;
+          const prodName = item.product_name || item.name || `Product #${prodId}`;
+          const prodCode = item.product_code || item.code || '';
+          const itemQty = parseFloat(item.quantity) || 1;
+          const optId = item.option_id ? parseInt(item.option_id, 10) : null;
+          if (optId) {
+            const [vRows] = await connection.query(
+              'SELECT COALESCE(wpv.quantity, pv.quantity, 0) AS stock FROM aura_product_variants pv LEFT JOIN aura_warehouses_products_variants wpv ON wpv.option_id = pv.id AND wpv.warehouse_id = ? WHERE pv.id = ?',
+              [wid, optId]
+            );
+            const vStock = parseFloat(vRows[0]?.stock || 0);
+            if (vStock < itemQty) {
+              await connection.rollback();
+              return res.status(400).json({
+                success: false,
+                message: `Insufficient inventory for variant "${prodName} (${item.variant_name || prodCode})". Available in warehouse: ${vStock}, Requested: ${itemQty}`
+              });
+            }
+          } else {
+            const [pRows] = await connection.query(
+              'SELECT COALESCE(wp.quantity, p.quantity, 0) AS stock FROM aura_products p LEFT JOIN aura_warehouses_products wp ON wp.product_id = p.id AND wp.warehouse_id = ? WHERE p.id = ?',
+              [wid, prodId]
+            );
+            const pStock = parseFloat(pRows[0]?.stock || 0);
+            if (pStock < itemQty) {
+              await connection.rollback();
+              return res.status(400).json({
+                success: false,
+                message: `Insufficient inventory for product "${prodName}". Available in warehouse: ${pStock}, Requested: ${itemQty}`
+              });
+            }
+          }
+        }
+      }
+
       for (const item of items) {
+        const prodId = item.product_id || item.id;
+        const prodName = item.product_name || item.name || '';
+        const prodCode = item.product_code || item.code || '';
         const itemQty = parseFloat(item.quantity) || 1;
         const itemPrice = parseFloat(item.unit_price || item.price) || 0;
+        const optId = item.option_id ? parseInt(item.option_id, 10) : null;
         let itemDiscountUnit = parseFloat(item.item_discount) || 0;
         if (item.discount_type === 'percent' && item.discount_val) {
           itemDiscountUnit = (itemPrice * parseFloat(item.discount_val)) / 100;
@@ -685,15 +782,16 @@ exports.checkoutPosSale = async (req, res) => {
 
         await connection.query(
           `INSERT INTO aura_sale_items 
-           (sale_id, product_id, product_code, product_name, product_type, 
+           (sale_id, product_id, product_code, product_name, product_type, option_id,
             unit_price, net_unit_price, discount, item_discount, quantity, warehouse_id, item_tax, 
             subtotal, real_unit_price, product_unit_id, product_unit_code, unit_quantity) 
-           VALUES (?, ?, ?, ?, 'standard', ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, 'standard', ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
           [
             saleId,
-            item.id,
-            item.code || '',
-            item.name,
+            prodId,
+            prodCode,
+            prodName,
+            optId,
             itemPrice,
             netUnitPrice,
             discountStr,
@@ -708,20 +806,57 @@ exports.checkoutPosSale = async (req, res) => {
           ]
         );
 
-        // Overall product stock deduction
+        // Audit Stock Movement Ledger (triggers automatic insertStock updates across warehouse & variants)
         await connection.query(
-          `UPDATE aura_products SET quantity = GREATEST(0, quantity - ?) WHERE id = ?`,
-          [baseQtyToDeduct, item.id]
+          `INSERT INTO aura_stock_movement
+           (date, reference_no, transaction, transaction_id, warehouse_id,
+            product_id, product_type, product_code, product_name, option_id, real_unit_cost,
+            quantity, unit_quantity, unit_code, unit_id, user_id)
+           VALUES (NOW(), ?, 'POS', ?, ?, ?, 'standard', ?, ?, ?, 0, -?, -?, ?, ?, ?)`,
+          [
+            referenceNo,
+            saleId,
+            wid,
+            prodId,
+            prodCode,
+            prodName,
+            optId,
+            baseQtyToDeduct,
+            baseQtyToDeduct,
+            item.unit_code || 'pcs',
+            item.unit_id || 1,
+            uid
+          ]
         );
 
-        // Per-warehouse stock deduction
+        // Fallback sync in case triggers are bypassed
+        await connection.query(
+          `UPDATE aura_products SET quantity = GREATEST(0, quantity - ?) WHERE id = ?`,
+          [baseQtyToDeduct, prodId]
+        );
+
         if (wid) {
           await connection.query(
             `INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity)
              VALUES (?, ?, -?)
              ON DUPLICATE KEY UPDATE quantity = quantity - ?`,
-            [item.id, wid, baseQtyToDeduct, baseQtyToDeduct]
+            [prodId, wid, baseQtyToDeduct, baseQtyToDeduct]
           );
+        }
+
+        if (optId) {
+          await connection.query(
+            `UPDATE aura_product_variants SET quantity = GREATEST(0, quantity - ?) WHERE id = ?`,
+            [itemQty, optId]
+          );
+          if (wid) {
+            await connection.query(
+              `INSERT INTO aura_warehouses_products_variants (product_id, option_id, warehouse_id, quantity)
+               VALUES (?, ?, ?, -?)
+               ON DUPLICATE KEY UPDATE quantity = quantity - ?`,
+              [prodId, optId, wid, itemQty, itemQty]
+            );
+          }
         }
       }
     }

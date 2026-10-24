@@ -21,9 +21,13 @@ module.exports = (app) => {
   // 3. Admin Profile & Session endpoints
   app.get("/api/admin/auth/session", verifyAdminSession, profile);
   app.get("/api/admin/auth/profile", verifyAdminSession, profile);
-  app.post("/api/admin/auth/profile", verifyAdminSession, profile);
+  app.post("/api/admin/auth/profile", verifyAdminSession, adminAuthCtrl.updateProfile);
+  app.put("/api/admin/auth/profile", verifyAdminSession, adminAuthCtrl.updateProfile);
   app.get("/api/admin/profile", verifyAdminSession, profile);
-  app.post("/api/admin/profile", verifyAdminSession, profile);
+  app.post("/api/admin/profile", verifyAdminSession, adminAuthCtrl.updateProfile);
+  app.put("/api/admin/profile", verifyAdminSession, adminAuthCtrl.updateProfile);
+  app.post("/api/admin/auth/change-password", verifyAdminSession, adminAuthCtrl.changePassword);
+  app.put("/api/admin/auth/change-password", verifyAdminSession, adminAuthCtrl.changePassword);
 
   // 4. Admin Session Refresh & Heartbeat Activity
   app.post("/api/admin/auth/refresh", adminAuthCtrl.refreshToken);

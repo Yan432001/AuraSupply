@@ -17,6 +17,17 @@ const ShopAuth_Model = require('../../models/web/shopAuth.model');
 const JWT_SECRET = process.env.JWT_SECRET || access_token_key || 'AURA_ERP_SECRET_TOKEN_2026';
 const ACCESS_TOKEN_EXPIRY = '4h';
 
+function validatePasswordComplexity(pw) {
+  if (!pw || typeof pw !== 'string' || pw.length < 8) return false;
+  const hasUpper = /[A-Z]/.test(pw);
+  const hasLower = /[a-z]/.test(pw);
+  const hasNumber = /[0-9]/.test(pw);
+  const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(pw);
+  return hasUpper && hasLower && hasNumber && hasSymbol;
+}
+
+exports.validatePasswordComplexity = validatePasswordComplexity;
+
 /**
  * POST /api/web/auth/register
  * Public Website Self-Registration for Customers and Suppliers
@@ -25,6 +36,9 @@ exports.register = async (req, res) => {
   try {
     const {
       name,
+      first_name,
+      last_name,
+      username: customUsername,
       company,
       phone,
       email,
@@ -35,12 +49,19 @@ exports.register = async (req, res) => {
       vat_no
     } = req.body;
 
-    if (!name || !email || !password || !phone) {
+    const fullName = (name || `${first_name || ''} ${last_name || ''}`).trim();
+
+    if (!fullName || !email || !password || !phone) {
       return sendError(res, 'Name, email, phone number, and password are required', 400);
     }
 
-    if (password.length < 6) {
-      return sendError(res, 'Password must be at least 6 characters', 400);
+    if (!validatePasswordComplexity(password)) {
+      return sendError(
+        res,
+        'Password must be at least 8 characters long and contain uppercase letters (A-Z), lowercase letters (a-z), numbers (0-9), and symbols/special characters (!@#$%^&*).',
+        400,
+        { code: 'PASSWORD_COMPLEXITY_FAILED' }
+      );
     }
 
     const cleanEmail = email.trim().toLowerCase();
@@ -64,10 +85,21 @@ exports.register = async (req, res) => {
       return sendError(res, 'An account with this email address already exists. Please sign in instead.', 409);
     }
 
-    // Generate clean username from name/email
-    const baseUsername = cleanEmail.split('@')[0].replace(/[^a-z0-9_]/g, '');
-    const uniqueSuffix = Math.floor(100 + Math.random() * 900);
-    const username = `${baseUsername}_${uniqueSuffix}`;
+    let username = customUsername ? customUsername.trim().toLowerCase() : null;
+    if (username) {
+      if (!/^[a-zA-Z0-9_.-]{3,30}$/.test(username)) {
+        return sendError(res, 'Username must be 3-30 characters and contain only letters, numbers, underscores, dots, or hyphens.', 400);
+      }
+      const existingUser = await ShopAuth_Model.findCustomerByIdentity(username);
+      if (existingUser) {
+        return sendError(res, `Username '${username}' is already taken. Please choose another username.`, 409);
+      }
+    } else {
+      // Generate clean username from email
+      const baseUsername = cleanEmail.split('@')[0].replace(/[^a-z0-9_]/g, '');
+      const uniqueSuffix = Math.floor(100 + Math.random() * 900);
+      username = `${baseUsername}_${uniqueSuffix}`;
+    }
 
     const hash = await bcrypt.hash(password, 10);
     const initialStatus = Number(group.requires_approval) === 1 ? 'pending' : 'active';
@@ -77,7 +109,7 @@ exports.register = async (req, res) => {
       email: cleanEmail,
       passwordHash: hash,
       groupId: group.id,
-      firstName: name.trim(),
+      firstName: fullName,
       company: company ? company.trim() : null,
       phone: phone.trim(),
       status: initialStatus,
@@ -112,12 +144,12 @@ exports.register = async (req, res) => {
  */
 exports.login = async (req, res) => {
   try {
-    const { login, username, email, password, remember = false, remember_me = false } = req.body;
+    const { identity, login, username, email, password, remember = false, remember_me = false } = req.body;
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
     const userAgent = req.headers['user-agent'] || 'Unknown';
     const isRemember = Boolean(remember || remember_me);
 
-    const rawLogin = login || username || email;
+    const rawLogin = identity || login || username || email;
     if (!rawLogin || !password) {
       return sendError(res, 'Email or username and password are required', 400);
     }
@@ -316,6 +348,96 @@ exports.profile = async (req, res) => {
   } catch (err) {
     console.error('[Web Profile Error]', err);
     return sendError(res, 'Failed to fetch customer profile', 500, err.message);
+  }
+};
+
+/**
+ * PUT /api/web/auth/profile or POST /api/web/auth/profile
+ * Allows updating customer profile, including username
+ */
+exports.updateProfile = async (req, res) => {
+  try {
+    const userId = req.user_id || req.user?.id;
+    if (!userId) return sendError(res, 'Unauthenticated', 401);
+
+    const { username, name, first_name, last_name, phone, company, address, vat_no } = req.body;
+
+    if (username) {
+      const cleanUsername = username.trim().toLowerCase();
+      if (!/^[a-zA-Z0-9_.-]{3,30}$/.test(cleanUsername)) {
+        return sendError(res, 'Username must be 3-30 characters and contain only letters, numbers, underscores, dots, or hyphens.', 400);
+      }
+      const [existing] = await db.query('SELECT id FROM aura_users WHERE LOWER(username) = ? AND id != ? LIMIT 1', [cleanUsername, userId]);
+      if (existing && existing.length > 0) {
+        return sendError(res, `Username '${username}' is already taken. Please choose another username.`, 409);
+      }
+    }
+
+    await ShopAuth_Model.updateCustomerProfile(userId, {
+      username: username ? username.trim() : null,
+      first_name: (first_name || name) ? (first_name || name).trim() : null,
+      last_name: last_name ? last_name.trim() : null,
+      phone: phone ? phone.trim() : null,
+      company: company ? company.trim() : null,
+      name: (name || first_name) ? (name || first_name).trim() : null,
+      address,
+      vat_no
+    });
+
+    const updatedUser = await ShopAuth_Model.findCustomerById(userId);
+    return sendSuccess(res, updatedUser, 'Profile updated successfully');
+  } catch (err) {
+    console.error('[Web Profile Update Error]', err);
+    return sendError(res, 'Failed to update profile', 500, err.message);
+  }
+};
+
+/**
+ * POST /api/web/auth/change-password
+ */
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user_id || req.user?.id;
+    if (!userId) return sendError(res, 'Unauthenticated', 401);
+
+    const currentPassword = req.body.current_password || req.body.old_password;
+    const newPassword = req.body.new_password;
+
+    if (!currentPassword || !newPassword) {
+      return sendError(res, 'Current password and new password are required', 400);
+    }
+
+    // Password Complexity: Uppercase, Lowercase, Number, Symbol, min 8 chars
+    if (!validatePasswordComplexity(newPassword)) {
+      return sendError(
+        res,
+        'Password must be at least 8 characters long and include uppercase letters (A-Z), lowercase letters (a-z), numbers (0-9), and symbols/special characters (!@#$%^&*).',
+        400,
+        { code: 'PASSWORD_COMPLEXITY_FAILED' }
+      );
+    }
+
+    const [rows] = await db.query('SELECT password FROM aura_users WHERE id = ? LIMIT 1', [userId]);
+    if (!rows || rows.length === 0) return sendError(res, 'User not found', 404);
+
+    let isMatch = false;
+    if (rows[0].password && (rows[0].password.startsWith('$2a$') || rows[0].password.startsWith('$2b$') || rows[0].password.startsWith('$2y$'))) {
+      isMatch = await bcrypt.compare(currentPassword, rows[0].password);
+    } else {
+      const sha1 = crypto.createHash('sha1').update(currentPassword).digest('hex');
+      if (sha1 === rows[0].password || rows[0].password === currentPassword) {
+        isMatch = true;
+      }
+    }
+
+    if (!isMatch) return sendError(res, 'Current password is incorrect', 401);
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE aura_users SET password = ?, password_algo = "bcrypt", updated_at = NOW() WHERE id = ?', [hash, userId]);
+    return sendSuccess(res, null, 'Password changed successfully');
+  } catch (err) {
+    console.error('[Web Change Password Error]', err);
+    return sendError(res, 'Failed to change password', 500, err.message);
   }
 };
 

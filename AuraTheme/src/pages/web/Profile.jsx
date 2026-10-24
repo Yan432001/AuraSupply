@@ -15,6 +15,9 @@ import {
   Spin,
   Tabs,
   Input,
+  Modal,
+  Form,
+  Alert,
 } from 'antd';
 import { Typography } from 'antd';
 import {
@@ -33,12 +36,17 @@ import {
   EyeOutlined,
   ReloadOutlined,
   BankOutlined,
+  EditOutlined,
+  KeyOutlined,
+  LockOutlined,
+  PhoneOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import OrderReceiptModal from '../../components/common/OrderReceiptModal';
+import PasswordComplexityIndicator, { passwordComplexityRule } from '../../components/common/PasswordComplexityIndicator';
 import { formatCurrency, publicTheme } from '../../utils/webTheme';
 import { exportSingleOrderPdf } from '../../utils/orderPdfExporter';
 import { fetchOrders } from '../../utils/apiconfig';
@@ -57,9 +65,18 @@ const statusColor = {
 const SYNC_STORAGE_KEY = 'aura_order_background_sync';
 
 export default function Profile() {
-  const { user, logout } = useAuth();
+  const { user, logout, loginWeb } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+
+  const [profileForm] = Form.useForm();
+  const [passwordForm] = Form.useForm();
+  const watchNewPassword = Form.useWatch('new_password', passwordForm);
 
   const [backgroundSyncEnabled, setBackgroundSyncEnabled] = useState(() => {
     try {
@@ -76,6 +93,75 @@ export default function Profile() {
   const [syncSecondsAgo, setSyncSecondsAgo] = useState(0);
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
+
+  const fetchCustomerProfile = async () => {
+    try {
+      const res = await axios.get('/api/web/auth/profile');
+      if (res.data?.success && res.data?.data) {
+        const u = res.data.data.user || res.data.data.profile || res.data.data;
+        if (loginWeb) loginWeb({ user: u });
+        profileForm.setFieldsValue({
+          username: u.username || '',
+          name: u.first_name || u.name || '',
+          phone: u.phone || '',
+          company: u.company || '',
+          address: u.address || '',
+        });
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchCustomerProfile();
+  }, []);
+
+  const openEditModal = () => {
+    profileForm.setFieldsValue({
+      username: user?.username || '',
+      name: user?.name || user?.first_name || '',
+      phone: user?.phone || '',
+      company: user?.company || '',
+      address: user?.address || '',
+    });
+    setEditProfileOpen(true);
+  };
+
+  const handleSaveProfile = async (values) => {
+    setUpdatingProfile(true);
+    try {
+      const res = await axios.put('/api/web/auth/profile', values);
+      if (res.data?.success) {
+        message.success(t('profile_updated_successfully', 'Profile updated successfully!'));
+        const updated = res.data.data?.user || res.data.data?.profile || res.data.data;
+        if (loginWeb) loginWeb({ user: updated });
+        setEditProfileOpen(false);
+      } else {
+        message.error(res.data?.message || t('failed_to_update_profile', 'Failed to update profile'));
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || t('failed_to_update_profile', 'Failed to update profile'));
+    } finally {
+      setUpdatingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async (values) => {
+    setUpdatingPassword(true);
+    try {
+      const res = await axios.post('/api/web/auth/change-password', values);
+      if (res.data?.success) {
+        message.success(t('password_changed_successfully', 'Password changed successfully!'));
+        passwordForm.resetFields();
+        setChangePasswordOpen(false);
+      } else {
+        message.error(res.data?.message || t('failed_to_change_password', 'Failed to change password'));
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || t('failed_to_change_password', 'Failed to change password'));
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -185,7 +271,7 @@ export default function Profile() {
         styles={{ body: { padding: '28px 32px' } }}
       >
         <Row gutter={[24, 20]} align="middle" justify="space-between">
-          <Col xs={24} md={15}>
+          <Col xs={24} lg={13}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
               <Avatar
                 size={72}
@@ -200,30 +286,50 @@ export default function Profile() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <Title level={2} style={{ margin: 0, fontWeight: 850, color: publicTheme.text }}>
-                    {user?.name || t('wholesale_partner', 'Aura Wholesale Partner')}
+                    {user?.name || user?.first_name || user?.username || t('wholesale_partner', 'Aura Wholesale Partner')}
                   </Title>
                   <Tag color="blue" style={{ borderRadius: 6, fontWeight: 700, fontSize: 11 }}>
                     {user?.tier || t('enterprise_vip', 'Enterprise Tier 1 VIP')}
                   </Tag>
+                  {user?.username && (
+                    <Tag color="purple" style={{ borderRadius: 6, fontWeight: 700, fontSize: 11 }}>
+                      @{user.username}
+                    </Tag>
+                  )}
                 </div>
                 <div style={{ color: publicTheme.subtext, fontSize: 13, marginTop: 4 }}>
                   {user?.email || 'procurement@auraglobal.com'} • {t('account_id', 'Account ID')}: {user?.id || 'AUR-CORP-9182'}
                 </div>
                 <div style={{ display: 'flex', gap: 14, marginTop: 8, fontSize: 12, color: publicTheme.subtext, flexWrap: 'wrap' }}>
-                  <span><BankOutlined /> {t('net_30_credit', 'Net-30 Corporate Credit')}: <strong>$50,000 {t('approved', 'Approved')}</strong></span>
+                  {user?.phone && <span><PhoneOutlined /> {user.phone}</span>}
+                  {user?.company && <span><ShopOutlined /> {user.company}</span>}
                   <span><SafetyCertificateOutlined style={{ color: '#10b981' }} /> {t('verified_business_buyer', 'Verified Business Buyer')}</span>
                 </div>
               </div>
             </div>
           </Col>
 
-          <Col xs={24} md={9} style={{ textAlign: 'right' }}>
-            <Space wrap size={10}>
+          <Col xs={24} lg={11} style={{ textAlign: 'right' }}>
+            <Space wrap size={8}>
+              <Button
+                icon={<EditOutlined />}
+                onClick={openEditModal}
+                style={{ borderRadius: 12, height: 40, fontWeight: 700 }}
+              >
+                {t('edit_profile', 'Edit Profile')}
+              </Button>
+              <Button
+                icon={<KeyOutlined />}
+                onClick={() => setChangePasswordOpen(true)}
+                style={{ borderRadius: 12, height: 40, fontWeight: 700 }}
+              >
+                {t('change_password', 'Change Password')}
+              </Button>
               <Button
                 icon={<ReloadOutlined />}
                 onClick={() => fetchUserOrders(false)}
                 loading={loadingOrders}
-                style={{ borderRadius: 12, height: 42, fontWeight: 700 }}
+                style={{ borderRadius: 12, height: 40, fontWeight: 700 }}
               >
                 {t('sync_orders', 'Sync Orders')}
               </Button>
@@ -231,7 +337,7 @@ export default function Profile() {
                 danger
                 icon={<LogoutOutlined />}
                 onClick={handleLogout}
-                style={{ borderRadius: 12, height: 42, fontWeight: 700 }}
+                style={{ borderRadius: 12, height: 40, fontWeight: 700 }}
               >
                 {t('sign_out', 'Sign Out')}
               </Button>
@@ -448,6 +554,165 @@ export default function Profile() {
         open={Boolean(selectedReceiptOrder)}
         onClose={() => setSelectedReceiptOrder(null)}
       />
+
+      {/* Edit Profile Modal (Allows updating username, name, phone, company, address) */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 800 }}>
+            <EditOutlined style={{ color: publicTheme.primary }} />
+            <span>{t('edit_profile', 'Edit Profile')}</span>
+          </div>
+        }
+        open={editProfileOpen}
+        onCancel={() => setEditProfileOpen(false)}
+        footer={null}
+        destroyOnClose
+        centered
+        styles={{ body: { paddingTop: 16 } }}
+      >
+        <Form form={profileForm} layout="vertical" onFinish={handleSaveProfile}>
+          <Form.Item
+            label={t('username', 'Username')}
+            name="username"
+            tooltip={t('username_criteria_tooltip', 'Username must be 3-30 characters, letters, numbers, underscores, dots, or hyphens')}
+            rules={[
+              { required: true, message: t('username_required', 'Please enter a username') },
+              { min: 3, message: t('username_min_3', 'Username must be at least 3 characters') },
+              { max: 30, message: t('username_max_30', 'Username cannot exceed 30 characters') },
+              {
+                pattern: /^[a-zA-Z0-9_.-]+$/,
+                message: t('username_invalid_chars', 'Only letters, numbers, underscores, dots, and hyphens are allowed'),
+              },
+            ]}
+          >
+            <Input prefix={<UserOutlined />} placeholder="e.g. john_doe" />
+          </Form.Item>
+
+          <Form.Item
+            label={t('full_name', 'Full Name')}
+            name="name"
+            rules={[{ required: true, message: t('name_required', 'Please enter your name') }]}
+          >
+            <Input placeholder="e.g. John Doe" />
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item label={t('phone_number', 'Phone Number')} name="phone">
+                <Input prefix={<PhoneOutlined />} placeholder="e.g. +855 12 345 678" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item label={t('company_name', 'Company / Business')} name="company">
+                <Input prefix={<ShopOutlined />} placeholder="e.g. Acme Corp" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item label={t('delivery_address', 'Delivery Address')} name="address">
+            <Input.TextArea rows={2} placeholder="e.g. #123 St 456, Phnom Penh" />
+          </Form.Item>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+            <Button onClick={() => setEditProfileOpen(false)} style={{ borderRadius: 10 }}>
+              {t('cancel', 'Cancel')}
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={updatingProfile}
+              style={{ borderRadius: 10, fontWeight: 700, background: publicTheme.primary }}
+            >
+              {t('save_profile_changes', 'Save Profile Changes')}
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Change Password Modal (Enforces password complexity: uppercase, lowercase, numbers, symbols, min 8 chars) */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 800 }}>
+            <KeyOutlined style={{ color: publicTheme.primary }} />
+            <span>{t('change_password', 'Change Password')}</span>
+          </div>
+        }
+        open={changePasswordOpen}
+        onCancel={() => setChangePasswordOpen(false)}
+        footer={null}
+        destroyOnClose
+        centered
+        styles={{ body: { paddingTop: 16 } }}
+      >
+        <Alert
+          type="info"
+          showIcon
+          message={t('password_policy_title', 'Secure Password Requirements')}
+          description={t(
+            'password_policy_desc',
+            'Password must be at least 8 characters long and include uppercase letters (A-Z), lowercase letters (a-z), numbers (0-9), and symbols (!@#$%^&*).'
+          )}
+          style={{ marginBottom: 16, borderRadius: 10 }}
+        />
+
+        <Form form={passwordForm} layout="vertical" onFinish={handleChangePassword}>
+          <Form.Item
+            label={t('current_password', 'Current Password')}
+            name="current_password"
+            rules={[{ required: true, message: t('enter_current_password', 'Please enter your current password') }]}
+          >
+            <Input.Password prefix={<LockOutlined />} placeholder={t('enter_current_password', 'Enter current password')} />
+          </Form.Item>
+
+          <Form.Item
+            label={t('new_password', 'New Password')}
+            name="new_password"
+            rules={[
+              { required: true, message: t('enter_new_password', 'Please enter a new password') },
+              passwordComplexityRule(t),
+            ]}
+          >
+            <Input.Password prefix={<KeyOutlined />} placeholder={t('enter_new_password', 'Enter new password')} />
+          </Form.Item>
+
+          <div style={{ marginBottom: 16 }}>
+            <PasswordComplexityIndicator password={watchNewPassword} t={t} />
+          </div>
+
+          <Form.Item
+            label={t('confirm_new_password', 'Confirm New Password')}
+            name="confirm_password"
+            dependencies={['new_password']}
+            rules={[
+              { required: true, message: t('confirm_password_required', 'Please confirm your new password') },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('new_password') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error(t('passwords_do_not_match', 'The two passwords do not match!')));
+                },
+              }),
+            ]}
+          >
+            <Input.Password prefix={<LockOutlined />} placeholder={t('confirm_new_password', 'Confirm new password')} />
+          </Form.Item>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+            <Button onClick={() => setChangePasswordOpen(false)} style={{ borderRadius: 10 }}>
+              {t('cancel', 'Cancel')}
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={updatingPassword}
+              style={{ borderRadius: 10, fontWeight: 700, background: publicTheme.primary }}
+            >
+              {t('update_password', 'Update Password')}
+            </Button>
+          </div>
+        </Form>
+      </Modal>
     </div>
   );
 }

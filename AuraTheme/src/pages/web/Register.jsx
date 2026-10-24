@@ -29,13 +29,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from '../../contexts/LanguageContext';
 import AuraLogo from '../../components/common/AuraLogo';
 import SocialAuthModal, { GoogleIcon, TelegramIcon } from '../../components/common/SocialAuthModal';
+import PasswordComplexityIndicator, { passwordComplexityRule } from '../../components/common/PasswordComplexityIndicator';
 import { registerCustomer } from '../../utils/apiconfig';
 
 const { Title, Text, Paragraph } = Typography;
-const { Option } = Select;
 
 export default function Register() {
   const [form] = Form.useForm();
+  const passwordValue = Form.useWatch('password', form);
   const { login } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -50,11 +51,12 @@ export default function Register() {
 
     try {
       const res = await registerCustomer({
+        name: values.fullName.trim(),
         fullName: values.fullName.trim(),
         email: values.email.toLowerCase().trim(),
         phone: values.phone?.trim() || '',
-        password: values.password || '123456',
-        memberType: values.memberType || 'customer',
+        password: values.password,
+        role: 'customer',
       });
 
       if (res?.success && (res?.data || res?.user)) {
@@ -64,12 +66,11 @@ export default function Register() {
           name: userObj.name || values.fullName.trim(),
           email: userObj.email || values.email.toLowerCase().trim(),
           phone: userObj.phone || values.phone?.trim() || '',
-          memberType: values.memberType || 'customer',
           role: 'customer',
           token: userObj.token,
           avatar: null,
           joinedAt: new Date().toISOString(),
-          tier: 'Bronze VIP Member',
+          tier: 'Valued Customer',
           loyaltyPoints: 100,
         };
 
@@ -128,25 +129,6 @@ export default function Register() {
           }}
           styles={{ body: { padding: '32px 30px' } }}
         >
-          {/* Welcome Perks Banner */}
-          <div
-            style={{
-              padding: '10px 14px',
-              borderRadius: 14,
-              background: 'linear-gradient(135deg, #eff6ff 0%, #fef3c7 100%)',
-              border: '1px solid #bfdbfe',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              marginBottom: 18,
-            }}
-          >
-            <div style={{ fontSize: 20 }}>🎁</div>
-            <div style={{ fontSize: 11.5, color: '#1e3a8a' }}>
-              <b>{t('member_perk', 'Member Perk')}:</b> {t('member_perk_desc', 'Get 100 instant loyalty points on registration for your next cafe or bakery visit!')}
-            </div>
-          </div>
-
           {/* Social 1-Tap Registration Concept (Google & Telegram) */}
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>
@@ -191,7 +173,7 @@ export default function Register() {
             form={form}
             layout="vertical"
             onFinish={onFinish}
-            initialValues={{ memberType: 'customer', agreeTerms: true }}
+            initialValues={{ agreeTerms: true }}
             requiredMark={false}
           >
             <Form.Item
@@ -240,17 +222,21 @@ export default function Register() {
               label={<span style={{ fontWeight: 600, fontSize: 13 }}>{t('password', 'Password')}</span>}
               rules={[
                 { required: true, message: t('create_password_req', 'Please create a password') },
-                { min: 6, message: t('password_min_6', 'Password must be at least 6 characters') },
+                passwordComplexityRule(t)
               ]}
+              style={{ marginBottom: 8 }}
             >
               <Input.Password
                 autoComplete="new-password"
                 prefix={<LockOutlined style={{ color: '#94a3b8', marginRight: 6 }} />}
-                placeholder={t('at_least_6_chars', 'At least 6 characters')}
+                placeholder={t('password_placeholder', 'Min. 8 chars with uppercase, lowercase, numbers, symbols')}
                 size="large"
                 style={{ borderRadius: 12, height: 46 }}
               />
             </Form.Item>
+            <div style={{ marginBottom: 18 }}>
+              <PasswordComplexityIndicator password={passwordValue} t={t} />
+            </div>
 
             <Form.Item
               name="confirmPassword"
@@ -275,17 +261,6 @@ export default function Register() {
                 size="large"
                 style={{ borderRadius: 12, height: 46 }}
               />
-            </Form.Item>
-
-            <Form.Item
-              name="memberType"
-              label={<span style={{ fontWeight: 600, fontSize: 13 }}>{t('membership_type', 'Membership Type')}</span>}
-            >
-              <Select size="large" style={{ borderRadius: 12 }}>
-                <Option value="customer">🛍️ {t('dining_retail_customer', 'Dining & Retail Customer')}</Option>
-                <Option value="b2b">🏪 {t('business_wholesale_partner', 'Business / Wholesale Partner')}</Option>
-                <Option value="enthusiast">☕ {t('specialty_coffee_member', 'Specialty Coffee Club Member')}</Option>
-              </Select>
             </Form.Item>
 
             <Form.Item

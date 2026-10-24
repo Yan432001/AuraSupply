@@ -135,7 +135,7 @@ export default function Login() {
             {t('welcome_back', 'Welcome Back')}
           </Title>
           <Text style={{ color: '#64748b', fontSize: 13.5 }}>
-            {t('login_subtitle', 'Sign in to access your orders, member perks, and store management.')}
+            {t('login_subtitle', 'Sign in to access your orders, profile, and account management.')}
           </Text>
         </div>
 

@@ -16,7 +16,14 @@ module.exports = (app) => {
   // 3. Website Session & Customer Profile
   app.get("/api/web/auth/session", verifyWebSession, webAuthCtrl.profile);
   app.get("/api/web/auth/profile", verifyWebSession, webAuthCtrl.profile);
+  app.put("/api/web/auth/profile", verifyWebSession, webAuthCtrl.updateProfile);
+  app.post("/api/web/auth/profile", verifyWebSession, webAuthCtrl.updateProfile);
+  app.post("/api/web/auth/change-password", verifyWebSession, webAuthCtrl.changePassword);
+
+  // Aliases for compatibility
   app.get("/api/auth/profile", verifyWebSession, webAuthCtrl.profile);
+  app.put("/api/auth/profile", verifyWebSession, webAuthCtrl.updateProfile);
+  app.post("/api/auth/change-password", verifyWebSession, webAuthCtrl.changePassword);
 
   // 4. Inactivity Activity Heartbeat
   app.post("/api/web/auth/activity", verifyWebSession, webAuthCtrl.activity);

@@ -1,0 +1,24 @@
+[24/10/2026 16:52:29]Error: Product SKU/Code 'TSHIRT-1792835549097' already exists. Please choose a unique SKU.
+    at InventoryModel.createProduct (C:\AuraSupply\API\app\models\admins\inventory.model.js:395:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.createProduct (C:\AuraSupply\API\app\controller\admin\adminInventory.controller.js:62:21)
+[24/10/2026 16:52:29]Error: Duplicate variant combination 'Red / S' detected for this product.
+    at InventoryModel.createProduct (C:\AuraSupply\API\app\models\admins\inventory.model.js:407:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.createProduct (C:\AuraSupply\API\app\controller\admin\adminInventory.controller.js:62:21)
+[24/10/2026 16:59:18]Error: Product SKU/Code 'TSHIRT-1792835958308' already exists. Please choose a unique SKU.
+    at InventoryModel.createProduct (C:\AuraSupply\API\app\models\admins\inventory.model.js:395:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.createProduct (C:\AuraSupply\API\app\controller\admin\adminInventory.controller.js:62:21)
+[24/10/2026 16:59:18]Error: Duplicate variant combination 'Red / S' detected for this product.
+    at InventoryModel.createProduct (C:\AuraSupply\API\app\models\admins\inventory.model.js:407:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.createProduct (C:\AuraSupply\API\app\controller\admin\adminInventory.controller.js:62:21)
+[24/10/2026 17:16:35]Error: Product SKU/Code 'TSHIRT-1792836995870' already exists. Please choose a unique SKU.
+    at InventoryModel.createProduct (C:\AuraSupply\API\app\models\admins\inventory.model.js:395:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.createProduct (C:\AuraSupply\API\app\controller\admin\adminInventory.controller.js:62:21)
+[24/10/2026 17:16:35]Error: Duplicate variant combination 'Red / S' detected for this product.
+    at InventoryModel.createProduct (C:\AuraSupply\API\app\models\admins\inventory.model.js:407:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.createProduct (C:\AuraSupply\API\app\controller\admin\adminInventory.controller.js:62:21)

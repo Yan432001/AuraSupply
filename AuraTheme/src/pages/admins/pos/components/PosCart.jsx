@@ -10,6 +10,7 @@ import {
   Avatar,
   Badge,
   Popover,
+  Popconfirm,
 } from 'antd';
 import {
   UserOutlined,
@@ -282,6 +283,17 @@ const PosCart = ({
                         {item.unit_name && (
                           <Tag style={{ fontSize: 10, borderRadius: 4, margin: 0, padding: '0 5px', background: isDark ? '#1e293b' : '#f1f5f9' }}>
                             {item.unit_name}
+                          </Tag>
+                        )}
+                        {item.variant_name && (
+                          <Tag color="purple" style={{ fontSize: 10, borderRadius: 4, margin: 0, padding: '0 5px', fontWeight: 600 }}>
+                            {item.variant_name}
+                          </Tag>
+                        )}
+                        {/* Stock warning if quantity exceeds warehouse limit */}
+                        {item.max_quantity !== undefined && item.quantity > item.max_quantity && (
+                          <Tag color="error" style={{ fontSize: 10, borderRadius: 4, margin: 0, padding: '0 5px', fontWeight: 700 }}>
+                            ⚠ Stock limit: {item.max_quantity}
                           </Tag>
                         )}
                         {/* Discount Badge showing both Percentage (%) and Price ($) */}
@@ -1031,18 +1043,25 @@ const PosCart = ({
 
         {/* 4. ACTION BUTTONS: Void, Hold, Bill */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 8 }}>
-          <Tooltip title="Void / Clear Entire Cart (F8)">
+          <Popconfirm
+            title="Void / Clear Entire Cart?"
+            description="Are you sure you want to remove all items from this active order?"
+            onConfirm={clearCart}
+            okText="Yes, Clear"
+            cancelText="Cancel"
+            okButtonProps={{ danger: true }}
+            disabled={cart.length === 0}
+          >
             <Button
               danger
               icon={<ClearOutlined />}
-              onClick={clearCart}
               disabled={cart.length === 0}
               className="pos-press"
-              style={{ borderRadius: 10, height: 38, fontWeight: 700, fontSize: 12 }}
+              style={{ borderRadius: 10, height: 38, fontWeight: 700, fontSize: 12, width: '100%' }}
             >
               Void <span style={{ fontSize: 10, opacity: 0.75 }}>F8</span>
             </Button>
-          </Tooltip>
+          </Popconfirm>
 
           <Tooltip title="Hold / Suspend Order (F7)">
             <Button

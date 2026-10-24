@@ -1,79 +1,108 @@
-const { db } = require('../API/app/config/utill/helper');
 const fs = require('fs');
 
-function escapeSqlString(str) {
-  if (str === null || str === undefined) return 'NULL';
-  return `'` + String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r') + `'`;
+function updateSqlDump() {
+  console.log('Updating aura_v1_db.sql schema...');
+  let content = fs.readFileSync('aura_v1_db.sql', 'utf8');
+
+  const newVariantTable = `CREATE TABLE IF NOT EXISTS \`aura_product_variants\` (
+  \`id\` int NOT NULL AUTO_INCREMENT,
+  \`product_id\` int NOT NULL,
+  \`name\` varchar(55) NOT NULL,
+  \`sku\` varchar(100) DEFAULT NULL,
+  \`barcode\` varchar(100) DEFAULT NULL,
+  \`image\` varchar(255) DEFAULT NULL,
+  \`attributes\` text DEFAULT NULL,
+  \`cost\` decimal(25,2) DEFAULT NULL,
+  \`price\` decimal(25,2) DEFAULT NULL,
+  \`quantity\` decimal(15,2) DEFAULT NULL,
+  \`qty_unit\` decimal(11,3) DEFAULT '0.000',
+  \`status\` tinyint(1) DEFAULT '1',
+  \`created_at\` datetime DEFAULT CURRENT_TIMESTAMP,
+  \`updated_at\` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (\`id\`),
+  UNIQUE KEY \`unique_product_id_name\` (\`product_id\`,\`name\`),
+  KEY \`idx_variant_sku\` (\`sku\`),
+  KEY \`idx_variant_barcode\` (\`barcode\`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;`;
+
+  if (content.includes('`aura_product_variants`')) {
+    content = content.replace(/CREATE TABLE IF NOT EXISTS \`aura_product_variants\`[^\;]+\;/, newVariantTable);
+    console.log('✅ Replaced aura_product_variants definition in SQL dump');
+  }
+
+  if (!content.includes('`aura_attributes`')) {
+    const extraTables = `
+-- ==============================================================================
+-- AURA INVENTORY & VARIANT SYSTEM EXTENSIONS
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS \`aura_attributes\` (
+  \`id\` int NOT NULL AUTO_INCREMENT,
+  \`name\` varchar(100) NOT NULL,
+  \`code\` varchar(50) NOT NULL,
+  \`created_at\` datetime DEFAULT CURRENT_TIMESTAMP,
+  \`updated_at\` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (\`id\`),
+  UNIQUE KEY \`uk_attribute_code\` (\`code\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS \`aura_attribute_values\` (
+  \`id\` int NOT NULL AUTO_INCREMENT,
+  \`attribute_id\` int NOT NULL,
+  \`value\` varchar(100) NOT NULL,
+  \`color_code\` varchar(25) DEFAULT NULL,
+  \`sort_order\` int DEFAULT '0',
+  \`created_at\` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (\`id\`),
+  UNIQUE KEY \`uk_attr_val\` (\`attribute_id\`, \`value\`),
+  KEY \`idx_attribute_id\` (\`attribute_id\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS \`aura_product_variant_values\` (
+  \`id\` int NOT NULL AUTO_INCREMENT,
+  \`product_id\` int NOT NULL,
+  \`variant_id\` int NOT NULL,
+  \`attribute_id\` int NOT NULL,
+  \`attribute_value_id\` int NOT NULL,
+  PRIMARY KEY (\`id\`),
+  UNIQUE KEY \`uk_var_attr\` (\`variant_id\`, \`attribute_id\`),
+  KEY \`idx_product_id\` (\`product_id\`),
+  KEY \`idx_variant_id\` (\`variant_id\`),
+  KEY \`idx_attribute_id\` (\`attribute_id\`),
+  KEY \`idx_attr_val_id\` (\`attribute_value_id\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO \`aura_attributes\` (\`id\`, \`name\`, \`code\`) VALUES
+(1, 'Color', 'color'),
+(2, 'Size', 'size'),
+(3, 'Material', 'material')
+ON DUPLICATE KEY UPDATE \`name\` = VALUES(\`name\`);
+
+INSERT INTO \`aura_attribute_values\` (\`attribute_id\`, \`value\`, \`color_code\`, \`sort_order\`) VALUES
+(1, 'Red', '#ef4444', 0),
+(1, 'Blue', '#3b82f6', 1),
+(1, 'Black', '#1e293b', 2),
+(1, 'White', '#ffffff', 3),
+(1, 'Green', '#10b981', 4),
+(2, 'Small (S)', NULL, 0),
+(2, 'Medium (M)', NULL, 1),
+(2, 'Large (L)', NULL, 2),
+(2, 'XL', NULL, 3),
+(2, 'Size 40', NULL, 4),
+(2, 'Size 41', NULL, 5),
+(2, 'Size 42', NULL, 6),
+(3, 'Cotton', NULL, 0),
+(3, 'Leather', NULL, 1),
+(3, 'Polyester', NULL, 2),
+(3, 'Stainless Steel', NULL, 3)
+ON DUPLICATE KEY UPDATE \`color_code\` = VALUES(\`color_code\`), \`sort_order\` = VALUES(\`sort_order\`);
+`;
+    content += extraTables;
+    console.log('✅ Appended aura_attributes & aura_attribute_values to aura_v1_db.sql');
+  }
+
+  fs.writeFileSync('aura_v1_db.sql', content, 'utf8');
+  console.log('✅ aura_v1_db.sql saved successfully.');
 }
 
-async function run() {
-  console.log('Fetching all 5,474 rows from MySQL aura_language...');
-  const [rows] = await db.query('SELECT id, code, khmer, english, chinese, thai, vietnamese FROM aura_language ORDER BY id ASC');
-  console.log(`Fetched ${rows.length} rows.`);
-
-  // Build the SQL block
-  const lines = [];
-  lines.push('-- --------------------------------------------------------');
-  lines.push('-- Table structure for table `aura_language`');
-  lines.push('-- --------------------------------------------------------');
-  lines.push('');
-  lines.push('DROP TABLE IF EXISTS `aura_language`;');
-  lines.push('CREATE TABLE IF NOT EXISTS `aura_language` (');
-  lines.push('  `id` int NOT NULL AUTO_INCREMENT,');
-  lines.push('  `code` varchar(150) COLLATE utf8mb4_bin NOT NULL,');
-  lines.push('  `khmer` text DEFAULT NULL,');
-  lines.push('  `english` text DEFAULT NULL,');
-  lines.push('  `chinese` text DEFAULT NULL,');
-  lines.push('  `thai` text DEFAULT NULL,');
-  lines.push('  `vietnamese` text DEFAULT NULL,');
-  lines.push('  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,');
-  lines.push('  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,');
-  lines.push('  PRIMARY KEY (`id`),');
-  lines.push('  UNIQUE KEY `code` (`code`)');
-  lines.push(') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;');
-  lines.push('');
-  lines.push('-- Dumping data for table `aura_language`');
-  lines.push('');
-
-  const CHUNK_SIZE = 50;
-  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
-    const chunk = rows.slice(i, i + CHUNK_SIZE);
-    const valueTuples = chunk.map((r, idx) => {
-      const isLast = idx === chunk.length - 1;
-      return `(${r.id}, ${escapeSqlString(r.code)}, ${escapeSqlString(r.khmer)}, ${escapeSqlString(r.english)}, ${escapeSqlString(r.chinese)}, ${escapeSqlString(r.thai)}, ${escapeSqlString(r.vietnamese)})` + (isLast ? ';' : ',');
-    });
-    lines.push(`INSERT INTO \`aura_language\` (\`id\`, \`code\`, \`khmer\`, \`english\`, \`chinese\`, \`thai\`, \`vietnamese\`) VALUES\n` + valueTuples.join('\n'));
-    lines.push('');
-  }
-
-  const newSqlBlock = lines.join('\n');
-
-  console.log('Reading aura_v1_db.sql...');
-  const sqlContent = fs.readFileSync('aura_v1_db.sql', 'utf8');
-
-  const startMarker = '-- --------------------------------------------------------\n-- Table structure for table `aura_language`';
-  const startMarkerCRLF = '-- --------------------------------------------------------\r\n-- Table structure for table `aura_language`';
-  const endMarker = '-- Table structure for table `aura_leads`';
-
-  let startIndex = sqlContent.indexOf(startMarker);
-  if (startIndex === -1) {
-    startIndex = sqlContent.indexOf(startMarkerCRLF);
-  }
-  const endIndex = sqlContent.indexOf(endMarker);
-
-  if (startIndex === -1 || endIndex === -1) {
-    console.error(`Markers not found: start=${startIndex}, end=${endIndex}`);
-    process.exit(1);
-  }
-
-  console.log(`Replacing lines between ${startIndex} and ${endIndex}...`);
-  const updatedSql = sqlContent.substring(0, startIndex) + newSqlBlock + '\n\n--\n' + sqlContent.substring(endIndex);
-  fs.writeFileSync('aura_v1_db.sql', updatedSql, 'utf8');
-  console.log(`Successfully updated aura_v1_db.sql with ${rows.length} clean Unicode rows.`);
-  process.exit(0);
-}
-
-run().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+updateSqlDump();

@@ -1,208 +1,262 @@
-const db = require("../../config/utill/connection");
-const { logError } = require("../../config/utill/logErr");
+const PurchasesModel = require('../../models/admins/purchases.model');
+const { logError } = require('../../config/utill/logErr');
+
+/**
+ * Purchases & Procurement Controller
+ * High-performance, strictly transactional, full AURA_v1 alignment
+ */
 
 /**
  * GET /api/admin/purchases
+ * Filterable, sortable, paginated purchases list + overall metrics
  */
 exports.getPurchases = async (req, res) => {
   try {
-    const { search, status, page = 1, limit = 50 } = req.query;
+    const {
+      search,
+      status,
+      payment_status,
+      supplier_id,
+      warehouse_id,
+      start_date,
+      end_date,
+      sortBy,
+      sortOrder,
+      page = 1,
+      limit = 50
+    } = req.query;
 
-    let query = `
-      SELECT 
-        p.*,
-        c.name AS supplier_name,
-        c.email AS supplier_email,
-        c.phone AS supplier_phone
-      FROM aura_purchases p
-      LEFT JOIN aura_companies c ON p.supplier_id = c.id
-      WHERE 1=1
-    `;
-    const params = [];
-
-    if (search && search.trim() !== '') {
-      query += ` AND (p.reference_no LIKE ? OR p.supplier LIKE ? OR c.name LIKE ?)`;
-      const term = `%${search.trim()}%`;
-      params.push(term, term, term);
-    }
-
-    if (status && status !== 'all') {
-      query += ` AND p.status = ?`;
-      params.push(status);
-    }
-
-    query += ` ORDER BY p.id DESC`;
-
-    const numLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
-    const numOffset = (Math.max(parseInt(page) || 1, 1) - 1) * numLimit;
-    query += ` LIMIT ${numLimit} OFFSET ${numOffset}`;
-
-    const [rows] = await db.query(query, params);
-
-    const [statsRows] = await db.query(`
-      SELECT 
-        COUNT(*) AS total_purchases,
-        COALESCE(SUM(grand_total), 0) AS total_spend,
-        SUM(CASE WHEN status = 'received' THEN 1 ELSE 0 END) AS received_count,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_count
-      FROM aura_purchases
-    `);
-
-    const stats = statsRows[0] || {};
+    const result = await PurchasesModel.getPurchases({
+      search,
+      status,
+      payment_status,
+      supplier_id,
+      warehouse_id,
+      start_date,
+      end_date,
+      sortBy,
+      sortOrder,
+      page,
+      limit
+    });
 
     res.json({
       status: true,
-      data: rows.map(p => ({
-        id: p.id,
-        key: p.id,
-        referenceNo: p.reference_no,
-        date: p.date,
-        supplier: p.supplier || p.supplier_name || 'General Supplier',
-        status: p.status || 'received',
-        total: parseFloat(p.grand_total || 0),
-        paid: parseFloat(p.paid || 0),
-        balance: parseFloat(p.grand_total || 0) - parseFloat(p.paid || 0),
-        payment_status: p.payment_status || 'due'
-      })),
-      metrics: {
-        totalPurchases: parseInt(stats.total_purchases) || 0,
-        totalSpend: parseFloat(stats.total_spend) || 0,
-        received: parseInt(stats.received_count) || 0,
-        pending: parseInt(stats.pending_count) || 0
-      }
+      data: result.records,
+      pagination: result.pagination,
+      metrics: result.metrics
     });
   } catch (err) {
-    logError("purchases.controller.getPurchases", err, res);
+    logError('purchases.controller.getPurchases', err, res);
+  }
+};
+
+/**
+ * GET /api/admin/purchases/meta/options
+ * Returns suppliers, warehouses, units, and next generated reference number
+ */
+exports.getMetadata = async (req, res) => {
+  try {
+    const meta = await PurchasesModel.getMetadata();
+    res.json({
+      status: true,
+      data: meta
+    });
+  } catch (err) {
+    logError('purchases.controller.getMetadata', err, res);
+  }
+};
+
+/**
+ * GET /api/admin/purchases/:id
+ * Retrieve full purchase order details, item lines with variants, payments, and receipt history
+ */
+exports.getPurchaseById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const purchase = await PurchasesModel.getPurchaseById(id);
+
+    if (!purchase) {
+      return res.status(404).json({
+        status: false,
+        message: `Purchase #${id} not found`
+      });
+    }
+
+    res.json({
+      status: true,
+      data: purchase
+    });
+  } catch (err) {
+    logError('purchases.controller.getPurchaseById', err, res);
   }
 };
 
 /**
  * POST /api/admin/purchases
- * Create a new purchase with multi-unit conversion and warehouse stock ledger addition
+ * Create a new purchase order with multi-unit conversion, variant support, and optional immediate receipt
  */
 exports.createPurchase = async (req, res) => {
   try {
-    const {
-      reference_no,
-      supplier_id = 1,
-      supplier = 'General Supplier',
-      warehouse_id = 1,
-      note = '',
-      status = 'received',
-      payment_status = 'due',
-      paid = 0,
-      grand_total,
-      items = []
-    } = req.body;
+    const { items = [], ...purchaseData } = req.body;
 
-    const { unitToBaseQty, convertToBasePrice } = require('../../utils/unitConverter');
-
-    const refNo = reference_no || `PO-${Date.now().toString().slice(-6)}`;
-    const calcGrandTotal = parseFloat(grand_total) || items.reduce((acc, it) => acc + (parseFloat(it.quantity || 1) * parseFloat(it.unit_cost || 0)), 0);
-
-    const [purchaseRes] = await db.query(`
-      INSERT INTO aura_purchases 
-      (reference_no, supplier_id, supplier, warehouse_id, note, total, grand_total, paid, status, payment_status, date)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-    `, [
-      refNo,
-      parseInt(supplier_id) || 1,
-      supplier,
-      parseInt(warehouse_id) || 1,
-      note,
-      calcGrandTotal,
-      calcGrandTotal,
-      parseFloat(paid) || 0,
-      status,
-      payment_status
-    ]);
-
-    const newPurchaseId = purchaseRes.insertId;
-    const whId = parseInt(warehouse_id) || 1;
-
-    for (const item of items) {
-      const prodId = parseInt(item.product_id) || 0;
-      let unitId = item.product_unit_id || item.unit_id || null;
-      let unitCode = item.product_unit_code || item.unit_code || null;
-      let unitObj = null;
-
-      if (unitId) {
-        const [uRows] = await db.query('SELECT * FROM aura_units WHERE id = ?', [unitId]);
-        if (uRows.length) {
-          unitObj = uRows[0];
-          unitCode = unitObj.code;
-        }
-      } else if (prodId) {
-        const [pRows] = await db.query('SELECT p.purchase_unit, p.unit, u.code, u.operator, u.operation_value FROM aura_products p LEFT JOIN aura_units u ON u.id = COALESCE(p.purchase_unit, p.unit) WHERE p.id = ?', [prodId]);
-        if (pRows.length && pRows[0].code) {
-          unitId = pRows[0].purchase_unit || pRows[0].unit;
-          unitCode = pRows[0].code;
-          unitObj = pRows[0];
-        }
-      }
-
-      const itemQty = parseFloat(item.quantity) || 1;
-      const baseUnitQty = unitToBaseQty(itemQty, unitObj);
-      const unitCost = parseFloat(item.unit_cost) || 0;
-      const baseUnitCost = convertToBasePrice(unitCost, unitObj);
-      const subtotal = parseFloat(item.subtotal || (itemQty * unitCost)) || 0;
-
-      await db.query(`
-        INSERT INTO aura_purchase_items 
-        (purchase_id, product_id, product_code, product_name, product_unit_id, product_unit_code, warehouse_id, quantity, unit_quantity, unit_cost, real_unit_cost, net_unit_cost, base_unit_cost, subtotal, status, date)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-      `, [
-        newPurchaseId,
-        prodId,
-        item.product_code || '',
-        item.product_name || 'Item',
-        unitId,
-        unitCode,
-        whId,
-        itemQty,
-        baseUnitQty,
-        unitCost,
-        unitCost,
-        unitCost,
-        baseUnitCost,
-        subtotal,
-        status
-      ]);
-
-      // If status is received, increment warehouse stock in base units
-      if (status === 'received' && prodId) {
-        const [existingStock] = await db.query(
-          'SELECT id FROM aura_warehouses_products WHERE product_id = ? AND warehouse_id = ? LIMIT 1',
-          [prodId, whId]
-        );
-
-        if (existingStock.length > 0) {
-          await db.query(`
-            UPDATE aura_warehouses_products 
-            SET quantity = quantity + ? 
-            WHERE product_id = ? AND warehouse_id = ?
-          `, [baseUnitQty, prodId, whId]);
-        } else {
-          await db.query(`
-            INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity)
-            VALUES (?, ?, ?)
-          `, [prodId, whId, baseUnitQty]);
-        }
-      }
+    if (!items || items.length === 0) {
+      return res.status(400).json({
+        status: false,
+        message: 'A purchase order must contain at least one product item.'
+      });
     }
+
+    const newPurchase = await PurchasesModel.createPurchase(purchaseData, items, req.user || {});
 
     res.status(201).json({
       status: true,
       message: 'Purchase created successfully',
-      data: {
-        id: newPurchaseId,
-        referenceNo: refNo,
-        grandTotal: calcGrandTotal,
-        status
-      }
+      data: newPurchase
     });
   } catch (err) {
-    logError("purchases.controller.createPurchase", err, res);
+    logError('purchases.controller.createPurchase', err, res);
   }
 };
 
+/**
+ * PUT /api/admin/purchases/:id
+ * Update an existing purchase order (with safety protection for received orders)
+ */
+exports.updatePurchase = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { items = [], ...purchaseData } = req.body;
+
+    const updatedPurchase = await PurchasesModel.updatePurchase(id, purchaseData, items, req.user || {});
+
+    res.json({
+      status: true,
+      message: 'Purchase updated successfully',
+      data: updatedPurchase
+    });
+  } catch (err) {
+    logError('purchases.controller.updatePurchase', err, res);
+  }
+};
+
+/**
+ * PUT /api/admin/purchases/:id/status
+ * Transition purchase workflow status (draft -> pending -> ordered -> cancelled)
+ */
+exports.updateStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        status: false,
+        message: 'Status parameter is required.'
+      });
+    }
+
+    const updated = await PurchasesModel.updateStatus(id, status, req.user || {});
+
+    res.json({
+      status: true,
+      message: `Purchase status transitioned to ${status}`,
+      data: updated
+    });
+  } catch (err) {
+    logError('purchases.controller.updateStatus', err, res);
+  }
+};
+
+/**
+ * POST /api/admin/purchases/:id/receive
+ * Goods Receiving Workflow: Record full or partial receipt, update warehouse stock, and log stock movements
+ */
+exports.receiveGoods = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { items = [] } = req.body;
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({
+        status: false,
+        message: 'Please provide items and quantities to receive.'
+      });
+    }
+
+    const updated = await PurchasesModel.receiveGoods(id, items, req.user || {});
+
+    res.json({
+      status: true,
+      message: 'Goods receipt processed and warehouse stock updated successfully',
+      data: updated
+    });
+  } catch (err) {
+    logError('purchases.controller.receiveGoods', err, res);
+  }
+};
+
+/**
+ * POST /api/admin/purchases/:id/payments
+ * Record payment to supplier against purchase
+ */
+exports.addPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const paymentData = req.body;
+
+    if (!paymentData.amount || parseFloat(paymentData.amount) <= 0) {
+      return res.status(400).json({
+        status: false,
+        message: 'Payment amount must be greater than 0.'
+      });
+    }
+
+    const updated = await PurchasesModel.addPayment(id, paymentData, req.user || {});
+
+    res.status(201).json({
+      status: true,
+      message: 'Payment recorded successfully',
+      data: updated
+    });
+  } catch (err) {
+    logError('purchases.controller.addPayment', err, res);
+  }
+};
+
+/**
+ * DELETE /api/admin/purchases/:id/payments/:paymentId
+ * Remove payment record and adjust purchase paid balance
+ */
+exports.deletePayment = async (req, res) => {
+  try {
+    const { id, paymentId } = req.params;
+    const updated = await PurchasesModel.deletePayment(id, paymentId);
+
+    res.json({
+      status: true,
+      message: 'Payment deleted and balance adjusted successfully',
+      data: updated
+    });
+  } catch (err) {
+    logError('purchases.controller.deletePayment', err, res);
+  }
+};
+
+/**
+ * DELETE /api/admin/purchases/:id
+ * Safe purchase deletion (prohibits deletion if payments exist or stock has been received)
+ */
+exports.deletePurchase = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await PurchasesModel.deletePurchase(id);
+
+    res.json({
+      status: true,
+      message: result.message
+    });
+  } catch (err) {
+    logError('purchases.controller.deletePurchase', err, res);
+  }
+};

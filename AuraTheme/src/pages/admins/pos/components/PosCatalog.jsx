@@ -8,6 +8,7 @@ import {
   Spin,
   Empty,
   Segmented,
+  Modal,
 } from 'antd';
 import {
   SearchOutlined,
@@ -63,6 +64,7 @@ const PosCatalog = ({
   catalogViewMode = 'grid',
   setCatalogViewMode,
   khrExchangeRate = 4200,
+  overselling = 0,
   themeMode,
   adminTheme,
   t,
@@ -71,6 +73,23 @@ const PosCatalog = ({
   const categoryScrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // Variant Selection Modal State
+  const [variantModalVisible, setVariantModalVisible] = useState(false);
+  const [selectedProductForVariant, setSelectedProductForVariant] = useState(null);
+
+  const handleProductClick = (product) => {
+    const qty = parseFloat(product.quantity ?? 99);
+    if (qty <= 0 && overselling === 0 && (!product.variants || product.variants.length === 0)) {
+      return;
+    }
+    if (product.variants && product.variants.length > 0) {
+      setSelectedProductForVariant(product);
+      setVariantModalVisible(true);
+    } else {
+      onAddToCart(product, null);
+    }
+  };
 
   // Deduplicate products defensively by unique id or code
   const uniqueProducts = React.useMemo(() => {
@@ -395,8 +414,8 @@ const PosCatalog = ({
               return (
                 <div
                   key={p.id}
-                  onClick={() => !isOutOfStock && onAddToCart(p)}
-                  className={`pos-press ${!isOutOfStock ? 'pos-product-card' : ''}`}
+                  onClick={() => (!isOutOfStock || (p.variants && p.variants.length > 0) || overselling === 1) && handleProductClick(p)}
+                  className={`pos-press ${!isOutOfStock || (p.variants && p.variants.length > 0) ? 'pos-product-card' : ''}`}
                   style={{
                     padding: '12px 16px',
                     borderRadius: 14,
@@ -405,8 +424,8 @@ const PosCatalog = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                    opacity: isOutOfStock ? 0.45 : 1,
+                    cursor: (isOutOfStock && (!p.variants || p.variants.length === 0) && overselling === 0) ? 'not-allowed' : 'pointer',
+                    opacity: (isOutOfStock && (!p.variants || p.variants.length === 0) && overselling === 0) ? 0.45 : 1,
                     transition: 'all 0.18s ease',
                     boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)',
                   }}
@@ -463,6 +482,11 @@ const PosCatalog = ({
                         {p.unit_name && (
                           <Tag color="cyan" style={{ fontSize: 11, borderRadius: 6, margin: 0, padding: '0 7px' }}>
                             Unit: {p.unit_name}
+                          </Tag>
+                        )}
+                        {p.variants && p.variants.length > 0 && (
+                          <Tag color="purple" style={{ fontSize: 11, borderRadius: 6, margin: 0, padding: '0 7px', fontWeight: 600 }}>
+                            {p.variants.length} Variants Available
                           </Tag>
                         )}
                       </div>
@@ -549,8 +573,8 @@ const PosCatalog = ({
               return (
                 <div
                   key={p.id}
-                  onClick={() => !isOutOfStock && onAddToCart(p)}
-                  className={`pos-press ${!isOutOfStock ? 'pos-product-card' : ''}`}
+                  onClick={() => (!isOutOfStock || (p.variants && p.variants.length > 0) || overselling === 1) && handleProductClick(p)}
+                  className={`pos-press ${!isOutOfStock || (p.variants && p.variants.length > 0) ? 'pos-product-card' : ''}`}
                   style={{
                     borderRadius: 16,
                     background: isDark ? '#0f172a' : '#ffffff',
@@ -559,8 +583,8 @@ const PosCatalog = ({
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                    opacity: isOutOfStock ? 0.45 : 1,
+                    cursor: (isOutOfStock && (!p.variants || p.variants.length === 0) && overselling === 0) ? 'not-allowed' : 'pointer',
+                    opacity: (isOutOfStock && (!p.variants || p.variants.length === 0) && overselling === 0) ? 0.45 : 1,
                     position: 'relative',
                     overflow: 'hidden',
                     boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.03)',
@@ -644,8 +668,13 @@ const PosCatalog = ({
                     >
                       {p.name}
                     </div>
-                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginTop: 2 }}>
-                      {p.code}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>{p.code}</span>
+                      {p.variants && p.variants.length > 0 && (
+                        <Tag color="purple" style={{ fontSize: 10, borderRadius: 8, padding: '0 5px', margin: 0, fontWeight: 700 }}>
+                          {p.variants.length} Options
+                        </Tag>
+                      )}
                     </div>
                   </div>
 
@@ -694,6 +723,88 @@ const PosCatalog = ({
           </div>
         )}
       </div>
+      {/* Product Variant Picker Modal */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 16, fontWeight: 700 }}>{selectedProductForVariant?.name}</span>
+            <Tag color="blue">{selectedProductForVariant?.code}</Tag>
+          </div>
+        }
+        open={variantModalVisible}
+        onCancel={() => setVariantModalVisible(false)}
+        footer={null}
+        destroyOnClose
+        width={500}
+      >
+        <p style={{ color: '#64748b', fontSize: 13, marginBottom: 14 }}>
+          {t('select_variant_instruction', 'Select a variant option to add to cart with specific pricing and warehouse stock:')}
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {selectedProductForVariant?.variants?.map((v) => {
+            const vStock = parseFloat(v.quantity ?? 0);
+            const isVOutOfStock = vStock <= 0;
+            const price = parseFloat(v.price) > 0 ? parseFloat(v.price) : parseFloat(selectedProductForVariant?.price || 0);
+
+            return (
+              <div
+                key={v.id}
+                onClick={() => {
+                  if (isVOutOfStock && overselling === 0) return;
+                  onAddToCart(selectedProductForVariant, v);
+                  setVariantModalVisible(false);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  border: `1.5px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+                  background: isDark ? '#1e293b' : '#f8fafc',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: (isVOutOfStock && overselling === 0) ? 'not-allowed' : 'pointer',
+                  opacity: (isVOutOfStock && overselling === 0) ? 0.45 : 1,
+                  transition: 'all 0.15s ease',
+                }}
+                className="pos-press"
+              >
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: isDark ? '#f8fafc' : '#0f172a' }}>
+                    {v.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                    SKU: <strong>{v.sku || selectedProductForVariant?.code}</strong>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#2563eb' }}>
+                      ${price.toFixed(2)}
+                    </div>
+                    <Tag
+                      color={isVOutOfStock ? 'red' : vStock < 10 ? 'orange' : 'green'}
+                      style={{ fontSize: 10, margin: 0, borderRadius: 8, padding: '0 6px' }}
+                    >
+                      {isVOutOfStock ? 'Out of Stock' : `${vStock} in stock`}
+                    </Tag>
+                  </div>
+
+                  <Button
+                    type="primary"
+                    size="small"
+                    disabled={isVOutOfStock && overselling === 0}
+                    style={{ borderRadius: 6, fontWeight: 700 }}
+                  >
+                    Select
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Modal>
     </div>
   );
 };
