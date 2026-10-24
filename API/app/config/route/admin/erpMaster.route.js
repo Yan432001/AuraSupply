@@ -120,7 +120,13 @@ module.exports = (app) => {
   // 7. INVENTORY & PRODUCT CATALOG (Scoped by branches & permissions)
   // --------------------------------------------------------------------------
   app.get('/api/admin/inventory/products', authenticate, checkModuleEnabled('inventory'), requirePermission('products-index'), branchScopeFilter, invCtrl.listProducts);
-  app.get('/api/admin/products', authenticate, checkModuleEnabled('inventory'), requirePermission('products-index'), branchScopeFilter, invCtrl.listProducts);
+  app.get('/api/admin/products', (req, res, next) => {
+    if (req.query.action === 'barcode') {
+      const barcodeCtrl = require('../../../controller/admin/barcode.controller');
+      return barcodeCtrl.listBarcodeProducts(req, res);
+    }
+    next();
+  }, authenticate, checkModuleEnabled('inventory'), requirePermission('products-index'), branchScopeFilter, invCtrl.listProducts);
   app.get('/api/admin/inventory/products/:id', authenticate, checkModuleEnabled('inventory'), requirePermission('products-index'), invCtrl.getProduct);
   app.post('/api/admin/inventory/products', authenticate, checkModuleEnabled('inventory'), requirePermission('products-add'), invCtrl.createProduct);
   app.post('/api/admin/products', authenticate, checkModuleEnabled('inventory'), requirePermission('products-add'), invCtrl.createProduct);

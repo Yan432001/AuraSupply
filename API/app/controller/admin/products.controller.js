@@ -12,6 +12,8 @@ exports.getProducts = async (req, res) => {
       search,
       category_id,
       category,
+      brand_id,
+      brand,
       warehouse_id,
       stock,
       stock_status,
@@ -26,6 +28,7 @@ exports.getProducts = async (req, res) => {
     const result = await InventoryModel.getProducts({
       search,
       category_id: category_id || category,
+      brand_id: brand_id || brand,
       warehouse_id,
       stock_status: stock_status || stock || 'all',
       status: status || 'all',
@@ -201,5 +204,62 @@ exports.bulkUpdatePrices = async (req, res) => {
     });
   } catch (err) {
     logError('products.controller.bulkUpdatePrices', err, res);
+  }
+};
+
+/**
+ * GET /api/admin/products/meta/options & GET /api/products/meta/options
+ * Product creation and editing metadata (categories, units, brands, suppliers, warehouses, tax rates, attributes)
+ */
+exports.getProductMetadata = async (req, res) => {
+  try {
+    const meta = await InventoryModel.getProductMetadata();
+    res.json({
+      status: true,
+      success: true,
+      data: meta
+    });
+  } catch (err) {
+    logError('products.controller.getProductMetadata', err, res);
+  }
+};
+
+/**
+ * POST /api/admin/products/:id/duplicate
+ * Duplicate existing product with clean code & unique SKU
+ */
+exports.duplicateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const original = await InventoryModel.getProductById(id);
+    if (!original) {
+      return res.status(404).json({ status: false, message: 'Product not found for duplication' });
+    }
+
+    const newCode = `${original.code || 'PRD'}-COPY-${Date.now().toString().slice(-4)}`;
+    const clonedData = {
+      ...original,
+      id: undefined,
+      code: newCode,
+      barcode: newCode,
+      sku: newCode,
+      name: `${original.name} (Copy)`,
+      variants: (original.variants || []).map(v => ({
+        ...v,
+        id: undefined,
+        sku: `${v.sku || newCode}-COPY`,
+        barcode: `${v.barcode || newCode}-COPY`
+      }))
+    };
+
+    const created = await InventoryModel.createProduct(clonedData);
+    res.status(201).json({
+      status: true,
+      success: true,
+      message: 'Product duplicated successfully',
+      data: created
+    });
+  } catch (err) {
+    logError('products.controller.duplicateProduct', err, res);
   }
 };

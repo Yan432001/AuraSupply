@@ -167,6 +167,7 @@ export default function BpasInventoryWorkspace() {
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [filterSearch, setFilterSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [filterBrand, setFilterBrand] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [filterWarehouse, setFilterWarehouse] = useState('all');
   const [filterStockStatus, setFilterStockStatus] = useState('all');
@@ -376,14 +377,24 @@ export default function BpasInventoryWorkspace() {
       const matchSearch =
         !filterSearch ||
         (item.name && item.name.toLowerCase().includes(filterSearch.toLowerCase())) ||
+        (item.second_name && item.second_name.toLowerCase().includes(filterSearch.toLowerCase())) ||
         (item.code && item.code.toLowerCase().includes(filterSearch.toLowerCase())) ||
-        (item.brand && item.brand.toLowerCase().includes(filterSearch.toLowerCase()));
+        (item.barcode && item.barcode.toLowerCase().includes(filterSearch.toLowerCase())) ||
+        (item.sku && item.sku.toLowerCase().includes(filterSearch.toLowerCase())) ||
+        (item.brand_name && item.brand_name.toLowerCase().includes(filterSearch.toLowerCase())) ||
+        (item.brand && String(item.brand).toLowerCase().includes(filterSearch.toLowerCase()));
 
       const matchCategory =
         filterCategory === 'all' ||
         item.category === filterCategory ||
         item.category_name === filterCategory ||
         String(item.category_id) === String(filterCategory);
+
+      const matchBrand =
+        filterBrand === 'all' ||
+        String(item.brand_id) === String(filterBrand) ||
+        String(item.brand) === String(filterBrand) ||
+        (item.brand_name && item.brand_name.toLowerCase() === String(filterBrand).toLowerCase());
 
       const matchType =
         filterType === 'all' ||
@@ -399,9 +410,13 @@ export default function BpasInventoryWorkspace() {
         (filterStockStatus === 'low_stock' && qty > 0 && qty <= alertQty) ||
         (filterStockStatus === 'out_of_stock' && qty <= 0);
 
-      return matchSearch && matchCategory && matchType && matchStockStatus;
+      const matchWarehouse =
+        filterWarehouse === 'all' ||
+        (Array.isArray(item.warehouse_stock) && item.warehouse_stock.some((w) => String(w.warehouse_id) === String(filterWarehouse)));
+
+      return matchSearch && matchCategory && matchBrand && matchType && matchStockStatus && matchWarehouse;
     });
-  }, [productsList, filterSearch, filterCategory, filterType, filterStockStatus]);
+  }, [productsList, filterSearch, filterCategory, filterBrand, filterType, filterStockStatus, filterWarehouse]);
 
   // Catalog Metrics
   const metrics = useMemo(() => {
@@ -434,6 +449,18 @@ export default function BpasInventoryWorkspace() {
     setEditingRecord(record);
     setPageMode('add');
     navigate('/admins/products?action=add', { replace: true });
+  };
+
+  const handleDuplicateProduct = async (id) => {
+    try {
+      const res = await axios.post(`/api/admin/products/${id}/duplicate`, {}, { headers: getAuthHeaders() });
+      if (res.data?.success || res.data?.status) {
+        message.success(res.data.message || 'Product duplicated successfully');
+        fetchLiveProducts();
+      }
+    } catch (err) {
+      message.error('Failed to duplicate product: ' + (err.response?.data?.message || err.message));
+    }
   };
 
   // Safe Deletion Handler (checks backend reference & archival protection)
@@ -900,7 +927,7 @@ export default function BpasInventoryWorkspace() {
       title: t('name', 'Product Name'),
       dataIndex: 'name',
       key: 'name',
-      width: 240,
+      width: 250,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
       render: (name, record) => {
         const variantCount = record.variant_count ?? (record.variants ? record.variants.length : 0);
@@ -915,7 +942,13 @@ export default function BpasInventoryWorkspace() {
             >
               {name}
             </a>
+            {record.second_name && (
+              <div style={{ fontSize: 11, color: '#64748b' }}>{record.second_name}</div>
+            )}
             <div style={{ marginTop: 2, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              <Tag color="blue" style={{ fontSize: 10, borderRadius: 4, padding: '0 4px', textTransform: 'capitalize' }}>
+                {record.type || 'Standard'}
+              </Tag>
               {variantCount > 0 ? (
                 <Tag color="purple" style={{ fontSize: 10, borderRadius: 4, padding: '0 4px' }}>
                   {variantCount} Variants
@@ -943,6 +976,13 @@ export default function BpasInventoryWorkspace() {
       render: (cat, record) => <span style={{ fontWeight: 600 }}>{cat || record.category || 'General'}</span>,
     },
     {
+      title: 'Brand',
+      dataIndex: 'brand_name',
+      key: 'brand_name',
+      width: 110,
+      render: (brand, record) => <span style={{ color: adminTheme.subtext, fontWeight: 600 }}>{brand || record.brand || '—'}</span>,
+    },
+    {
       title: t('unit', 'Unit'),
       dataIndex: 'unit_name',
       key: 'unit_name',
@@ -967,14 +1007,30 @@ export default function BpasInventoryWorkspace() {
       title: t('price', 'Price'),
       dataIndex: 'price',
       key: 'price',
-      width: 110,
+      width: 120,
       align: 'right',
       sorter: (a, b) => (Number(a.price) || 0) - (Number(b.price) || 0),
-      render: (price) => (
-        <span style={{ fontWeight: 800, color: '#16a34a', fontSize: 13.5 }}>
-          {formatCurrency(price || 0)}
-        </span>
-      ),
+      render: (price, record) => {
+        const isPromo = Boolean(record.promotion && record.promo_price);
+        return (
+          <div style={{ textAlign: 'right' }}>
+            {isPromo ? (
+              <div>
+                <span style={{ fontWeight: 800, color: '#d97706', fontSize: 13.5 }}>
+                  {formatCurrency(record.promo_price)}
+                </span>
+                <div style={{ fontSize: 10, color: '#94a3b8', textDecoration: 'line-through' }}>
+                  {formatCurrency(price || 0)}
+                </div>
+              </div>
+            ) : (
+              <span style={{ fontWeight: 800, color: '#16a34a', fontSize: 13.5 }}>
+                {formatCurrency(price || 0)}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: t('quantity', 'Total Stock'),
@@ -1070,6 +1126,12 @@ export default function BpasInventoryWorkspace() {
             icon: <EditOutlined style={{ color: '#2563eb' }} />,
             label: 'Edit Product & Variants',
             onClick: () => handleEditProduct(record),
+          },
+          {
+            key: 'duplicate',
+            icon: <CopyOutlined style={{ color: '#d97706' }} />,
+            label: 'Duplicate Product',
+            onClick: () => handleDuplicateProduct(record.id),
           },
           {
             key: 'receive',
@@ -1491,7 +1553,7 @@ export default function BpasInventoryWorkspace() {
                   />
                 </div>
               </Col>
-              <Col xs={24} sm={12} md={6}>
+              <Col xs={12} sm={6} md={4}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
                     Category:
@@ -1510,7 +1572,44 @@ export default function BpasInventoryWorkspace() {
                   </Select>
                 </div>
               </Col>
-              <Col xs={24} sm={12} md={6}>
+              <Col xs={12} sm={6} md={4}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
+                    Brand:
+                  </label>
+                  <Select
+                    value={filterBrand}
+                    onChange={setFilterBrand}
+                    style={{ width: '100%' }}
+                  >
+                    <Option value="all">All Brands</Option>
+                    {brandsList.map((b) => (
+                      <Option key={b.id || b.name} value={b.id || b.name}>
+                        {b.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </div>
+              </Col>
+              <Col xs={12} sm={6} md={3}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
+                    Type:
+                  </label>
+                  <Select
+                    value={filterType}
+                    onChange={setFilterType}
+                    style={{ width: '100%' }}
+                  >
+                    <Option value="all">All Types</Option>
+                    <Option value="standard">Standard</Option>
+                    <Option value="combo">Combo</Option>
+                    <Option value="digital">Digital</Option>
+                    <Option value="service">Service</Option>
+                  </Select>
+                </div>
+              </Col>
+              <Col xs={12} sm={6} md={4}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
                     Stock Status:
@@ -1527,7 +1626,7 @@ export default function BpasInventoryWorkspace() {
                   </Select>
                 </div>
               </Col>
-              <Col xs={24} sm={12} md={6}>
+              <Col xs={12} sm={6} md={3}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: adminTheme.text, display: 'block', marginBottom: 6 }}>
                     Warehouse:
@@ -1553,6 +1652,7 @@ export default function BpasInventoryWorkspace() {
                 onClick={() => {
                   setFilterSearch('');
                   setFilterCategory('all');
+                  setFilterBrand('all');
                   setFilterType('all');
                   setFilterWarehouse('all');
                   setFilterStockStatus('all');

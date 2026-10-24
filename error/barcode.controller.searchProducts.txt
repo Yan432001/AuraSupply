@@ -1,0 +1,2 @@
+[24/10/2026 22:02:19]Unknown column 'p.barcode' in 'where clause'
+[24/10/2026 22:02:24]Unknown column 'p.barcode' in 'where clause'

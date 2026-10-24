@@ -12,6 +12,7 @@ class InventoryModel {
   static async getProducts({
     search = '',
     category_id = null,
+    brand_id = null,
     warehouse_id = null,
     stock_status = 'all', // 'all', 'in_stock', 'low_stock', 'out_of_stock'
     status = 'all', // 'all', 'active', 'inactive'
@@ -31,7 +32,10 @@ class InventoryModel {
         whereClauses.push(`(
           p.name LIKE ? OR 
           p.code LIKE ? OR 
+          p.barcode LIKE ? OR 
+          p.sku LIKE ? OR 
           p.item_code LIKE ? OR 
+          p.second_name LIKE ? OR 
           p.barcode_symbology LIKE ? OR 
           p.details LIKE ? OR
           EXISTS (
@@ -39,12 +43,17 @@ class InventoryModel {
             WHERE pv.product_id = p.id AND (pv.name LIKE ? OR pv.sku LIKE ? OR pv.barcode LIKE ?)
           )
         )`);
-        params.push(term, term, term, term, term, term, term, term);
+        params.push(term, term, term, term, term, term, term, term, term, term, term);
       }
 
       if (category_id && category_id !== 'all') {
         whereClauses.push('p.category_id = ?');
         params.push(parseInt(category_id));
+      }
+
+      if (brand_id && brand_id !== 'all') {
+        whereClauses.push('(p.brand_id = ? OR p.brand = ?)');
+        params.push(parseInt(brand_id), parseInt(brand_id));
       }
 
       if (warehouse_id && warehouse_id !== 'all') {
@@ -98,6 +107,7 @@ class InventoryModel {
           p.*,
           c.name AS category_name,
           c.code AS category_code,
+          b.name AS brand_name,
           u.name AS unit_name,
           u.code AS unit_code,
           comp.name AS biller_name,
@@ -109,6 +119,7 @@ class InventoryModel {
            WHERE wp.product_id = p.id) AS warehouse_stocks_summary
         FROM aura_products p
         LEFT JOIN aura_categories c ON p.category_id = c.id
+        LEFT JOIN aura_brands b ON b.id = COALESCE(p.brand_id, p.brand)
         LEFT JOIN aura_units u ON p.unit = u.id
         LEFT JOIN aura_companies comp ON p.biller_id = comp.id
         WHERE ${whereSql}
@@ -250,14 +261,22 @@ class InventoryModel {
         SELECT 
           p.*,
           c.name AS category_name,
+          b.name AS brand_name,
           u.name AS unit_name,
           u.code AS unit_code,
           comp.name AS biller_name,
-          comp.company AS biller_company
+          comp.company AS biller_company,
+          sup1.name AS supplier1_name,
+          sup2.name AS supplier2_name,
+          sup3.name AS supplier3_name
         FROM aura_products p
         LEFT JOIN aura_categories c ON p.category_id = c.id
+        LEFT JOIN aura_brands b ON b.id = COALESCE(p.brand_id, p.brand)
         LEFT JOIN aura_units u ON p.unit = u.id
         LEFT JOIN aura_companies comp ON p.biller_id = comp.id
+        LEFT JOIN aura_companies sup1 ON p.supplier1 = sup1.id
+        LEFT JOIN aura_companies sup2 ON p.supplier2 = sup2.id
+        LEFT JOIN aura_companies sup3 ON p.supplier3 = sup3.id
         WHERE p.id = ?
         LIMIT 1
       `, [id]);
@@ -357,30 +376,60 @@ class InventoryModel {
 
       const {
         name,
+        second_name = '',
         code,
         barcode,
+        sku,
         type = 'standard',
         category_id = 1,
+        subcategory_id = null,
         unit = 1,
         purchase_unit = 1,
         sale_unit = 1,
         currency = 'USD',
         price = 0,
+        sale_price = null,
         cost = 0,
         biller_id = 1,
         project_id = null,
         image = '',
         gallery = [],
         barcode_symbology = 'Code128',
+        barcode_type = 'CODE128',
         brand = null,
+        brand_id = null,
         tax_rate = null,
         tax_method = 'exclusive',
         alert_quantity = 10,
+        weight = null,
+        p_length = null,
+        p_width = null,
+        p_height = null,
+        cf1 = '',
+        cf2 = '',
+        cf3 = '',
+        cf4 = '',
+        cf5 = '',
+        cf6 = '',
+        supplier1 = null,
+        supplier1price = null,
+        supplier1_part_no = '',
+        supplier2 = null,
+        supplier2price = null,
+        supplier2_part_no = '',
+        supplier3 = null,
+        supplier3price = null,
+        supplier3_part_no = '',
+        promotion = 0,
+        promo_price = null,
+        start_date = null,
+        end_date = null,
         details = '',
         product_details = '',
         variants = [],
         warehouse_id = 1,
-        initial_quantity = 0
+        initial_quantity = 0,
+        warehouse_allocations = []
       } = productData;
 
       if (!name || name.trim() === '') {
@@ -438,50 +487,112 @@ class InventoryModel {
       const safeCost = Math.max(0, parseFloat(cost) || 0);
       const safeSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString().slice(-4);
 
+      const safeBarcode = (barcode || safeCode).trim();
+      const safeSku = (sku || safeCode).trim();
+      const safeBrand = brand_id || brand || null;
+
       // 1. Insert parent product
       const [result] = await conn.query(`
         INSERT INTO aura_products (
-          code, name, type, category_id, unit, purchase_unit, sale_unit, currency,
-          price, cost, biller_id, project_id, image, slug, barcode_symbology, brand,
-          tax_rate, tax_method, alert_quantity, details, product_details, quantity, status
+          code, barcode, sku, name, second_name, type, category_id, subcategory_id,
+          unit, purchase_unit, sale_unit, currency, price, sale_price, cost,
+          biller_id, project_id, image, slug, barcode_symbology, barcode_type,
+          brand, brand_id, tax_rate, tax_method, alert_quantity, details, product_details,
+          weight, p_length, p_width, p_height, cf1, cf2, cf3, cf4, cf5, cf6,
+          supplier1, supplier1price, supplier1_part_no,
+          supplier2, supplier2price, supplier2_part_no,
+          supplier3, supplier3price, supplier3_part_no,
+          promotion, promo_price, start_date, end_date,
+          quantity, status
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, 1
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?,
+          ?, ?, ?,
+          ?, ?, ?,
+          ?, ?, ?, ?,
+          ?, 1
         )
       `, [
         safeCode,
+        safeBarcode,
+        safeSku,
         name.trim(),
+        second_name ? second_name.trim() : null,
         type,
         parseInt(category_id) || 1,
+        subcategory_id ? parseInt(subcategory_id) : null,
         unit,
         purchase_unit,
         sale_unit,
         currency,
         safePrice,
+        sale_price ? parseFloat(sale_price) : (promo_price ? parseFloat(promo_price) : null),
         safeCost,
         parseInt(biller_id) || 1,
         project_id ? parseInt(project_id) : null,
         image || '',
         safeSlug,
-        barcode_symbology,
-        brand || null,
+        barcode_symbology || 'Code128',
+        barcode_type || 'CODE128',
+        safeBrand,
+        safeBrand,
         tax_rate || null,
         tax_method || 'exclusive',
         parseFloat(alert_quantity) || 10,
         details || '',
         product_details || details || '',
+        weight ? parseFloat(weight) : null,
+        p_length ? parseFloat(p_length) : null,
+        p_width ? parseFloat(p_width) : null,
+        p_height ? parseFloat(p_height) : null,
+        cf1 || null,
+        cf2 || null,
+        cf3 || null,
+        cf4 || null,
+        cf5 || null,
+        cf6 || null,
+        supplier1 ? parseInt(supplier1) : null,
+        supplier1price ? parseFloat(supplier1price) : null,
+        supplier1_part_no || null,
+        supplier2 ? parseInt(supplier2) : null,
+        supplier2price ? parseFloat(supplier2price) : null,
+        supplier2_part_no || null,
+        supplier3 ? parseInt(supplier3) : null,
+        supplier3price ? parseFloat(supplier3price) : null,
+        supplier3_part_no || null,
+        promotion ? 1 : 0,
+        promo_price ? parseFloat(promo_price) : null,
+        start_date || null,
+        end_date || null,
         totalStock
       ]);
 
       const newProductId = result.insertId;
 
-      // 2. Insert warehouse stock balance for parent
-      await conn.query(`
-        INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity, avg_cost, qty_alert)
-        VALUES (?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), avg_cost = VALUES(avg_cost)
-      `, [newProductId, warehouse_id || 1, totalStock, safeCost, alert_quantity]);
+      // 2. Insert warehouse stock balance
+      if (Array.isArray(warehouse_allocations) && warehouse_allocations.length > 0) {
+        for (const alloc of warehouse_allocations) {
+          const wId = alloc.warehouse_id || alloc.id;
+          const wQty = parseFloat(alloc.quantity) || 0;
+          if (wId) {
+            await conn.query(`
+              INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity, avg_cost, qty_alert)
+              VALUES (?, ?, ?, ?, ?)
+              ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), avg_cost = VALUES(avg_cost)
+            `, [newProductId, wId, wQty, safeCost, alert_quantity]);
+          }
+        }
+      } else {
+        await conn.query(`
+          INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity, avg_cost, qty_alert)
+          VALUES (?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), avg_cost = VALUES(avg_cost)
+        `, [newProductId, warehouse_id || 1, totalStock, safeCost, alert_quantity]);
+      }
 
       // 3. Process variants if provided
       if (Array.isArray(variants) && variants.length > 0) {
@@ -732,10 +843,67 @@ class InventoryModel {
         fields.push('barcode_symbology = ?');
         values.push(barcode_symbology);
       }
-      if (brand !== undefined) {
-        fields.push('brand = ?');
-        values.push(brand || null);
+      if (productData.second_name !== undefined) {
+        fields.push('second_name = ?');
+        values.push(productData.second_name || null);
       }
+      if (productData.barcode !== undefined) {
+        fields.push('barcode = ?');
+        values.push(productData.barcode || null);
+      }
+      if (productData.sku !== undefined) {
+        fields.push('sku = ?');
+        values.push(productData.sku || null);
+      }
+      if (productData.barcode_type !== undefined) {
+        fields.push('barcode_type = ?');
+        values.push(productData.barcode_type);
+      }
+      if (productData.brand_id !== undefined || brand !== undefined) {
+        const bVal = productData.brand_id || brand || null;
+        fields.push('brand = ?', 'brand_id = ?');
+        values.push(bVal, bVal);
+      }
+      if (productData.subcategory_id !== undefined) {
+        fields.push('subcategory_id = ?');
+        values.push(productData.subcategory_id ? parseInt(productData.subcategory_id) : null);
+      }
+      if (productData.weight !== undefined) {
+        fields.push('weight = ?');
+        values.push(productData.weight ? parseFloat(productData.weight) : null);
+      }
+      if (productData.p_length !== undefined) {
+        fields.push('p_length = ?');
+        values.push(productData.p_length ? parseFloat(productData.p_length) : null);
+      }
+      if (productData.p_width !== undefined) {
+        fields.push('p_width = ?');
+        values.push(productData.p_width ? parseFloat(productData.p_width) : null);
+      }
+      if (productData.p_height !== undefined) {
+        fields.push('p_height = ?');
+        values.push(productData.p_height ? parseFloat(productData.p_height) : null);
+      }
+      if (productData.cf1 !== undefined) { fields.push('cf1 = ?'); values.push(productData.cf1 || null); }
+      if (productData.cf2 !== undefined) { fields.push('cf2 = ?'); values.push(productData.cf2 || null); }
+      if (productData.cf3 !== undefined) { fields.push('cf3 = ?'); values.push(productData.cf3 || null); }
+      if (productData.cf4 !== undefined) { fields.push('cf4 = ?'); values.push(productData.cf4 || null); }
+      if (productData.cf5 !== undefined) { fields.push('cf5 = ?'); values.push(productData.cf5 || null); }
+      if (productData.cf6 !== undefined) { fields.push('cf6 = ?'); values.push(productData.cf6 || null); }
+      if (productData.supplier1 !== undefined) { fields.push('supplier1 = ?'); values.push(productData.supplier1 ? parseInt(productData.supplier1) : null); }
+      if (productData.supplier1price !== undefined) { fields.push('supplier1price = ?'); values.push(productData.supplier1price ? parseFloat(productData.supplier1price) : null); }
+      if (productData.supplier1_part_no !== undefined) { fields.push('supplier1_part_no = ?'); values.push(productData.supplier1_part_no || null); }
+      if (productData.supplier2 !== undefined) { fields.push('supplier2 = ?'); values.push(productData.supplier2 ? parseInt(productData.supplier2) : null); }
+      if (productData.supplier2price !== undefined) { fields.push('supplier2price = ?'); values.push(productData.supplier2price ? parseFloat(productData.supplier2price) : null); }
+      if (productData.supplier2_part_no !== undefined) { fields.push('supplier2_part_no = ?'); values.push(productData.supplier2_part_no || null); }
+      if (productData.supplier3 !== undefined) { fields.push('supplier3 = ?'); values.push(productData.supplier3 ? parseInt(productData.supplier3) : null); }
+      if (productData.supplier3price !== undefined) { fields.push('supplier3price = ?'); values.push(productData.supplier3price ? parseFloat(productData.supplier3price) : null); }
+      if (productData.supplier3_part_no !== undefined) { fields.push('supplier3_part_no = ?'); values.push(productData.supplier3_part_no || null); }
+      if (productData.promotion !== undefined) { fields.push('promotion = ?'); values.push(productData.promotion ? 1 : 0); }
+      if (productData.promo_price !== undefined) { fields.push('promo_price = ?'); values.push(productData.promo_price ? parseFloat(productData.promo_price) : null); }
+      if (productData.sale_price !== undefined) { fields.push('sale_price = ?'); values.push(productData.sale_price ? parseFloat(productData.sale_price) : null); }
+      if (productData.start_date !== undefined) { fields.push('start_date = ?'); values.push(productData.start_date || null); }
+      if (productData.end_date !== undefined) { fields.push('end_date = ?'); values.push(productData.end_date || null); }
       if (tax_rate !== undefined) {
         fields.push('tax_rate = ?');
         values.push(tax_rate);
@@ -1517,6 +1685,59 @@ class InventoryModel {
       };
     } catch (err) {
       logError('InventoryModel.getStockMovements', err, null);
+      throw err;
+    }
+  }
+  /**
+   * Get complete product metadata (categories, units, brands, warehouses, suppliers, tax rates, attributes)
+   */
+  static async getProductMetadata() {
+    try {
+      const [categories] = await db.query('SELECT id, name, code, parent_id FROM aura_categories ORDER BY name ASC');
+      const [units] = await db.query('SELECT id, code, name, base_unit, operator, operation_value FROM aura_units ORDER BY name ASC');
+      const [brands] = await db.query('SELECT id, name, code FROM aura_brands ORDER BY name ASC');
+      const [warehouses] = await db.query('SELECT id, code, name, address FROM aura_warehouses ORDER BY name ASC');
+      const [suppliers] = await db.query("SELECT id, name, company, email, phone FROM aura_companies WHERE group_name = 'supplier' ORDER BY name ASC");
+      const [taxRates] = await db.query('SELECT id, name, rate, type FROM aura_tax_rates ORDER BY id ASC');
+      
+      let attributes = [];
+      try {
+        const [attrs] = await db.query('SELECT id, name, code FROM aura_product_attributes ORDER BY sort_order ASC, name ASC');
+        attributes = attrs || [];
+        for (const attr of attributes) {
+          const [vals] = await db.query('SELECT id, attribute_id, value, color_code FROM aura_product_attribute_values WHERE attribute_id = ? ORDER BY sort_order ASC', [attr.id]);
+          attr.values = vals || [];
+        }
+      } catch (e) {
+        console.warn('Attributes fetch note in metadata:', e.message);
+      }
+
+      let accounts = [];
+      try {
+        const [accs] = await db.query('SELECT id, account_code, account_name, type FROM aura_gl_accounts ORDER BY account_code ASC');
+        accounts = accs || [];
+      } catch (e) {
+        // Fallback to aura_accounts
+        try {
+          const [accs2] = await db.query('SELECT accountcode AS account_code, accountname AS account_name FROM aura_accounts ORDER BY accountcode ASC');
+          accounts = accs2.map((a, idx) => ({ id: idx + 1, ...a }));
+        } catch (_) {}
+      }
+
+      return {
+        categories: categories || [],
+        units: units || [],
+        brands: brands || [],
+        warehouses: warehouses || [],
+        suppliers: suppliers || [],
+        tax_rates: taxRates || [],
+        attributes,
+        accounts,
+        product_types: ['standard', 'combo', 'digital', 'service'],
+        barcode_symbologies: ['Code128', 'EAN13', 'UPC', 'Code39', 'QR']
+      };
+    } catch (err) {
+      logError('InventoryModel.getProductMetadata', err, null);
       throw err;
     }
   }

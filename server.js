@@ -147,7 +147,8 @@ async function startServer() {
     'attributes',
     'inventoryOperations',
     'accounting',
-    'asset'
+    'asset',
+    'barcode'
   ];
 
   for (const routeName of adminRoutes) {
