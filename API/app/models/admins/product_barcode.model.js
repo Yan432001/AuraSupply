@@ -54,11 +54,11 @@ class ProductBarcodeModel {
     const conditions = ['1=1'];
     const params = [];
 
-    // Search scope (name, sku, or barcode)
+    // Search scope (name, second_name, sku, barcode, or code)
     if (search && search.trim() !== '') {
-      conditions.push('(p.name LIKE ? OR p.code LIKE ? OR p.barcode LIKE ? OR p.sku LIKE ? OR p.item_code LIKE ?)');
+      conditions.push('(p.name LIKE ? OR p.second_name LIKE ? OR p.code LIKE ? OR p.barcode LIKE ? OR p.sku LIKE ? OR p.item_code LIKE ?)');
       const term = `%${search.trim()}%`;
-      params.push(term, term, term, term, term);
+      params.push(term, term, term, term, term, term);
     }
 
     // Category filter

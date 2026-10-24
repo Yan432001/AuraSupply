@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Card,
   Button,
@@ -23,7 +23,8 @@ import {
   Badge,
   Breadcrumb,
   Switch,
-  Statistic
+  Statistic,
+  Segmented
 } from 'antd';
 import {
   PrinterOutlined,
@@ -47,7 +48,9 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   DownloadOutlined,
-  ImportOutlined
+  ImportOutlined,
+  LoadingOutlined,
+  BarsOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import JsBarcode from 'jsbarcode';
@@ -132,7 +135,12 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
   });
 
   // Print Configuration Options
-  const [selectedPaperStyle, setSelectedPaperStyle] = useState(() => localStorage.getItem('bcstyle') || '24');
+  const isRollStyle = (style) => ['1', '4025', '50', 'jewellery'].includes(String(style));
+  const [selectedPaperStyle, setSelectedPaperStyle] = useState(() => localStorage.getItem('bcstyle') || '4025');
+  const [previewViewMode, setPreviewViewMode] = useState(() => {
+    const saved = localStorage.getItem('bcstyle') || '4025';
+    return isRollStyle(saved) ? 'rows' : 'rows';
+  });
   const [customWidth, setCustomWidth] = useState(() => localStorage.getItem('cf_width') || '4');
   const [customHeight, setCustomHeight] = useState(() => localStorage.getItem('cf_height') || '2');
   const [customOrientation, setCustomOrientation] = useState(() => localStorage.getItem('cf_orientation') || '0');
@@ -170,8 +178,10 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
   const [catalogModalOpen, setCatalogModalOpen] = useState(false);
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [selectedCatalogKeys, setSelectedCatalogKeys] = useState([]);
+  const [selectedCatalogMap, setSelectedCatalogMap] = useState(new Map());
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [catalogPagination, setCatalogPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+  const isFirstCatalogRender = useRef(true);
 
   // Generate Missing Barcodes Modal
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
@@ -523,28 +533,36 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
     fetchTemplates();
   };
 
-  // Open Catalog Modal with full filters
-  const openCatalogModal = async (page = 1) => {
-    setCatalogModalOpen(true);
+  // Fetch Catalog Products with live filters & pagination
+  const fetchCatalogProducts = useCallback(async ({
+    page = 1,
+    search = filterSearch,
+    category_id = filterCategory,
+    brand_id = filterBrand,
+    status = filterStatus,
+    missing = onlyMissingBarcode,
+    pageSize = catalogPagination.pageSize
+  } = {}) => {
     setLoadingCatalog(true);
     try {
       const res = await axios.get('/api/admin/products/barcode/list', {
         params: {
-          search: filterSearch,
-          category_id: filterCategory !== 'all' ? filterCategory : undefined,
-          brand_id: filterBrand !== 'all' ? filterBrand : undefined,
-          status: filterStatus !== 'all' ? filterStatus : undefined,
-          only_missing_barcode: onlyMissingBarcode,
+          search: search && search.trim() ? search.trim() : undefined,
+          category_id: category_id !== 'all' ? category_id : undefined,
+          brand_id: brand_id !== 'all' ? brand_id : undefined,
+          status: status !== 'all' ? status : undefined,
+          only_missing_barcode: missing ? 1 : undefined,
           page,
-          limit: catalogPagination.pageSize
+          limit: pageSize
         }
       });
       if (res.data?.status && res.data?.data) {
         setCatalogProducts(res.data.data);
         setCatalogPagination((prev) => ({
           ...prev,
-          current: res.data.pagination.page,
-          total: res.data.pagination.total
+          current: res.data.pagination?.page || page,
+          total: res.data.pagination?.total || 0,
+          pageSize: res.data.pagination?.limit || pageSize
         }));
       }
     } catch (err) {
@@ -552,11 +570,47 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
     } finally {
       setLoadingCatalog(false);
     }
+  }, [filterSearch, filterCategory, filterBrand, filterStatus, onlyMissingBarcode, catalogPagination.pageSize]);
+
+  // Open Catalog Modal
+  const openCatalogModal = (page = 1) => {
+    setCatalogModalOpen(true);
+    fetchCatalogProducts({ page });
   };
+
+  // Live debounced search & filter sync when Catalog Modal is active
+  useEffect(() => {
+    if (!catalogModalOpen) {
+      isFirstCatalogRender.current = true;
+      return;
+    }
+
+    // Skip redundant initial fetch if openCatalogModal just triggered it
+    if (isFirstCatalogRender.current) {
+      isFirstCatalogRender.current = false;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchCatalogProducts({
+        page: 1,
+        search: filterSearch,
+        category_id: filterCategory,
+        brand_id: filterBrand,
+        status: filterStatus,
+        missing: onlyMissingBarcode
+      });
+    }, 280);
+
+    return () => clearTimeout(timer);
+  }, [catalogModalOpen, filterSearch, filterCategory, filterBrand, filterStatus, onlyMissingBarcode, fetchCatalogProducts]);
 
   // Confirm Catalog Selection
   const handleConfirmCatalogSelection = () => {
-    const selected = catalogProducts.filter((p) => selectedCatalogKeys.includes(p.id));
+    const selected = selectedCatalogKeys
+      .map((k) => selectedCatalogMap.get(k) || catalogProducts.find((p) => p.id === k))
+      .filter(Boolean);
+
     if (selected.length === 0) {
       message.warning('Please select at least one product.');
       return;
@@ -572,6 +626,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
     });
     setCatalogModalOpen(false);
     setSelectedCatalogKeys([]);
+    setSelectedCatalogMap(new Map());
     message.success(`Added ${selected.length} products to print queue`);
   };
 
@@ -681,49 +736,361 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
   // Calculate paper style dimensions & grid
   const getStyleConfig = () => {
     switch (selectedPaperStyle) {
-      case '1':
-        return { key: '1', name: '50 x 30 mm Thermal Roll', width: '50mm', height: '30mm', gridCols: 'repeat(auto-fill, minmax(200px, 1fr))', isRoll: true, labelPerSheet: 1 };
       case '4025':
-        return { key: '4025', name: '40 x 25 mm Compact Thermal Roll', width: '40mm', height: '25mm', gridCols: 'repeat(auto-fill, minmax(180px, 1fr))', isRoll: true, labelPerSheet: 1 };
-      case '84':
-        return { key: '84', name: '84 per sheet A4 (7x12, 16x21mm)', width: '1.1in', height: '0.85in', gridCols: 'repeat(7, 1fr)', isA4: true, labelPerSheet: 84 };
-      case '40':
-        return { key: '40', name: '40 per sheet A4 (4x10, 48.5x25.4mm)', width: '1.799in', height: '1.003in', gridCols: 'repeat(4, 1fr)', isA4: true, labelPerSheet: 40 };
-      case '30':
-        return { key: '30', name: '30 per sheet A4 (3x10, 70x29.7mm)', width: '2.625in', height: '1in', gridCols: 'repeat(3, 1fr)', isA4: true, labelPerSheet: 30 };
-      case '24':
-      default:
-        return { key: '24', name: '24 per sheet A4 (3x8, 70x37mm)', width: '2.48in', height: '1.335in', gridCols: 'repeat(3, 1fr)', isA4: true, labelPerSheet: 24 };
-      case '20':
-        return { key: '20', name: '20 per sheet A4 (2x10, 101.6x25.4mm)', width: '4in', height: '1in', gridCols: 'repeat(2, 1fr)', isA4: true, labelPerSheet: 20 };
-      case '18':
-        return { key: '18', name: '18 per sheet A4 (3x6, 70x48.5mm)', width: '2.5in', height: '1.835in', gridCols: 'repeat(3, 1fr)', isA4: true, labelPerSheet: 18 };
-      case '14':
-        return { key: '14', name: '14 per sheet A4 (2x7, 101.6x38.1mm)', width: '4in', height: '1.33in', gridCols: 'repeat(2, 1fr)', isA4: true, labelPerSheet: 14 };
-      case '12':
-        return { key: '12', name: '12 per sheet A4 (2x6, 101.6x48mm)', width: '4in', height: '1.85in', gridCols: 'repeat(2, 1fr)', isA4: true, labelPerSheet: 12 };
-      case '10':
-        return { key: '10', name: '10 per sheet A4 (2x5, 101.6x50.8mm)', width: '4in', height: '2in', gridCols: 'repeat(2, 1fr)', isA4: true, labelPerSheet: 10 };
-      case '2':
-        return { key: '2', name: '2 per sheet A4 (1x2, 210x148.5mm)', width: '7.5in', height: '5.1in', gridCols: 'repeat(1, 1fr)', isA4: true, labelPerSheet: 2 };
-      case 'jewellery':
-        return { key: 'jewellery', name: 'Jewellery Label (Dual Tail Tag with Weight)', width: '300px', height: '90px', gridCols: 'repeat(auto-fill, minmax(310px, 1fr))', isJewellery: true, labelPerSheet: 1 };
-      case 'shelf':
-        return { key: 'shelf', name: 'Shelf Edge Tag (3.8in x 1.5in)', width: '3.8in', height: '1.5in', gridCols: 'repeat(2, 1fr)', isShelf: true, labelPerSheet: 14 };
+        return {
+          key: '4025',
+          name: '1 per sheet (40 x 25mm)',
+          width: '40mm',
+          height: '24.8mm',
+          itemWidthPx: 200,
+          itemHeightPx: 120,
+          barcodeHeight: 28,
+          barcodeWidth: 1.1,
+          isRoll: true,
+          labelPerSheet: 1
+        };
+      case '1':
+        return {
+          key: '1',
+          name: '1 per sheet (50 x 30mm)',
+          width: '50mm',
+          height: '29.5mm',
+          itemWidthPx: 230,
+          itemHeightPx: 135,
+          barcodeHeight: 32,
+          barcodeWidth: 1.15,
+          isRoll: true,
+          labelPerSheet: 1
+        };
       case '50':
         return {
           key: '50',
           name: 'Continuous Feed (Custom Dimensions)',
           width: `${customWidth}in`,
           height: `${customHeight}in`,
-          gridCols: 'repeat(auto-fill, minmax(220px, 1fr))',
+          itemWidthPx: 240,
+          itemHeightPx: 140,
+          barcodeHeight: 32,
+          barcodeWidth: 1.2,
           isCustom: true,
+          isRoll: true,
           labelPerSheet: 1
+        };
+      case 'jewellery':
+        return {
+          key: 'jewellery',
+          name: 'Jewellery Label (Dual Tail Tag with Weight)',
+          width: '300px',
+          height: '90px',
+          itemWidthPx: 300,
+          itemHeightPx: 95,
+          barcodeHeight: 26,
+          barcodeWidth: 1.0,
+          isJewellery: true,
+          isRoll: true,
+          labelPerSheet: 1
+        };
+      case '84':
+        return {
+          key: '84',
+          name: '84 per sheet (16 x 21mm, A4 7x12 - Mini)',
+          width: '16mm',
+          height: '21mm',
+          itemWidthPx: 140,
+          itemHeightPx: 95,
+          gridCols: 'repeat(auto-fill, minmax(135px, 1fr))',
+          barcodeHeight: 20,
+          barcodeWidth: 0.9,
+          isA4: true,
+          labelPerSheet: 84
+        };
+      case '40':
+        return {
+          key: '40',
+          name: '40 per sheet (48.5 x 25.4mm, A4 4x10)',
+          width: '48.5mm',
+          height: '25.4mm',
+          itemWidthPx: 210,
+          itemHeightPx: 115,
+          gridCols: 'repeat(auto-fill, minmax(190px, 1fr))',
+          barcodeHeight: 26,
+          barcodeWidth: 1.05,
+          isA4: true,
+          labelPerSheet: 40
+        };
+      case '30':
+        return {
+          key: '30',
+          name: '30 per sheet (70 x 29.7mm, A4 3x10)',
+          width: '70mm',
+          height: '29.7mm',
+          itemWidthPx: 230,
+          itemHeightPx: 120,
+          gridCols: 'repeat(auto-fill, minmax(210px, 1fr))',
+          barcodeHeight: 28,
+          barcodeWidth: 1.15,
+          isA4: true,
+          labelPerSheet: 30
+        };
+      case '24':
+      default:
+        return {
+          key: '24',
+          name: '24 per sheet (70 x 37mm, A4 3x8)',
+          width: '70mm',
+          height: '37mm',
+          itemWidthPx: 230,
+          itemHeightPx: 130,
+          gridCols: 'repeat(auto-fill, minmax(210px, 1fr))',
+          barcodeHeight: 28,
+          barcodeWidth: 1.15,
+          isA4: true,
+          labelPerSheet: 24
+        };
+      case '20':
+        return {
+          key: '20',
+          name: '20 per sheet (101.6 x 25.4mm, A4 2x10)',
+          width: '101.6mm',
+          height: '25.4mm',
+          itemWidthPx: 280,
+          itemHeightPx: 115,
+          gridCols: 'repeat(auto-fill, minmax(260px, 1fr))',
+          barcodeHeight: 28,
+          barcodeWidth: 1.2,
+          isA4: true,
+          labelPerSheet: 20
+        };
+      case '18':
+        return {
+          key: '18',
+          name: '18 per sheet (70 x 48.5mm, A4 3x6)',
+          width: '70mm',
+          height: '48.5mm',
+          itemWidthPx: 240,
+          itemHeightPx: 140,
+          gridCols: 'repeat(auto-fill, minmax(220px, 1fr))',
+          barcodeHeight: 32,
+          barcodeWidth: 1.2,
+          isA4: true,
+          labelPerSheet: 18
+        };
+      case '14':
+        return {
+          key: '14',
+          name: '14 per sheet (101.6 x 38.1mm, A4 2x7)',
+          width: '101.6mm',
+          height: '38.1mm',
+          itemWidthPx: 280,
+          itemHeightPx: 135,
+          gridCols: 'repeat(auto-fill, minmax(260px, 1fr))',
+          barcodeHeight: 30,
+          barcodeWidth: 1.2,
+          isA4: true,
+          labelPerSheet: 14
+        };
+      case '12':
+        return {
+          key: '12',
+          name: '12 per sheet (101.6 x 48mm, A4 2x6)',
+          width: '101.6mm',
+          height: '48mm',
+          itemWidthPx: 280,
+          itemHeightPx: 150,
+          gridCols: 'repeat(auto-fill, minmax(260px, 1fr))',
+          barcodeHeight: 32,
+          barcodeWidth: 1.2,
+          isA4: true,
+          labelPerSheet: 12
+        };
+      case '10':
+        return {
+          key: '10',
+          name: '10 per sheet (101.6 x 50.8mm, A4 2x5)',
+          width: '101.6mm',
+          height: '50.8mm',
+          itemWidthPx: 290,
+          itemHeightPx: 160,
+          gridCols: 'repeat(auto-fill, minmax(260px, 1fr))',
+          barcodeHeight: 34,
+          barcodeWidth: 1.25,
+          isA4: true,
+          labelPerSheet: 10
+        };
+      case '2':
+        return {
+          key: '2',
+          name: '2 per sheet (190 x 130mm, A4 Half Sheet)',
+          width: '190mm',
+          height: '130mm',
+          itemWidthPx: 450,
+          itemHeightPx: 260,
+          gridCols: 'repeat(auto-fill, minmax(380px, 1fr))',
+          barcodeHeight: 50,
+          barcodeWidth: 1.6,
+          isA4: true,
+          labelPerSheet: 2
+        };
+      case 'shelf':
+        return {
+          key: 'shelf',
+          name: 'Shelf Edge Tag (3.8in x 1.5in)',
+          width: '3.8in',
+          height: '1.5in',
+          itemWidthPx: 320,
+          itemHeightPx: 140,
+          gridCols: 'repeat(auto-fill, minmax(300px, 1fr))',
+          barcodeHeight: 34,
+          barcodeWidth: 1.2,
+          isShelf: true,
+          labelPerSheet: 14
         };
     }
   };
 
   const styleConfig = getStyleConfig();
+
+  // Render Barcode Label Item (matches AURA_v1 layout & hierarchy)
+  const renderBarcodeLabel = (lbl, isSingleSample = false) => {
+    const isRowLayout = (styleConfig.isRoll || previewViewMode === 'rows' || isSingleSample);
+
+    return (
+      <div
+        key={lbl.uniqueKey || 'sample'}
+        className={`barcode-single-item ${
+          styleConfig.key === '4025' ? 'barcode1_40x25' : styleConfig.key === '1' ? 'barcode1_50x30' : ''
+        } ${isRowLayout ? 'barcode-roll-item' : ''} ${styleConfig.isRoll && !isSingleSample ? 'page-break' : ''}`}
+        style={{
+          width: isSingleSample ? '185px' : (isRowLayout ? `${styleConfig.itemWidthPx || 200}px` : '100%'),
+          maxWidth: isRowLayout ? `${styleConfig.itemWidthPx || 210}px` : `${(styleConfig.itemWidthPx || 220) + 40}px`,
+          minHeight: `${styleConfig.itemHeightPx || 120}px`,
+          margin: '0 auto',
+          padding: '6px 8px',
+          background: '#ffffff',
+          border: '1px solid #cbd5e1',
+          borderRadius: 4,
+          boxShadow: isRowLayout ? '0 1px 3px rgba(0,0,0,0.08)' : '0 1px 2px rgba(0,0,0,0.04)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+          boxSizing: 'border-box'
+        }}
+      >
+        {/* 1. Site Name (Centered at top like AURA_v1 VSR) */}
+        {printSiteName && (lbl.site || settings.site_name) && (
+          <div
+            className="barcode_site"
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: '#334155',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              lineHeight: 1.1,
+              marginBottom: 2
+            }}
+          >
+            {lbl.site || settings.site_name}
+          </div>
+        )}
+
+        {/* 2. Price ($2.00 centered and prominent like AURA_v1) */}
+        {printPrice && lbl.price !== null && (
+          <div
+            className="barcode_price"
+            style={{
+              fontSize: 12.5,
+              fontWeight: 800,
+              color: '#0f172a',
+              lineHeight: 1.1,
+              marginBottom: 2
+            }}
+          >
+            {formatCurrency(lbl.price)}
+          </div>
+        )}
+
+        {/* 3. Product Name (LAYS centered clean uppercase/bold text) */}
+        {printProductName && (lbl.name || lbl.shortName) && (
+          <div
+            className="barcode_name"
+            style={{
+              fontSize: 9.5,
+              fontWeight: 700,
+              color: '#0f172a',
+              textTransform: 'uppercase',
+              textAlign: 'center',
+              lineHeight: 1.15,
+              marginBottom: 3,
+              maxWidth: '96%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+            title={lbl.name}
+          >
+            {lbl.shortName || lbl.name}
+          </div>
+        )}
+
+        {/* 4. Multi-Currencies / Exchange Rates (if checked) */}
+        {printCurrencies && lbl.currencies && (
+          <div
+            style={{
+              fontSize: 8,
+              color: '#64748b',
+              display: 'flex',
+              gap: 4,
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              marginBottom: 2
+            }}
+          >
+            {lbl.currencies.map((c) => (
+              <span key={c.id}>
+                {c.code}: {c.symbol}{(lbl.price * parseFloat(c.rate)).toFixed(2)}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* 5. Barcode SVG with Barcode value underneath (86337976 style) */}
+        <div style={{ margin: '1px 0', width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <SvgBarcode
+            value={lbl.barcode}
+            format={lbl.barcode_symbology}
+            height={styleConfig.barcodeHeight || 26}
+            width={styleConfig.barcodeWidth || 1.1}
+            fontSize={8.5}
+            displayValue={true}
+          />
+        </div>
+
+        {/* 6. Product Unit (if checked) */}
+        {printUnit && (lbl.unit_name || lbl.unit) && (
+          <div style={{ fontSize: 8.5, color: '#475569', fontWeight: 600, marginTop: 1 }}>
+            Unit: {lbl.unit_name || lbl.unit}
+          </div>
+        )}
+
+        {/* 7. Category (if checked) */}
+        {printCategory && (lbl.category_name || lbl.category) && (
+          <div style={{ fontSize: 8, color: '#64748b', marginTop: 1 }}>
+            Category: {lbl.category_name || lbl.category}
+          </div>
+        )}
+
+        {/* 8. Weight (if checked) */}
+        {printWeight && lbl.weight && (
+          <div style={{ fontSize: 8, color: '#475569', marginTop: 1 }}>
+            Weight: {lbl.weight}g
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Print Execution: saves print log to database audit trail, then executes window.print()
   const handlePrint = async () => {
@@ -776,6 +1143,8 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important;
+            border: none !important;
+            box-shadow: none !important;
           }
           .no-print {
             display: none !important;
@@ -784,22 +1153,66 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
             page-break-after: always !important;
             break-after: page !important;
           }
+          .barcode-single-item {
+            border: none !important;
+            box-shadow: none !important;
+            page-break-inside: avoid !important;
+          }
+          .barcode-roll-container {
+            padding: 0 !important;
+            gap: 0 !important;
+            background: #fff !important;
+            border: none !important;
+          }
+          .barcode1_40x25 {
+            width: 40mm !important;
+            height: 24.8mm !important;
+            margin: 0 auto !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            padding: 1.5mm 0 !important;
+          }
+          .barcode1_50x30 {
+            width: 50mm !important;
+            height: 29.5mm !important;
+            margin: 0 auto !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            padding: 2mm 0 !important;
+          }
         }
         .barcode-single-item {
-          display: inline-flex;
+          display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           text-align: center;
           box-sizing: border-box;
           background: #fff;
-          border: 1px dashed #cbd5e1;
-          padding: 4px;
+          border: 1px solid #cbd5e1;
+          padding: 6px 8px;
           overflow: hidden;
           position: relative;
+          transition: all 0.2s ease;
         }
         .barcode-single-item:hover {
-          border-color: #3b82f6;
+          border-color: #2563eb;
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        .barcode-roll-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          padding: 20px 10px;
+          background: #f8fafc;
+          border-radius: 8px;
+          border: 1px dashed #cbd5e1;
+        }
+        .barcode-roll-item {
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+          border-radius: 4px;
         }
       `}</style>
 
@@ -1163,11 +1576,16 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
                 </label>
                 <Select
                   value={selectedPaperStyle}
-                  onChange={(val) => setSelectedPaperStyle(val)}
+                  onChange={(val) => {
+                    setSelectedPaperStyle(val);
+                    if (isRollStyle(val)) {
+                      setPreviewViewMode('rows');
+                    }
+                  }}
                   style={{ width: '100%' }}
                 >
-                  <Option value="1">1 per sheet (50mm x 30mm Roll - Standard Thermal)</Option>
-                  <Option value="4025">1 per sheet (40mm x 25mm Roll - Compact Thermal)</Option>
+                  <Option value="4025">1 per sheet (40 x 25mm)</Option>
+                  <Option value="1">1 per sheet (50 x 30mm)</Option>
                   <Option value="24">24 per sheet (70mm x 37mm, A4 3x8)</Option>
                   <Option value="40">40 per sheet (48.5mm x 25.4mm, A4 4x10)</Option>
                   <Option value="30">30 per sheet (70mm x 29.7mm, A4 3x10)</Option>
@@ -1298,42 +1716,12 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
                     borderRadius: 6,
                     padding: 12,
                     display: 'flex',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    alignItems: 'center'
                   }}
                 >
                   {generatedLabels.length > 0 ? (
-                    <div
-                      className="barcode-single-item"
-                      style={{
-                        width: styleConfig.isRoll ? 180 : 160,
-                        minHeight: 90,
-                        background: '#fff',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                      }}
-                    >
-                      {printSiteName && (
-                        <div style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
-                          {settings.site_name}
-                        </div>
-                      )}
-                      {printProductName && (
-                        <div style={{ fontSize: 10, fontWeight: 700, color: '#0f172a', textAlign: 'center', lineHeight: 1.2 }}>
-                          {generatedLabels[0].shortName || generatedLabels[0].name}
-                        </div>
-                      )}
-                      {printPrice && (
-                        <div style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', margin: '2px 0' }}>
-                          {formatCurrency(generatedLabels[0].price)}
-                        </div>
-                      )}
-                      <SvgBarcode
-                        value={generatedLabels[0].barcode}
-                        format={generatedLabels[0].barcode_symbology}
-                        height={28}
-                        width={1.1}
-                        fontSize={9}
-                      />
-                    </div>
+                    renderBarcodeLabel(generatedLabels[0], true)
                   ) : (
                     <Text type="secondary" style={{ fontSize: 11 }}>
                       Add items to view preview
@@ -1358,72 +1746,58 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
             <span>Complete Sheet Preview ({generatedLabels.length} total labels ready for printer)</span>
           </Space>
         }
+        extra={
+          <Space>
+            <span style={{ fontSize: 12, color: adminTheme.subtext }}>View:</span>
+            <Segmented
+              size="small"
+              value={previewViewMode}
+              onChange={(val) => setPreviewViewMode(val)}
+              options={[
+                { label: 'Vertical Rows (Roll)', value: 'rows', icon: <BarsOutlined /> },
+                { label: 'Sheet Grid', value: 'grid', icon: <AppstoreOutlined /> }
+              ]}
+            />
+          </Space>
+        }
         className="barcode-preview-card"
         style={{ background: adminTheme.surface, borderColor: adminTheme.border }}
       >
-        <div
-          className="barcode-print-canvas"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: styleConfig.gridCols,
-            gap: 8,
-            padding: 8,
-            background: '#fff'
-          }}
-        >
-          {generatedLabels.map((lbl) => (
-            <div
-              key={lbl.uniqueKey}
-              className={`barcode-single-item ${styleConfig.isRoll ? 'page-break' : ''}`}
-              style={{
-                width: '100%',
-                minHeight: styleConfig.isRoll ? '110px' : '90px'
-              }}
-            >
-              {lbl.site && (
-                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: '#64748b' }}>
-                  {lbl.site}
-                </div>
-              )}
-
-              {lbl.name && (
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#0f172a', margin: '2px 0', lineHeight: 1.15 }}>
-                  {lbl.shortName || lbl.name}
-                </div>
-              )}
-
-              {lbl.price !== null && (
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#16a34a' }}>
-                  {formatCurrency(lbl.price)}
-                </div>
-              )}
-
-              {lbl.currencies && (
-                <div style={{ fontSize: 8, color: '#64748b', display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
-                  {lbl.currencies.map((c) => (
-                    <span key={c.id}>
-                      {c.code}: {c.symbol}{(lbl.price * parseFloat(c.rate)).toFixed(2)}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <SvgBarcode
-                value={lbl.barcode}
-                format={lbl.barcode_symbology}
-                height={styleConfig.isRoll ? 34 : 26}
-                width={1.2}
-                fontSize={9}
-              />
-
-              {lbl.weight && (
-                <div style={{ fontSize: 8, color: '#475569' }}>
-                  Weight: {lbl.weight}g
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        {generatedLabels.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '36px 0', color: adminTheme.subtext }}>
+            No labels in print queue. Use "Browse Catalog" or search products to begin.
+          </div>
+        ) : (previewViewMode === 'rows' || styleConfig.isRoll) ? (
+          <div
+            className="barcode-print-canvas barcode-roll-container"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+              padding: '24px 12px',
+              background: '#f8fafc',
+              borderRadius: 8,
+              border: '1px dashed #cbd5e1'
+            }}
+          >
+            {generatedLabels.map((lbl) => renderBarcodeLabel(lbl, false))}
+          </div>
+        ) : (
+          <div
+            className="barcode-print-canvas"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: styleConfig.gridCols,
+              gap: 10,
+              padding: 12,
+              background: '#fff'
+            }}
+          >
+            {generatedLabels.map((lbl) => renderBarcodeLabel(lbl, false))}
+          </div>
+        )}
       </Card>
 
       {/* 
@@ -1434,10 +1808,21 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
       <Modal
         title="Product Catalog Browser"
         open={catalogModalOpen}
-        onCancel={() => setCatalogModalOpen(false)}
+        onCancel={() => {
+          setCatalogModalOpen(false);
+          setSelectedCatalogKeys([]);
+          setSelectedCatalogMap(new Map());
+        }}
         width={850}
         footer={[
-          <Button key="cancel" onClick={() => setCatalogModalOpen(false)}>
+          <Button
+            key="cancel"
+            onClick={() => {
+              setCatalogModalOpen(false);
+              setSelectedCatalogKeys([]);
+              setSelectedCatalogMap(new Map());
+            }}
+          >
             Cancel
           </Button>,
           <Button
@@ -1456,10 +1841,11 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
             <Col xs={24} sm={8}>
               <Input
                 placeholder="Search name, SKU, or barcode..."
-                prefix={<SearchOutlined />}
+                prefix={loadingCatalog ? <LoadingOutlined spin style={{ color: '#2563eb' }} /> : <SearchOutlined style={{ color: '#94a3b8' }} />}
                 value={filterSearch}
+                allowClear
                 onChange={(e) => setFilterSearch(e.target.value)}
-                onPressEnter={() => openCatalogModal(1)}
+                onPressEnter={() => fetchCatalogProducts({ page: 1, search: filterSearch })}
               />
             </Col>
             <Col xs={12} sm={5}>
@@ -1496,7 +1882,11 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
             </Col>
             <Col xs={24} sm={6}>
               <Space>
-                <Button type="primary" icon={<FilterOutlined />} onClick={() => openCatalogModal(1)}>
+                <Button
+                  type="primary"
+                  icon={<FilterOutlined />}
+                  onClick={() => fetchCatalogProducts({ page: 1, search: filterSearch })}
+                >
                   Filter
                 </Button>
                 <Button
@@ -1505,7 +1895,13 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
                     setFilterCategory('all');
                     setFilterBrand('all');
                     setOnlyMissingBarcode(false);
-                    openCatalogModal(1);
+                    fetchCatalogProducts({
+                      page: 1,
+                      search: '',
+                      category_id: 'all',
+                      brand_id: 'all',
+                      missing: false
+                    });
                   }}
                 >
                   Reset
@@ -1534,13 +1930,28 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
           loading={loadingCatalog}
           rowSelection={{
             selectedRowKeys: selectedCatalogKeys,
-            onChange: (keys) => setSelectedCatalogKeys(keys)
+            onChange: (keys, selectedRows) => {
+              setSelectedCatalogKeys(keys);
+              setSelectedCatalogMap((prev) => {
+                const next = new Map(prev);
+                selectedRows.forEach((row) => {
+                  if (row && row.id) next.set(row.id, row);
+                });
+                const keySet = new Set(keys);
+                for (const id of next.keys()) {
+                  if (!keySet.has(id)) next.delete(id);
+                }
+                return next;
+              });
+            }
           }}
           pagination={{
             current: catalogPagination.current,
             pageSize: catalogPagination.pageSize,
             total: catalogPagination.total,
-            onChange: (p) => openCatalogModal(p)
+            showSizeChanger: true,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            onChange: (p, size) => fetchCatalogProducts({ page: p, pageSize: size })
           }}
           columns={[
             {
