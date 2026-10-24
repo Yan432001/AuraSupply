@@ -8,7 +8,6 @@ import {
   Typography,
   Space,
   Divider,
-  Tag,
   Flex,
   message,
   Alert,
@@ -111,44 +110,6 @@ export default function Login() {
     } catch (err) {
       console.warn('Real login error:', err);
       setErrorMsg(err.message || t('invalid_username_password', 'Invalid username or password'));
-      setLoading(false);
-    }
-  };
-
-  // Quick 1-Click Demo Login using real DB credentials
-  const handleQuickLogin = async (type) => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      const creds = type === 'admin'
-        ? { username: 'admin', password: 'password' }
-        : { username: 'audit', password: 'password' };
-
-      const res = await loginUser(creds);
-      if (res?.success && (res?.token || res?.data?.token)) {
-        const token = res.token || res.data?.token;
-        const profile = res.profile || res.data?.profile || res.user || res.data?.user || res.data || {};
-        localStorage.setItem('token', token);
-        const userData = {
-          id: profile.id,
-          name: profile.username || 'System User',
-          username: profile.username,
-          email: profile.email,
-          role: profile.role || 'admin',
-          group_id: profile.group_id,
-          token: token,
-          avatar: profile.avatar || null,
-          tier: 'System Master'
-        };
-        login(userData);
-        message.success(`${t('logged_in_as', 'Logged in as')} ${profile.username}`);
-        navigate('/admins/dashboard');
-      } else {
-        setErrorMsg(res?.message || res?.error?.message || t('login_failed', 'Login failed'));
-      }
-    } catch (err) {
-      setErrorMsg(err.message || t('quick_login_error', 'Quick login error'));
-    } finally {
       setLoading(false);
     }
   };
@@ -314,39 +275,6 @@ export default function Login() {
               </Button>
             </Form.Item>
           </Form>
-
-          {/* Quick 1-Click Demo Accounts */}
-          <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid #f1f5f9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {t('one_click_demo_credentials', '1-Click Demo Credentials:')}
-              </span>
-              <Tag color="blue" style={{ margin: 0, borderRadius: 6, fontSize: 10.5 }}>{t('demo_ready', 'DEMO READY')}</Tag>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('customer')}
-                className="py-2 px-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all text-center border border-slate-200"
-              >
-                👤 {t('customer', 'Customer')}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('manager')}
-                className="py-2 px-2 rounded-xl text-xs font-semibold bg-orange-50 hover:bg-orange-100 text-orange-700 transition-all text-center border border-orange-200"
-              >
-                ☕ {t('manager', 'Manager')}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin')}
-                className="py-2 px-2 rounded-xl text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 transition-all text-center border border-blue-200"
-              >
-                👑 {t('admin', 'Admin')}
-              </button>
-            </div>
-          </div>
 
           <Divider style={{ margin: '20px 0 16px', fontSize: 12, color: '#94a3b8' }}>
             {t('new_to_aura', 'New to Aura?')}
