@@ -149,7 +149,10 @@ const AdminDashboardRouter = () => {
     menuKey === 'stock-counts' ||
     menuKey === 'quantity-adjustments' ||
     menuKey === 'cost-adjustments' ||
+    moduleKey === 'using-stock' ||
+    moduleKey === 'using_stock' ||
     menuKey === 'using-stock' ||
+    menuKey === 'using_stock' ||
     menuKey === 'stock-received' ||
     menuKey === 'transfers' ||
     menuKey === 'consignments' ||

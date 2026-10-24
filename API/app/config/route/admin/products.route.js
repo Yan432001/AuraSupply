@@ -20,18 +20,18 @@ module.exports = (app) => {
 
   // Public & Admin Products Endpoints
   app.get("/api/products", getProducts);
-  app.get("/api/products/:id", getProductById);
+  app.get("/api/products/:id(\\d+)", getProductById);
   app.post("/api/products", addProducts);
-  app.put("/api/products/:id", updateProducts);
+  app.put("/api/products/:id(\\d+)", updateProducts);
   app.post("/api/products/update", updateProducts);
-  app.delete("/api/products/:id", deleteProducts);
+  app.delete("/api/products/:id(\\d+)", deleteProducts);
   app.delete("/api/products", deleteProducts);
 
   // Dedicated Admin Namespace
   app.get("/api/admin/products", getProducts);
-  app.get("/api/admin/products/:id", getProductById);
+  app.get("/api/admin/products/:id(\\d+)", getProductById);
   app.post("/api/admin/products", addProducts);
-  app.put("/api/admin/products/:id", updateProducts);
-  app.delete("/api/admin/products/:id", deleteProducts);
+  app.put("/api/admin/products/:id(\\d+)", updateProducts);
+  app.delete("/api/admin/products/:id(\\d+)", deleteProducts);
   app.post("/api/admin/products/bulk-price", bulkUpdatePrices);
 };

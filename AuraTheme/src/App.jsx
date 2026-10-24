@@ -103,6 +103,13 @@ const ThemedAdminLayout = () => (
   </ThemeProvider>
 );
 
+const AdminRedirect = () => {
+  const loc = useLocation();
+  const sub = loc.pathname.replace(/^\/admin(?:\/|$)/, '');
+  const target = `/admins/${sub}${loc.search}`;
+  return <Navigate to={target} replace />;
+};
+
 const AppContent = () => {
   return (
     <Routes>
@@ -162,6 +169,8 @@ const AppContent = () => {
         <Route path="products/add" element={<AdminProducts />} />
         <Route path="products/import" element={<AdminProducts />} />
         <Route path="products/print_barcodes" element={<AdminProducts />} />
+        <Route path="products/using_stock" element={<AdminProducts />} />
+        <Route path="products/using-stock" element={<AdminProducts />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="customers" element={<CustomersManagement />} />
         <Route path="purchases" element={<BpasPurchasesWorkspace />} />
@@ -219,7 +228,11 @@ const AppContent = () => {
         <Route path="*" element={<AdminDashboardRouter />} />
       </Route>
 
-      {/* 5. Catch-All Route */}
+      {/* 5. Admin Prefix Fallback (/admin -> /admins) */}
+      <Route path="/admin/*" element={<AdminRedirect />} />
+      <Route path="/admin" element={<Navigate to="/admins" replace />} />
+
+      {/* 6. Catch-All Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -72,6 +72,7 @@ import { useTranslation } from '../../contexts/LanguageContext';
 import BpasAddProductPage from './BpasAddProductPage';
 import BpasImportExcelPage from './BpasImportExcelPage';
 import BpasPrintBarcodesPage from './BpasPrintBarcodesPage';
+import BpasUsingStockWorkspace from './BpasUsingStockWorkspace';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -135,7 +136,10 @@ export default function BpasInventoryWorkspace() {
   const [barcodeSelectedItems, setBarcodeSelectedItems] = useState([]);
 
   // Active Tab: products | attributes | warehouse-stock | movements | stock-counts | quantity-adjustments | cost-adjustments | using-stock | transfers | consignments
-  const initialTab = searchParams.get('tab') || searchParams.get('menu') || 'products';
+  const initialTab =
+    searchParams.get('tab') ||
+    searchParams.get('menu') ||
+    (location.pathname.includes('using_stock') || location.pathname.includes('using-stock') ? 'using-stock' : 'products');
   const [activeTab, setActiveTab] = useState(initialTab === 'inventory' ? 'products' : initialTab);
 
   // Sync tab with URL if changed externally
@@ -152,7 +156,9 @@ export default function BpasInventoryWorkspace() {
       setPageMode('barcode');
     } else {
       setPageMode('list');
-      if (currentTab && currentTab !== 'inventory') {
+      if (location.pathname.includes('using_stock') || location.pathname.includes('using-stock')) {
+        setActiveTab('using-stock');
+      } else if (currentTab && currentTab !== 'inventory') {
         setActiveTab(currentTab);
       }
     }
@@ -1427,6 +1433,18 @@ export default function BpasInventoryWorkspace() {
             >
               Transfers
             </Button>
+            <Button
+              type={activeTab === 'using-stock' || activeTab === 'using_stock' ? 'primary' : 'default'}
+              icon={<FileTextOutlined />}
+              onClick={() => {
+                setPageMode('list');
+                setActiveTab('using-stock');
+                navigate('/admins/products?tab=using-stock');
+              }}
+              style={{ fontWeight: 700 }}
+            >
+              Stock Usage
+            </Button>
           </Space>
 
           <Space size={8}>
@@ -1474,6 +1492,7 @@ export default function BpasInventoryWorkspace() {
             {activeTab === 'movements' && <HistoryOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {activeTab === 'quantity-adjustments' && <ToolOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {activeTab === 'transfers' && <SwapOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+            {(activeTab === 'using-stock' || activeTab === 'using_stock') && <FileTextOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
 
             <span style={{ fontSize: 17, fontWeight: 800, color: '#2563eb' }}>
               {activeTab === 'products' && `Products Inventory (${filterWarehouse === 'all' ? 'All Warehouses' : warehousesList.find((w) => String(w.id) === filterWarehouse)?.name || 'Selected Warehouse'})`}
@@ -1482,6 +1501,7 @@ export default function BpasInventoryWorkspace() {
               {activeTab === 'movements' && 'Stock Movement Audit Ledger'}
               {activeTab === 'quantity-adjustments' && 'Inventory Quantity Adjustments'}
               {activeTab === 'transfers' && 'Warehouse Stock Transfers'}
+              {(activeTab === 'using-stock' || activeTab === 'using_stock') && 'Using Stock Management (Material & Internal Consumption)'}
             </span>
           </div>
         }
@@ -2155,6 +2175,11 @@ export default function BpasInventoryWorkspace() {
               pagination={false}
             />
           </div>
+        )}
+
+        {/* TAB 7: Stock Usage / Using Stock */}
+        {(activeTab === 'using-stock' || activeTab === 'using_stock') && (
+          <BpasUsingStockWorkspace embedded={true} />
         )}
       </Card>
 
