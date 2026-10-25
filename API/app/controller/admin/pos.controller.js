@@ -471,37 +471,51 @@ exports.getPosProducts = async (req, res) => {
     }
 
     const [settingsRows] = await pool.query('SELECT overselling FROM aura_settings LIMIT 1');
-    const overselling = settingsRows[0]?.overselling ? 1 : 0;
+    const globalOversell = parseInt(settingsRows[0]?.overselling || 0, 10) === 1;
+    let warehouseOversell = true;
+    if (warehouseId) {
+      const [whRows] = await pool.query('SELECT overselling FROM aura_warehouses WHERE id = ? LIMIT 1', [warehouseId]);
+      if (whRows.length > 0 && whRows[0].overselling !== null) {
+        warehouseOversell = parseInt(whRows[0].overselling, 10) === 1;
+      }
+    }
+    const overselling = (globalOversell && warehouseOversell) ? 1 : 0;
 
-    const items = products.map(p => ({
-      ...p,
-      price: parseFloat(p.price) || 0,
-      cost: parseFloat(p.cost) || 0,
-      quantity: parseFloat(p.quantity) || 0,
-      variants: variantsMap[p.id] || [],
-      has_variants: (variantsMap[p.id] || []).length > 0,
-      image_url: p.image && p.image !== 'no_image.png' 
-        ? (p.image.startsWith('http') || p.image.startsWith('/assets') ? p.image : `/assets/uploads/${p.image}`)
-        : null,
-      units: [
-        {
-          unit_id: p.unit_id || 1,
-          unit_name: p.unit_name || 'Piece',
-          unit_code: p.unit_code || 'pcs',
-          unit_qty: 1,
-          unit_price: parseFloat(p.price) || 0,
-          operation_value: 1
-        },
-        ...(multiUnitsMap[p.id] || []).map(u => ({
-          unit_id: u.unit_id,
-          unit_name: u.unit_name,
-          unit_code: u.unit_code,
-          unit_qty: parseFloat(u.unit_qty) || 1,
-          unit_price: parseFloat(u.unit_price) > 0 ? parseFloat(u.unit_price) : (parseFloat(p.price) * (parseFloat(u.operation_value) || 1)),
-          operation_value: parseFloat(u.operation_value) || parseFloat(u.unit_qty) || 1
-        }))
-      ]
-    }));
+    const items = products.map(p => {
+      const isService = p.type === 'service' || p.type === 'digital';
+      const canOversell = overselling === 1 || isService;
+      return {
+        ...p,
+        price: parseFloat(p.price) || 0,
+        cost: parseFloat(p.cost) || 0,
+        quantity: parseFloat(p.quantity) || 0,
+        overselling,
+        can_oversell: canOversell,
+        variants: variantsMap[p.id] || [],
+        has_variants: (variantsMap[p.id] || []).length > 0,
+        image_url: p.image && p.image !== 'no_image.png' 
+          ? (p.image.startsWith('http') || p.image.startsWith('/assets') ? p.image : `/assets/uploads/${p.image}`)
+          : null,
+        units: [
+          {
+            unit_id: p.unit_id || 1,
+            unit_name: p.unit_name || 'Piece',
+            unit_code: p.unit_code || 'pcs',
+            unit_qty: 1,
+            unit_price: parseFloat(p.price) || 0,
+            operation_value: 1
+          },
+          ...(multiUnitsMap[p.id] || []).map(u => ({
+            unit_id: u.unit_id,
+            unit_name: u.unit_name,
+            unit_code: u.unit_code,
+            unit_qty: parseFloat(u.unit_qty) || 1,
+            unit_price: parseFloat(u.unit_price) > 0 ? parseFloat(u.unit_price) : (parseFloat(p.price) * (parseFloat(u.operation_value) || 1)),
+            operation_value: parseFloat(u.operation_value) || parseFloat(u.unit_qty) || 1
+          }))
+        ]
+      };
+    });
 
     return res.json({
       success: true,
@@ -1388,9 +1402,14 @@ exports.getPosSettings = async (req, res) => {
       SELECT id, name, company, phone FROM aura_companies WHERE group_name = 'customer' ORDER BY id ASC LIMIT 100
     `);
 
+    // Fetch master overselling configuration from aura_settings
+    const [genSettings] = await pool.query('SELECT overselling, default_currency, default_warehouse FROM aura_settings LIMIT 1');
+    const globalOversell = parseInt(genSettings[0]?.overselling || 0, 10) === 1;
+
     return res.json({
       success: true,
       settings: rows[0] || {},
+      overselling: globalOversell ? 1 : 0,
       billers,
       warehouses,
       categories,

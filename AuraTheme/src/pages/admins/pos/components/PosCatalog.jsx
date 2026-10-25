@@ -63,6 +63,7 @@ const PosCatalog = ({
   catalogViewMode = 'grid',
   setCatalogViewMode,
   khrExchangeRate = 4200,
+  allowOverselling = false,
   themeMode,
   adminTheme,
   t,
@@ -388,17 +389,20 @@ const PosCatalog = ({
           /* Enlarged, Spacious, Informative List Mode */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {filteredProducts.map((p) => {
-              const qty = parseFloat(p.quantity ?? 99);
-              const isOutOfStock = qty <= 0;
-              const isLowStock = !isOutOfStock && qty < 10;
+              const qty = parseFloat(p.quantity ?? 0);
+              const isServiceOrDigital = p.type === 'service' || p.type === 'digital';
+              const canOversell = Boolean(allowOverselling || p.can_oversell || isServiceOrDigital);
+              const hasNoStock = qty <= 0;
+              const isBlocked = hasNoStock && !canOversell;
+              const isLowStock = !hasNoStock && qty < 10;
               const khrPrice = Math.round((parseFloat(p.price) || 0) * khrExchangeRate);
               const fallbackEmoji = getCategoryEmoji(p.category_name);
 
               return (
                 <div
                   key={p.id}
-                  onClick={() => !isOutOfStock && onAddToCart(p)}
-                  className={`pos-press ${!isOutOfStock ? 'pos-product-card' : ''}`}
+                  onClick={() => !isBlocked && onAddToCart(p)}
+                  className={`pos-press ${!isBlocked ? 'pos-product-card' : ''}`}
                   style={{
                     padding: '12px 16px',
                     borderRadius: 14,
@@ -407,8 +411,8 @@ const PosCatalog = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                    opacity: isOutOfStock ? 0.45 : 1,
+                    cursor: isBlocked ? 'not-allowed' : 'pointer',
+                    opacity: isBlocked ? 0.45 : 1,
                     transition: 'all 0.18s ease',
                     boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)',
                   }}
@@ -482,25 +486,63 @@ const PosCatalog = ({
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 5,
-                        background: isOutOfStock
+                        background: isBlocked
                           ? 'rgba(239, 68, 68, 0.12)'
+                          : isServiceOrDigital
+                          ? 'rgba(99, 102, 241, 0.12)'
+                          : hasNoStock
+                          ? 'rgba(245, 158, 11, 0.12)'
                           : isLowStock
                           ? 'rgba(245, 158, 11, 0.12)'
                           : 'rgba(16, 185, 129, 0.12)',
-                        color: isOutOfStock ? '#ef4444' : isLowStock ? '#d97706' : '#059669',
-                        border: `1px solid ${isOutOfStock ? '#fca5a5' : isLowStock ? '#fcd34d' : '#86efac'}`,
+                        color: isBlocked
+                          ? '#ef4444'
+                          : isServiceOrDigital
+                          ? '#4f46e5'
+                          : hasNoStock
+                          ? '#d97706'
+                          : isLowStock
+                          ? '#d97706'
+                          : '#059669',
+                        border: `1px solid ${
+                          isBlocked
+                            ? '#fca5a5'
+                            : isServiceOrDigital
+                            ? '#c7d2fe'
+                            : hasNoStock
+                            ? '#fcd34d'
+                            : isLowStock
+                            ? '#fcd34d'
+                            : '#86efac'
+                        }`,
                       }}
                     >
                       <span
-                        className={!isOutOfStock && !isLowStock ? 'pos-pulse-dot' : ''}
+                        className={!isBlocked && !hasNoStock && !isLowStock ? 'pos-pulse-dot' : ''}
                         style={{
                           width: 6,
                           height: 6,
                           borderRadius: '50%',
-                          background: isOutOfStock ? '#ef4444' : isLowStock ? '#d97706' : '#10b981',
+                          background: isBlocked
+                            ? '#ef4444'
+                            : isServiceOrDigital
+                            ? '#4f46e5'
+                            : hasNoStock
+                            ? '#d97706'
+                            : isLowStock
+                            ? '#d97706'
+                            : '#10b981',
                         }}
                       />
-                      {isOutOfStock ? 'Sold Out' : isLowStock ? `⚡ ${qty} left` : `${qty} in stock`}
+                      {isBlocked
+                        ? 'Sold Out'
+                        : isServiceOrDigital
+                        ? 'Service'
+                        : hasNoStock
+                        ? `${qty} (Oversell)`
+                        : isLowStock
+                        ? `⚡ ${qty} left`
+                        : `${qty} in stock`}
                     </span>
 
                     <div style={{ textAlign: 'right', minWidth: 85 }}>
@@ -511,7 +553,7 @@ const PosCatalog = ({
                     <Button
                       type="primary"
                       icon={<PlusOutlined />}
-                      disabled={isOutOfStock}
+                      disabled={isBlocked}
                       className="pos-add-btn"
                       style={{
                         background: 'linear-gradient(135deg, #2F6FED 0%, #5B8DEF 100%)',
@@ -543,17 +585,20 @@ const PosCatalog = ({
             }}
           >
             {filteredProducts.map((p) => {
-              const qty = parseFloat(p.quantity ?? 99);
-              const isOutOfStock = qty <= 0;
-              const isLowStock = !isOutOfStock && qty < 10;
+              const qty = parseFloat(p.quantity ?? 0);
+              const isServiceOrDigital = p.type === 'service' || p.type === 'digital';
+              const canOversell = Boolean(allowOverselling || p.can_oversell || isServiceOrDigital);
+              const hasNoStock = qty <= 0;
+              const isBlocked = hasNoStock && !canOversell;
+              const isLowStock = !hasNoStock && qty < 10;
               const khrPrice = Math.round((parseFloat(p.price) || 0) * khrExchangeRate);
               const fallbackEmoji = getCategoryEmoji(p.category_name);
 
               return (
                 <div
                   key={p.id}
-                  onClick={() => !isOutOfStock && onAddToCart(p)}
-                  className={`pos-press ${!isOutOfStock ? 'pos-product-card' : ''}`}
+                  onClick={() => !isBlocked && onAddToCart(p)}
+                  className={`pos-press ${!isBlocked ? 'pos-product-card' : ''}`}
                   style={{
                     borderRadius: 16,
                     background: isDark ? '#0f172a' : '#ffffff',
@@ -562,8 +607,8 @@ const PosCatalog = ({
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                    opacity: isOutOfStock ? 0.45 : 1,
+                    cursor: isBlocked ? 'not-allowed' : 'pointer',
+                    opacity: isBlocked ? 0.45 : 1,
                     position: 'relative',
                     overflow: 'hidden',
                     boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.03)',
@@ -580,26 +625,64 @@ const PosCatalog = ({
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 4,
-                        background: isOutOfStock
+                        background: isBlocked
                           ? 'rgba(239, 68, 68, 0.15)'
+                          : isServiceOrDigital
+                          ? 'rgba(99, 102, 241, 0.15)'
+                          : hasNoStock
+                          ? 'rgba(245, 158, 11, 0.15)'
                           : isLowStock
                           ? 'rgba(245, 158, 11, 0.15)'
                           : 'rgba(16, 185, 129, 0.15)',
-                        color: isOutOfStock ? '#ef4444' : isLowStock ? '#d97706' : '#059669',
+                        color: isBlocked
+                          ? '#ef4444'
+                          : isServiceOrDigital
+                          ? '#4f46e5'
+                          : hasNoStock
+                          ? '#d97706'
+                          : isLowStock
+                          ? '#d97706'
+                          : '#059669',
                         backdropFilter: 'blur(4px)',
-                        border: `1px solid ${isOutOfStock ? '#fca5a5' : isLowStock ? '#fcd34d' : '#86efac'}`,
+                        border: `1px solid ${
+                          isBlocked
+                            ? '#fca5a5'
+                            : isServiceOrDigital
+                            ? '#c7d2fe'
+                            : hasNoStock
+                            ? '#fcd34d'
+                            : isLowStock
+                            ? '#fcd34d'
+                            : '#86efac'
+                        }`,
                       }}
                     >
                       <span
-                        className={!isOutOfStock && !isLowStock ? 'pos-pulse-dot' : ''}
+                        className={!isBlocked && !hasNoStock && !isLowStock ? 'pos-pulse-dot' : ''}
                         style={{
                           width: 5,
                           height: 5,
                           borderRadius: '50%',
-                          background: isOutOfStock ? '#ef4444' : isLowStock ? '#d97706' : '#10b981',
+                          background: isBlocked
+                            ? '#ef4444'
+                            : isServiceOrDigital
+                            ? '#4f46e5'
+                            : hasNoStock
+                            ? '#d97706'
+                            : isLowStock
+                            ? '#d97706'
+                            : '#10b981',
                         }}
                       />
-                      {isOutOfStock ? 'Sold Out' : isLowStock ? `⚡ ${qty}` : `${qty}`}
+                      {isBlocked
+                        ? 'Sold Out'
+                        : isServiceOrDigital
+                        ? 'Service'
+                        : hasNoStock
+                        ? `${qty}`
+                        : isLowStock
+                        ? `⚡ ${qty}`
+                        : `${qty}`}
                     </span>
                   </div>
 

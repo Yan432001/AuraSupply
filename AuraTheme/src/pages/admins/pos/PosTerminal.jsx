@@ -213,6 +213,7 @@ export default function PosTerminal() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchProductKeyword, setSearchProductKeyword] = useState('');
   const [catalogViewMode, setCatalogViewMode] = useState('grid');
+  const [allowOverselling, setAllowOverselling] = useState(false);
   const searchInputRef = useRef(null);
 
   // 5. Cart, Customers, Table & Orders State (Persisted across in-app navigation)
@@ -346,6 +347,9 @@ export default function PosTerminal() {
           setBillers(bList);
           setWarehouses(wList);
           setPosSettingsData((prev) => ({ ...prev, ...s }));
+          if (res.data?.overselling !== undefined) {
+            setAllowOverselling(Number(res.data.overselling) === 1);
+          }
 
           if (res.data.customers && res.data.customers.length > 0) {
             setCustomers(res.data.customers);
@@ -590,6 +594,9 @@ export default function PosTerminal() {
 
       if (prodRes.data?.success && Array.isArray(prodRes.data.products) && prodRes.data.products.length > 0) {
         setProducts(prodRes.data.products);
+      }
+      if (prodRes.data?.overselling !== undefined) {
+        setAllowOverselling(Number(prodRes.data.overselling) === 1);
       }
       if (catRes.data?.success && Array.isArray(catRes.data.categories) && catRes.data.categories.length > 0) {
         const cats = catRes.data.categories;
@@ -1256,6 +1263,7 @@ export default function PosTerminal() {
               catalogViewMode={catalogViewMode}
               setCatalogViewMode={setCatalogViewMode}
               khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
+              allowOverselling={allowOverselling}
               t={t}
             />
           </div>
