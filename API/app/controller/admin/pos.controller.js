@@ -766,70 +766,74 @@ exports.checkoutPosSale = async (req, res) => {
         );
 
         // Check if product exists in aura_products and is an inventory-trackable item
-        let isTrackable = false;
+        let pData = null;
         if (prodId > 0) {
           const [pRows] = await connection.query(
-            'SELECT id, type FROM aura_products WHERE id = ? LIMIT 1',
+            'SELECT id, code, name, type, cost FROM aura_products WHERE id = ? LIMIT 1',
             [prodId]
           );
-          if (pRows.length > 0 && pRows[0].type !== 'service' && pRows[0].type !== 'digital') {
-            isTrackable = true;
-          }
+          if (pRows.length > 0) pData = pRows[0];
         }
 
-        if (isTrackable) {
-          // Audit Stock Movement Ledger (triggers automatic insertStock updates across warehouse & variants)
+        // Handle Combo Products (Cut stock for each standard item in the combo, matching AURA_v1 Pos_model.php)
+        if (pData && pData.type === 'combo') {
+          const [comboItems] = await connection.query(
+            `SELECT ci.quantity AS combo_qty, p.id AS child_id, p.code AS child_code, p.name AS child_name, p.type AS child_type, p.cost AS child_cost
+             FROM aura_combo_items ci
+             JOIN aura_products p ON p.code = ci.item_code
+             WHERE ci.product_id = ?`,
+            [prodId]
+          );
+          for (const ci of comboItems) {
+            if (ci.child_type === 'standard') {
+              const childDeduct = parseFloat(ci.combo_qty || 1) * baseQtyToDeduct;
+              await connection.query(
+                `INSERT INTO aura_stock_movement
+                 (date, reference_no, transaction, transaction_id, warehouse_id,
+                  product_id, product_type, product_code, product_name, option_id, real_unit_cost,
+                  quantity, unit_quantity, unit_code, unit_id, user_id)
+                 VALUES (NOW(), ?, 'Sale', ?, ?, ?, 'standard', ?, ?, NULL, ?, -?, ?, 'pcs', 1, ?)`,
+                [
+                  referenceNo,
+                  saleId,
+                  wid,
+                  ci.child_id,
+                  ci.child_code,
+                  ci.child_name,
+                  parseFloat(ci.child_cost || 0),
+                  childDeduct,
+                  unitRatio,
+                  uid
+                ]
+              );
+            }
+          }
+        } else if (pData && pData.type === 'standard') {
+          // Standard Inventory Product: Record in stock movement ledger
+          // Note: The MySQL trigger `insertStock` automatically calculates SUM(quantity) and updates
+          // aura_products.quantity and aura_warehouses_products.quantity without manual double-deduction.
           await connection.query(
             `INSERT INTO aura_stock_movement
              (date, reference_no, transaction, transaction_id, warehouse_id,
               product_id, product_type, product_code, product_name, option_id, real_unit_cost,
               quantity, unit_quantity, unit_code, unit_id, user_id)
-             VALUES (NOW(), ?, 'POS', ?, ?, ?, 'standard', ?, ?, ?, 0, -?, -?, ?, ?, ?)`,
+             VALUES (NOW(), ?, 'Sale', ?, ?, ?, 'standard', ?, ?, ?, ?, -?, ?, ?, ?, ?)`,
             [
               referenceNo,
               saleId,
               wid,
               prodId,
-              prodCode,
-              prodName,
+              prodCode || pData.code,
+              prodName || pData.name,
               optId,
+              parseFloat(pData.cost || 0),
               baseQtyToDeduct,
-              baseQtyToDeduct,
+              unitRatio,
               item.unit_code || 'pcs',
               item.unit_id || 1,
               uid
             ]
           );
-
-          // Update product master balance
-          await connection.query(
-            `UPDATE aura_products SET quantity = GREATEST(0, quantity - ?) WHERE id = ?`,
-            [baseQtyToDeduct, prodId]
-          );
-
-          if (wid) {
-            await connection.query(
-              `INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity)
-               VALUES (?, ?, -?)
-               ON DUPLICATE KEY UPDATE quantity = quantity - ?`,
-              [prodId, wid, baseQtyToDeduct, baseQtyToDeduct]
-            );
-          }
-
-          if (optId) {
-            await connection.query(
-              `UPDATE aura_product_variants SET quantity = GREATEST(0, quantity - ?) WHERE id = ?`,
-              [itemQty, optId]
-            );
-            if (wid) {
-              await connection.query(
-                `INSERT INTO aura_warehouses_products_variants (product_id, option_id, warehouse_id, quantity)
-                 VALUES (?, ?, ?, -?)
-                 ON DUPLICATE KEY UPDATE quantity = quantity - ?`,
-                [prodId, optId, wid, itemQty, itemQty]
-              );
-            }
-          }
         }
       }
     }

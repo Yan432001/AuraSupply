@@ -628,11 +628,18 @@ export default function PosTerminal() {
         ...prev,
         {
           id: product.id,
+          product_id: product.id,
           code: product.code || `PRD-${product.id}`,
           name: product.name,
           unit_price: parseFloat(product.price || product.unit_price || 0),
           quantity: 1,
-          unit_name: product.unit_name || 'Unit',
+          unit_name: product.unit_name || product.unit || 'Unit',
+          unit_id: product.unit_id || product.unit || 1,
+          unit_code: product.unit_code || 'pcs',
+          operation_value: product.operation_value || 1,
+          product_type: product.type || 'standard',
+          option_id: product.option_id || null,
+          cost: parseFloat(product.cost || 0),
           item_discount: 0,
           item_note: '',
           image_url: product.image_url,
@@ -994,9 +1001,32 @@ export default function PosTerminal() {
       setCompletedInvoice(invoiceData);
       setCheckoutModalVisible(false);
       setReceiptModalVisible(true);
+      
+      // Capture items before clearing cart for optimistic stock decrement
+      const completedCart = [...cart];
       clearCart();
       playPosAudio('success', soundEnabled);
       message.success('Sale completed successfully!');
+
+      // 1. Optimistically decrement stock quantities on screen for responsive UX
+      if (completedCart.length > 0) {
+        setProducts((prev) =>
+          prev.map((p) => {
+            const soldItem = completedCart.find((c) => c.id === p.id || c.product_id === p.id);
+            if (soldItem) {
+              const qtyDeducted = (parseFloat(soldItem.quantity) || 1) * (parseFloat(soldItem.operation_value) || 1);
+              return {
+                ...p,
+                quantity: Math.max(0, (parseFloat(p.quantity) || 0) - qtyDeducted),
+              };
+            }
+            return p;
+          })
+        );
+      }
+
+      // 2. Re-fetch fresh catalog from server to ensure 100% sync with database triggers
+      fetchCatalog();
     } catch (err) {
       message.error(err.response?.data?.message || err.message || 'Checkout failed');
     } finally {
