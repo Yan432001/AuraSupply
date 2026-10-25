@@ -152,7 +152,8 @@ async function startServer() {
     'asset',
     'barcode',
     'stockCounts',
-    'transfers'
+    'transfers',
+    'costAdjustments'
   ];
 
   for (const routeName of adminRoutes) {
@@ -226,7 +227,7 @@ async function startServer() {
     });
   });
 
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`====================================================`);
     console.log(`🚀 Aura Global Server running at port ${PORT}`);
     console.log(`🌐 Local Website:    http://127.0.0.1:${PORT}/`);

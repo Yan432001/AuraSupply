@@ -43,6 +43,7 @@ export const erpModules = [
         leaf('stock-counts', 'Stock Counts', 'Perform cycle counts and reconcile physical inventory with system records.', { route: '/admins/products?tab=stock-counts' }),
         leaf('quantity-adjustments', 'Quantity Adjustments', 'Record damaged, missing, expired, or found stock items.', { route: '/admins/products?tab=quantity-adjustments' }),
         leaf('cost-adjustments', 'Cost Adjustments', 'Revalue product purchase costs and update valuation history.', { route: '/admins/products?tab=cost-adjustments' }),
+        leaf('add-cost-adjustment', 'Add Cost Adjustment', 'Create a new cost revaluation voucher for products.', { route: '/admins/products/cost_adjustments/add' }),
       ]),
       group('inventory-movement', 'Stock Movement', 'Internal usage, receiving, and transfers.', [
         leaf('using-stock', 'Stock Using', 'Record operational consumption and internal branch material use.', { route: '/admins/products?tab=using-stock' }),

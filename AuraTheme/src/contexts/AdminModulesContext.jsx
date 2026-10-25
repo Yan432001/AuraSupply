@@ -48,40 +48,55 @@ export const AdminModulesProvider = ({ children }) => {
   const [moduleState, setModuleState] = useState(() => getStoredModuleState());
   const [activeWebsiteTemplate, setActiveWebsiteTemplate] = useState(() => getStoredWebsiteTemplate());
 
-  // Fetch real-time public website & template status from database
+  // Fetch real-time public website & template status from database with auto-retry
   useEffect(() => {
     let isMounted = true;
-    axios.get('/api/public/website-status')
-      .then((res) => {
-        if (!isMounted) return;
-        if (res.data?.success && res.data?.data) {
-          const { is_ecommerce_active, active_template, submodules } = res.data.data;
-          if (typeof is_ecommerce_active === 'boolean') {
-            setModuleState((prev) => ({
-              ...prev,
-              ecommerce: is_ecommerce_active,
-              shop: is_ecommerce_active
-            }));
-          }
-          if (active_template) {
-            setActiveWebsiteTemplate(active_template);
-            try {
-              window.localStorage.setItem(ACTIVE_TEMPLATE_STORAGE_KEY, active_template);
-            } catch (_) {}
-          }
-          if (Array.isArray(submodules)) {
-            setModuleState((prev) => {
-              const next = { ...prev };
-              submodules.forEach((sub) => {
-                next[sub.sub_module_key] = sub.is_enabled === 1;
+    let retryTimer = null;
+
+    const fetchStatus = (retries = 0) => {
+      axios.get('/api/public/website-status')
+        .then((res) => {
+          if (!isMounted) return;
+          if (res.data?.success && res.data?.data) {
+            const { is_ecommerce_active, active_template, submodules } = res.data.data;
+            if (typeof is_ecommerce_active === 'boolean') {
+              setModuleState((prev) => ({
+                ...prev,
+                ecommerce: is_ecommerce_active,
+                shop: is_ecommerce_active
+              }));
+            }
+            if (active_template) {
+              setActiveWebsiteTemplate(active_template);
+              try {
+                window.localStorage.setItem(ACTIVE_TEMPLATE_STORAGE_KEY, active_template);
+              } catch (_) {}
+            }
+            if (Array.isArray(submodules)) {
+              setModuleState((prev) => {
+                const next = { ...prev };
+                submodules.forEach((sub) => {
+                  next[sub.sub_module_key] = sub.is_enabled === 1;
+                });
+                return next;
               });
-              return next;
-            });
+            }
           }
-        }
-      })
-      .catch(() => {});
-    return () => { isMounted = false; };
+        })
+        .catch((err) => {
+          // If server is restarting (502 or network error), retry up to 3 times
+          if (isMounted && retries < 3 && (err?.response?.status === 502 || !err?.response)) {
+            retryTimer = setTimeout(() => fetchStatus(retries + 1), 1500);
+          }
+        });
+    };
+
+    fetchStatus();
+
+    return () => {
+      isMounted = false;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, []);
 
   // Persist moduleState to localStorage safely on state change

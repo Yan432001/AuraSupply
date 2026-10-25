@@ -467,7 +467,7 @@ export const LanguageProvider = ({ children }) => {
   const [isLoadingTranslations, setIsLoadingTranslations] = useState(false);
 
   // Fetch full dictionary from MySQL API
-  const fetchTranslations = useCallback(async (langCode) => {
+  const fetchTranslations = useCallback(async (langCode, retries = 0) => {
     try {
       setIsLoadingTranslations(true);
       const res = await axios.get(`/api/languages/translations/${langCode}`);
@@ -478,6 +478,10 @@ export const LanguageProvider = ({ children }) => {
         } catch (_) {}
       }
     } catch (err) {
+      if (retries < 3 && (err?.response?.status === 502 || !err?.response)) {
+        setTimeout(() => fetchTranslations(langCode, retries + 1), 1500);
+        return;
+      }
       console.warn('[LanguageContext] Failed to load server translations:', err.message);
     } finally {
       setIsLoadingTranslations(false);

@@ -76,6 +76,7 @@ import BpasUsingStockWorkspace from './BpasUsingStockWorkspace';
 import BpasQuantityAdjustmentsWorkspace from './BpasQuantityAdjustmentsWorkspace';
 import BpasStockCountsWorkspace from './BpasStockCountsWorkspace';
 import BpasTransfersWorkspace from './BpasTransfersWorkspace';
+import BpasCostAdjustmentsWorkspace from './BpasCostAdjustmentsWorkspace';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -142,7 +143,9 @@ export default function BpasInventoryWorkspace() {
   const initialTab =
     searchParams.get('tab') ||
     searchParams.get('menu') ||
-    (location.pathname.includes('using_stock') || location.pathname.includes('using-stock')
+    (location.pathname.includes('cost_adjustments') || location.pathname.includes('cost-adjustments')
+      ? 'cost-adjustments'
+      : location.pathname.includes('using_stock') || location.pathname.includes('using-stock')
       ? 'using-stock'
       : location.pathname.includes('quantity_adjustments') || location.pathname.includes('quantity-adjustments')
       ? 'quantity-adjustments'
@@ -1463,6 +1466,18 @@ export default function BpasInventoryWorkspace() {
               Transfers
             </Button>
             <Button
+              type={activeTab === 'cost-adjustments' || activeTab === 'cost_adjustments' ? 'primary' : 'default'}
+              icon={<DollarOutlined />}
+              onClick={() => {
+                setPageMode('list');
+                setActiveTab('cost-adjustments');
+                navigate('/admins/products?tab=cost-adjustments');
+              }}
+              style={{ fontWeight: 700 }}
+            >
+              Cost Adjustments
+            </Button>
+            <Button
               type={activeTab === 'using-stock' || activeTab === 'using_stock' ? 'primary' : 'default'}
               icon={<FileTextOutlined />}
               onClick={() => {
@@ -1522,6 +1537,7 @@ export default function BpasInventoryWorkspace() {
             {activeTab === 'quantity-adjustments' && <ToolOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {(activeTab === 'stock-counts' || activeTab === 'stock_counts') && <CheckSquareOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {activeTab === 'transfers' && <SwapOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+            {(activeTab === 'cost-adjustments' || activeTab === 'cost_adjustments') && <DollarOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {(activeTab === 'using-stock' || activeTab === 'using_stock') && <FileTextOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
 
             <span style={{ fontSize: 17, fontWeight: 800, color: '#2563eb' }}>
@@ -1532,6 +1548,7 @@ export default function BpasInventoryWorkspace() {
               {activeTab === 'quantity-adjustments' && 'Inventory Quantity Adjustments'}
               {(activeTab === 'stock-counts' || activeTab === 'stock_counts') && 'Stock Counts & Physical Inventory Audits'}
               {activeTab === 'transfers' && 'Warehouse Stock Transfers'}
+              {(activeTab === 'cost-adjustments' || activeTab === 'cost_adjustments') && 'Inventory Cost Adjustments & Valuation'}
               {(activeTab === 'using-stock' || activeTab === 'using_stock') && 'Using Stock Management (Material & Internal Consumption)'}
             </span>
           </div>
@@ -2176,6 +2193,11 @@ export default function BpasInventoryWorkspace() {
               navigate('/admins/products?tab=quantity-adjustments');
             }}
           />
+        )}
+
+        {/* TAB 9: Cost Adjustments & Valuation */}
+        {(activeTab === 'cost-adjustments' || activeTab === 'cost_adjustments') && (
+          <BpasCostAdjustmentsWorkspace embedded={true} />
         )}
       </Card>
 

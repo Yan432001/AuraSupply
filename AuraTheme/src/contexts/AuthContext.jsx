@@ -411,9 +411,10 @@ export const AuthProvider = ({ children }) => {
               localStorage.setItem(ADMIN_KEYS.user, JSON.stringify(enrichedUser));
             }
           }
-        } catch (_) {
-          // If server fails or rejects
-          if (isMounted) {
+        } catch (err) {
+          // Only clear session if explicitly unauthenticated (401/403), NOT on temporary server restarts (502/503/network)
+          const isExplicitUnauthorized = err?.response?.status === 401 || err?.response?.status === 403;
+          if (isExplicitUnauthorized && isMounted) {
             setAdminUser(null);
             setAdminToken(null);
             localStorage.removeItem(ADMIN_KEYS.token);
@@ -448,8 +449,9 @@ export const AuthProvider = ({ children }) => {
               localStorage.setItem(WEB_KEYS.user, JSON.stringify(userObj));
             }
           }
-        } catch (_) {
-          if (isMounted) {
+        } catch (err) {
+          const isExplicitUnauthorized = err?.response?.status === 401 || err?.response?.status === 403;
+          if (isExplicitUnauthorized && isMounted) {
             setWebUser(null);
             setWebToken(null);
             localStorage.removeItem(WEB_KEYS.token);

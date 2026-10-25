@@ -58,6 +58,9 @@ import SaleDetailPage from './pages/admins/sales/SaleDetailPage';
 import BpasTransfersWorkspace from './pages/admins/BpasTransfersWorkspace';
 import BpasAddTransferPage from './pages/admins/BpasAddTransferPage';
 import BpasEditTransferPage from './pages/admins/BpasEditTransferPage';
+import BpasCostAdjustmentsWorkspace from './pages/admins/BpasCostAdjustmentsWorkspace';
+import BpasAddCostAdjustmentPage from './pages/admins/BpasAddCostAdjustmentPage';
+import BpasEditCostAdjustmentPage from './pages/admins/BpasEditCostAdjustmentPage';
 import { AdminModulesProvider } from './contexts/AdminModulesContext';
 
 // E-Menu Telegram Mini App Layout & Views
@@ -178,6 +181,15 @@ const AppContent = () => {
         <Route path="products/quantity-adjustments" element={<AdminProducts />} />
         <Route path="products/add_adjustment" element={<AdminProducts />} />
         <Route path="products/edit_adjustment/:id" element={<AdminProducts />} />
+        <Route path="products/cost_adjustments" element={<AdminProducts />} />
+        <Route path="products/cost-adjustments" element={<AdminProducts />} />
+        <Route path="products/cost_adjustments/add" element={<BpasAddCostAdjustmentPage />} />
+        <Route path="products/cost-adjustments/add" element={<BpasAddCostAdjustmentPage />} />
+        <Route path="products/cost_adjustments/edit/:id" element={<BpasEditCostAdjustmentPage />} />
+        <Route path="products/cost-adjustments/edit/:id" element={<BpasEditCostAdjustmentPage />} />
+        <Route path="cost_adjustments" element={<BpasCostAdjustmentsWorkspace />} />
+        <Route path="cost_adjustments/add" element={<BpasAddCostAdjustmentPage />} />
+        <Route path="cost_adjustments/edit/:id" element={<BpasEditCostAdjustmentPage />} />
         <Route path="transfers" element={<BpasTransfersWorkspace />} />
         <Route path="transfers/add" element={<BpasAddTransferPage />} />
         <Route path="transfers/edit/:id" element={<BpasEditTransferPage />} />
