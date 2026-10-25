@@ -151,7 +151,7 @@ async function startServer() {
     'accounting',
     'asset',
     'barcode',
-    'usingStock'
+    'stockCounts'
   ];
 
   for (const routeName of adminRoutes) {
@@ -225,12 +225,13 @@ async function startServer() {
     });
   });
 
-  app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, () => {
     console.log(`====================================================`);
-    console.log(`🚀 Aura Global Server running at http://0.0.0.0:${PORT}`);
-    console.log(`🌐 Default Website:  http://0.0.0.0:${PORT}/`);
-    console.log(`🛍️ E-Menu WebApp:    http://0.0.0.0:${PORT}/shop/sbc-store`);
-    console.log(`📡 E-Menu & TMA API: http://0.0.0.0:${PORT}/api/tma/stores`);
+    console.log(`🚀 Aura Global Server running at port ${PORT}`);
+    console.log(`🌐 Local Website:    http://127.0.0.1:${PORT}/`);
+    console.log(`🌐 Localhost:        http://localhost:${PORT}/`);
+    console.log(`🛍️ E-Menu WebApp:    http://localhost:${PORT}/shop/sbc-store`);
+    console.log(`📡 E-Menu & TMA API: http://localhost:${PORT}/api/tma/stores`);
     console.log(`====================================================`);
   });
 }

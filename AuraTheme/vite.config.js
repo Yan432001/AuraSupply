@@ -44,9 +44,21 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
         secure: false,
+        configure: (proxy) => {
+          proxy.on('error', (err, _req, res) => {
+            if (res && !res.headersSent && typeof res.writeHead === 'function') {
+              res.writeHead(502, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({
+                success: false,
+                message: 'Backend API service is connecting or restarting. Please try again in a few seconds.',
+                error: err.message
+              }));
+            }
+          });
+        },
       },
     },
     fs: {

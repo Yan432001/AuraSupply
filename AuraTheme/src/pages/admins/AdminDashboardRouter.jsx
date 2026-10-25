@@ -147,6 +147,10 @@ const AdminDashboardRouter = () => {
     menuKey === 'import-products' ||
     menuKey === 'print-barcodes' ||
     menuKey === 'stock-counts' ||
+    menuKey === 'stock_counts' ||
+    moduleKey === 'stock-counts' ||
+    moduleKey === 'stock_counts' ||
+    menuKey === 'count_stock' ||
     moduleKey === 'quantity-adjustments' ||
     moduleKey === 'quantity_adjustments' ||
     menuKey === 'quantity-adjustments' ||
@@ -286,8 +290,7 @@ const AdminDashboardRouter = () => {
   if (
     menuKey === 'report-stock-value' ||
     menuKey === 'report-product-quantity' ||
-    menuKey === 'inventory-report' ||
-    menuKey === 'stock-counts'
+    menuKey === 'inventory-report'
   ) {
     return <InventoryReport />;
   }

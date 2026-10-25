@@ -74,6 +74,7 @@ import BpasImportExcelPage from './BpasImportExcelPage';
 import BpasPrintBarcodesPage from './BpasPrintBarcodesPage';
 import BpasUsingStockWorkspace from './BpasUsingStockWorkspace';
 import BpasQuantityAdjustmentsWorkspace from './BpasQuantityAdjustmentsWorkspace';
+import BpasStockCountsWorkspace from './BpasStockCountsWorkspace';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -144,6 +145,8 @@ export default function BpasInventoryWorkspace() {
       ? 'using-stock'
       : location.pathname.includes('quantity_adjustments') || location.pathname.includes('quantity-adjustments')
       ? 'quantity-adjustments'
+      : location.pathname.includes('stock_counts') || location.pathname.includes('stock-counts')
+      ? 'stock-counts'
       : 'products');
   const [activeTab, setActiveTab] = useState(initialTab === 'inventory' ? 'products' : initialTab);
 
@@ -165,6 +168,8 @@ export default function BpasInventoryWorkspace() {
         setActiveTab('using-stock');
       } else if (location.pathname.includes('quantity_adjustments') || location.pathname.includes('quantity-adjustments')) {
         setActiveTab('quantity-adjustments');
+      } else if (location.pathname.includes('stock_counts') || location.pathname.includes('stock-counts')) {
+        setActiveTab('stock-counts');
       } else if (currentTab && currentTab !== 'inventory') {
         setActiveTab(currentTab);
       }
@@ -1437,6 +1442,18 @@ export default function BpasInventoryWorkspace() {
               Adjustments
             </Button>
             <Button
+              type={activeTab === 'stock-counts' || activeTab === 'stock_counts' ? 'primary' : 'default'}
+              icon={<CheckSquareOutlined />}
+              onClick={() => {
+                setPageMode('list');
+                setActiveTab('stock-counts');
+                navigate('/admins/products?tab=stock-counts');
+              }}
+              style={{ fontWeight: 700 }}
+            >
+              Stock Counts
+            </Button>
+            <Button
               type={activeTab === 'transfers' ? 'primary' : 'default'}
               icon={<SwapOutlined />}
               onClick={() => setActiveTab('transfers')}
@@ -1502,6 +1519,7 @@ export default function BpasInventoryWorkspace() {
             {activeTab === 'warehouse-stock' && <ApartmentOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {activeTab === 'movements' && <HistoryOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {activeTab === 'quantity-adjustments' && <ToolOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+            {(activeTab === 'stock-counts' || activeTab === 'stock_counts') && <CheckSquareOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {activeTab === 'transfers' && <SwapOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {(activeTab === 'using-stock' || activeTab === 'using_stock') && <FileTextOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
 
@@ -1511,6 +1529,7 @@ export default function BpasInventoryWorkspace() {
               {activeTab === 'warehouse-stock' && 'Live Warehouse Stock Balance by Variant'}
               {activeTab === 'movements' && 'Stock Movement Audit Ledger'}
               {activeTab === 'quantity-adjustments' && 'Inventory Quantity Adjustments'}
+              {(activeTab === 'stock-counts' || activeTab === 'stock_counts') && 'Stock Counts & Physical Inventory Audits'}
               {activeTab === 'transfers' && 'Warehouse Stock Transfers'}
               {(activeTab === 'using-stock' || activeTab === 'using_stock') && 'Using Stock Management (Material & Internal Consumption)'}
             </span>
@@ -2168,6 +2187,17 @@ export default function BpasInventoryWorkspace() {
         {/* TAB 7: Stock Usage / Using Stock */}
         {(activeTab === 'using-stock' || activeTab === 'using_stock') && (
           <BpasUsingStockWorkspace embedded={true} />
+        )}
+
+        {/* TAB 8: Stock Counts & Audits */}
+        {(activeTab === 'stock-counts' || activeTab === 'stock_counts') && (
+          <BpasStockCountsWorkspace
+            embedded={true}
+            onNavigateAdjustment={() => {
+              setActiveTab('quantity-adjustments');
+              navigate('/admins/products?tab=quantity-adjustments');
+            }}
+          />
         )}
       </Card>
 
