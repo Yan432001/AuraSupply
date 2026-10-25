@@ -124,6 +124,7 @@ process.on('SIGTERM', async () => {
 module.exports = {
   pool,
   query,
+  getConnection: () => pool.getConnection(),
   withTransaction,
   healthCheck,
   closePool

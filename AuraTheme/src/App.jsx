@@ -55,6 +55,9 @@ import SalesListPage from './pages/admins/sales/SalesListPage';
 import AddSalePage from './pages/admins/sales/AddSalePage';
 import EditSalePage from './pages/admins/sales/EditSalePage';
 import SaleDetailPage from './pages/admins/sales/SaleDetailPage';
+import BpasTransfersWorkspace from './pages/admins/BpasTransfersWorkspace';
+import BpasAddTransferPage from './pages/admins/BpasAddTransferPage';
+import BpasEditTransferPage from './pages/admins/BpasEditTransferPage';
 import { AdminModulesProvider } from './contexts/AdminModulesContext';
 
 // E-Menu Telegram Mini App Layout & Views
@@ -175,6 +178,9 @@ const AppContent = () => {
         <Route path="products/quantity-adjustments" element={<AdminProducts />} />
         <Route path="products/add_adjustment" element={<AdminProducts />} />
         <Route path="products/edit_adjustment/:id" element={<AdminProducts />} />
+        <Route path="transfers" element={<BpasTransfersWorkspace />} />
+        <Route path="transfers/add" element={<BpasAddTransferPage />} />
+        <Route path="transfers/edit/:id" element={<BpasEditTransferPage />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="customers" element={<CustomersManagement />} />
         <Route path="purchases" element={<BpasPurchasesWorkspace />} />

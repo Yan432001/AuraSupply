@@ -48,11 +48,6 @@ module.exports = (app) => {
     listEntityRecords(req, res, next);
   });
 
-  app.get("/api/admin/transfers", (req, res, next) => {
-    req.params.entity = 'transfers';
-    listEntityRecords(req, res, next);
-  });
-
   app.get("/api/admin/assets", (req, res, next) => {
     req.params.entity = 'assets';
     listEntityRecords(req, res, next);

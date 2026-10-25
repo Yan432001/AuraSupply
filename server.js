@@ -151,7 +151,8 @@ async function startServer() {
     'accounting',
     'asset',
     'barcode',
-    'stockCounts'
+    'stockCounts',
+    'transfers'
   ];
 
   for (const routeName of adminRoutes) {

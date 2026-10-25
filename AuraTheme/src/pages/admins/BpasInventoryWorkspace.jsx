@@ -75,6 +75,7 @@ import BpasPrintBarcodesPage from './BpasPrintBarcodesPage';
 import BpasUsingStockWorkspace from './BpasUsingStockWorkspace';
 import BpasQuantityAdjustmentsWorkspace from './BpasQuantityAdjustmentsWorkspace';
 import BpasStockCountsWorkspace from './BpasStockCountsWorkspace';
+import BpasTransfersWorkspace from './BpasTransfersWorkspace';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -2158,30 +2159,7 @@ export default function BpasInventoryWorkspace() {
 
         {/* TAB 6: Warehouse Transfers */}
         {activeTab === 'transfers' && (
-          <div>
-            <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>Warehouse Stock Transfers</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenTransfer()}>
-                Create Transfer
-              </Button>
-            </Flex>
-            <Table
-              rowKey="id"
-              dataSource={[
-                { id: 1, date: '2026-10-24', reference: 'TR-2026-001', from_warehouse: 'Office Furniture (HQ)', to_warehouse: 'Printing (W2)', items_count: 10, shipping: '$5.00', status: 'Completed' },
-              ]}
-              columns={[
-                { title: 'Date', dataIndex: 'date', key: 'date', width: 120 },
-                { title: 'Transfer No', dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: 'From Warehouse', dataIndex: 'from_warehouse', key: 'from_warehouse', width: 200 },
-                { title: 'To Warehouse', dataIndex: 'to_warehouse', key: 'to_warehouse', width: 200 },
-                { title: 'Quantity', dataIndex: 'items_count', key: 'items_count', width: 120, align: 'right', render: (q) => <strong>{q}</strong> },
-                { title: 'Shipping Charge', dataIndex: 'shipping', key: 'shipping', width: 130, align: 'right' },
-                { title: 'Status', dataIndex: 'status', key: 'status', width: 130, render: (s) => <Tag color="green">{s}</Tag> },
-              ]}
-              pagination={false}
-            />
-          </div>
+          <BpasTransfersWorkspace embedded={true} />
         )}
 
         {/* TAB 7: Stock Usage / Using Stock */}

@@ -47,7 +47,8 @@ export const erpModules = [
       group('inventory-movement', 'Stock Movement', 'Internal usage, receiving, and transfers.', [
         leaf('using-stock', 'Stock Using', 'Record operational consumption and internal branch material use.', { route: '/admins/products?tab=using-stock' }),
         leaf('stock-received', 'Stock Received', 'Review warehouse receipts against incoming purchase shipments.', { route: '/admins/products?tab=stock-received' }),
-        leaf('transfers', 'List Transfers', 'Dispatch, track, and receive inventory across multi-branch warehouses.', { route: '/admins/products?tab=transfers' }),
+        leaf('transfers', 'List Transfers', 'Dispatch, track, and receive inventory across multi-branch warehouses.', { route: '/admins/transfers' }),
+        leaf('add-transfer', 'Add Transfer', 'Create a new warehouse inventory transfer request or order.', { route: '/admins/transfers/add' }),
         leaf('consignments', 'Consignments', 'Track supplier consignments and consignment customer agreements.', { route: '/admins/products?tab=consignments' }),
         leaf('rewards-exchange', 'Rewards Exchange', 'Process customer points exchange and ring gifts catalog.', { route: '/admins/products?tab=rewards-exchange' }),
       ]),
