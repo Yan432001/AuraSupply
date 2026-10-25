@@ -150,27 +150,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Check account lockout (15 minutes after 5 failed tries)
-    if (user.locked_until && new Date(user.locked_until) > new Date()) {
-      const remainingMinutes = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
-      return res.status(423).json({
-        success: false,
-        status: false,
-        code: 'ACCOUNT_LOCKED',
-        message: `Account is temporarily locked due to excessive failed attempts. Try again in ${remainingMinutes} minute(s).`
-      });
-    }
-
-    // Check account active status
-    if (user.active === 0 || (user.status && user.status !== 'active')) {
-      return res.status(403).json({
-        success: false,
-        status: false,
-        message: "Account has been deactivated. Please contact administrator.",
-        error: { message: "Account has been deactivated" }
-      });
-    }
-
     // Strictly block customer accounts from administrative login
     const roleName = (user.role || user.group_name || '').toLowerCase();
     const isCustomer = roleName === 'customer' || Number(user.group_id) === 4 || Number(user.allow_admin_login) === 0;
@@ -182,6 +161,16 @@ exports.login = async (req, res) => {
         error: 'FORBIDDEN',
         code: 'FORBIDDEN_CUSTOMER',
         message: 'Access denied: Customer accounts are strictly prohibited from logging into the administrative portal.'
+      });
+    }
+
+    // Check account active status
+    if (user.active === 0 || (user.status && user.status !== 'active')) {
+      return res.status(403).json({
+        success: false,
+        status: false,
+        message: "Account has been deactivated. Please contact administrator.",
+        error: { message: "Account has been deactivated" }
       });
     }
 
@@ -225,7 +214,17 @@ exports.login = async (req, res) => {
       needsUpgrade = true;
     }
 
+    // If password does not match, enforce lockout or record failed attempt
     if (!isMatch) {
+      if (user.locked_until && new Date(user.locked_until) > new Date()) {
+        const remainingMinutes = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
+        return res.status(423).json({
+          success: false,
+          status: false,
+          code: 'ACCOUNT_LOCKED',
+          message: `Account is temporarily locked due to excessive failed attempts. Try again in ${remainingMinutes} minute(s).`
+        });
+      }
       await Auth_Model.recordLoginAttempt(cleanLogin, ipAddress, 'admin');
       const newFailedCount = (user.failed_login_count || 0) + 1;
       if (newFailedCount >= 5) {
@@ -244,6 +243,11 @@ exports.login = async (req, res) => {
           message: `Invalid credentials. ${5 - newFailedCount} attempt(s) remaining before temporary lockout.`
         });
       }
+    }
+
+    // Auto-unlock account if correct password is provided
+    if (user.locked_until || user.failed_login_count > 0) {
+      await db.query("UPDATE aura_users SET failed_login_count = 0, locked_until = NULL WHERE id = ?", [user.id]);
     }
 
     // Auto-upgrade legacy hash to modern bcrypt

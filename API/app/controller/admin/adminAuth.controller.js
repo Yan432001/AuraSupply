@@ -40,16 +40,6 @@ exports.login = async (req, res) => {
       return sendError(res, 'Invalid credentials', 401);
     }
 
-    // Check account lockout
-    if (user.locked_until && new Date(user.locked_until) > new Date()) {
-      const remainingMinutes = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
-      return sendError(
-        res,
-        `Account temporarily locked due to too many failed attempts. Please try again in ${remainingMinutes} minute(s).`,
-        423
-      );
-    }
-
     // Strictly block customer accounts
     const roleName = (user.group_name || user.role || '').toLowerCase();
     if (roleName === 'customer' || Number(user.group_id) === 4 || Number(user.allow_admin_login) !== 1) {
@@ -104,7 +94,16 @@ exports.login = async (req, res) => {
       needsUpgradeToBcrypt = true;
     }
 
+    // If password does not match, enforce account lockout or record failed attempt
     if (!passwordMatches) {
+      if (user.locked_until && new Date(user.locked_until) > new Date()) {
+        const remainingMinutes = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
+        return sendError(
+          res,
+          `Account temporarily locked due to too many failed attempts. Please try again in ${remainingMinutes} minute(s).`,
+          423
+        );
+      }
       await Auth_Model.recordLoginAttempt(cleanLogin, ipAddress, 'admin');
       const newFailedCount = (user.failed_login_count || 0) + 1;
       if (newFailedCount >= 5) {
@@ -114,6 +113,11 @@ exports.login = async (req, res) => {
       await db.query("UPDATE aura_users SET failed_login_count = ? WHERE id = ?", [newFailedCount, user.id]);
       const attemptsRemaining = 5 - newFailedCount;
       return sendError(res, `Invalid credentials. ${attemptsRemaining} attempt(s) remaining before temporary lockout.`, 401);
+    }
+
+    // Auto-unlock account if correct password is provided
+    if (user.locked_until || user.failed_login_count > 0) {
+      await db.query("UPDATE aura_users SET failed_login_count = 0, locked_until = NULL WHERE id = ?", [user.id]);
     }
 
     if (needsUpgradeToBcrypt) {

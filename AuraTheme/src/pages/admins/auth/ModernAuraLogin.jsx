@@ -130,10 +130,10 @@ const ModernAuraLogin = () => {
     }
   };
 
-  const handleQuickFill = () => {
+  const handleQuickFill = (user = 'admin', pass = 'admin') => {
     form.setFieldsValue({
-      username: 'admin',
-      password: 'admin',
+      username: user,
+      password: pass,
       remember_me: true
     });
   };
@@ -541,11 +541,11 @@ const ModernAuraLogin = () => {
             </Divider>
 
             {/* Quick 1-Click Demo Fill */}
-            <div style={{ textAlign: 'center' }}>
+            <div style={{ textAlign: 'center', display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
               <Button
                 type="dashed"
                 size="small"
-                onClick={handleQuickFill}
+                onClick={() => handleQuickFill('admin', 'admin')}
                 style={{
                   borderRadius: 20,
                   fontSize: 12,
@@ -554,7 +554,21 @@ const ModernAuraLogin = () => {
                   background: '#eff6ff'
                 }}
               >
-                ⚡ {t('demo_sign_in_pill', 'Quick Demo Sign In: admin / admin')}
+                ⚡ admin / admin
+              </Button>
+              <Button
+                type="dashed"
+                size="small"
+                onClick={() => handleQuickFill('sbcsolutions', 'admin')}
+                style={{
+                  borderRadius: 20,
+                  fontSize: 12,
+                  color: '#059669',
+                  borderColor: '#6ee7b7',
+                  background: '#ecfdf5'
+                }}
+              >
+                ⚡ sbcsolutions / admin
               </Button>
             </div>
           </Card>
