@@ -154,7 +154,7 @@ const PosCustomerStockModal = ({
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <div>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: '#2563eb', marginRight: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: '#2F6FED', marginRight: 8 }}>
                       {stock.reference_no}
                     </span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#f8fafc' : '#0f172a' }}>

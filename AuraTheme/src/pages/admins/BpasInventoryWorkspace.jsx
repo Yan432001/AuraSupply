@@ -73,6 +73,7 @@ import BpasAddProductPage from './BpasAddProductPage';
 import BpasImportExcelPage from './BpasImportExcelPage';
 import BpasPrintBarcodesPage from './BpasPrintBarcodesPage';
 import BpasUsingStockWorkspace from './BpasUsingStockWorkspace';
+import BpasQuantityAdjustmentsWorkspace from './BpasQuantityAdjustmentsWorkspace';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -139,7 +140,11 @@ export default function BpasInventoryWorkspace() {
   const initialTab =
     searchParams.get('tab') ||
     searchParams.get('menu') ||
-    (location.pathname.includes('using_stock') || location.pathname.includes('using-stock') ? 'using-stock' : 'products');
+    (location.pathname.includes('using_stock') || location.pathname.includes('using-stock')
+      ? 'using-stock'
+      : location.pathname.includes('quantity_adjustments') || location.pathname.includes('quantity-adjustments')
+      ? 'quantity-adjustments'
+      : 'products');
   const [activeTab, setActiveTab] = useState(initialTab === 'inventory' ? 'products' : initialTab);
 
   // Sync tab with URL if changed externally
@@ -158,6 +163,8 @@ export default function BpasInventoryWorkspace() {
       setPageMode('list');
       if (location.pathname.includes('using_stock') || location.pathname.includes('using-stock')) {
         setActiveTab('using-stock');
+      } else if (location.pathname.includes('quantity_adjustments') || location.pathname.includes('quantity-adjustments')) {
+        setActiveTab('quantity-adjustments');
       } else if (currentTab && currentTab !== 'inventory') {
         setActiveTab(currentTab);
       }
@@ -1418,9 +1425,13 @@ export default function BpasInventoryWorkspace() {
               Stock Movements Ledger
             </Button>
             <Button
-              type={activeTab === 'quantity-adjustments' ? 'primary' : 'default'}
+              type={activeTab === 'quantity-adjustments' || activeTab === 'quantity_adjustments' ? 'primary' : 'default'}
               icon={<ToolOutlined />}
-              onClick={() => setActiveTab('quantity-adjustments')}
+              onClick={() => {
+                setPageMode('list');
+                setActiveTab('quantity-adjustments');
+                navigate('/admins/products?tab=quantity-adjustments');
+              }}
               style={{ fontWeight: 700 }}
             >
               Adjustments
@@ -2121,32 +2132,9 @@ export default function BpasInventoryWorkspace() {
           </div>
         )}
 
-        {/* TAB 5: Stock Adjustments */}
-        {activeTab === 'quantity-adjustments' && (
-          <div>
-            <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-              <Title level={4} style={{ margin: 0 }}>Stock Quantity Adjustments (Damage, Loss, Cycle Counts)</Title>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenAdjustment()}>
-                Add Quantity Adjustment
-              </Button>
-            </Flex>
-            <Table
-              rowKey="id"
-              dataSource={[
-                { id: 1, date: '2026-10-24', reference: 'ADJ-2026-001', warehouse: 'Office Furniture (HQ)', type: 'addition', reason: 'Cycle count physical adjustment', items_count: 5 },
-                { id: 2, date: '2026-10-23', reference: 'ADJ-2026-002', warehouse: 'Printing (W2)', type: 'subtraction', reason: 'Damaged in Handling', items_count: 2 },
-              ]}
-              columns={[
-                { title: 'Date', dataIndex: 'date', key: 'date', width: 120 },
-                { title: 'Reference No', dataIndex: 'reference', key: 'reference', width: 160, render: (t) => <strong style={{ color: '#2563eb' }}>{t}</strong> },
-                { title: 'Warehouse', dataIndex: 'warehouse', key: 'warehouse', width: 200 },
-                { title: 'Adjustment Type', dataIndex: 'type', key: 'type', width: 140, render: (t) => <Tag color={t === 'addition' ? 'green' : 'red'}>{t.toUpperCase()}</Tag> },
-                { title: 'Reason', dataIndex: 'reason', key: 'reason' },
-                { title: 'Quantity', dataIndex: 'items_count', key: 'items_count', width: 100, align: 'right', render: (q) => <strong>{q}</strong> },
-              ]}
-              pagination={false}
-            />
-          </div>
+        {/* TAB 5: Stock Quantity Adjustments */}
+        {(activeTab === 'quantity-adjustments' || activeTab === 'quantity_adjustments') && (
+          <BpasQuantityAdjustmentsWorkspace embedded={true} />
         )}
 
         {/* TAB 6: Warehouse Transfers */}

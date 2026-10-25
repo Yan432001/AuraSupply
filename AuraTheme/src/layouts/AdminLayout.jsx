@@ -92,13 +92,35 @@ const AdminLayout = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Strict isolation: Activate admin-active while inside AdminLayout
+  // Strict isolation: Activate admin-active while inside AdminLayout (POS isolated to website light theme)
   useEffect(() => {
+    const isPos = location.pathname.startsWith('/admins/pos');
     const doc = document.documentElement;
     const body = document.body;
+
+    if (isPos) {
+      doc.classList.remove('admin-active', 'dark', 'theme-dark', 'admin-dark');
+      doc.classList.add('light', 'theme-light', 'pos-active');
+      doc.setAttribute('data-mode', 'light');
+      doc.setAttribute('data-theme', 'default');
+      doc.style.colorScheme = 'light';
+
+      if (body) {
+        body.classList.remove('admin-active', 'dark', 'theme-dark', 'admin-dark');
+        body.classList.add('light', 'theme-light', 'pos-active');
+        body.setAttribute('data-mode', 'light');
+        body.setAttribute('data-theme', 'default');
+        body.style.colorScheme = 'light';
+        body.style.backgroundColor = '#f8fafc';
+        body.style.color = '#0f172a';
+      }
+      return;
+    }
+
     const mode = themeMode === 'dark' ? 'dark' : 'light';
     const preset = themePreset || 'default';
 
+    doc.classList.remove('pos-active');
     doc.classList.add('admin-active');
     doc.classList.remove('light', 'dark', 'theme-light', 'theme-dark');
     doc.classList.add(mode, `theme-${mode}`);
@@ -107,6 +129,7 @@ const AdminLayout = () => {
     doc.style.colorScheme = mode;
 
     if (body) {
+      body.classList.remove('pos-active');
       body.classList.add('admin-active');
       body.classList.remove('light', 'dark', 'theme-light', 'theme-dark');
       body.classList.add(mode, `theme-${mode}`);
@@ -116,7 +139,7 @@ const AdminLayout = () => {
       body.style.backgroundColor = '';
       body.style.color = '';
     }
-  }, [themeMode, themePreset]);
+  }, [location.pathname, themeMode, themePreset]);
 
   // Clean up when unmounting AdminLayout (navigating away back to public website)
   useEffect(() => {
@@ -309,17 +332,17 @@ const AdminLayout = () => {
     return (
       <NotificationProvider>
         <div
-          className={`admin-layout admin-active pos-standalone-viewport ${themeMode === 'dark' ? 'dark theme-dark' : 'light theme-light'}`}
-          data-theme={themePreset || 'default'}
-          data-mode={themeMode === 'dark' ? 'dark' : 'light'}
+          className="pos-standalone-viewport pos-website-theme light theme-light"
+          data-theme="default"
+          data-mode="light"
           style={{
             width: '100vw',
             height: '100vh',
             maxWidth: '100vw',
             maxHeight: '100vh',
             overflow: 'hidden',
-            backgroundColor: adminTheme.pageBackground || (themeMode === 'dark' ? '#090d16' : '#f8fafc'),
-            color: adminTheme.text,
+            backgroundColor: '#f8fafc',
+            color: '#0f172a',
           }}
         >
           <Outlet context={{ moduleState, onToggleModule: handleToggleModule }} />

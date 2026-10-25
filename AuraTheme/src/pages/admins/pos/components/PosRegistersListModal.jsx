@@ -130,7 +130,7 @@ const PosRegistersListModal = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: 800, color: isDark ? '#f8fafc' : '#0f172a' }}>
-            <UnorderedListOutlined style={{ color: '#3b82f6', marginRight: 8 }} />
+            <UnorderedListOutlined style={{ color: '#2F6FED', marginRight: 8 }} />
             Cash Registers Shift History
           </div>
           <div style={{ fontSize: 12, color: '#94a3b8' }}>

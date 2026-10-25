@@ -23,9 +23,9 @@ import {
 
 // Preset color palette for quick biller color preview / selection
 const BILLER_COLOR_PRESETS = [
-  { label: 'Royal Blue', value: '#2563eb' },
+  { label: 'Aura Blue (Website)', value: '#2F6FED' },
   { label: 'Teal / CarePoint', value: '#0d9488' },
-  { label: 'Orange / Coffee', value: '#ea580c' },
+  { label: 'Orange / Coffee', value: '#ff7a3d' },
   { label: 'Rose / Bakery', value: '#f43f5e' },
   { label: 'Emerald / Green', value: '#10b981' },
   { label: 'Amber / Bistro', value: '#f59e0b' },
@@ -60,7 +60,7 @@ const PosReceiptModal = ({
     invoice.biller_color ||
     invoice.theme_color ||
     billerInfo?.theme_color ||
-    '#2563eb';
+    '#2F6FED';
 
   // Toggle / Transfer back and forth button handler (POS Receipt <-> Tax Invoice)
   const handleTransferBackAndForth = () => {
@@ -117,8 +117,12 @@ const PosReceiptModal = ({
       width={invoiceType === 'thermal' ? 470 : 880}
       centered
       destroyOnClose
+      className="pos-modal pos-receipt-modal"
       style={{ borderRadius: 20, overflow: 'hidden' }}
-      styles={{ body: { padding: '16px 22px' } }}
+      styles={{
+        content: { background: '#ffffff', borderRadius: 20 },
+        body: { padding: '16px 22px', background: '#ffffff' },
+      }}
     >
       {/* Print Stylesheet Injection */}
       <style>{`

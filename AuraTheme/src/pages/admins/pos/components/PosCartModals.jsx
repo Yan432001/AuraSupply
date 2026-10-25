@@ -97,7 +97,7 @@ export const EditItemModal = ({ visible, onClose, item, onSave, themeMode }) => 
       onCancel={onClose}
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <EditOutlined style={{ color: '#2563eb' }} />
+          <EditOutlined style={{ color: '#2F6FED' }} />
           <span>Edit Cart Item: {item?.name}</span>
         </div>
       }
@@ -200,12 +200,12 @@ export const EditItemModal = ({ visible, onClose, item, onSave, themeMode }) => 
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#64748b' }}>Net Unit Price:</span>
-              <span style={{ fontWeight: 700, color: '#2563eb' }}>${netUnitPrice.toFixed(2)}</span>
+              <span style={{ fontWeight: 700, color: '#2F6FED' }}>${netUnitPrice.toFixed(2)}</span>
             </div>
             <Divider style={{ margin: '4px 0' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
               <span style={{ fontWeight: 700 }}>Line Total ({currentQty} {form.getFieldValue('unit_name') || 'Unit'}):</span>
-              <span style={{ fontWeight: 900, color: '#2563eb' }}>${lineTotal.toFixed(2)}</span>
+              <span style={{ fontWeight: 900, color: '#2F6FED' }}>${lineTotal.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -233,7 +233,7 @@ export const EditItemModal = ({ visible, onClose, item, onSave, themeMode }) => 
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <Button onClick={onClose}>Cancel</Button>
-          <Button type="primary" htmlType="submit" icon={<CheckOutlined />} style={{ background: '#2563eb' }}>
+          <Button type="primary" htmlType="submit" icon={<CheckOutlined />} style={{ background: '#2F6FED', borderColor: '#2F6FED' }}>
             Update Item
           </Button>
         </div>
@@ -449,7 +449,7 @@ export const OrderDiscountModal = ({
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
             <span style={{ fontWeight: 700, color: '#1e293b' }}>Net Total After Discount:</span>
-            <span style={{ fontWeight: 900, color: '#2563eb' }}>${payableAfterDiscount.toFixed(2)}</span>
+            <span style={{ fontWeight: 900, color: '#2F6FED' }}>${payableAfterDiscount.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -599,7 +599,7 @@ export const QuickAddCustomerModal = ({ visible, onClose, onAddCustomer }) => {
       onCancel={onClose}
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <UserAddOutlined style={{ color: '#2563eb' }} />
+          <UserAddOutlined style={{ color: '#2F6FED' }} />
           <span>Quick Add Customer (F2)</span>
         </div>
       }
@@ -626,7 +626,7 @@ export const QuickAddCustomerModal = ({ visible, onClose, onAddCustomer }) => {
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <Button onClick={onClose}>Cancel</Button>
-          <Button type="primary" htmlType="submit" style={{ background: '#2563eb' }}>
+          <Button type="primary" htmlType="submit" style={{ background: '#2F6FED', borderColor: '#2F6FED' }}>
             Save & Select Customer
           </Button>
         </div>
@@ -645,7 +645,7 @@ export const CustomerDetailsModal = ({ visible, onClose, customer }) => {
       onCancel={onClose}
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <UserOutlined style={{ color: '#2563eb' }} />
+          <UserOutlined style={{ color: '#2F6FED' }} />
           <span>Customer Profile</span>
         </div>
       }

@@ -61,7 +61,7 @@ const PosSalesHistoryModal = ({
       dataIndex: 'reference_no',
       key: 'reference_no',
       render: (ref, r) => (
-        <span style={{ fontWeight: 800, color: '#2563eb' }}>
+        <span style={{ fontWeight: 800, color: '#2F6FED' }}>
           {ref || `INV-${r.id}`}
         </span>
       ),
@@ -145,7 +145,7 @@ const PosSalesHistoryModal = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: 800, color: isDark ? '#f8fafc' : '#0f172a' }}>
-            <HistoryOutlined style={{ color: '#2563eb', marginRight: 8 }} />
+            <HistoryOutlined style={{ color: '#2F6FED', marginRight: 8 }} />
             POS Completed Sales History
           </div>
           <div style={{ fontSize: 12, color: '#94a3b8' }}>

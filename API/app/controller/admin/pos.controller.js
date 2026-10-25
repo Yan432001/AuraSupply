@@ -718,50 +718,9 @@ exports.checkoutPosSale = async (req, res) => {
     }
 
     // 2. Insert items into aura_sale_items, update inventory ledger and deduct stock
-    const [settingsRows] = await connection.query('SELECT overselling FROM aura_settings LIMIT 1');
-    const allowOverselling = settingsRows[0]?.overselling == 1;
-
     if (Array.isArray(items) && items.length > 0) {
-      // Server-side inventory validation
-      if (!allowOverselling) {
-        for (const item of items) {
-          const prodId = item.product_id || item.id;
-          const prodName = item.product_name || item.name || `Product #${prodId}`;
-          const prodCode = item.product_code || item.code || '';
-          const itemQty = parseFloat(item.quantity) || 1;
-          const optId = item.option_id ? parseInt(item.option_id, 10) : null;
-          if (optId) {
-            const [vRows] = await connection.query(
-              'SELECT COALESCE(wpv.quantity, pv.quantity, 0) AS stock FROM aura_product_variants pv LEFT JOIN aura_warehouses_products_variants wpv ON wpv.option_id = pv.id AND wpv.warehouse_id = ? WHERE pv.id = ?',
-              [wid, optId]
-            );
-            const vStock = parseFloat(vRows[0]?.stock || 0);
-            if (vStock < itemQty) {
-              await connection.rollback();
-              return res.status(400).json({
-                success: false,
-                message: `Insufficient inventory for variant "${prodName} (${item.variant_name || prodCode})". Available in warehouse: ${vStock}, Requested: ${itemQty}`
-              });
-            }
-          } else {
-            const [pRows] = await connection.query(
-              'SELECT COALESCE(wp.quantity, p.quantity, 0) AS stock FROM aura_products p LEFT JOIN aura_warehouses_products wp ON wp.product_id = p.id AND wp.warehouse_id = ? WHERE p.id = ?',
-              [wid, prodId]
-            );
-            const pStock = parseFloat(pRows[0]?.stock || 0);
-            if (pStock < itemQty) {
-              await connection.rollback();
-              return res.status(400).json({
-                success: false,
-                message: `Insufficient inventory for product "${prodName}". Available in warehouse: ${pStock}, Requested: ${itemQty}`
-              });
-            }
-          }
-        }
-      }
-
       for (const item of items) {
-        const prodId = item.product_id || item.id;
+        const prodId = item.product_id || item.id || 0;
         const prodName = item.product_name || item.name || '';
         const prodCode = item.product_code || item.code || '';
         const itemQty = parseFloat(item.quantity) || 1;
@@ -806,56 +765,70 @@ exports.checkoutPosSale = async (req, res) => {
           ]
         );
 
-        // Audit Stock Movement Ledger (triggers automatic insertStock updates across warehouse & variants)
-        await connection.query(
-          `INSERT INTO aura_stock_movement
-           (date, reference_no, transaction, transaction_id, warehouse_id,
-            product_id, product_type, product_code, product_name, option_id, real_unit_cost,
-            quantity, unit_quantity, unit_code, unit_id, user_id)
-           VALUES (NOW(), ?, 'POS', ?, ?, ?, 'standard', ?, ?, ?, 0, -?, -?, ?, ?, ?)`,
-          [
-            referenceNo,
-            saleId,
-            wid,
-            prodId,
-            prodCode,
-            prodName,
-            optId,
-            baseQtyToDeduct,
-            baseQtyToDeduct,
-            item.unit_code || 'pcs',
-            item.unit_id || 1,
-            uid
-          ]
-        );
-
-        // Fallback sync in case triggers are bypassed
-        await connection.query(
-          `UPDATE aura_products SET quantity = GREATEST(0, quantity - ?) WHERE id = ?`,
-          [baseQtyToDeduct, prodId]
-        );
-
-        if (wid) {
-          await connection.query(
-            `INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity)
-             VALUES (?, ?, -?)
-             ON DUPLICATE KEY UPDATE quantity = quantity - ?`,
-            [prodId, wid, baseQtyToDeduct, baseQtyToDeduct]
+        // Check if product exists in aura_products and is an inventory-trackable item
+        let isTrackable = false;
+        if (prodId > 0) {
+          const [pRows] = await connection.query(
+            'SELECT id, type FROM aura_products WHERE id = ? LIMIT 1',
+            [prodId]
           );
+          if (pRows.length > 0 && pRows[0].type !== 'service' && pRows[0].type !== 'digital') {
+            isTrackable = true;
+          }
         }
 
-        if (optId) {
+        if (isTrackable) {
+          // Audit Stock Movement Ledger (triggers automatic insertStock updates across warehouse & variants)
           await connection.query(
-            `UPDATE aura_product_variants SET quantity = GREATEST(0, quantity - ?) WHERE id = ?`,
-            [itemQty, optId]
+            `INSERT INTO aura_stock_movement
+             (date, reference_no, transaction, transaction_id, warehouse_id,
+              product_id, product_type, product_code, product_name, option_id, real_unit_cost,
+              quantity, unit_quantity, unit_code, unit_id, user_id)
+             VALUES (NOW(), ?, 'POS', ?, ?, ?, 'standard', ?, ?, ?, 0, -?, -?, ?, ?, ?)`,
+            [
+              referenceNo,
+              saleId,
+              wid,
+              prodId,
+              prodCode,
+              prodName,
+              optId,
+              baseQtyToDeduct,
+              baseQtyToDeduct,
+              item.unit_code || 'pcs',
+              item.unit_id || 1,
+              uid
+            ]
           );
+
+          // Update product master balance
+          await connection.query(
+            `UPDATE aura_products SET quantity = GREATEST(0, quantity - ?) WHERE id = ?`,
+            [baseQtyToDeduct, prodId]
+          );
+
           if (wid) {
             await connection.query(
-              `INSERT INTO aura_warehouses_products_variants (product_id, option_id, warehouse_id, quantity)
-               VALUES (?, ?, ?, -?)
+              `INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity)
+               VALUES (?, ?, -?)
                ON DUPLICATE KEY UPDATE quantity = quantity - ?`,
-              [prodId, optId, wid, itemQty, itemQty]
+              [prodId, wid, baseQtyToDeduct, baseQtyToDeduct]
             );
+          }
+
+          if (optId) {
+            await connection.query(
+              `UPDATE aura_product_variants SET quantity = GREATEST(0, quantity - ?) WHERE id = ?`,
+              [itemQty, optId]
+            );
+            if (wid) {
+              await connection.query(
+                `INSERT INTO aura_warehouses_products_variants (product_id, option_id, warehouse_id, quantity)
+                 VALUES (?, ?, ?, -?)
+                 ON DUPLICATE KEY UPDATE quantity = quantity - ?`,
+                [prodId, optId, wid, itemQty, itemQty]
+              );
+            }
           }
         }
       }

@@ -55,7 +55,7 @@ const PosOpenRegisterView = ({
         justifyContent: 'center',
         background: isDark
           ? 'radial-gradient(ellipse at top, #1e293b 0%, #0f172a 100%)'
-          : 'radial-gradient(ellipse at top, #f1f5f9 0%, #e2e8f0 100%)',
+          : 'radial-gradient(circle at 18% 20%, rgba(47, 111, 237, 0.12), transparent 28%), radial-gradient(circle at 84% 10%, rgba(255, 122, 61, 0.10), transparent 26%), linear-gradient(145deg, #ffffff 0%, #f8faff 54%, #f1f5fb 100%)',
         padding: 20,
       }}
     >
@@ -64,12 +64,12 @@ const PosOpenRegisterView = ({
           width: '100%',
           maxWidth: 480,
           borderRadius: 24,
-          background: isDark ? 'rgba(30, 41, 59, 0.85)' : 'rgba(255, 255, 255, 0.95)',
-          border: `1px solid ${isDark ? 'rgba(51, 65, 85, 0.6)' : 'rgba(255, 255, 255, 0.8)'}`,
+          background: isDark ? 'rgba(30, 41, 59, 0.85)' : '#ffffff',
+          border: `1px solid ${isDark ? 'rgba(51, 65, 85, 0.6)' : 'rgba(226, 232, 240, 0.9)'}`,
           backdropFilter: 'blur(20px)',
           boxShadow: isDark
             ? '0 25px 50px -12px rgba(0, 0, 0, 0.7)'
-            : '0 20px 40px -15px rgba(37, 99, 235, 0.12)',
+            : '0 24px 70px rgba(47, 111, 237, 0.12)',
         }}
         styles={{ body: { padding: '36px 32px' } }}
       >
@@ -80,14 +80,14 @@ const PosOpenRegisterView = ({
               width: 72,
               height: 72,
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)',
+              background: 'linear-gradient(135deg, #2F6FED 0%, #5B8DEF 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 16px',
               fontSize: 32,
               color: '#ffffff',
-              boxShadow: '0 10px 25px rgba(37, 99, 235, 0.35)',
+              boxShadow: '0 10px 25px rgba(47, 111, 237, 0.3)',
             }}
           >
             <LockOutlined />
@@ -96,7 +96,7 @@ const PosOpenRegisterView = ({
           <div style={{ fontSize: 22, fontWeight: 800, color: isDark ? '#f8fafc' : '#0f172a' }}>
             Open Cash Register
           </div>
-          <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>
+          <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
             Please count the starting cash in drawer to unlock POS Terminal
           </div>
         </div>
@@ -107,7 +107,7 @@ const PosOpenRegisterView = ({
             padding: '12px 16px',
             borderRadius: 14,
             background: isDark ? 'rgba(15, 23, 42, 0.6)' : '#f8fafc',
-            border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+            border: `1px solid ${isDark ? '#334155' : 'rgba(226, 232, 240, 0.85)'}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -115,7 +115,7 @@ const PosOpenRegisterView = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Avatar size={36} style={{ backgroundColor: '#2563eb' }}>
+            <Avatar size={36} style={{ backgroundColor: '#2F6FED' }}>
               {user?.username ? user.username.charAt(0).toUpperCase() : 'C'}
             </Avatar>
             <div>
@@ -152,7 +152,7 @@ const PosOpenRegisterView = ({
             </label>
             <Input
               size="large"
-              prefix={<span style={{ fontWeight: 800, color: '#2563eb', fontSize: 18 }}>$</span>}
+              prefix={<span style={{ fontWeight: 800, color: '#2F6FED', fontSize: 18 }}>$</span>}
               type="number"
               step="any"
               min="0"
@@ -166,7 +166,7 @@ const PosOpenRegisterView = ({
                 fontWeight: 800,
                 height: 52,
                 background: isDark ? '#1e293b' : '#ffffff',
-                borderColor: isDark ? '#334155' : '#cbd5e1',
+                borderColor: isDark ? '#334155' : 'rgba(226, 232, 240, 0.9)',
               }}
             />
             {cashNum > 0 && (
@@ -198,7 +198,7 @@ const PosOpenRegisterView = ({
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2F6FED')}
                   onMouseLeave={(e) => (e.currentTarget.style.borderColor = isDark ? '#334155' : '#e2e8f0')}
                 >
                   {p.label}
@@ -231,10 +231,10 @@ const PosOpenRegisterView = ({
             style={{
               height: 52,
               borderRadius: 14,
-              background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #06b6d4 100%)',
+              background: 'linear-gradient(135deg, #2F6FED 0%, #1D4ED8 100%)',
               fontWeight: 800,
               fontSize: 16,
-              boxShadow: '0 8px 24px rgba(37, 99, 235, 0.4)',
+              boxShadow: '0 8px 24px rgba(47, 111, 237, 0.35)',
               border: 'none',
               marginBottom: 10,
             }}

@@ -171,6 +171,10 @@ const AppContent = () => {
         <Route path="products/print_barcodes" element={<AdminProducts />} />
         <Route path="products/using_stock" element={<AdminProducts />} />
         <Route path="products/using-stock" element={<AdminProducts />} />
+        <Route path="products/quantity_adjustments" element={<AdminProducts />} />
+        <Route path="products/quantity-adjustments" element={<AdminProducts />} />
+        <Route path="products/add_adjustment" element={<AdminProducts />} />
+        <Route path="products/edit_adjustment/:id" element={<AdminProducts />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="customers" element={<CustomersManagement />} />
         <Route path="purchases" element={<BpasPurchasesWorkspace />} />

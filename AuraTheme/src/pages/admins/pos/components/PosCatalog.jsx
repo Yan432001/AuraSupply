@@ -67,7 +67,7 @@ const PosCatalog = ({
   adminTheme,
   t,
 }) => {
-  const isDark = themeMode === 'dark';
+  const isDark = false; // Always enforce clean, beautiful website light theme
   const categoryScrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -150,7 +150,7 @@ const PosCatalog = ({
         <Input
           ref={searchInputRef}
           size="large"
-          prefix={<BarcodeOutlined style={{ color: '#2563eb', fontSize: 18, marginRight: 4 }} />}
+          prefix={<BarcodeOutlined style={{ color: '#2F6FED', fontSize: 18, marginRight: 4 }} />}
           suffix={
             <Tooltip title="Press F2 to focus scanner">
               <span
@@ -159,8 +159,8 @@ const PosCatalog = ({
                   fontWeight: 800,
                   padding: '2px 6px',
                   borderRadius: 6,
-                  background: isDark ? '#334155' : '#e2e8f0',
-                  color: isDark ? '#94a3b8' : '#64748b',
+                  background: isDark ? '#334155' : 'rgba(47, 111, 237, 0.08)',
+                  color: isDark ? '#94a3b8' : '#2F6FED',
                 }}
               >
                 F2
@@ -273,8 +273,8 @@ const PosCatalog = ({
               fontSize: 12.5,
               fontWeight: 700,
               cursor: 'pointer',
-              border: 'none',
-              background: selectedCategory === 'all' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : isDark ? '#1e293b' : '#f1f5f9',
+              border: selectedCategory === 'all' ? 'none' : '1px solid rgba(226, 232, 240, 0.85)',
+              background: selectedCategory === 'all' ? 'linear-gradient(135deg, #2F6FED, #5B8DEF)' : isDark ? '#1e293b' : '#ffffff',
               color: selectedCategory === 'all' ? '#ffffff' : isDark ? '#cbd5e1' : '#475569',
               display: 'inline-flex',
               alignItems: 'center',
@@ -288,7 +288,8 @@ const PosCatalog = ({
                 fontSize: 10.5,
                 padding: '1px 6px',
                 borderRadius: 10,
-                background: selectedCategory === 'all' ? 'rgba(255,255,255,0.28)' : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                background: selectedCategory === 'all' ? 'rgba(255,255,255,0.28)' : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(47, 111, 237, 0.08)',
+                color: selectedCategory === 'all' ? '#ffffff' : '#2F6FED',
                 fontWeight: 800,
               }}
             >
@@ -317,8 +318,8 @@ const PosCatalog = ({
                     fontSize: 12.5,
                     fontWeight: 700,
                     cursor: 'pointer',
-                    border: 'none',
-                    background: isSelected ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : isDark ? '#1e293b' : '#f1f5f9',
+                    border: isSelected ? 'none' : '1px solid rgba(226, 232, 240, 0.85)',
+                    background: isSelected ? 'linear-gradient(135deg, #2F6FED, #5B8DEF)' : isDark ? '#1e293b' : '#ffffff',
                     color: isSelected ? '#ffffff' : isDark ? '#cbd5e1' : '#475569',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -332,7 +333,8 @@ const PosCatalog = ({
                       fontSize: 10.5,
                       padding: '1px 6px',
                       borderRadius: 10,
-                      background: isSelected ? 'rgba(255,255,255,0.28)' : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                      background: isSelected ? 'rgba(255,255,255,0.28)' : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(47, 111, 237, 0.08)',
+                      color: isSelected ? '#ffffff' : '#2F6FED',
                       fontWeight: 800,
                     }}
                   >
@@ -502,7 +504,7 @@ const PosCatalog = ({
                     </span>
 
                     <div style={{ textAlign: 'right', minWidth: 85 }}>
-                      <div style={{ fontSize: 17, fontWeight: 900, color: '#2563eb' }}>${parseFloat(p.price || 0).toFixed(2)}</div>
+                      <div style={{ fontSize: 17, fontWeight: 900, color: '#2F6FED' }}>${parseFloat(p.price || 0).toFixed(2)}</div>
                       <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>៛{khrPrice.toLocaleString()}</div>
                     </div>
 
@@ -512,7 +514,8 @@ const PosCatalog = ({
                       disabled={isOutOfStock}
                       className="pos-add-btn"
                       style={{
-                        background: '#2563eb',
+                        background: 'linear-gradient(135deg, #2F6FED 0%, #5B8DEF 100%)',
+                        border: 'none',
                         borderRadius: 10,
                         fontWeight: 700,
                         height: 38,
@@ -520,7 +523,7 @@ const PosCatalog = ({
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 4,
-                        boxShadow: '0 3px 10px rgba(37, 99, 235, 0.3)',
+                        boxShadow: '0 3px 10px rgba(47, 111, 237, 0.28)',
                       }}
                     >
                       Add
@@ -661,7 +664,7 @@ const PosCatalog = ({
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: 16, fontWeight: 900, color: '#2563eb', lineHeight: 1 }}>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: '#2F6FED', lineHeight: 1 }}>
                         ${parseFloat(p.price || 0).toFixed(2)}
                       </div>
                       <div style={{ fontSize: 10.5, fontWeight: 600, color: '#94a3b8', marginTop: 2 }}>
@@ -675,13 +678,13 @@ const PosCatalog = ({
                         width: 30,
                         height: 30,
                         borderRadius: 10,
-                        background: '#2563eb',
+                        background: 'linear-gradient(135deg, #2F6FED 0%, #5B8DEF 100%)',
                         color: '#ffffff',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: 14,
-                        boxShadow: '0 3px 10px rgba(37, 99, 235, 0.4)',
+                        boxShadow: '0 3px 10px rgba(47, 111, 237, 0.35)',
                         cursor: 'pointer',
                       }}
                     >

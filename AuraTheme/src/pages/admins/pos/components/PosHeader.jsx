@@ -76,9 +76,9 @@ const PosHeader = ({
   const topBtnStyle = {
     height: 36,
     borderRadius: 8,
-    background: '#f8fafc',
-    color: '#1e293b',
-    border: '1px solid #cbd5e1',
+    background: '#ffffff',
+    color: '#0f172a',
+    border: '1px solid rgba(226, 232, 240, 0.9)',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -87,6 +87,7 @@ const PosHeader = ({
     fontWeight: 600,
     cursor: 'pointer',
     padding: '0 10px',
+    boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
     transition: 'all 0.15s ease',
   };
 
@@ -137,7 +138,7 @@ const PosHeader = ({
     },
     {
       key: 'pos-settings',
-      icon: <SettingOutlined style={{ color: '#2563eb' }} />,
+      icon: <SettingOutlined style={{ color: '#2F6FED' }} />,
       label: t('pos_settings', 'POS Settings & Hardware Config'),
       onClick: onOpenPosSettings,
     },
@@ -188,14 +189,14 @@ const PosHeader = ({
         height: 60,
         padding: '0 16px',
         background: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid rgba(226, 232, 240, 0.85)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+        boxShadow: '0 2px 10px rgba(15, 23, 42, 0.03)',
       }}
     >
       {/* LEFT: Branding + Cashier Status + Warehouse Selector */}
@@ -207,11 +208,11 @@ const PosHeader = ({
               width: 38,
               height: 38,
               borderRadius: 10,
-              background: '#2563eb',
+              background: 'linear-gradient(135deg, #2F6FED 0%, #5B8DEF 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 10px rgba(37, 99, 235, 0.3)',
+              boxShadow: '0 4px 12px rgba(47, 111, 237, 0.28)',
               color: '#ffffff',
               fontSize: 18,
             }}
@@ -220,7 +221,7 @@ const PosHeader = ({
           </div>
           <div>
             <div style={{ fontSize: 16, fontWeight: 900, letterSpacing: '-0.3px', color: '#0f172a', lineHeight: 1.1 }}>
-              AURA <span style={{ color: '#2563eb' }}>POS</span>
+              AURA <span style={{ color: '#2F6FED' }}>POS</span><span style={{ color: '#FF7A3D' }}>.</span>
             </div>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
               Terminal Edition
@@ -243,7 +244,18 @@ const PosHeader = ({
             }))}
           />
         ) : (
-          <Tag color="blue" style={{ borderRadius: 6, fontWeight: 700, padding: '3px 10px', margin: 0, fontSize: 12 }}>
+          <Tag
+            style={{
+              borderRadius: 6,
+              fontWeight: 700,
+              padding: '3px 10px',
+              margin: 0,
+              fontSize: 12,
+              border: '1px solid rgba(47, 111, 237, 0.25)',
+              background: 'rgba(47, 111, 237, 0.08)',
+              color: '#2F6FED',
+            }}
+          >
             🏬 {billers.find((b) => b.id === selectedBillerId)?.name || user?.biller_name || 'My Store'}
           </Tag>
         )}
@@ -263,7 +275,18 @@ const PosHeader = ({
             }))}
           />
         ) : (
-          <Tag color="cyan" style={{ borderRadius: 6, fontWeight: 700, padding: '3px 10px', margin: 0, fontSize: 12 }}>
+          <Tag
+            style={{
+              borderRadius: 6,
+              fontWeight: 700,
+              padding: '3px 10px',
+              margin: 0,
+              fontSize: 12,
+              border: '1px solid rgba(255, 122, 61, 0.25)',
+              background: 'rgba(255, 122, 61, 0.08)',
+              color: '#EA580C',
+            }}
+          >
             📦 {warehouses.find((w) => w.id === selectedWarehouseId)?.name || currentWarehouse || 'Store Warehouse'}
           </Tag>
         )}
@@ -307,7 +330,7 @@ const PosHeader = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#334155' }}>
-          <ClockCircleOutlined style={{ color: '#2563eb' }} />
+          <ClockCircleOutlined style={{ color: '#2F6FED' }} />
           <span>
             {currentTime.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} • {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </span>
@@ -317,7 +340,7 @@ const PosHeader = ({
           <Avatar
             size={22}
             style={{
-              backgroundColor: '#2563eb',
+              backgroundColor: '#2F6FED',
               fontSize: 11,
               fontWeight: 700,
             }}
@@ -339,8 +362,8 @@ const PosHeader = ({
             className="pos-press"
             onClick={onOpenShortcuts}
             style={topBtnStyle}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2F6FED')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(226, 232, 240, 0.9)')}
           >
             <QuestionCircleOutlined />
             <span style={{ fontSize: 11, color: '#64748b' }}>F1</span>
@@ -354,8 +377,8 @@ const PosHeader = ({
             className="pos-press"
             onClick={onOpenCalculator}
             style={topBtnStyle}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2F6FED')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(226, 232, 240, 0.9)')}
           >
             <CalculatorOutlined />
           </button>
@@ -371,8 +394,8 @@ const PosHeader = ({
               ...topBtnStyle,
               color: soundEnabled ? '#16a34a' : '#94a3b8',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2F6FED')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(226, 232, 240, 0.9)')}
           >
             <SoundOutlined />
           </button>
@@ -385,8 +408,8 @@ const PosHeader = ({
             className="pos-press"
             onClick={toggleFullscreen}
             style={topBtnStyle}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2F6FED')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(226, 232, 240, 0.9)')}
           >
             {isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
           </button>
@@ -399,10 +422,10 @@ const PosHeader = ({
             className="pos-press"
             onClick={() => window.open('/pos/view-bill', '_blank', 'width=1280,height=800')}
             style={topBtnStyle}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#0284c7')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2F6FED')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(226, 232, 240, 0.9)')}
           >
-            <DesktopOutlined style={{ color: '#0284c7' }} />
+            <DesktopOutlined style={{ color: '#2F6FED' }} />
           </button>
         </Tooltip>
 
@@ -413,10 +436,10 @@ const PosHeader = ({
             className="pos-press"
             onClick={handleKitchenClick}
             style={topBtnStyle}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#ea580c')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#FF7A3D')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(226, 232, 240, 0.9)')}
           >
-            <FireOutlined style={{ color: '#ea580c' }} />
+            <FireOutlined style={{ color: '#FF7A3D' }} />
           </button>
         </Tooltip>
 
@@ -427,10 +450,10 @@ const PosHeader = ({
             className="pos-press"
             onClick={onOpenPosSettings}
             style={topBtnStyle}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1')}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2F6FED')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(226, 232, 240, 0.9)')}
           >
-            <SettingOutlined style={{ color: '#2563eb' }} />
+            <SettingOutlined style={{ color: '#2F6FED' }} />
           </button>
         </Tooltip>
 
@@ -442,7 +465,7 @@ const PosHeader = ({
             style={{
               ...topBtnStyle,
               padding: '0 12px',
-              border: '1px solid #cbd5e1',
+              border: '1px solid rgba(226, 232, 240, 0.9)',
             }}
           >
             <SwapOutlined />

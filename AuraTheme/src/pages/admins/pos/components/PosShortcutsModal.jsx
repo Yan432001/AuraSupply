@@ -35,11 +35,11 @@ const PosShortcutsModal = ({ visible, onClose, themeMode, t }) => {
             width: 40,
             height: 40,
             borderRadius: 10,
-            background: 'rgba(37, 99, 235, 0.1)',
+            background: 'rgba(47, 111, 237, 0.1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#2563eb',
+            color: '#2F6FED',
             fontSize: 20,
           }}
         >
@@ -80,7 +80,7 @@ const PosShortcutsModal = ({ visible, onClose, themeMode, t }) => {
       </div>
 
       <div style={{ marginTop: 20, textAlign: 'right' }}>
-        <Button type="primary" onClick={onClose} style={{ borderRadius: 10, background: '#2563eb', fontWeight: 700 }}>
+        <Button type="primary" onClick={onClose} style={{ borderRadius: 10, background: '#2F6FED', borderColor: '#2F6FED', fontWeight: 700 }}>
           Got It
         </Button>
       </div>

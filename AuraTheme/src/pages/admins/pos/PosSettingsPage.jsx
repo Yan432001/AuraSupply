@@ -187,7 +187,7 @@ export default function PosSettingsPage() {
             style={{ marginBottom: 8 }}
           />
           <Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <SettingOutlined style={{ color: '#2563eb' }} />
+            <SettingOutlined style={{ color: '#2F6FED' }} />
             {t('pos_settings', 'POS System Settings & Hardware')}
           </Title>
           <Text type="secondary">
@@ -207,7 +207,7 @@ export default function PosSettingsPage() {
             icon={<SaveOutlined />}
             loading={saving}
             onClick={() => form.submit()}
-            style={{ minWidth: 120, background: '#2563eb' }}
+            style={{ minWidth: 120, background: '#2F6FED', borderColor: '#2F6FED' }}
           >
             {t('save_settings', 'Save Changes')}
           </Button>
@@ -599,7 +599,7 @@ export default function PosSettingsPage() {
                       <Divider style={{ margin: '24px 0 20px' }} />
 
                       <Title level={5} style={{ marginBottom: 16 }}>
-                        <SafetyCertificateOutlined style={{ color: '#2563eb' }} /> {t('custom_fields', 'Custom Receipt Header & Footer Lines')}
+                        <SafetyCertificateOutlined style={{ color: '#2F6FED' }} /> {t('custom_fields', 'Custom Receipt Header & Footer Lines')}
                       </Title>
 
                       <Row gutter={[20, 16]}>

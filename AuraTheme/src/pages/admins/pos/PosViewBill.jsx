@@ -155,7 +155,7 @@ const PosViewBill = () => {
                   width: 34,
                   height: 34,
                   borderRadius: 9,
-                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                  background: 'linear-gradient(135deg, #2F6FED, #5B8DEF)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -175,7 +175,7 @@ const PosViewBill = () => {
             </div>
 
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#2563eb', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#2F6FED', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <ClockCircleOutlined /> {currentTime}
               </div>
               <div style={{ fontSize: 11, color: '#059669', fontWeight: 700 }}>● Online</div>
@@ -199,7 +199,7 @@ const PosViewBill = () => {
             }}
           >
             <div>
-              <UserOutlined style={{ marginRight: 4, color: '#2563eb' }} />
+              <UserOutlined style={{ marginRight: 4, color: '#2F6FED' }} />
               <span>{billData?.customer_name || 'Walk-in Customer'}</span>
             </div>
             <div>
@@ -297,7 +297,7 @@ const PosViewBill = () => {
                     <div style={{ textAlign: 'center', fontWeight: 800, color: '#0f172a' }}>
                       {q}
                     </div>
-                    <div style={{ textAlign: 'right', fontWeight: 800, color: '#2563eb' }}>
+                    <div style={{ textAlign: 'right', fontWeight: 800, color: '#2F6FED' }}>
                       ${sub.toFixed(2)}
                     </div>
                   </div>

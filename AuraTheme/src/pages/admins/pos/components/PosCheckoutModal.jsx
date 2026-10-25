@@ -253,17 +253,87 @@ const PosCheckoutModal = ({
       open={visible}
       onCancel={onClose}
       width={940}
+      className="pos-modal pos-checkout-modal"
+      centered
+      styles={{
+        content: {
+          background: '#ffffff',
+          borderRadius: 18,
+          boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.2)',
+          border: '1px solid rgba(226, 232, 240, 0.9)',
+          padding: '20px 24px',
+        },
+        header: {
+          background: '#ffffff',
+          borderBottom: '1px solid #e2e8f0',
+          paddingBottom: 14,
+          marginBottom: 16,
+        },
+        body: {
+          background: '#ffffff',
+          padding: 0,
+        },
+        footer: {
+          background: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          paddingTop: 14,
+          marginTop: 16,
+        },
+      }}
       title={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 18, fontWeight: 800, color: '#1e293b' }}>Finalize Sale</span>
-            <Tag color="blue" style={{ fontSize: 12, fontWeight: 700, borderRadius: 12 }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #2F6FED 0%, #1D4ED8 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                boxShadow: '0 4px 10px rgba(47, 111, 237, 0.3)',
+              }}
+            >
+              <DollarOutlined style={{ fontSize: 18 }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
+                Finalize Sale
+              </div>
+              <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 500 }}>
+                Complete payment & print receipt
+              </div>
+            </div>
+            <Tag
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                borderRadius: 20,
+                background: '#eff6ff',
+                color: '#2F6FED',
+                borderColor: '#bfdbfe',
+                padding: '2px 10px',
+                marginLeft: 6,
+              }}
+            >
               Customer: {selectedCustomerName || 'Walk-in Customer'}
             </Tag>
           </div>
-          <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>
-            {totalItemsCount} Items in Order
-          </span>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#475569',
+              background: '#f1f5f9',
+              padding: '4px 12px',
+              borderRadius: 20,
+              border: '1px solid #e2e8f0',
+            }}
+          >
+            {totalItemsCount} {totalItemsCount === 1 ? 'Item' : 'Items'} in Order
+          </div>
         </div>
       }
       footer={
@@ -276,12 +346,17 @@ const PosCheckoutModal = ({
           icon={<CheckOutlined />}
           style={{
             height: 52,
-            fontSize: 18,
+            fontSize: 17,
             fontWeight: 800,
-            borderRadius: 10,
-            background: '#16a34a',
-            borderColor: '#16a34a',
-            boxShadow: '0 4px 14px rgba(22, 163, 74, 0.4)',
+            borderRadius: 12,
+            background: 'linear-gradient(135deg, #2F6FED 0%, #1D4ED8 100%)',
+            borderColor: '#2F6FED',
+            boxShadow: '0 8px 24px rgba(47, 111, 237, 0.35)',
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
           }}
         >
           Submit & Print Receipt (${totalPayingUSD.toFixed(2)})
@@ -300,7 +375,7 @@ const PosCheckoutModal = ({
               gap: 10,
               padding: '10px 14px',
               background: '#f8fafc',
-              borderRadius: 8,
+              borderRadius: 10,
               border: '1px solid #e2e8f0',
             }}
           >
@@ -362,23 +437,24 @@ const PosCheckoutModal = ({
             </div>
           </div>
 
-          {/* 2. DUAL-CURRENCY PAYABLE & PAID TABLE (Exact replica of cyspharma add.php lines 1000-1039) */}
+          {/* 2. DUAL-CURRENCY PAYABLE & PAID TABLE (cyspharma add.php lines 1000-1039) */}
           <div
             style={{
-              border: '2px solid #cbd5e1',
-              borderRadius: 8,
+              border: '1px solid #e2e8f0',
+              borderRadius: 12,
               overflow: 'hidden',
               background: '#ffffff',
+              boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)',
             }}
           >
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr style={{ background: '#0284c7', color: '#ffffff', fontWeight: 800, fontSize: 13 }}>
-                  <th style={{ padding: '8px 12px', width: '30%' }}>Currency</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'center', width: '35%', borderLeft: '1px solid #38bdf8' }}>
+                <tr style={{ background: 'linear-gradient(135deg, #2F6FED 0%, #1D4ED8 100%)', color: '#ffffff', fontWeight: 800, fontSize: 13 }}>
+                  <th style={{ padding: '10px 14px', width: '30%' }}>Currency</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'center', width: '35%', borderLeft: '1px solid rgba(255, 255, 255, 0.2)' }}>
                     USD ($)
                   </th>
-                  <th style={{ padding: '8px 12px', textAlign: 'center', width: '35%', borderLeft: '1px solid #38bdf8' }}>
+                  <th style={{ padding: '10px 14px', textAlign: 'center', width: '35%', borderLeft: '1px solid rgba(255, 255, 255, 0.2)' }}>
                     KH (៛ Riel @ {khrExchangeRate.toLocaleString()})
                   </th>
                 </tr>
@@ -386,16 +462,16 @@ const PosCheckoutModal = ({
               <tbody>
                 {/* Total Discount Row (if any) */}
                 {totalDiscount > 0 && (
-                  <tr style={{ borderBottom: '1px solid #fecdd3', background: '#fff1f2' }}>
-                    <td style={{ padding: '8px 12px', fontWeight: 700, fontSize: 13, color: '#e11d48' }}>
+                  <tr style={{ borderBottom: '1px solid #fee2e2', background: '#fff1f2' }}>
+                    <td style={{ padding: '10px 14px', fontWeight: 700, fontSize: 13, color: '#e11d48' }}>
                       Discount {orderDiscountId ? `(${orderDiscountId})` : ''}
                     </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'center', borderLeft: '1px solid #fecdd3' }}>
+                    <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: '1px solid #fee2e2' }}>
                       <span style={{ fontSize: 16, fontWeight: 800, color: '#e11d48' }}>
                         -${totalDiscount.toFixed(2)}
                       </span>
                     </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'center', borderLeft: '1px solid #fecdd3' }}>
+                    <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: '1px solid #fee2e2' }}>
                       <span style={{ fontSize: 16, fontWeight: 800, color: '#e11d48' }}>
                         -៛{Math.round(totalDiscount * khrExchangeRate).toLocaleString()}
                       </span>
@@ -405,56 +481,60 @@ const PosCheckoutModal = ({
 
                 {/* Total Payable Row */}
                 <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                  <td style={{ padding: '8px 12px', fontWeight: 700, fontSize: 13, color: '#334155' }}>
+                  <td style={{ padding: '10px 14px', fontWeight: 700, fontSize: 13, color: '#334155' }}>
                     Total Payable
                   </td>
-                  <td style={{ padding: '8px 12px', textAlign: 'center', borderLeft: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>
+                  <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: 19, fontWeight: 900, color: '#0f172a' }}>
                       ${totalUSD.toFixed(2)}
                     </span>
                   </td>
-                  <td style={{ padding: '8px 12px', textAlign: 'center', borderLeft: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: '#0369a1' }}>
+                  <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: 19, fontWeight: 900, color: '#2F6FED' }}>
                       ៛{totalKHR.toLocaleString()}
                     </span>
                   </td>
                 </tr>
 
                 {/* Paid Input Row */}
-                <tr>
-                  <td style={{ padding: '8px 12px', fontWeight: 700, fontSize: 13, color: '#16a34a' }}>
+                <tr style={{ background: '#ffffff' }}>
+                  <td style={{ padding: '10px 14px', fontWeight: 700, fontSize: 13, color: '#10b981' }}>
                     Paid
                   </td>
-                  <td style={{ padding: '6px 12px', borderLeft: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '8px 12px', borderLeft: '1px solid #e2e8f0' }}>
                     <Input
                       size="large"
-                      prefix="$"
+                      prefix={<span style={{ fontWeight: 800, color: '#2F6FED' }}>$</span>}
                       placeholder="0.00"
                       value={paidUSD}
                       onChange={(e) => setPaidUSD(e.target.value)}
                       style={{
                         fontWeight: 800,
                         fontSize: 16,
-                        borderColor: '#2563eb',
-                        borderRadius: 6,
+                        borderColor: '#2F6FED',
+                        borderRadius: 8,
                         textAlign: 'right',
+                        background: '#ffffff',
+                        color: '#0f172a',
                       }}
                       autoFocus
                     />
                   </td>
-                  <td style={{ padding: '6px 12px', borderLeft: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '8px 12px', borderLeft: '1px solid #e2e8f0' }}>
                     <Input
                       size="large"
-                      prefix="៛"
+                      prefix={<span style={{ fontWeight: 800, color: '#5B8DEF' }}>៛</span>}
                       placeholder="0"
                       value={paidKHR}
                       onChange={(e) => setPaidKHR(e.target.value)}
                       style={{
                         fontWeight: 800,
                         fontSize: 16,
-                        borderColor: '#0284c7',
-                        borderRadius: 6,
+                        borderColor: '#cbd5e1',
+                        borderRadius: 8,
                         textAlign: 'right',
+                        background: '#ffffff',
+                        color: '#0f172a',
                       }}
                     />
                   </td>
@@ -468,7 +548,7 @@ const PosCheckoutModal = ({
             style={{
               padding: '12px 14px',
               background: '#f8fafc',
-              borderRadius: 8,
+              borderRadius: 10,
               border: '1px solid #e2e8f0',
               display: 'flex',
               flexDirection: 'column',
@@ -505,6 +585,7 @@ const PosCheckoutModal = ({
                   placeholder="Reference number or note..."
                   value={paymentNote}
                   onChange={(e) => setPaymentNote(e.target.value)}
+                  style={{ background: '#ffffff', color: '#0f172a', borderColor: '#cbd5e1', borderRadius: 8 }}
                 />
               </div>
             </div>
@@ -515,7 +596,7 @@ const PosCheckoutModal = ({
                 style={{
                   padding: 10,
                   background: '#ffffff',
-                  borderRadius: 6,
+                  borderRadius: 8,
                   border: '1px solid #cbd5e1',
                   display: 'grid',
                   gridTemplateColumns: '2fr 2fr 1fr 1fr',
@@ -553,7 +634,7 @@ const PosCheckoutModal = ({
                 style={{
                   padding: 10,
                   background: '#ffffff',
-                  borderRadius: 6,
+                  borderRadius: 8,
                   border: '1px solid #cbd5e1',
                   display: 'flex',
                   gap: 8,
@@ -570,7 +651,7 @@ const PosCheckoutModal = ({
                   type="primary"
                   loading={loadingGiftCard}
                   onClick={handleCheckGiftCard}
-                  style={{ background: '#2563eb' }}
+                  style={{ background: '#2F6FED', borderColor: '#2F6FED', borderRadius: 8 }}
                 >
                   Verify Balance
                 </Button>
@@ -588,7 +669,7 @@ const PosCheckoutModal = ({
                 style={{
                   padding: 10,
                   background: '#ffffff',
-                  borderRadius: 6,
+                  borderRadius: 8,
                   border: '1px solid #cbd5e1',
                 }}
               >
@@ -616,7 +697,7 @@ const PosCheckoutModal = ({
                     alignItems: 'center',
                     background: '#fff',
                     padding: '8px 10px',
-                    borderRadius: 6,
+                    borderRadius: 8,
                     border: '1px solid #e2e8f0',
                   }}
                 >
@@ -661,36 +742,36 @@ const PosCheckoutModal = ({
             type="dashed"
             icon={<PlusOutlined />}
             onClick={handleAddPaymentRow}
-            style={{ borderRadius: 6, fontWeight: 700, color: '#2563eb' }}
+            style={{ borderRadius: 8, fontWeight: 700, color: '#2F6FED', borderColor: 'rgba(47, 111, 237, 0.4)', background: '#f8faff' }}
           >
             + Add More Payments (Split Bill)
           </Button>
 
-          {/* 5. NOTES ACCORDION (Sale Note & Staff Note) */}
+          {/* 5. NOTES (Sale Note & Staff Note) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Input.TextArea
               rows={2}
               placeholder="Sale Note (Printed on Receipt)"
               value={saleNote}
               onChange={(e) => setSaleNote(e.target.value)}
-              style={{ borderRadius: 6 }}
+              style={{ borderRadius: 8, background: '#ffffff', color: '#0f172a', borderColor: '#cbd5e1' }}
             />
             <Input.TextArea
               rows={2}
               placeholder="Staff Note (Internal Cashier Log)"
               value={staffNote}
               onChange={(e) => setStaffNote(e.target.value)}
-              style={{ borderRadius: 6 }}
+              style={{ borderRadius: 8, background: '#ffffff', color: '#0f172a', borderColor: '#cbd5e1' }}
             />
           </div>
 
           {/* 6. BOTTOM SUMMARY TABLE: Total Items, Total Paying, Balance (lines 1150-1177) */}
           <div
             style={{
-              background: '#f1f5f9',
-              borderRadius: 8,
-              border: '1px solid #cbd5e1',
-              padding: '10px 14px',
+              background: '#f8fafc',
+              borderRadius: 10,
+              border: '1px solid #e2e8f0',
+              padding: '12px 16px',
             }}
           >
             <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
@@ -701,19 +782,19 @@ const PosCheckoutModal = ({
                     {totalItemsCount}
                   </td>
                   <td style={{ width: '25%', color: '#64748b', fontWeight: 600 }}>Total Paying:</td>
-                  <td style={{ width: '25%', fontWeight: 800, fontSize: 15, color: '#2563eb', textAlign: 'right' }}>
+                  <td style={{ width: '25%', fontWeight: 800, fontSize: 16, color: '#2F6FED', textAlign: 'right' }}>
                     ${totalPayingUSD.toFixed(2)}
                   </td>
                 </tr>
-                <tr style={{ height: 8 }} />
-                <tr style={{ borderTop: '1px solid #cbd5e1', paddingTop: 6 }}>
-                  <td style={{ color: '#64748b', fontWeight: 700, fontSize: 14 }}>Balance / Change:</td>
+                <tr style={{ height: 10 }} />
+                <tr style={{ borderTop: '1px solid #e2e8f0', paddingTop: 8 }}>
+                  <td style={{ color: '#475569', fontWeight: 700, fontSize: 14 }}>Balance / Change:</td>
                   <td colSpan={3} style={{ textAlign: 'right' }}>
                     <span
                       style={{
-                        fontSize: 18,
+                        fontSize: 19,
                         fontWeight: 900,
-                        color: balanceUSD >= 0 ? '#16a34a' : '#dc2626',
+                        color: balanceUSD >= 0 ? '#10b981' : '#ef4444',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 8,
@@ -734,108 +815,152 @@ const PosCheckoutModal = ({
         {/* RIGHT COLUMN: QUICK CASH KEYPAD (cyspharma col-md-2 text-center lines 1181-1191) */}
         <div
           style={{
-            width: 170,
+            width: 176,
             display: 'flex',
             flexDirection: 'column',
             gap: 8,
             padding: '12px 10px',
             background: '#f8fafc',
-            borderRadius: 8,
+            borderRadius: 12,
             border: '1px solid #e2e8f0',
             textAlign: 'center',
           }}
         >
-          <span style={{ fontSize: 14, fontWeight: 800, color: '#1e293b', marginBottom: 2 }}>
-            Quick Cash
-          </span>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 2 }}>
+            <DollarOutlined style={{ color: '#2F6FED' }} />
+            <span>Quick Cash</span>
+          </div>
 
-          {/* Exact Payable Quick Button (btn-info) */}
-          <Button
-            type="primary"
-            size="large"
+          {/* Exact Payable Quick Button */}
+          <button
+            type="button"
             onClick={handleQuickPayableExact}
             style={{
-              height: 44,
-              fontSize: 15,
+              height: 42,
+              fontSize: 14,
               fontWeight: 800,
-              background: '#0284c7',
-              borderColor: '#0284c7',
-              borderRadius: 6,
-              boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
+              background: 'linear-gradient(135deg, #2F6FED 0%, #1D4ED8 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: 8,
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(47, 111, 237, 0.3)',
+              transition: 'all 0.15s ease',
             }}
           >
             Exact (${totalUSD.toFixed(2)})
-          </Button>
+          </button>
 
-          {/* Presets in USD (btn-warning) */}
+          {/* Presets in USD */}
           {[10, 20, 50, 100, 500].map((amt) => (
-            <Button
+            <button
               key={amt}
-              size="middle"
+              type="button"
               onClick={() => handleAddQuickCash(amt)}
               style={{
-                height: 38,
-                fontSize: 14,
-                fontWeight: 800,
-                background: '#f59e0b',
-                color: '#ffffff',
-                borderColor: '#d97706',
-                borderRadius: 6,
+                height: 36,
+                fontSize: 13.5,
+                fontWeight: 700,
+                background: '#ffffff',
+                color: '#0f172a',
+                border: '1px solid #cbd5e1',
+                borderRadius: 8,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#2F6FED';
+                e.currentTarget.style.color = '#2F6FED';
+                e.currentTarget.style.background = '#eff6ff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#cbd5e1';
+                e.currentTarget.style.color = '#0f172a';
+                e.currentTarget.style.background = '#ffffff';
               }}
             >
               + ${amt}
-            </Button>
+            </button>
           ))}
 
           {/* Presets in KHR (Riel) */}
-          <Button
-            size="middle"
+          <button
+            type="button"
             onClick={() => handleAddQuickCashKHR(50000)}
             style={{
-              height: 36,
+              height: 34,
               fontSize: 12,
               fontWeight: 700,
-              background: '#0ea5e9',
-              color: '#ffffff',
-              borderColor: '#0284c7',
-              borderRadius: 6,
+              background: '#eff6ff',
+              color: '#2F6FED',
+              border: '1px solid #bfdbfe',
+              borderRadius: 8,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#dbeafe';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#eff6ff';
             }}
           >
             + ៛50,000
-          </Button>
+          </button>
 
-          <Button
-            size="middle"
+          <button
+            type="button"
             onClick={() => handleAddQuickCashKHR(100000)}
             style={{
-              height: 36,
+              height: 34,
               fontSize: 12,
               fontWeight: 700,
-              background: '#0ea5e9',
-              color: '#ffffff',
-              borderColor: '#0284c7',
-              borderRadius: 6,
+              background: '#eff6ff',
+              color: '#2F6FED',
+              border: '1px solid #bfdbfe',
+              borderRadius: 8,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#dbeafe';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#eff6ff';
             }}
           >
             + ៛100,000
-          </Button>
+          </button>
 
-          {/* Clear Button (btn-danger) */}
-          <Button
-            danger
-            type="primary"
-            size="middle"
+          {/* Clear Button */}
+          <button
+            type="button"
             onClick={handleClearCash}
             style={{
-              height: 38,
-              fontSize: 14,
-              fontWeight: 800,
-              borderRadius: 6,
-              marginTop: 4,
+              height: 34,
+              fontSize: 13,
+              fontWeight: 700,
+              background: '#fff1f2',
+              color: '#e11d48',
+              border: '1px solid #fecdd3',
+              borderRadius: 8,
+              cursor: 'pointer',
+              marginTop: 2,
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#ffe4e6';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#fff1f2';
             }}
           >
             Clear
-          </Button>
+          </button>
         </div>
       </div>
     </Modal>

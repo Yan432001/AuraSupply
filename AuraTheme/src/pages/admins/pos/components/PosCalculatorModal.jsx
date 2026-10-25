@@ -79,7 +79,7 @@ const PosCalculatorModal = ({ visible, onClose, themeMode, t }) => {
           textAlign: 'right',
           fontSize: 28,
           fontWeight: 900,
-          color: '#2563eb',
+          color: '#2F6FED',
           fontFamily: 'monospace',
           marginBottom: 14,
           overflow: 'hidden',
@@ -113,7 +113,7 @@ const PosCalculatorModal = ({ visible, onClose, themeMode, t }) => {
 
         <button type="button" onClick={() => handleDigit(0)} style={{ ...btnStyle, gridColumn: 'span 2', background: isDark ? '#1e293b' : '#ffffff', color: isDark ? '#f8fafc' : '#1e293b' }}>0</button>
         <button type="button" onClick={handleDot} style={{ ...btnStyle, background: isDark ? '#1e293b' : '#ffffff', color: isDark ? '#f8fafc' : '#1e293b' }}>.</button>
-        <button type="button" onClick={handleEquals} style={{ ...btnStyle, background: '#2563eb', color: '#ffffff' }}>=</button>
+        <button type="button" onClick={handleEquals} style={{ ...btnStyle, background: 'linear-gradient(135deg, #2F6FED, #5B8DEF)', color: '#ffffff', border: 'none' }}>=</button>
       </div>
     </Modal>
   );

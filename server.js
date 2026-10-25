@@ -117,6 +117,7 @@ async function startServer() {
   // Mount Admin & ERP Module Routes
 
   const adminRoutes = [
+    'quantityAdjustments',
     'usingStock',
     'erpMaster',
     'auth',

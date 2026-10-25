@@ -145,8 +145,8 @@ const PosCloseRegisterModal = ({
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 2px', fontSize: 15, fontWeight: 900 }}>
-              <span style={{ color: '#2563eb' }}>Expected Drawer Cash:</span>
-              <span style={{ color: '#2563eb' }}>${expectedCash.toFixed(2)}</span>
+              <span style={{ color: '#2F6FED' }}>Expected Drawer Cash:</span>
+              <span style={{ color: '#2F6FED' }}>${expectedCash.toFixed(2)}</span>
             </div>
           </div>
 
@@ -157,7 +157,7 @@ const PosCloseRegisterModal = ({
             </label>
             <Input
               size="large"
-              prefix={<span style={{ fontWeight: 800, color: '#2563eb', fontSize: 18 }}>$</span>}
+              prefix={<span style={{ fontWeight: 800, color: '#2F6FED', fontSize: 18 }}>$</span>}
               type="number"
               step="any"
               min="0"
@@ -191,10 +191,10 @@ const PosCloseRegisterModal = ({
                 marginBottom: 16,
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 700, color: isBalanced ? '#15803d' : isOver ? '#1d4ed8' : '#b91c1c' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: isBalanced ? '#15803d' : isOver ? '#2F6FED' : '#b91c1c' }}>
                 {isBalanced ? '✓ Balanced: Count matches expected cash' : isOver ? '▲ Cash Over in drawer' : '▼ Cash Short in drawer'}
               </div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: isBalanced ? '#15803d' : isOver ? '#1d4ed8' : '#b91c1c' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: isBalanced ? '#15803d' : isOver ? '#2F6FED' : '#b91c1c' }}>
                 {difference > 0 ? `+$${difference.toFixed(2)}` : difference < 0 ? `-$${Math.abs(difference).toFixed(2)}` : '$0.00'}
               </div>
             </div>

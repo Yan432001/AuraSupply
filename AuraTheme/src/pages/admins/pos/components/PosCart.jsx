@@ -31,6 +31,7 @@ import {
   EnvironmentOutlined,
   SwapOutlined,
   ThunderboltFilled,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 
 const PosCart = ({
@@ -74,7 +75,7 @@ const PosCart = ({
   adminTheme,
   t,
 }) => {
-  const isDark = themeMode === 'dark';
+  const isDark = false; // Always enforce clean, crisp website light theme in POS
   const totalKHR = Math.round(grandTotal * khrExchangeRate);
   const totalTHB = (grandTotal * thbExchangeRate).toFixed(2);
   const isOrderDiscountPercent = orderDiscountType === 'percent' || orderDiscountType === 'percentage';
@@ -123,7 +124,7 @@ const PosCart = ({
               onClick={onOpenQuickAddCustomer}
               style={{
                 borderRadius: 8,
-                background: '#2563eb',
+                background: '#2F6FED',
                 height: 36,
                 padding: '0 12px',
               }}
@@ -165,24 +166,31 @@ const PosCart = ({
           >
             {heldOrders.length > 0 ? (
               heldOrders.map((h, idx) => (
-                <Tag
+                <div
                   key={h.id || idx}
-                  color="warning"
                   onClick={() => resumeHeldOrder(h.id)}
+                  className="pos-held-pill"
                   style={{
                     cursor: 'pointer',
-                    borderRadius: 12,
+                    borderRadius: 20,
                     fontSize: 11,
                     fontWeight: 700,
                     margin: 0,
+                    padding: '3px 10px',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: 4,
+                    gap: 6,
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    color: '#1d4ed8',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 1px 3px rgba(47, 111, 237, 0.08)',
                   }}
                 >
+                  <ClockCircleOutlined style={{ fontSize: 11, color: '#2F6FED' }} />
                   <span>{h.reference || `Hold #${idx + 1}`}</span>
-                  <span style={{ fontSize: 10, color: '#b45309' }}>(${parseFloat(h.total || 0).toFixed(2)})</span>
-                </Tag>
+                  <span style={{ fontSize: 10.5, fontWeight: 800, color: '#2F6FED' }}>(${parseFloat(h.total || 0).toFixed(2)})</span>
+                </div>
               ))
             ) : (
               <span style={{ fontSize: 11, color: '#94a3b8' }}>No held sales</span>
@@ -560,7 +568,7 @@ const PosCart = ({
                                 }
                               }}
                               style={{
-                                background: !isItemPercent ? '#2563eb' : 'transparent',
+                                background: !isItemPercent ? '#2F6FED' : 'transparent',
                                 color: !isItemPercent ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
                                 border: 'none',
                                 borderRadius: 4,
@@ -667,7 +675,7 @@ const PosCart = ({
                                 </div>
 
                                 {/* Fixed Dollar Presets */}
-                                <div style={{ fontSize: 10, fontWeight: 700, color: '#2563eb', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#2F6FED', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                   Fixed Dollar ($)
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, marginBottom: 10 }}>
@@ -691,9 +699,9 @@ const PosCart = ({
                                         fontSize: 11,
                                         fontWeight: 700,
                                         borderRadius: 6,
-                                        border: rawDiscountVal === fix && !isItemPercent ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                                        border: rawDiscountVal === fix && !isItemPercent ? '1.5px solid #2F6FED' : '1px solid #e2e8f0',
                                         background: rawDiscountVal === fix && !isItemPercent ? '#eff6ff' : '#f8fafc',
-                                        color: rawDiscountVal === fix && !isItemPercent ? '#2563eb' : '#334155',
+                                        color: rawDiscountVal === fix && !isItemPercent ? '#2F6FED' : '#334155',
                                       }}
                                     >
                                       ${fix}
@@ -856,7 +864,7 @@ const PosCart = ({
                             ${(unitPrice * qty).toFixed(2)}
                           </div>
                         )}
-                        <div style={{ fontSize: 15.5, fontWeight: 900, color: '#2563eb', lineHeight: 1.2 }}>
+                        <div style={{ fontSize: 15.5, fontWeight: 900, color: '#2F6FED', lineHeight: 1.2 }}>
                           ${lineTotal.toFixed(2)}
                         </div>
                       </div>
@@ -911,9 +919,9 @@ const PosCart = ({
               fontSize: 11.5,
               fontWeight: 700,
               height: 30,
-              color: orderTaxRate > 0 ? '#2563eb' : undefined,
-              borderColor: orderTaxRate > 0 ? '#93c5fd' : undefined,
-              background: orderTaxRate > 0 ? 'rgba(37, 99, 235, 0.08)' : undefined,
+              color: orderTaxRate > 0 ? '#2F6FED' : undefined,
+              borderColor: orderTaxRate > 0 ? 'rgba(47, 111, 237, 0.4)' : undefined,
+              background: orderTaxRate > 0 ? 'rgba(47, 111, 237, 0.08)' : undefined,
             }}
           >
             {orderTaxRate > 0 ? `Tax ${orderTaxRate}%` : 'Order Tax'}
@@ -1004,8 +1012,8 @@ const PosCart = ({
         {/* High-Contrast Creative Total Payable Card */}
         <div
           style={{
-            background: isDark ? 'rgba(30, 41, 59, 0.7)' : '#eff6ff',
-            border: `1px solid ${isDark ? '#334155' : '#bfdbfe'}`,
+            background: isDark ? 'rgba(30, 41, 59, 0.7)' : 'linear-gradient(135deg, rgba(47, 111, 237, 0.06) 0%, rgba(91, 141, 239, 0.06) 100%)',
+            border: `1.5px solid ${isDark ? '#334155' : 'rgba(47, 111, 237, 0.2)'}`,
             borderRadius: 14,
             padding: '10px 14px',
             marginBottom: 10,
@@ -1015,7 +1023,7 @@ const PosCart = ({
           }}
         >
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#2563eb', letterSpacing: '0.6px' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#2F6FED', letterSpacing: '0.6px' }}>
               Total Payable
             </div>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#059669', marginTop: 2 }}>
@@ -1023,7 +1031,7 @@ const PosCart = ({
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 27, fontWeight: 900, color: '#1d4ed8', lineHeight: 1 }}>
+            <div style={{ fontSize: 27, fontWeight: 900, color: '#2F6FED', lineHeight: 1 }}>
               ${grandTotal.toFixed(2)}
             </div>
           </div>
@@ -1087,7 +1095,7 @@ const PosCart = ({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 10,
-            boxShadow: cart.length > 0 ? '0 8px 24px rgba(37, 99, 235, 0.45)' : 'none',
+            boxShadow: cart.length > 0 ? '0 8px 24px rgba(47, 111, 237, 0.35)' : 'none',
             border: 'none',
             cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
           }}

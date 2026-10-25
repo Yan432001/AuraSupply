@@ -147,7 +147,12 @@ const AdminDashboardRouter = () => {
     menuKey === 'import-products' ||
     menuKey === 'print-barcodes' ||
     menuKey === 'stock-counts' ||
+    moduleKey === 'quantity-adjustments' ||
+    moduleKey === 'quantity_adjustments' ||
     menuKey === 'quantity-adjustments' ||
+    menuKey === 'quantity_adjustments' ||
+    menuKey === 'add_adjustment' ||
+    menuKey === 'add-adjustment' ||
     menuKey === 'cost-adjustments' ||
     moduleKey === 'using-stock' ||
     moduleKey === 'using_stock' ||

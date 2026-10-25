@@ -101,7 +101,7 @@ const PosRegisterDetailsModal = ({
             <span style={{ fontWeight: 600 }}>${otherSales.toFixed(2)}</span>
           </div>
         )}
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 14, color: '#2563eb', borderBottom: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 14, color: '#2F6FED', borderBottom: '1px solid #e2e8f0' }}>
           <span>Total Gross Sales:</span>
           <span>${totalSales.toFixed(2)}</span>
         </div>

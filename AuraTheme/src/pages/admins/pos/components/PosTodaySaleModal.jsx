@@ -60,7 +60,7 @@ const PosTodaySaleModal = ({
         <Col span={8}>
           <Card size="small" style={{ borderRadius: 12, textAlign: 'center', background: isDark ? '#1e293b' : '#eff6ff', borderColor: '#bfdbfe' }}>
             <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Total Revenue</div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: '#2563eb' }}>${totalSales.toFixed(2)}</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: '#2F6FED' }}>${totalSales.toFixed(2)}</div>
             <div style={{ fontSize: 10, color: '#94a3b8' }}>៛{(totalSales * khrExchangeRate).toLocaleString()}</div>
           </Card>
         </Col>
@@ -109,7 +109,7 @@ const PosTodaySaleModal = ({
           <span>Petty Cash Expenses:</span>
           <span style={{ fontWeight: 700 }}>-${expenses.toFixed(2)}</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 15, color: '#2563eb', paddingTop: 4 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 15, color: '#2F6FED', paddingTop: 4 }}>
           <span>Net Cash Tendered Today:</span>
           <span>${netCash.toFixed(2)} (៛{(netCash * khrExchangeRate).toLocaleString()})</span>
         </div>

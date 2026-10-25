@@ -5,6 +5,7 @@ import {
   Spin,
   message,
   Grid,
+  ConfigProvider,
 } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
@@ -12,6 +13,64 @@ import axios from 'axios';
 // Contexts & Hooks
 import { useAuth } from '../../../contexts/AuthContext';
 import { useTranslation } from '../../../contexts/LanguageContext';
+import { publicTheme } from '../../../utils/webTheme';
+
+// Fixed, immutable website color theme configuration for POS Terminal
+const websitePosThemeConfig = {
+  token: {
+    colorPrimary: publicTheme.primary, // #2f6fed
+    colorLink: publicTheme.primary,
+    colorSuccess: publicTheme.success, // #10b981
+    colorWarning: publicTheme.warning, // #f59e0b
+    colorError: publicTheme.danger, // #ef4444
+    colorInfo: publicTheme.secondary, // #5b8def
+    colorTextBase: '#0f172a',
+    colorTextSecondary: '#64748b',
+    colorBgBase: '#ffffff',
+    colorBgLayout: '#f8fafc',
+    colorBgContainer: '#ffffff',
+    colorBgElevated: '#ffffff',
+    colorBorder: 'rgba(226, 232, 240, 0.85)',
+    borderRadius: 12,
+    fontFamily: '"Plus Jakarta Sans", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  },
+  components: {
+    Modal: {
+      contentBg: '#ffffff',
+      headerBg: '#ffffff',
+      footerBg: '#ffffff',
+      titleColor: '#0f172a',
+      borderRadiusLG: 18,
+    },
+    Button: {
+      colorPrimary: publicTheme.primary,
+      borderRadius: 10,
+    },
+    Card: {
+      colorBgContainer: '#ffffff',
+      borderRadiusLG: 14,
+    },
+    Input: {
+      colorBgContainer: '#ffffff',
+      activeBorderColor: publicTheme.primary,
+      hoverBorderColor: publicTheme.secondary,
+      borderRadius: 10,
+    },
+    Select: {
+      colorBgContainer: '#ffffff',
+      colorPrimary: publicTheme.primary,
+      borderRadius: 10,
+    },
+    Table: {
+      colorBgContainer: '#ffffff',
+      headerBg: '#f8fafc',
+      headerColor: '#475569',
+    },
+    Drawer: {
+      colorBgElevated: '#ffffff',
+    },
+  },
+};
 
 // Modular Creative POS Components matching cyspharma & AURA_v1
 import PosHeader from './components/PosHeader';
@@ -825,7 +884,7 @@ export default function PosTerminal() {
       biller_phone: currentBiller?.phone || '012 345 678',
       biller_email: currentBiller?.email || '',
       biller_vat_no: currentBiller?.vat_no || '',
-      biller_color: currentBiller?.theme_color || '#2563eb',
+      biller_color: currentBiller?.theme_color || '#2F6FED',
       biller_logo: currentBiller?.logo_url || currentBiller?.logo || '',
       warehouse_name: currentWh?.name || currentWarehouse,
       items: cart,
@@ -927,7 +986,7 @@ export default function PosTerminal() {
         biller_phone: currentBiller?.phone || baseInvoice.biller_phone || '012 345 678',
         biller_email: currentBiller?.email || baseInvoice.biller_email || '',
         biller_vat_no: currentBiller?.vat_no || baseInvoice.biller_vat_no || '',
-        biller_color: currentBiller?.theme_color || baseInvoice.biller_color || '#2563eb',
+        biller_color: currentBiller?.theme_color || baseInvoice.biller_color || '#2F6FED',
         biller_logo: currentBiller?.logo_url || currentBiller?.logo || baseInvoice.biller_logo || '',
         warehouse_name: currentWh?.name || currentWarehouse,
       };
@@ -1033,22 +1092,24 @@ export default function PosTerminal() {
   // Loading Screen for Initial Gatekeeper Check
   if (loadingRegister) {
     return (
-      <div
-        style={{
-          width: '100vw',
-          height: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#f8fafc',
-          color: '#1e293b',
-          gap: 16,
-        }}
-      >
-        <Spin size="large" />
-        <span style={{ fontSize: 15, fontWeight: 700 }}>Loading POS Cash Register session...</span>
-      </div>
+      <ConfigProvider theme={websitePosThemeConfig}>
+        <div
+          style={{
+            width: '100vw',
+            height: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: publicTheme.pageBackground || '#f8fafc',
+            color: publicTheme.text,
+            gap: 16,
+          }}
+        >
+          <Spin size="large" />
+          <span style={{ fontSize: 15, fontWeight: 700, color: publicTheme.text }}>Loading POS Cash Register session...</span>
+        </div>
+      </ConfigProvider>
     );
   }
 
@@ -1057,132 +1118,135 @@ export default function PosTerminal() {
   // =========================================================================
   if (!isRegisterOpen) {
     return (
-      <PosOpenRegisterView
-        user={user}
-        openRegisterCashInHand={openRegisterCashInHand}
-        setOpenRegisterCashInHand={setOpenRegisterCashInHand}
-        openRegisterNote={openRegisterNote}
-        setOpenRegisterNote={setOpenRegisterNote}
-        handleOpenRegisterSubmit={handleOpenRegisterSubmit}
-        khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-        billerName={billers.find((b) => b.id === selectedBillerId)?.name || user?.biller_name || 'Main Store'}
-        warehouseName={warehouses.find((w) => w.id === selectedWarehouseId)?.name || currentWarehouse}
-        onExit={() => navigate('/admins')}
-        t={t}
-      />
+      <ConfigProvider theme={websitePosThemeConfig}>
+        <PosOpenRegisterView
+          user={user}
+          openRegisterCashInHand={openRegisterCashInHand}
+          setOpenRegisterCashInHand={setOpenRegisterCashInHand}
+          openRegisterNote={openRegisterNote}
+          setOpenRegisterNote={setOpenRegisterNote}
+          handleOpenRegisterSubmit={handleOpenRegisterSubmit}
+          khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
+          billerName={billers.find((b) => b.id === selectedBillerId)?.name || user?.biller_name || 'Main Store'}
+          warehouseName={warehouses.find((w) => w.id === selectedWarehouseId)?.name || currentWarehouse}
+          onExit={() => navigate('/admins')}
+          t={t}
+        />
+      </ConfigProvider>
     );
   }
 
   // =========================================================================
-  // CREATIVE POS TERMINAL MAIN VIEW (High-Contrast Professional Theme)
+  // CREATIVE POS TERMINAL MAIN VIEW (Website Default Theme Style)
   // =========================================================================
   return (
-    <div
-      style={{
-        width: '100vw',
-        height: '100vh',
-        maxWidth: '100vw',
-        maxHeight: '100vh',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        background: '#f1f5f9',
-        color: '#0f172a',
-        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-      }}
-    >
-      {/* 1. PROFESSIONAL POS TOP HEADER (No Dark/Light, No Theme Settings) */}
-      <PosHeader
-        user={user}
-        currentRegister={currentRegister}
-        currentTime={currentTime}
-        isFullscreen={isFullscreen}
-        toggleFullscreen={toggleFullscreen}
-        soundEnabled={soundEnabled}
-        setSoundEnabled={setSoundEnabled}
-        currentWarehouse={currentWarehouse}
-        setCurrentWarehouse={setCurrentWarehouse}
-        billers={billers}
-        selectedBillerId={selectedBillerId}
-        onSelectBiller={handleSelectBiller}
-        warehouses={warehouses}
-        selectedWarehouseId={selectedWarehouseId}
-        onSelectWarehouse={handleSelectWarehouse}
-        isSuperAdmin={isSuperAdmin}
-        onOpenPosSettings={() => navigate('/admins/pos/settings')}
-        onOpenShortcuts={() => setShortcutsModalVisible(true)}
-        onOpenCalculator={() => setCalculatorModalVisible(true)}
-        onOpenExpense={() => setAddExpenseModalVisible(true)}
-        onOpenTodaySale={() => setTodaySaleModalVisible(true)}
-        onOpenTodayProfit={() => setTodaySaleModalVisible(true)}
-        onOpenListRegisters={() => setListRegistersModalVisible(true)}
-        onOpenRegisterDetails={() => setRegisterDetailsVisible(true)}
-        onOpenSalesHistory={() => setSalesHistoryModalVisible(true)}
-        onOpenMemberCards={() => setMemberCardModalVisible(true)}
-        onOpenCoupons={() => setCouponModalVisible(true)}
-        onOpenCustomerStocks={() => setCustomerStockModalVisible(true)}
-        onOpenPrinters={() => setPrintersModalVisible(true)}
-        onOpenKitchen={() => navigate('/admins/pos/kitchen')}
-        onInitiateCloseRegister={handleInitiateCloseRegister}
-        onExit={() => navigate('/admins')}
-        t={t}
-      />
-
-      {/* 2. MAIN POS WORKSPACE: ITEM DISPLAY (LEFT) & ORDER DISPLAY (RIGHT) */}
+    <ConfigProvider theme={websitePosThemeConfig}>
       <div
         style={{
-          flex: 1,
-          display: 'flex',
+          width: '100vw',
+          height: '100vh',
+          maxWidth: '100vw',
+          maxHeight: '100vh',
           overflow: 'hidden',
-          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'radial-gradient(circle at 10% 8%, rgba(47, 111, 237, 0.04), transparent 30%), radial-gradient(circle at 90% 4%, rgba(255, 122, 61, 0.03), transparent 26%), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
+          color: publicTheme.text,
+          fontFamily: '"Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif',
         }}
       >
-        {/* LEFT: ITEM DISPLAY AREA (PRODUCT CATALOG & CATEGORIES) */}
+        {/* 1. PROFESSIONAL POS TOP HEADER (Website Default Theme Style) */}
+        <PosHeader
+          user={user}
+          currentRegister={currentRegister}
+          currentTime={currentTime}
+          isFullscreen={isFullscreen}
+          toggleFullscreen={toggleFullscreen}
+          soundEnabled={soundEnabled}
+          setSoundEnabled={setSoundEnabled}
+          currentWarehouse={currentWarehouse}
+          setCurrentWarehouse={setCurrentWarehouse}
+          billers={billers}
+          selectedBillerId={selectedBillerId}
+          onSelectBiller={handleSelectBiller}
+          warehouses={warehouses}
+          selectedWarehouseId={selectedWarehouseId}
+          onSelectWarehouse={handleSelectWarehouse}
+          isSuperAdmin={isSuperAdmin}
+          onOpenPosSettings={() => navigate('/admins/pos/settings')}
+          onOpenShortcuts={() => setShortcutsModalVisible(true)}
+          onOpenCalculator={() => setCalculatorModalVisible(true)}
+          onOpenExpense={() => setAddExpenseModalVisible(true)}
+          onOpenTodaySale={() => setTodaySaleModalVisible(true)}
+          onOpenTodayProfit={() => setTodaySaleModalVisible(true)}
+          onOpenListRegisters={() => setListRegistersModalVisible(true)}
+          onOpenRegisterDetails={() => setRegisterDetailsVisible(true)}
+          onOpenSalesHistory={() => setSalesHistoryModalVisible(true)}
+          onOpenMemberCards={() => setMemberCardModalVisible(true)}
+          onOpenCoupons={() => setCouponModalVisible(true)}
+          onOpenCustomerStocks={() => setCustomerStockModalVisible(true)}
+          onOpenPrinters={() => setPrintersModalVisible(true)}
+          onOpenKitchen={() => navigate('/admins/pos/kitchen')}
+          onInitiateCloseRegister={handleInitiateCloseRegister}
+          onExit={() => navigate('/admins')}
+          t={t}
+        />
+
+        {/* 2. MAIN POS WORKSPACE: ITEM DISPLAY (LEFT) & ORDER DISPLAY (RIGHT) */}
         <div
           style={{
             flex: 1,
-            height: '100%',
             display: 'flex',
-            flexDirection: 'column',
             overflow: 'hidden',
+            position: 'relative',
           }}
         >
-          <PosCatalog
-            products={products}
-            categories={categories}
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-            searchProductKeyword={searchProductKeyword}
-            setSearchProductKeyword={setSearchProductKeyword}
-            searchInputRef={searchInputRef}
-            onBarcodeScanSubmit={handleBarcodeScanSubmit}
-            onAddToCart={handleAddToCart}
-            loadingProducts={loadingProducts}
-            onOpenManualAddProduct={() => setManualAddProductModalVisible(true)}
-            catalogViewMode={catalogViewMode}
-            setCatalogViewMode={setCatalogViewMode}
-            khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-            t={t}
-          />
-        </div>
-
-        {/* RIGHT: ORDER DISPLAY AREA (CART, TOTALS, AND CHECKOUT) - PROPORTIONAL 38% SPLIT */}
-        {isDesktop && (
+          {/* LEFT: ITEM DISPLAY AREA (PRODUCT CATALOG & CATEGORIES) */}
           <div
             style={{
-              width: '38%',
-              minWidth: 460,
-              maxWidth: 600,
+              flex: 1,
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
-              borderLeft: '1px solid #cbd5e1',
-              background: '#ffffff',
-              boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.04)',
-              zIndex: 10,
+              overflow: 'hidden',
             }}
           >
-            <PosCart
+            <PosCatalog
+              products={products}
+              categories={categories}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              searchProductKeyword={searchProductKeyword}
+              setSearchProductKeyword={setSearchProductKeyword}
+              searchInputRef={searchInputRef}
+              onBarcodeScanSubmit={handleBarcodeScanSubmit}
+              onAddToCart={handleAddToCart}
+              loadingProducts={loadingProducts}
+              onOpenManualAddProduct={() => setManualAddProductModalVisible(true)}
+              catalogViewMode={catalogViewMode}
+              setCatalogViewMode={setCatalogViewMode}
+              khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
+              t={t}
+            />
+          </div>
+
+          {/* RIGHT: ORDER DISPLAY AREA (CART, TOTALS, AND CHECKOUT) - PROPORTIONAL 38% SPLIT */}
+          {isDesktop && (
+            <div
+              style={{
+                width: '38%',
+                minWidth: 460,
+                maxWidth: 600,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                borderLeft: '1px solid rgba(226, 232, 240, 0.85)',
+                background: '#ffffff',
+                boxShadow: '-4px 0 24px rgba(15, 23, 42, 0.03)',
+                zIndex: 10,
+              }}
+            >
+              <PosCart
               cart={cart}
               updateItemQuantity={updateItemQuantity}
               onUpdateCartItem={handleUpdateCartItem}
@@ -1251,7 +1315,7 @@ export default function PosTerminal() {
               <div style={{ fontSize: 12, color: '#64748b' }}>
                 Cart ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)
               </div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#2563eb' }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#2F6FED' }}>
                 ${grandTotalUSD.toFixed(2)}{' '}
                 <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
                   (៛{(grandTotalUSD * (posSettingsData.exchange_rate || KHR_EXCHANGE_RATE)).toLocaleString()})
@@ -1266,12 +1330,13 @@ export default function PosTerminal() {
                 style={{
                   padding: '8px 16px',
                   borderRadius: 10,
-                  background: '#2563eb',
+                  background: 'linear-gradient(135deg, #2F6FED 0%, #1D4ED8 100%)',
                   color: '#fff',
                   border: 'none',
                   fontWeight: 700,
                   fontSize: 14,
                   cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(47, 111, 237, 0.35)',
                 }}
               >
                 View Cart & Pay
@@ -1367,7 +1432,7 @@ export default function PosTerminal() {
         visible={receiptModalVisible}
         onClose={() => setReceiptModalVisible(false)}
         invoice={completedInvoice}
-        billerColor={billers.find((b) => b.id === selectedBillerId)?.theme_color || completedInvoice?.biller_color || '#2563eb'}
+        billerColor={billers.find((b) => b.id === selectedBillerId)?.theme_color || completedInvoice?.biller_color || '#2F6FED'}
         billerInfo={billers.find((b) => b.id === selectedBillerId)}
         onNextSale={() => {
           setReceiptModalVisible(false);
@@ -1605,5 +1670,6 @@ export default function PosTerminal() {
         }}
       />
     </div>
+    </ConfigProvider>
   );
 }

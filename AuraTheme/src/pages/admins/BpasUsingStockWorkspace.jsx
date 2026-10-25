@@ -54,7 +54,7 @@ const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 export default function BpasUsingStockWorkspace({ embedded = false }) {
-  const { adminTheme } = useAdminTheme();
+  const adminTheme = useAdminTheme();
   const { t } = useTranslation();
 
   // 1. Data States
@@ -652,19 +652,19 @@ export default function BpasUsingStockWorkspace({ embedded = false }) {
       */}
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ background: adminTheme.surface, borderColor: adminTheme.border }}>
+          <Card size="small" style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}>
             <Statistic
-              title={<span style={{ color: adminTheme.subtext }}>Total Stock Consumptions</span>}
+              title={<span style={{ color: adminTheme?.subtext || '#64748b' }}>Total Stock Consumptions</span>}
               value={stats.count_use || 0}
               prefix={<FileTextOutlined style={{ color: '#2563eb' }} />}
-              valueStyle={{ fontWeight: 800, color: adminTheme.text }}
+              valueStyle={{ fontWeight: 800, color: adminTheme?.text || '#0f172a' }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ background: adminTheme.surface, borderColor: adminTheme.border }}>
+          <Card size="small" style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}>
             <Statistic
-              title={<span style={{ color: adminTheme.subtext }}>Total Value Used</span>}
+              title={<span style={{ color: adminTheme?.subtext || '#64748b' }}>Total Value Used</span>}
               value={stats.total_use_cost || 0}
               precision={2}
               prefix={<DollarOutlined style={{ color: '#16a34a' }} />}
@@ -674,9 +674,9 @@ export default function BpasUsingStockWorkspace({ embedded = false }) {
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ background: adminTheme.surface, borderColor: adminTheme.border }}>
+          <Card size="small" style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}>
             <Statistic
-              title={<span style={{ color: adminTheme.subtext }}>Stock Returns</span>}
+              title={<span style={{ color: adminTheme?.subtext || '#64748b' }}>Stock Returns</span>}
               value={stats.count_return || 0}
               prefix={<RollbackOutlined style={{ color: '#d97706' }} />}
               valueStyle={{ fontWeight: 800, color: '#d97706' }}
@@ -684,9 +684,9 @@ export default function BpasUsingStockWorkspace({ embedded = false }) {
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ background: adminTheme.surface, borderColor: adminTheme.border }}>
+          <Card size="small" style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}>
             <Statistic
-              title={<span style={{ color: adminTheme.subtext }}>Total Returned Value</span>}
+              title={<span style={{ color: adminTheme?.subtext || '#64748b' }}>Total Returned Value</span>}
               value={stats.total_return_cost || 0}
               precision={2}
               prefix={<DollarOutlined style={{ color: '#d97706' }} />}
@@ -720,7 +720,7 @@ export default function BpasUsingStockWorkspace({ embedded = false }) {
             </Button>
           </Space>
         }
-        style={{ background: adminTheme.surface, borderColor: adminTheme.border }}
+        style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}
       >
         {/* Filters */}
         <Row gutter={[10, 10]} style={{ marginBottom: 16 }}>
