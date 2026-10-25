@@ -79,6 +79,7 @@ import PosCatalog from './components/PosCatalog';
 import PosOpenRegisterView from './components/PosOpenRegisterView';
 import PosCheckoutModal from './components/PosCheckoutModal';
 import PosReceiptModal from './components/PosReceiptModal';
+import PosTableModal from './components/PosTableModal';
 import PosCloseRegisterModal from './components/PosCloseRegisterModal';
 import PosRegisterDetailsModal from './components/PosRegisterDetailsModal';
 import PosTodaySaleModal from './components/PosTodaySaleModal';
@@ -311,6 +312,14 @@ export default function PosTerminal() {
   const [shortcutsModalVisible, setShortcutsModalVisible] = useState(false);
   const [calculatorModalVisible, setCalculatorModalVisible] = useState(false);
 
+  // Restaurant Tables & Floor Plan State (AURA_v1 Concept + Shared Groups & Multi-Bill)
+  const [tableModalVisible, setTableModalVisible] = useState(false);
+  const [selectedTableId, setSelectedTableId] = useState(null);
+  const [tablesList, setTablesList] = useState([]);
+  const [activeTableOrder, setActiveTableOrder] = useState(null);
+  const [activeSubBillName, setActiveSubBillName] = useState(null);
+  const [activeSubBillId, setActiveSubBillId] = useState(null);
+
   // 8. In-Cart Adjustments Dialogs
   const [editingItem, setEditingItem] = useState(null);
   const [editItemModalVisible, setEditItemModalVisible] = useState(false);
@@ -333,6 +342,7 @@ export default function PosTerminal() {
     auto_print: true,
     sound_effects: true,
     pro_limit: 30,
+    pos_type: 'pos',
   });
 
   // Fetch POS Settings, Billers, Warehouses & Customer directory on mount
@@ -403,6 +413,101 @@ export default function PosTerminal() {
     setSelectedWarehouseId(warehouseId);
     const wObj = warehouses.find((w) => w.id === warehouseId);
     if (wObj) setCurrentWarehouse(wObj.name);
+  };
+
+  // Fetch Tables & Floor Plan (AURA_v1 Concept)
+  const fetchPosTables = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/admin/pos/tables');
+      if (res.data?.success) {
+        setTablesList(res.data.tables || []);
+      }
+    } catch (err) {
+      console.warn('[POS] Failed to fetch tables:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPosTables();
+  }, [fetchPosTables, selectedWarehouseId]);
+
+  const handleSelectTable = (tbl, subBill = null) => {
+    if (!tbl || !tbl.id) {
+      setCurrentTable('Takeaway / Walk-in');
+      setSelectedTableId(null);
+      setActiveTableOrder(null);
+      setActiveSubBillName(null);
+      setActiveSubBillId(null);
+    } else {
+      setCurrentTable(tbl.name);
+      setSelectedTableId(tbl.id);
+      setActiveTableOrder(tbl);
+      setActiveSubBillName(subBill?.sub_bill_name || null);
+      setActiveSubBillId(subBill?.id || null);
+      message.info(`Table "${tbl.name}" selected`);
+    }
+  };
+
+  const handleLoadTableOrder = (tbl, subBill = null) => {
+    setCurrentTable(tbl.name);
+    setSelectedTableId(tbl.id);
+
+    const targetBill = subBill || (tbl.bills && tbl.bills.length > 0 ? tbl.bills[0] : null);
+    const billItems = targetBill ? targetBill.items : (tbl.items || []);
+    const billTotal = targetBill ? targetBill.total : (tbl.bill_total || 0);
+    const subName = targetBill?.sub_bill_name || (tbl.bills?.length > 1 ? 'Group A' : null);
+    const subId = targetBill?.id || tbl.suspended_bill_id || null;
+
+    setActiveSubBillName(subName);
+    setActiveSubBillId(subId);
+    setActiveTableOrder({
+      ...tbl,
+      suspended_bill_id: subId,
+      bill_total: billTotal,
+      bill_customer: targetBill?.customer || tbl.bill_customer,
+      sub_bill_name: subName,
+    });
+
+    if (billItems && billItems.length > 0) {
+      const loadedCart = billItems.map((it) => ({
+        id: it.product_id,
+        product_id: it.product_id,
+        code: it.product_code,
+        name: it.product_name,
+        price: parseFloat(it.unit_price) || 0,
+        unit_price: parseFloat(it.unit_price) || 0,
+        quantity: parseFloat(it.quantity) || 1,
+        unit_code: it.product_unit_code || 'pcs',
+        subtotal: parseFloat(it.subtotal) || 0,
+        item_discount: parseFloat(it.item_discount) || 0,
+        item_note: it.comment || '',
+        suspended_item_id: it.id,
+      }));
+
+      setCart(loadedCart);
+      if (targetBill?.customer_id || tbl.bill_customer_id) {
+        setSelectedCustomerId(targetBill?.customer_id || tbl.bill_customer_id);
+      }
+      playPosAudio('success', soundEnabled);
+      message.success(`Loaded active order for ${tbl.name}${subName ? ` (${subName})` : ''} (${loadedCart.length} items, $${Number(billTotal).toFixed(2)})`);
+    } else {
+      clearCart();
+    }
+  };
+
+  const handleStartNewSubBill = (tbl, groupName = 'Group B') => {
+    setCurrentTable(tbl.name);
+    setSelectedTableId(tbl.id);
+    setActiveSubBillName(groupName);
+    setActiveSubBillId(null);
+    setActiveTableOrder({
+      ...tbl,
+      suspended_bill_id: null,
+      sub_bill_name: groupName,
+    });
+    clearCart();
+    playPosAudio('success', soundEnabled);
+    message.success(`Started new sub-bill "${groupName}" on ${tbl.name}`);
   };
 
   // Real-time Clock
@@ -828,19 +933,23 @@ export default function PosTerminal() {
     setHeldOrders(nextHolds);
     localStorage.setItem('aura_pos_held_orders', JSON.stringify(nextHolds));
 
-    // Persist to backend for Kitchen Display System (KDS) & other cashier terminals
+    // Persist to backend for Kitchen Display System (KDS) & Restaurant Table Status
     try {
       await axios.post('/api/admin/pos/suspend', {
         customer_id: selectedCustomerId,
         customer: selectedCustomerName,
+        table_id: selectedTableId,
         table_name: currentTable,
-        suspend_note: currentTable,
+        sub_bill_name: activeSubBillName,
+        suspended_bill_id: activeSubBillId,
+        suspend_note: activeSubBillName ? `${currentTable} (${activeSubBillName})` : currentTable,
         items: cart,
         total: grandTotalUSD,
         biller_id: selectedBillerId,
         warehouse_id: selectedWarehouseId,
         user_id: user?.id || 1,
       });
+      fetchPosTables();
     } catch (_) {}
 
     clearCart();
@@ -960,8 +1069,10 @@ export default function PosTerminal() {
         cc_holder: checkoutData.ccHolder || '',
         cc_type: checkoutData.ccType || '',
         table_name: currentTable,
-        table_id: null,
-        suspend_note: currentTable,
+        table_id: selectedTableId,
+        sub_bill_name: activeSubBillName,
+        suspend_note: activeSubBillName ? `${currentTable} (${activeSubBillName})` : currentTable,
+        suspended_bill_id: activeSubBillId || activeTableOrder?.suspended_bill_id || null,
         user_id: user?.id || 1,
       };
 
@@ -1012,6 +1123,12 @@ export default function PosTerminal() {
       // Capture items before clearing cart for optimistic stock decrement
       const completedCart = [...cart];
       clearCart();
+      setSelectedTableId(null);
+      setCurrentTable('Takeaway / Walk-in');
+      setActiveTableOrder(null);
+      setActiveSubBillName(null);
+      setActiveSubBillId(null);
+      fetchPosTables();
       playPosAudio('success', soundEnabled);
       message.success('Sale completed successfully!');
 
@@ -1068,7 +1185,7 @@ export default function PosTerminal() {
         setQuickAddCustomerVisible(true);
       } else if (e.key === 'F3') {
         e.preventDefault();
-        setManualAddProductModalVisible(true);
+        setTableModalVisible((prev) => !prev);
       } else if (e.key === 'F4' || (e.code === 'Space' && !isInput)) {
         e.preventDefault();
         if (cart.length > 0) setCheckoutModalVisible(true);
@@ -1226,6 +1343,10 @@ export default function PosTerminal() {
           onOpenKitchen={() => navigate('/admins/pos/kitchen')}
           onInitiateCloseRegister={handleInitiateCloseRegister}
           onExit={() => navigate('/admins')}
+          onOpenTablePlan={() => setTableModalVisible(true)}
+          posType={posSettingsData?.pos_type || 'pos'}
+          currentTable={currentTable}
+          currentTableId={selectedTableId}
           t={t}
         />
 
@@ -1297,6 +1418,11 @@ export default function PosTerminal() {
               onOpenViewCustomer={() => setViewCustomerModalVisible(true)}
               currentTable={currentTable}
               setCurrentTable={setCurrentTable}
+              activeSubBillName={activeSubBillName}
+              setActiveSubBillName={setActiveSubBillName}
+              activeSubBillId={activeSubBillId}
+              onOpenTablePlan={() => setTableModalVisible(true)}
+              tablesList={tablesList}
               heldOrders={heldOrders}
               resumeHeldOrder={resumeHeldOrder}
               onHoldOrder={handleHoldOrder}
@@ -1406,6 +1532,9 @@ export default function PosTerminal() {
           onOpenViewCustomer={() => setViewCustomerModalVisible(true)}
           currentTable={currentTable}
           setCurrentTable={setCurrentTable}
+          activeSubBillName={activeSubBillName}
+          setActiveSubBillName={setActiveSubBillName}
+          activeSubBillId={activeSubBillId}
           heldOrders={heldOrders}
           resumeHeldOrder={resumeHeldOrder}
           onHoldOrder={handleHoldOrder}
@@ -1462,10 +1591,26 @@ export default function PosTerminal() {
         selectedCustomerName={selectedCustomerName}
         billers={billers}
         selectedBillerId={selectedBillerId}
+        currentTable={currentTable}
         t={t}
       />
 
-      {/* 2. RECEIPT & INVOICE MODAL (Default Invoice, Tax Invoice, Thermal Slip with Transfer Button) */}
+      {/* 2. RESTAURANT FLOOR PLAN & TABLE MODAL (AURA_v1 Table.php / suspended/index.php) */}
+      <PosTableModal
+        visible={tableModalVisible}
+        onClose={() => setTableModalVisible(false)}
+        currentTable={currentTable}
+        currentTableId={selectedTableId}
+        activeSubBillId={activeSubBillId}
+        onSelectTable={handleSelectTable}
+        onLoadTableOrder={handleLoadTableOrder}
+        onStartNewSubBill={handleStartNewSubBill}
+        activeBillerColor={billers.find((b) => b.id === selectedBillerId)?.theme_color || '#2F6FED'}
+        khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
+        t={t}
+      />
+
+      {/* 3. RECEIPT & INVOICE MODAL (Default Invoice, Tax Invoice, Thermal Slip with Transfer Button) */}
       <PosReceiptModal
         visible={receiptModalVisible}
         onClose={() => setReceiptModalVisible(false)}

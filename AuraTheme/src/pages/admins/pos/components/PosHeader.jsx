@@ -33,6 +33,7 @@ import {
   SettingOutlined,
   DesktopOutlined,
   FireOutlined,
+  CoffeeOutlined,
 } from '@ant-design/icons';
 
 const PosHeader = ({
@@ -66,6 +67,10 @@ const PosHeader = ({
   onOpenPrinters,
   onOpenPosSettings,
   onOpenKitchen,
+  onOpenTablePlan,
+  posType = 'pos',
+  currentTable = 'Takeaway / Walk-in',
+  currentTableId = null,
   onInitiateCloseRegister,
   onExit,
   t,
@@ -129,6 +134,12 @@ const PosHeader = ({
       icon: <InboxOutlined style={{ color: '#14b8a6' }} />,
       label: t('customer_stocks', 'Customer Held Goods & Deposits'),
       onClick: onOpenCustomerStocks,
+    },
+    {
+      key: 'table-plan',
+      icon: <CoffeeOutlined style={{ color: '#f59e0b' }} />,
+      label: t('restaurant_table_plan', 'Restaurant Floor & Table Plan (ផែនការតុ)'),
+      onClick: onOpenTablePlan,
     },
     {
       key: 'printers',
@@ -355,6 +366,36 @@ const PosHeader = ({
 
       {/* RIGHT: Quick Action Utilities, Fullscreen, Audio, Menu, Close Register, Exit (NO Dark/Light, NO Theme Setting) */}
       <Space size={8}>
+        {/* Restaurant Tables & Floor Plan Trigger (AURA_v1 Concept) */}
+        <Tooltip title={t('table_floor_plan', 'Restaurant Floor Plan & Table Selection (F3 / ផែនការតុ)')}>
+          <button
+            type="button"
+            className="pos-press"
+            onClick={onOpenTablePlan}
+            style={{
+              ...topBtnStyle,
+              background: posType === 'table' ? '#fffaf5' : '#ffffff',
+              borderColor: posType === 'table' ? '#f59e0b' : 'rgba(226, 232, 240, 0.9)',
+              color: posType === 'table' ? '#b45309' : '#0f172a',
+              fontWeight: 700,
+              padding: '0 12px',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#f59e0b')}
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.borderColor = posType === 'table' ? '#f59e0b' : 'rgba(226, 232, 240, 0.9)')
+            }
+          >
+            <CoffeeOutlined style={{ color: '#f59e0b', fontSize: 15 }} />
+            <span>
+              {currentTable && currentTable !== 'Takeaway / Walk-in'
+                ? `🍽️ ${currentTable}`
+                : posType === 'table'
+                ? t('select_table', '🍽️ Select Table')
+                : t('tables', '📍 Tables')}
+            </span>
+          </button>
+        </Tooltip>
+
         {/* Keyboard Shortcuts Trigger */}
         <Tooltip title="Keyboard Shortcuts (F1)">
           <button

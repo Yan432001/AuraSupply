@@ -32,6 +32,7 @@ import {
   SwapOutlined,
   ThunderboltFilled,
   ClockCircleOutlined,
+  CoffeeOutlined,
 } from '@ant-design/icons';
 
 const PosCart = ({
@@ -47,7 +48,12 @@ const PosCart = ({
   onOpenViewCustomer,
   currentTable,
   setCurrentTable,
+  activeSubBillName = null,
+  setActiveSubBillName,
+  activeSubBillId = null,
   tables = ['Takeaway / Walk-in', 'Table 1', 'Table 2', 'Table 3', 'Table 4', 'VIP Room 1', 'VIP Room 2'],
+  tablesList = [],
+  onOpenTablePlan,
   heldOrders = [],
   resumeHeldOrder,
   onHoldOrder,
@@ -144,15 +150,73 @@ const PosCart = ({
           </Tooltip>
         </div>
 
-        {/* Table / Room Selector + Held Sales Tabs */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        {/* Table / Room Selector + Shared Group Badge + Floor Plan Button */}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <Select
             value={currentTable}
-            onChange={setCurrentTable}
-            style={{ width: 160 }}
+            onChange={(val) => {
+              setCurrentTable(val);
+              if (val === 'Takeaway / Walk-in' && setActiveSubBillName) {
+                setActiveSubBillName(null);
+              }
+            }}
+            style={{ width: activeSubBillName ? 130 : 150 }}
             size="small"
-            options={tables.map((tbl) => ({ value: tbl, label: `📍 ${tbl}` }))}
+            popupMatchSelectWidth={false}
+            options={
+              tablesList && tablesList.length > 0
+                ? [
+                    { value: 'Takeaway / Walk-in', label: '🚶 Takeaway / Walk-in' },
+                    ...tablesList.map((tbl) => ({
+                      value: tbl.name,
+                      label: `${tbl.is_occupied ? (tbl.is_shared ? '🟣' : '🔴') : '🟢'} ${tbl.name} (${tbl.seats || 4}p)${tbl.is_shared ? ` • ${tbl.total_bills}G` : ''}`,
+                    })),
+                  ]
+                : tables.map((tbl) => ({ value: tbl, label: `📍 ${tbl}` }))
+            }
           />
+
+          {/* Active Sub-Bill Badge if sharing a table */}
+          {activeSubBillName && (
+            <Tooltip title={`Multi-group billing active: ${activeSubBillName}`}>
+              <Tag
+                color="purple"
+                style={{
+                  borderRadius: 6,
+                  fontWeight: 800,
+                  fontSize: 10.5,
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  padding: '1px 6px',
+                }}
+              >
+                👥 {activeSubBillName}
+              </Tag>
+            </Tooltip>
+          )}
+
+          {onOpenTablePlan && (
+            <Tooltip title="Open Restaurant Floor Plan (ផែនការតុ)">
+              <Button
+                size="small"
+                icon={<CoffeeOutlined />}
+                onClick={onOpenTablePlan}
+                style={{
+                  borderRadius: 6,
+                  fontWeight: 700,
+                  fontSize: 11,
+                  background: '#fffaf5',
+                  borderColor: '#fed7aa',
+                  color: '#b45309',
+                  padding: '0 8px',
+                }}
+              >
+                Plan
+              </Button>
+            </Tooltip>
+          )}
 
           {/* Held Orders Quick Chips */}
           <div

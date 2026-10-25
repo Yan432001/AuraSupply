@@ -731,6 +731,19 @@ exports.checkoutPosSale = async (req, res) => {
       }
     }
 
+    // Release table in aura_suspended_note if ALL active groups / sub-bills on this table are settled
+    if (table_id) {
+      const [rem] = await connection.query('SELECT COUNT(*) as c FROM aura_suspended_bills WHERE table_id = ?', [table_id]);
+      if (rem[0]?.c === 0) {
+        await connection.query('UPDATE aura_suspended_note SET status = 0, booking = "" WHERE note_id = ?', [table_id]);
+      }
+    } else if (table_name && table_name !== 'Takeaway / Walk-in' && table_name !== 'Walk-in') {
+      const [rem] = await connection.query('SELECT COUNT(*) as c FROM aura_suspended_bills WHERE table_name = ?', [table_name]);
+      if (rem[0]?.c === 0) {
+        await connection.query('UPDATE aura_suspended_note SET status = 0, booking = "" WHERE name = ?', [table_name]);
+      }
+    }
+
     // 2. Insert items into aura_sale_items, update inventory ledger and deduct stock
     if (Array.isArray(items) && items.length > 0) {
       for (const item of items) {
@@ -1111,7 +1124,7 @@ exports.addPosExpense = async (req, res) => {
   }
 };
 
-// 14. Suspend Sale (Hold Bill - Records Table & Customer Info)
+// 14. Suspend Sale (Hold Bill - Records Table & Customer Info & Multi-Group Sub-Bills)
 exports.suspendSale = async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -1122,6 +1135,8 @@ exports.suspendSale = async (req, res) => {
       suspend_note = '',
       table_name = '',
       table_id = null,
+      sub_bill_name = null,
+      suspended_bill_id = null,
       items = [],
       total = 0,
       biller_id = 1,
@@ -1131,26 +1146,50 @@ exports.suspendSale = async (req, res) => {
 
     const ref = `HOLD-${Date.now().toString().slice(-6)}`;
     const effectiveTableName = table_name || suspend_note || 'Walk-in';
+    let suspendId = suspended_bill_id;
 
-    const [billResult] = await connection.query(`
-      INSERT INTO aura_suspended_bills
-      (date, refer, customer_id, customer, count, total, biller_id, warehouse_id, created_by, suspend_note, table_id, table_name, bill_status)
-      VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
-    `, [
-      ref,
-      customer_id,
-      customer,
-      items.length,
-      parseFloat(total) || 0,
-      biller_id,
-      warehouse_id,
-      user_id,
-      suspend_note || effectiveTableName,
-      table_id || null,
-      effectiveTableName
-    ]);
+    // Check if updating existing open bill vs creating new sub-bill on the table
+    if (suspendId) {
+      await connection.query(`
+        UPDATE aura_suspended_bills
+        SET customer_id = ?, customer = ?, count = ?, total = ?, biller_id = ?, warehouse_id = ?, 
+            sub_bill_name = COALESCE(?, sub_bill_name)
+        WHERE id = ?
+      `, [customer_id, customer, items.length, parseFloat(total) || 0, biller_id, warehouse_id, sub_bill_name, suspendId]);
 
-    const suspendId = billResult.insertId;
+      await connection.query('DELETE FROM aura_suspended_items WHERE suspend_id = ?', [suspendId]);
+    } else {
+      // Calculate group label if multiple groups on this table
+      let finalGroupLabel = sub_bill_name;
+      if (!finalGroupLabel && table_id) {
+        const [existing] = await connection.query('SELECT COUNT(*) as c FROM aura_suspended_bills WHERE table_id = ?', [table_id]);
+        const countGroups = existing[0]?.c || 0;
+        finalGroupLabel = `Group ${String.fromCharCode(65 + countGroups)}`;
+      } else if (!finalGroupLabel) {
+        finalGroupLabel = 'Group A';
+      }
+
+      const [billResult] = await connection.query(`
+        INSERT INTO aura_suspended_bills
+        (date, refer, customer_id, customer, count, total, biller_id, warehouse_id, created_by, suspend_note, table_id, table_name, sub_bill_name, bill_status)
+        VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
+      `, [
+        ref,
+        customer_id,
+        customer,
+        items.length,
+        parseFloat(total) || 0,
+        biller_id,
+        warehouse_id,
+        user_id,
+        suspend_note || `${effectiveTableName} (${finalGroupLabel})`,
+        table_id || null,
+        effectiveTableName,
+        finalGroupLabel
+      ]);
+
+      suspendId = billResult.insertId;
+    }
 
     if (Array.isArray(items) && items.length > 0) {
       for (const item of items) {
@@ -1163,6 +1202,13 @@ exports.suspendSale = async (req, res) => {
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
         `, [suspendId, item.id, item.code || '', item.name, price, qty, qty * price, item.unit_code || 'pcs', note]);
       }
+    }
+
+    // Mark restaurant table as occupied in aura_suspended_note (AURA_v1 concept)
+    if (table_id) {
+      await connection.query('UPDATE aura_suspended_note SET status = 1 WHERE note_id = ?', [table_id]);
+    } else if (effectiveTableName && effectiveTableName !== 'Takeaway / Walk-in' && effectiveTableName !== 'Walk-in') {
+      await connection.query('UPDATE aura_suspended_note SET status = 1 WHERE name = ?', [effectiveTableName]);
     }
 
     await connection.commit();
@@ -1299,9 +1345,19 @@ exports.completeKitchenOrder = async (req, res) => {
 exports.deleteSuspendedSale = async (req, res) => {
   try {
     const { id } = req.params;
+    const [billRows] = await pool.query('SELECT table_id, table_name, suspend_note FROM aura_suspended_bills WHERE id = ?', [id]);
+    if (billRows.length > 0) {
+      const b = billRows[0];
+      if (b.table_id) {
+        await pool.query('UPDATE aura_suspended_note SET status = 0, booking = "" WHERE note_id = ?', [b.table_id]);
+      } else if (b.table_name && b.table_name !== 'Takeaway / Walk-in' && b.table_name !== 'Walk-in') {
+        await pool.query('UPDATE aura_suspended_note SET status = 0, booking = "" WHERE name = ?', [b.table_name]);
+      }
+    }
+
     await pool.query('DELETE FROM aura_suspended_items WHERE suspend_id = ?', [id]);
     await pool.query('DELETE FROM aura_suspended_bills WHERE id = ?', [id]);
-    return res.json({ success: true, message: 'Suspended bill deleted' });
+    return res.json({ success: true, message: 'Suspended bill deleted and table released' });
   } catch (error) {
     console.error('[POS] deleteSuspendedSale error:', error);
     return res.status(500).json({ success: false, message: error.message });
@@ -1409,6 +1465,8 @@ exports.getPosSettings = async (req, res) => {
     return res.json({
       success: true,
       settings: rows[0] || {},
+      pos_type: rows[0]?.pos_type || 'pos',
+      show_floor: rows[0]?.show_floor !== undefined ? rows[0].show_floor : -1,
       overselling: globalOversell ? 1 : 0,
       billers,
       warehouses,
@@ -1794,6 +1852,514 @@ exports.getSaleReceipt = async (req, res) => {
     });
   } catch (error) {
     console.error('[POS] getSaleReceipt error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// =========================================================================
+// 25. RESTAURANT TABLES & FLOOR PLAN MANAGEMENT (Matching AURA_v1 Table.php)
+// =========================================================================
+
+// 25a. Get POS Tables & Live Floor Grid (Supports Multi-Group Shared Tables & Chair Allocation)
+exports.getPosTables = async (req, res) => {
+  try {
+    const scope = await resolveScope(req);
+    const { floor, warehouse_id } = req.query;
+
+    // 1. Fetch floors / blocks
+    const [floors] = await pool.query('SELECT id, name, description FROM aura_floors ORDER BY id ASC');
+
+    // 2. Fetch pos_type & show_floor from aura_pos_settings
+    const [posSet] = await pool.query('SELECT pos_type, show_floor FROM aura_pos_settings LIMIT 1');
+    const posType = posSet[0]?.pos_type || 'pos';
+    const showFloor = posSet[0]?.show_floor !== undefined ? posSet[0].show_floor : -1;
+
+    // 3. Query base tables with live seat and chair metadata
+    let query = `
+      SELECT 
+        n.note_id,
+        n.name,
+        n.floor,
+        COALESCE(f.name, n.floor, 'Main Area') as floor_name,
+        COALESCE(n.customer_qty, 4) as customer_qty,
+        n.warehouse_id,
+        n.type,
+        n.status as db_status,
+        n.booking,
+        n.description,
+        COALESCE(n.borrowed_chairs, 0) as borrowed_chairs,
+        COALESCE(n.chair_notes, '') as chair_notes
+      FROM aura_suspended_note n
+      LEFT JOIN aura_floors f ON f.id = n.floor
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (floor && floor !== '-1' && floor !== 'all') {
+      query += ' AND (n.floor = ? OR f.name = ?)';
+      params.push(floor, floor);
+    }
+
+    if (warehouse_id && warehouse_id !== 'all') {
+      query += ' AND (n.warehouse_id = ? OR n.warehouse_id = 0 OR n.warehouse_id IS NULL)';
+      params.push(warehouse_id);
+    } else if (!scope.isSuperAdmin && scope.warehouseId) {
+      query += ' AND (n.warehouse_id = ? OR n.warehouse_id = 0 OR n.warehouse_id IS NULL)';
+      params.push(scope.warehouseId);
+    }
+
+    query += ' ORDER BY n.floor ASC, n.note_id ASC';
+
+    const [rawTables] = await pool.query(query, params);
+
+    // Fetch all active suspended bills and items for each table (multi-bill shared table support)
+    const tables = await Promise.all(
+      rawTables.map(async (tbl) => {
+        const [billRows] = await pool.query(`
+          SELECT 
+            b.id,
+            b.refer,
+            b.date,
+            b.start_date,
+            b.customer_id,
+            b.customer,
+            b.count,
+            b.total,
+            b.sub_bill_name,
+            b.bill_status,
+            b.order_discount_id,
+            b.order_tax_id,
+            b.shipping
+          FROM aura_suspended_bills b
+          WHERE b.table_id = ? OR b.suspend_note = ? OR b.table_name = ?
+          ORDER BY b.id ASC
+        `, [tbl.note_id, tbl.note_id.toString(), tbl.name]);
+
+        const bills = await Promise.all(
+          billRows.map(async (b, idx) => {
+            const [itemRows] = await pool.query(
+              'SELECT * FROM aura_suspended_items WHERE suspend_id = ? ORDER BY id ASC',
+              [b.id]
+            );
+            const subBillName = b.sub_bill_name || `Group ${String.fromCharCode(65 + idx)}`;
+            const billTotal = parseFloat(b.total) || itemRows.reduce((acc, it) => acc + (parseFloat(it.subtotal) || 0), 0);
+            return {
+              id: b.id,
+              refer: b.refer,
+              sub_bill_name: subBillName,
+              customer_id: b.customer_id || 1,
+              customer: b.customer || 'General Guest',
+              total: Math.round(billTotal * 100) / 100,
+              count: b.count || itemRows.length,
+              bill_status: b.bill_status || 'open',
+              start_date: b.start_date || b.date,
+              items: itemRows
+            };
+          })
+        );
+
+        const isOccupied = bills.length > 0 || Number(tbl.db_status) === 1;
+        const baseSeats = parseInt(tbl.customer_qty, 10) || 4;
+        const borrowedChairs = parseInt(tbl.borrowed_chairs, 10) || 0;
+        const effectiveSeats = Math.max(0, baseSeats + borrowedChairs);
+        const combinedTotal = bills.reduce((acc, b) => acc + (parseFloat(b.total) || 0), 0);
+        const combinedCount = bills.reduce((acc, b) => acc + (parseInt(b.count, 10) || 0), 0);
+        const primaryBill = bills[0] || null;
+
+        return {
+          id: tbl.note_id,
+          note_id: tbl.note_id,
+          name: tbl.name,
+          floor: tbl.floor,
+          floor_name: tbl.floor_name,
+          customer_qty: baseSeats,
+          base_seats: baseSeats,
+          seats: effectiveSeats,
+          effective_seats: effectiveSeats,
+          borrowed_chairs: borrowedChairs,
+          chair_notes: tbl.chair_notes || '',
+          warehouse_id: tbl.warehouse_id,
+          type: tbl.type || 'table',
+          status: isOccupied ? 1 : 0,
+          is_occupied: isOccupied,
+          is_shared: bills.length > 1,
+          total_bills: bills.length,
+          bills,
+          booking: tbl.booking || '',
+          description: tbl.description || '',
+          // Primary / backwards compatibility fields:
+          suspended_bill_id: primaryBill?.id || null,
+          bill_reference: primaryBill?.refer || null,
+          bill_total: Math.round(combinedTotal * 100) / 100,
+          bill_items_count: combinedCount,
+          bill_customer: bills.length > 1
+            ? `${bills.length} Groups (${bills.map(b => b.sub_bill_name).join(', ')})`
+            : (primaryBill?.customer || 'Guest'),
+          bill_customer_id: primaryBill?.customer_id || 1,
+          bill_start_date: primaryBill?.start_date || null,
+          bill_status: primaryBill?.bill_status || null,
+          items: primaryBill?.items || []
+        };
+      })
+    );
+
+    return res.json({
+      success: true,
+      pos_type: posType,
+      show_floor: showFloor,
+      floors,
+      tables,
+      counts: {
+        total: tables.length,
+        available: tables.filter(t => !t.is_occupied).length,
+        occupied: tables.filter(t => t.is_occupied).length,
+        shared: tables.filter(t => t.is_shared).length
+      }
+    });
+  } catch (error) {
+    console.error('[POS] getPosTables error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 25b. Add New Table (Floor Plan Customization)
+exports.addPosTable = async (req, res) => {
+  try {
+    const { name, floor = '1', customer_qty = 4, warehouse_id = 1, type = 'table', description = '' } = req.body;
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Table name is required' });
+    }
+
+    const [result] = await pool.query(
+      `INSERT INTO aura_suspended_note (name, floor, customer_qty, warehouse_id, type, description, status, borrowed_chairs, chair_notes)
+       VALUES (?, ?, ?, ?, ?, ?, 0, 0, '')`,
+      [name, floor, customer_qty, warehouse_id, type, description]
+    );
+
+    return res.json({
+      success: true,
+      message: 'Table added successfully',
+      table_id: result.insertId
+    });
+  } catch (error) {
+    console.error('[POS] addPosTable error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 25c. Update Table Information
+exports.updatePosTable = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, floor, customer_qty, status, booking, description, borrowed_chairs, chair_notes } = req.body;
+
+    const fields = [];
+    const values = [];
+
+    if (name !== undefined) { fields.push('name = ?'); values.push(name); }
+    if (floor !== undefined) { fields.push('floor = ?'); values.push(floor); }
+    if (customer_qty !== undefined) { fields.push('customer_qty = ?'); values.push(customer_qty); }
+    if (status !== undefined) { fields.push('status = ?'); values.push(status); }
+    if (booking !== undefined) { fields.push('booking = ?'); values.push(booking); }
+    if (description !== undefined) { fields.push('description = ?'); values.push(description); }
+    if (borrowed_chairs !== undefined) { fields.push('borrowed_chairs = ?'); values.push(borrowed_chairs); }
+    if (chair_notes !== undefined) { fields.push('chair_notes = ?'); values.push(chair_notes); }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+
+    values.push(id);
+    await pool.query(`UPDATE aura_suspended_note SET ${fields.join(', ')} WHERE note_id = ?`, values);
+
+    return res.json({
+      success: true,
+      message: 'Table updated successfully'
+    });
+  } catch (error) {
+    console.error('[POS] updatePosTable error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 25d. Release / Reset Table (Make Available & Clear Open Bill)
+exports.releasePosTable = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('UPDATE aura_suspended_note SET status = 0, booking = "" WHERE note_id = ?', [id]);
+    
+    // Clear any open bill attached to this table
+    const [bills] = await pool.query('SELECT id FROM aura_suspended_bills WHERE table_id = ? OR suspend_note = ?', [id, id]);
+    for (const b of bills) {
+      await pool.query('DELETE FROM aura_suspended_items WHERE suspend_id = ?', [b.id]);
+      await pool.query('DELETE FROM aura_suspended_bills WHERE id = ?', [b.id]);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Table released successfully'
+    });
+  } catch (error) {
+    console.error('[POS] releasePosTable error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 25e. Transfer Table (Move bill, merge with destination bill, or join as separate sub-bill)
+exports.transferPosTable = async (req, res) => {
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
+  try {
+    const {
+      from_table_id,
+      to_table_id,
+      bill_id = null,
+      merge_mode = 'move', // 'move' (empty table), 'merge' (combine into one bill), 'separate' (keep as sub-bill)
+      move_chairs = false,
+      chairs_count = 0
+    } = req.body;
+
+    if (!from_table_id || !to_table_id) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Source and target table required' });
+    }
+
+    if (String(from_table_id) === String(to_table_id)) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Source and target table cannot be the same' });
+    }
+
+    const [targetTables] = await connection.query('SELECT * FROM aura_suspended_note WHERE note_id = ? LIMIT 1', [to_table_id]);
+    if (targetTables.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: 'Target table not found' });
+    }
+    const targetTable = targetTables[0];
+
+    const [sourceTables] = await connection.query('SELECT * FROM aura_suspended_note WHERE note_id = ? LIMIT 1', [from_table_id]);
+    const sourceTable = sourceTables[0];
+
+    // Find the bill(s) to transfer
+    let billsToTransfer = [];
+    if (bill_id) {
+      const [specific] = await connection.query('SELECT * FROM aura_suspended_bills WHERE id = ?', [bill_id]);
+      billsToTransfer = specific;
+    } else {
+      const [allSource] = await connection.query(
+        'SELECT * FROM aura_suspended_bills WHERE table_id = ? OR suspend_note = ? ORDER BY id ASC',
+        [from_table_id, from_table_id.toString()]
+      );
+      billsToTransfer = allSource;
+    }
+
+    if (billsToTransfer.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'No active orders found on source table to transfer' });
+    }
+
+    // Check if target table already has active orders
+    const [existingTargetBills] = await connection.query(
+      'SELECT * FROM aura_suspended_bills WHERE table_id = ? OR suspend_note = ? ORDER BY id ASC',
+      [to_table_id, to_table_id.toString()]
+    );
+    const targetHasOrders = existingTargetBills.length > 0;
+
+    if (targetHasOrders && merge_mode === 'merge') {
+      // MERGE MODE: Combine source items into primary target bill
+      const targetBill = existingTargetBills[0];
+      for (const srcBill of billsToTransfer) {
+        const tagComment = `[Moved from ${sourceTable?.name || ('Table ' + from_table_id)}]`;
+        await connection.query(`
+          UPDATE aura_suspended_items 
+          SET suspend_id = ?, 
+              comment = CASE 
+                WHEN comment IS NULL OR comment = '' THEN ? 
+                ELSE CONCAT(comment, ' ', ?) 
+              END
+          WHERE suspend_id = ?
+        `, [targetBill.id, tagComment, tagComment, srcBill.id]);
+
+        await connection.query('DELETE FROM aura_suspended_bills WHERE id = ?', [srcBill.id]);
+      }
+
+      // Recalculate target bill total and item count
+      const [itemStats] = await connection.query(
+        'SELECT COUNT(*) as cnt, COALESCE(SUM(subtotal), 0) as tot FROM aura_suspended_items WHERE suspend_id = ?',
+        [targetBill.id]
+      );
+      await connection.query(
+        'UPDATE aura_suspended_bills SET count = ?, total = ? WHERE id = ?',
+        [itemStats[0]?.cnt || 0, itemStats[0]?.tot || 0, targetBill.id]
+      );
+    } else {
+      // MOVE or SEPARATE SUB-BILL MODE:
+      let groupCount = existingTargetBills.length;
+      for (const srcBill of billsToTransfer) {
+        let assignedSubName = srcBill.sub_bill_name;
+        if (targetHasOrders) {
+          groupCount += 1;
+          assignedSubName = assignedSubName || `Group ${String.fromCharCode(64 + groupCount)}`;
+        }
+        await connection.query(`
+          UPDATE aura_suspended_bills 
+          SET table_id = ?, 
+              table_name = ?, 
+              suspend_note = ?, 
+              sub_bill_name = COALESCE(?, sub_bill_name)
+          WHERE id = ?
+        `, [targetTable.note_id, targetTable.name, targetTable.note_id.toString(), assignedSubName, srcBill.id]);
+      }
+    }
+
+    // Chair moving logic (if guests take chairs with them to the new table)
+    const chairsToMove = parseInt(chairs_count, 10) || 0;
+    if (move_chairs && chairsToMove > 0) {
+      await connection.query(
+        'UPDATE aura_suspended_note SET borrowed_chairs = GREATEST(0, borrowed_chairs - ?) WHERE note_id = ?',
+        [chairsToMove, from_table_id]
+      );
+      await connection.query(
+        'UPDATE aura_suspended_note SET borrowed_chairs = borrowed_chairs + ?, chair_notes = CONCAT(COALESCE(chair_notes, ""), " [Moved with guests from ", ?, "]") WHERE note_id = ?',
+        [chairsToMove, sourceTable?.name || ('Table ' + from_table_id), to_table_id]
+      );
+    }
+
+    // Target table is now definitely occupied
+    await connection.query('UPDATE aura_suspended_note SET status = 1 WHERE note_id = ?', [to_table_id]);
+
+    // Check if source table still has any other bills left
+    const [remainingSourceBills] = await connection.query(
+      'SELECT COUNT(*) as cnt FROM aura_suspended_bills WHERE table_id = ? OR suspend_note = ?',
+      [from_table_id, from_table_id.toString()]
+    );
+    if ((remainingSourceBills[0]?.cnt || 0) === 0) {
+      await connection.query('UPDATE aura_suspended_note SET status = 0, booking = "" WHERE note_id = ?', [from_table_id]);
+    }
+
+    await connection.commit();
+    return res.json({
+      success: true,
+      message: merge_mode === 'merge' && targetHasOrders
+        ? `Order merged with ${targetTable.name} successfully`
+        : `Order transferred to ${targetTable.name} successfully`,
+      new_table_name: targetTable.name,
+      merge_mode: targetHasOrders ? merge_mode : 'move'
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('[POS] transferPosTable error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
+// 25g. Adjust Table Chairs (Borrow chairs from another table, return chairs, add/reset extra chairs)
+exports.adjustPosTableChairs = async (req, res) => {
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
+  try {
+    const { id } = req.params;
+    const {
+      action = 'borrow', // 'borrow' | 'return' | 'add' | 'reset' | 'set'
+      count = 1,
+      donor_table_id = null,
+      note = ''
+    } = req.body;
+
+    const [targetTables] = await connection.query('SELECT * FROM aura_suspended_note WHERE note_id = ? LIMIT 1', [id]);
+    if (targetTables.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: 'Table not found' });
+    }
+    const targetTable = targetTables[0];
+    const chairDelta = Math.abs(parseInt(count, 10) || 1);
+
+    if (action === 'borrow') {
+      let chairNote = note || `Borrowed ${chairDelta} chair(s)`;
+      if (donor_table_id) {
+        const [donorTables] = await connection.query('SELECT * FROM aura_suspended_note WHERE note_id = ? LIMIT 1', [donor_table_id]);
+        if (donorTables.length > 0) {
+          const donor = donorTables[0];
+          chairNote = note || `Borrowed ${chairDelta} chair(s) from ${donor.name}`;
+          await connection.query(
+            'UPDATE aura_suspended_note SET borrowed_chairs = borrowed_chairs - ?, chair_notes = CONCAT(COALESCE(chair_notes, ""), " [Lent ", ?, " to ", ?, "]") WHERE note_id = ?',
+            [chairDelta, chairDelta, targetTable.name, donor_table_id]
+          );
+        }
+      }
+      await connection.query(
+        'UPDATE aura_suspended_note SET borrowed_chairs = borrowed_chairs + ?, chair_notes = ? WHERE note_id = ?',
+        [chairDelta, chairNote, id]
+      );
+    } else if (action === 'return') {
+      if (donor_table_id) {
+        const [donorTables] = await connection.query('SELECT * FROM aura_suspended_note WHERE note_id = ? LIMIT 1', [donor_table_id]);
+        if (donorTables.length > 0) {
+          await connection.query(
+            'UPDATE aura_suspended_note SET borrowed_chairs = borrowed_chairs + ? WHERE note_id = ?',
+            [chairDelta, donor_table_id]
+          );
+        }
+      }
+      await connection.query(
+        'UPDATE aura_suspended_note SET borrowed_chairs = GREATEST(0, borrowed_chairs - ?) WHERE note_id = ?',
+        [chairDelta, id]
+      );
+      const [updated] = await connection.query('SELECT borrowed_chairs FROM aura_suspended_note WHERE note_id = ?', [id]);
+      if ((updated[0]?.borrowed_chairs || 0) <= 0) {
+        await connection.query('UPDATE aura_suspended_note SET borrowed_chairs = 0, chair_notes = "" WHERE note_id = ?', [id]);
+      }
+    } else if (action === 'add') {
+      const chairNote = note || `Added ${chairDelta} extra chair(s)`;
+      await connection.query(
+        'UPDATE aura_suspended_note SET borrowed_chairs = borrowed_chairs + ?, chair_notes = ? WHERE note_id = ?',
+        [chairDelta, chairNote, id]
+      );
+    } else if (action === 'reset') {
+      await connection.query('UPDATE aura_suspended_note SET borrowed_chairs = 0, chair_notes = "" WHERE note_id = ?', [id]);
+    } else if (action === 'set') {
+      const setCount = parseInt(count, 10) || 0;
+      await connection.query('UPDATE aura_suspended_note SET borrowed_chairs = ?, chair_notes = ? WHERE note_id = ?', [setCount, note || '', id]);
+    }
+
+    const [refreshed] = await connection.query('SELECT * FROM aura_suspended_note WHERE note_id = ?', [id]);
+    await connection.commit();
+
+    const curr = refreshed[0];
+    const baseSeats = parseInt(curr.customer_qty, 10) || 4;
+    const borrowed = parseInt(curr.borrowed_chairs, 10) || 0;
+
+    return res.json({
+      success: true,
+      message: 'Table chairs updated successfully',
+      table_id: id,
+      base_seats: baseSeats,
+      borrowed_chairs: borrowed,
+      effective_seats: Math.max(0, baseSeats + borrowed),
+      chair_notes: curr.chair_notes || ''
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('[POS] adjustPosTableChairs error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
+// 25f. Delete Table
+exports.deletePosTable = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [bills] = await pool.query('SELECT id FROM aura_suspended_bills WHERE table_id = ? OR suspend_note = ? LIMIT 1', [id, id]);
+    if (bills.length > 0) {
+      return res.status(400).json({ success: false, message: 'Cannot delete table with an active order. Settle or cancel the order first.' });
+    }
+    await pool.query('DELETE FROM aura_suspended_note WHERE note_id = ?', [id]);
+    return res.json({ success: true, message: 'Table deleted successfully' });
+  } catch (error) {
+    console.error('[POS] deletePosTable error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };

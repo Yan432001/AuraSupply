@@ -91,7 +91,27 @@ const PosReceiptModal = ({
   const billerAddressKh = invoice.biller_address_kh || billerInfo?.address_kh || 'អគារ ១២៨ មហាវិថីព្រះមុនីវង្ស រាជធានីភ្នំពេញ';
   const billerPhone = invoice.biller_phone || billerInfo?.phone || '+855 12 345 678';
   const billerEmail = invoice.biller_email || billerInfo?.email || 'contact@aurasupply.com';
-  const billerLogo = invoice.biller_logo || billerInfo?.logo_url || billerInfo?.logo;
+  const rawBillerLogo = invoice.biller_logo || billerInfo?.logo_url || billerInfo?.logo;
+
+  const resolveLogoUrl = (raw) => {
+    if (!raw || typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    if (
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('data:') ||
+      trimmed.startsWith('blob:')
+    ) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('/')) {
+      return trimmed;
+    }
+    return `/assets/uploads/logos/${trimmed}`;
+  };
+
+  const resolvedBillerLogo = resolveLogoUrl(rawBillerLogo);
 
   const customerName = invoice.customer_name || invoice.customer || 'General Customer';
   const customerCompany = invoice.customer_company || customerName;
@@ -145,6 +165,14 @@ const PosReceiptModal = ({
             border: none !important;
             background: #ffffff !important;
             color: #000000 !important;
+          }
+          #printable-invoice-container img {
+            max-width: 100% !important;
+            height: auto !important;
+            max-height: 58px !important;
+            display: block !important;
+            margin: 0 auto 6px auto !important;
+            object-fit: contain !important;
           }
           .no-print {
             display: none !important;
@@ -263,11 +291,16 @@ const PosReceiptModal = ({
             {/* Tax Invoice Header: Logo + Biller Info */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 16 }}>
               <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                {billerLogo ? (
+                {resolvedBillerLogo ? (
                   <img
-                    src={billerLogo}
+                    src={resolvedBillerLogo}
                     alt={billerName}
                     style={{ width: 68, height: 68, objectFit: 'contain', borderRadius: 10, border: `1.5px solid ${activeBillerColor}30` }}
+                    onError={(e) => {
+                      if (e.currentTarget.src.includes('/assets/uploads/logos/')) {
+                        e.currentTarget.src = e.currentTarget.src.replace('/assets/uploads/logos/', '/assets/uploads/');
+                      }
+                    }}
                   />
                 ) : (
                   <div
@@ -497,11 +530,16 @@ const PosReceiptModal = ({
             {/* Header: Brand Logo & Title */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `2px solid ${activeBillerColor}`, paddingBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                {billerLogo ? (
+                {resolvedBillerLogo ? (
                   <img
-                    src={billerLogo}
+                    src={resolvedBillerLogo}
                     alt={billerName}
                     style={{ width: 60, height: 60, objectFit: 'contain', borderRadius: 10, border: `1px solid ${activeBillerColor}30` }}
+                    onError={(e) => {
+                      if (e.currentTarget.src.includes('/assets/uploads/logos/')) {
+                        e.currentTarget.src = e.currentTarget.src.replace('/assets/uploads/logos/', '/assets/uploads/');
+                      }
+                    }}
                   />
                 ) : (
                   <div
@@ -689,6 +727,72 @@ const PosReceiptModal = ({
         {invoiceType === 'thermal' && (
           <div style={{ fontFamily: "'Courier New', Courier, monospace", fontSize: 12, color: '#000000' }}>
             <div style={{ textAlign: 'center', marginBottom: 10 }}>
+              {/* Branch / Biller Centered Logo at Top of Receipt */}
+              {resolvedBillerLogo ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
+                  <img
+                    src={resolvedBillerLogo}
+                    alt={billerName}
+                    style={{
+                      maxHeight: 56,
+                      maxWidth: 160,
+                      objectFit: 'contain',
+                      display: 'block',
+                      margin: '0 auto',
+                    }}
+                    onError={(e) => {
+                      if (e.currentTarget.src.includes('/assets/uploads/logos/')) {
+                        e.currentTarget.src = e.currentTarget.src.replace('/assets/uploads/logos/', '/assets/uploads/');
+                      } else {
+                        e.currentTarget.style.display = 'none';
+                        const fallback = e.currentTarget.parentElement?.querySelector('.biller-thermal-logo-fallback');
+                        if (fallback) fallback.style.display = 'inline-flex';
+                      }
+                    }}
+                  />
+                  <div
+                    className="biller-thermal-logo-fallback"
+                    style={{
+                      display: 'none',
+                      width: 48,
+                      height: 48,
+                      borderRadius: '50%',
+                      background: `${activeBillerColor}15`,
+                      border: `2px solid ${activeBillerColor}`,
+                      color: activeBillerColor,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 18,
+                      fontWeight: 900,
+                      margin: '0 auto',
+                    }}
+                  >
+                    {(billerName || 'A').slice(0, 2).toUpperCase()}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: '50%',
+                      background: `${activeBillerColor}15`,
+                      border: `2px solid ${activeBillerColor}`,
+                      color: activeBillerColor,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 18,
+                      fontWeight: 900,
+                      margin: '0 auto',
+                    }}
+                  >
+                    {(billerName || 'A').slice(0, 2).toUpperCase()}
+                  </div>
+                </div>
+              )}
+
               <div style={{ fontSize: 16, fontWeight: 900, textTransform: 'uppercase', color: activeBillerColor }}>
                 {billerName}
               </div>

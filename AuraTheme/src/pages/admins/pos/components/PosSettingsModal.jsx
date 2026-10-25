@@ -82,6 +82,16 @@ const PosSettingsModal = ({
         initialValues={posSettingsData}
         onFinish={handleFinish}
       >
+        <Form.Item label="POS Operation Mode (ប្រភេទ POS)" name="pos_type">
+          <Select
+            options={[
+              { label: '🏪 Quick Retail & Counter POS (លក់រហ័ស)', value: 'pos' },
+              { label: '🍽️ Restaurant & Dine-In Table Service (ភោជនីយដ្ឋាន / តុ)', value: 'table' },
+              { label: '🏨 Hospitality & Room Service (បន្ទប់ស្នាក់នៅ)', value: 'room' },
+            ]}
+          />
+        </Form.Item>
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Form.Item label="USD / KHR Exchange Rate" name="exchange_rate">
             <Input type="number" step="50" prefix="៛" placeholder="4200" />

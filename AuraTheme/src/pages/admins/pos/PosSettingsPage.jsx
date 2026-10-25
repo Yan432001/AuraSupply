@@ -33,6 +33,8 @@ import {
   DollarOutlined,
   SafetyCertificateOutlined,
   ArrowLeftOutlined,
+  CoffeeOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -59,13 +61,17 @@ export default function PosSettingsPage() {
   const [warehouses, setWarehouses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [floors, setFloors] = useState([]);
   const [currentSettings, setCurrentSettings] = useState(null);
 
   // Fetch settings & options on mount
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('/api/admin/pos/settings');
+      const [res, tableRes] = await Promise.all([
+        axios.get('/api/admin/pos/settings'),
+        axios.get('/api/admin/pos/tables').catch(() => ({ data: { floors: [] } }))
+      ]);
       if (res.data?.success) {
         const s = res.data.settings || {};
         setCurrentSettings(s);
@@ -73,8 +79,11 @@ export default function PosSettingsPage() {
         setWarehouses(res.data.warehouses || []);
         setCategories(res.data.categories || []);
         setCustomers(res.data.customers || []);
+        setFloors(tableRes.data?.floors || []);
 
         form.setFieldsValue({
+          pos_type: s.pos_type || 'pos',
+          show_floor: s.show_floor !== undefined ? String(s.show_floor) : '-1',
           pro_limit: Number(s.pro_limit) || 20,
           cat_limit: Number(s.cat_limit) || 20,
           default_biller: s.default_biller ? Number(s.default_biller) : undefined,
@@ -245,6 +254,66 @@ export default function PosSettingsPage() {
                         showIcon
                         style={{ marginBottom: 24, borderRadius: 12 }}
                       />
+
+                      {/* POS Operation Mode & Restaurant Table Service Concept (AURA_v1) */}
+                      <Card
+                        size="small"
+                        title={
+                          <span style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>
+                            <CoffeeOutlined style={{ color: '#f59e0b', marginRight: 6 }} />
+                            {t('pos_operation_mode_title', 'POS Operation Mode & Restaurant Tables (ប្រភេទ POS និងការគ្រប់គ្រងតុ)')}
+                          </span>
+                        }
+                        style={{
+                          marginBottom: 24,
+                          borderRadius: 14,
+                          border: '1.5px solid #fed7aa',
+                          background: '#fffaf5',
+                        }}
+                      >
+                        <Row gutter={[20, 16]}>
+                          <Col xs={24} md={14}>
+                            <Form.Item
+                              name="pos_type"
+                              label={t('pos_type_label', 'POS Operation Mode (ប្រភេទដំណើរការ POS)')}
+                              rules={[{ required: true }]}
+                              tooltip="Switches POS between fast retail counter sales and restaurant dine-in table management"
+                            >
+                              <Select size="large" style={{ borderRadius: 10 }}>
+                                <Option value="pos">
+                                  🏪 {t('pos_mode_retail', 'Quick Retail & Counter POS (លក់រហ័ស / Counter)')}
+                                </Option>
+                                <Option value="table">
+                                  🍽️ {t('pos_mode_restaurant', 'Restaurant & Dine-In Table Service (ភោជនីយដ្ឋាន / បម្រើតាមតុ)')}
+                                </Option>
+                                <Option value="room">
+                                  🏨 {t('pos_mode_room', 'Hospitality & Room Service (បន្ទប់ស្នាក់នៅ / សណ្ឋាគារ)')}
+                                </Option>
+                              </Select>
+                            </Form.Item>
+                          </Col>
+
+                          <Col xs={24} md={10}>
+                            <Form.Item
+                              name="show_floor"
+                              label={t('default_floor_label', 'Default Floor / Block (ជាន់ / តំបន់លំនាំដើម)')}
+                              tooltip="Filter which floor area or dining block is loaded on POS startup"
+                            >
+                              <Select size="large" style={{ borderRadius: 10 }}>
+                                <Option value="-1">🏢 {t('show_all_floors', 'Show All Floors (បង្ហាញគ្រប់ជាន់)')}</Option>
+                                {floors.map((f) => (
+                                  <Option key={f.id} value={String(f.id)}>
+                                    📍 {f.name}
+                                  </Option>
+                                ))}
+                              </Select>
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                        <div style={{ fontSize: 12, color: '#78350f', marginTop: -4 }}>
+                          ℹ️ {t('pos_mode_hint', 'In "Restaurant & Dine-In Table" mode, cashiers can assign orders to tables, manage live dining floor plans, hold bills, and settle payments by table.')}
+                        </div>
+                      </Card>
 
                       <Row gutter={[20, 16]}>
                         {/* Default Biller */}

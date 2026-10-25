@@ -55,6 +55,7 @@ const PosCheckoutModal = ({
   selectedCustomerName,
   billers = [],
   selectedBillerId = null,
+  currentTable = 'Takeaway / Walk-in',
   t,
 }) => {
   const totalUSD = Math.max(0, parseFloat(grandTotal) || 0);
@@ -367,11 +368,12 @@ const PosCheckoutModal = ({
       <div style={{ display: 'flex', gap: 20, paddingTop: 4 }}>
         {/* LEFT COLUMN: PAYABLE, TENDERS, AND NOTES (cyspharma col-md-10) */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* 1. TOP HEADER DETAILS: Biller, Saleman, Project */}
+          {/* 1. TOP HEADER DETAILS: Biller, Saleman, Project, Table */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
+              gridTemplateColumns: currentTable && currentTable !== 'Takeaway / Walk-in' ? '1fr 1fr 1fr auto' : '1fr 1fr 1fr',
+              alignItems: 'center',
               gap: 10,
               padding: '10px 14px',
               background: '#f8fafc',
@@ -435,6 +437,17 @@ const PosCheckoutModal = ({
                 ]}
               />
             </div>
+
+            {currentTable && currentTable !== 'Takeaway / Walk-in' && (
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 2 }}>
+                  Dining Table:
+                </span>
+                <Tag color="orange" style={{ fontSize: 13, fontWeight: 900, padding: '3px 10px', borderRadius: 8, margin: 0 }}>
+                  🍽️ {currentTable}
+                </Tag>
+              </div>
+            )}
           </div>
 
           {/* 2. DUAL-CURRENCY PAYABLE & PAID TABLE (cyspharma add.php lines 1000-1039) */}

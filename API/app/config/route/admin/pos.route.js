@@ -34,6 +34,13 @@ const {
   getKitchenOrders,
   updateKitchenItemStatus,
   completeKitchenOrder,
+  getPosTables,
+  addPosTable,
+  updatePosTable,
+  deletePosTable,
+  releasePosTable,
+  transferPosTable,
+  adjustPosTableChairs,
 } = require("../../../controller/admin/pos.controller");
 
 module.exports = (app) => {
@@ -100,4 +107,13 @@ module.exports = (app) => {
   app.get("/api/admin/pos/settings", getPosSettings);
   app.post("/api/admin/pos/settings", updatePosSettings);
   app.put("/api/admin/pos/settings", updatePosSettings);
+
+  // POS Restaurant Tables & Floor Plan (AURA_v1 Concept)
+  app.get("/api/admin/pos/tables", getPosTables);
+  app.post("/api/admin/pos/tables", addPosTable);
+  app.put("/api/admin/pos/tables/:id", updatePosTable);
+  app.delete("/api/admin/pos/tables/:id", deletePosTable);
+  app.post("/api/admin/pos/tables/:id/release", releasePosTable);
+  app.post("/api/admin/pos/tables/transfer", transferPosTable);
+  app.post("/api/admin/pos/tables/:id/adjust-chairs", adjustPosTableChairs);
 };
