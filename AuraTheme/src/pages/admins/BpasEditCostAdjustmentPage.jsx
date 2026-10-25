@@ -363,7 +363,6 @@ export default function BpasEditCostAdjustmentPage({ adjustmentId = null, onBack
         message.success(res.data.message || 'Cost adjustment updated successfully!');
         try {
           localStorage.removeItem('aura_admin_live_products_v2');
-          window.dispatchEvent(new CustomEvent('aura_live_products_updated'));
         } catch (_) {}
         if (onSuccess) {
           onSuccess(res.data.data);

@@ -99,7 +99,6 @@ const saveLiveProducts = (prods) => {
   try {
     const list = Array.isArray(prods) ? prods : Array.isArray(prods?.products) ? prods.products : [];
     localStorage.setItem(LIVE_PRODUCTS_KEY, JSON.stringify(list));
-    window.dispatchEvent(new CustomEvent('aura_live_products_updated', { detail: list }));
   } catch (_) {}
 };
 
@@ -382,26 +381,19 @@ export default function BpasInventoryWorkspace() {
     fetchLiveProducts();
   }, []);
 
+  const prevTabRef = useRef(activeTab);
   useEffect(() => {
-    if (activeTab === 'products') {
-      fetchLiveProducts();
-    } else if (activeTab === 'attributes') {
+    if (activeTab === 'attributes') {
       fetchAttributes();
     } else if (activeTab === 'warehouse-stock') {
       fetchWarehouseStock();
     } else if (activeTab === 'movements') {
       fetchMovements();
-    }
-  }, [activeTab, filterWarehouse]);
-
-  useEffect(() => {
-    const handleUpdate = () => {
+    } else if (activeTab === 'products' && prevTabRef.current !== 'products') {
       fetchLiveProducts();
-      if (activeTab === 'warehouse-stock') fetchWarehouseStock();
-    };
-    window.addEventListener('aura_live_products_updated', handleUpdate);
-    return () => window.removeEventListener('aura_live_products_updated', handleUpdate);
-  }, [activeTab]);
+    }
+    prevTabRef.current = activeTab;
+  }, [activeTab, filterWarehouse]);
 
   // Client-side Filtered Products fallback
   const filteredProducts = useMemo(() => {

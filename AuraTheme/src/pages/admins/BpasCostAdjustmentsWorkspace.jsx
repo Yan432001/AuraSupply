@@ -205,7 +205,6 @@ export default function BpasCostAdjustmentsWorkspace({ embedded = false }) {
         message.success('Cost adjustment deleted and product costs reverted successfully!');
         try {
           localStorage.removeItem('aura_admin_live_products_v2');
-          window.dispatchEvent(new CustomEvent('aura_live_products_updated'));
         } catch (_) {}
         fetchRecords(pagination.current);
       } else {
