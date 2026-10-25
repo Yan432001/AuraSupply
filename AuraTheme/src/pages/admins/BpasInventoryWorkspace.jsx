@@ -1959,7 +1959,7 @@ export default function BpasInventoryWorkspace() {
               </Button>
             </Flex>
             <Table
-              rowKey={(r) => `${r.warehouse_id}_${r.product_id}_${r.option_id || 0}`}
+              rowKey={(r) => r.unique_row_key || `${r.warehouse_id}_${r.product_id}_${r.variant_id || r.option_id || 0}_${r.wp_id || r.id || 'wh_p'}`}
               loading={isWarehouseStockLoading}
               dataSource={warehouseStockData}
               columns={[
@@ -2569,15 +2569,15 @@ export default function BpasInventoryWorkspace() {
           }
         }}
       >
-        <Form form={attrValForm} layout="vertical">
+        <Form form={attrValForm} layout="vertical" initialValues={{ sort_order: 0 }}>
           <Form.Item name="value" label="Value / Option Name" rules={[{ required: true, message: 'Please enter value' }]}>
             <Input placeholder="e.g. Red, XL, 100% Cotton, 256GB" />
           </Form.Item>
           <Form.Item name="color_code" label="Color Hex Code (Optional)">
             <Input placeholder="e.g. #ef4444 or #3b82f6" />
           </Form.Item>
-          <Form.Item name="sort_order" label="Sort Order">
-            <InputNumber min={0} defaultValue={0} style={{ width: '100%' }} />
+          <Form.Item name="sort_order" label="Sort Order" initialValue={0}>
+            <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
         </Form>
       </Modal>

@@ -55,6 +55,19 @@ exports.deleteAttribute = async (req, res) => {
 };
 
 /**
+ * GET /api/admin/attributes/:id/values
+ */
+exports.getAttributeValues = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const values = await AttributesModel.getAttributeValues(id);
+    return sendSuccess(res, values, 'Attribute values fetched successfully');
+  } catch (err) {
+    return sendError(res, 'Failed to fetch attribute values', 500, err.message);
+  }
+};
+
+/**
  * POST /api/admin/attributes/:id/values
  */
 exports.addAttributeValue = async (req, res) => {

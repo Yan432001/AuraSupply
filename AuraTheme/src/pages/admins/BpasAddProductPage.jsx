@@ -512,7 +512,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                             >
                               <Input
                                 placeholder="Scan or enter barcode"
-                                addonAfter={
+                                suffix={
                                   <Tooltip title="Generate Random Barcode">
                                     <ThunderboltOutlined onClick={handleRandomCode} style={{ cursor: 'pointer', color: '#2563eb' }} />
                                   </Tooltip>

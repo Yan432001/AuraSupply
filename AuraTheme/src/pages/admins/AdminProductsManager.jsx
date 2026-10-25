@@ -1518,7 +1518,7 @@ export default function AdminProductsManager() {
                   >
                     <Input
                       placeholder="e.g. 885888"
-                      addonAfter={
+                      suffix={
                         <Tooltip title="Generate Random Barcode">
                           <SyncOutlined
                             style={{ cursor: 'pointer', color: '#1677ff' }}
@@ -1821,8 +1821,8 @@ export default function AdminProductsManager() {
                 </Col>
 
                 <Col xs={24} sm={8}>
-                  <Form.Item name="barcode_symbology" label="Barcode Symbology">
-                    <Select defaultValue="Code128">
+                  <Form.Item name="barcode_symbology" label="Barcode Symbology" initialValue="Code128">
+                    <Select>
                       <Option value="Code128">Code 128</Option>
                       <Option value="Code39">Code 39</Option>
                       <Option value="EAN13">EAN-13</Option>
@@ -1843,8 +1843,8 @@ export default function AdminProductsManager() {
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8}>
-                  <Form.Item name="tax_rate" label="Tax">
-                    <Select defaultValue="0">
+                  <Form.Item name="tax_rate" label="Tax" initialValue="0">
+                    <Select>
                       <Option value="0">No Tax (0%)</Option>
                       <Option value="10">VAT (10%)</Option>
                       <Option value="7">Standard Tax (7%)</Option>
@@ -1853,8 +1853,8 @@ export default function AdminProductsManager() {
                 </Col>
 
                 <Col xs={24} sm={8}>
-                  <Form.Item name="tax_method" label="Tax Method">
-                    <Select defaultValue="exclusive">
+                  <Form.Item name="tax_method" label="Tax Method" initialValue="exclusive">
+                    <Select>
                       <Option value="exclusive">Exclusive</Option>
                       <Option value="inclusive">Inclusive</Option>
                     </Select>
@@ -1872,8 +1872,8 @@ export default function AdminProductsManager() {
                 </Col>
 
                 <Col xs={24} sm={8}>
-                  <Form.Item name="stock_type" label="Stock Type">
-                    <Select defaultValue="standard">
+                  <Form.Item name="stock_type" label="Stock Type" initialValue="standard">
+                    <Select>
                       <Option value="standard">Standard Inventory</Option>
                       <Option value="serial">Serialized</Option>
                       <Option value="batch">Batch / Lot Tracking</Option>

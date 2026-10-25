@@ -45,6 +45,9 @@ if (typeof window !== 'undefined' && console) {
       combined.includes('`dropdownRender` is deprecated') ||
       combined.includes('`bordered` is deprecated') ||
       combined.includes('`bodyStyle` is deprecated') ||
+      combined.includes('`addonAfter` is deprecated') ||
+      combined.includes('`index` parameter of `rowKey` function is deprecated') ||
+      combined.includes('`defaultValue` will not work on controlled Field') ||
       combined.includes('An empty string ("") was passed to the src attribute') ||
       combined.includes('Instance created by `useForm` is not connected to any Form element') ||
       combined.includes('triggering nested component updates from render is not allowed')

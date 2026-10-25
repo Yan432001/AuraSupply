@@ -3,6 +3,7 @@ const {
   createAttribute,
   updateAttribute,
   deleteAttribute,
+  getAttributeValues,
   addAttributeValue,
   deleteAttributeValue,
   generateVariantCombinations
@@ -14,6 +15,7 @@ module.exports = (app) => {
   app.put('/api/admin/attributes/:id', updateAttribute);
   app.delete('/api/admin/attributes/:id', deleteAttribute);
 
+  app.get('/api/admin/attributes/:id/values', getAttributeValues);
   app.post('/api/admin/attributes/:id/values', addAttributeValue);
   app.delete('/api/admin/attributes/values/:valueId', deleteAttributeValue);
 
@@ -21,6 +23,7 @@ module.exports = (app) => {
 
   // General attributes endpoints
   app.get('/api/attributes', listAttributes);
+  app.get('/api/attributes/:id/values', getAttributeValues);
   app.post('/api/attributes/generate-combinations', generateVariantCombinations);
 
   console.log('[Route] Mounted admin/attributes.route');

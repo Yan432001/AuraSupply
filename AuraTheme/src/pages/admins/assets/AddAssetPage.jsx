@@ -372,8 +372,8 @@ const AddAssetPage = ({ onSuccess, onCancel }) => {
             </Form.Item>
           </Col>
           <Col xs={24} sm={12} md={6}>
-            <Form.Item name="depreciation_method" label={t('depreciation_method', 'Depreciation Model')}>
-              <Select defaultValue="straight_line">
+            <Form.Item name="depreciation_method" label={t('depreciation_method', 'Depreciation Model')} initialValue="straight_line">
+              <Select>
                 <Option value="straight_line">Straight-Line Method (SLM)</Option>
               </Select>
             </Form.Item>

@@ -1602,6 +1602,7 @@ class InventoryModel {
 
       const [rows] = await db.query(`
         SELECT 
+          wp.id AS wp_id,
           w.id AS warehouse_id,
           w.name AS warehouse_name,
           w.code AS warehouse_code,
@@ -1612,9 +1613,11 @@ class InventoryModel {
           wp.quantity AS product_warehouse_quantity,
           wp.rack AS product_rack,
           pv.id AS variant_id,
+          pv.id AS option_id,
           pv.name AS variant_name,
           pv.sku AS variant_sku,
-          wpv.quantity AS variant_warehouse_quantity
+          wpv.quantity AS variant_warehouse_quantity,
+          CONCAT(w.id, '_', p.id, '_', COALESCE(pv.id, 0), '_', wp.id) AS unique_row_key
         FROM aura_warehouses w
         JOIN aura_warehouses_products wp ON wp.warehouse_id = w.id
         JOIN aura_products p ON p.id = wp.product_id

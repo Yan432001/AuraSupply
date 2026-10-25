@@ -377,7 +377,7 @@ const AssetReportsPage = () => {
       <Table
         dataSource={reportData}
         columns={getColumns()}
-        rowKey={(r, idx) => r.id || r.category_id || r.asset_id || idx}
+        rowKey={(r) => r.id || r.category_id || r.asset_id || `${r.category_name || 'asset'}_${r.total_count || 'row'}`}
         loading={loading}
         size="middle"
         pagination={false}

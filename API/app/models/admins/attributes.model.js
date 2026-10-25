@@ -107,6 +107,24 @@ class AttributesModel {
   }
 
   /**
+   * Get values for a specific attribute
+   */
+  static async getAttributeValues(attribute_id) {
+    try {
+      const [values] = await db.query(`
+        SELECT id, attribute_id, value, color_code, sort_order
+        FROM aura_attribute_values
+        WHERE attribute_id = ?
+        ORDER BY sort_order ASC, value ASC
+      `, [attribute_id]);
+      return values || [];
+    } catch (err) {
+      logError('AttributesModel.getAttributeValues', err, null);
+      throw err;
+    }
+  }
+
+  /**
    * Add a value to an attribute
    */
   static async addValue({ attribute_id, value, color_code = null, sort_order = 0 }) {

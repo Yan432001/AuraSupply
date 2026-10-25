@@ -1421,27 +1421,26 @@ export default function SystemSettings() {
                             {t('custom_wallpaper_url', 'Custom Wallpaper Background')}
                           </Text>
                           <Space direction="vertical" style={{ width: '100%' }}>
-                            <Input
-                              placeholder="Paste high-res image URL (e.g. Unsplash or corporate wallpaper)"
-                              value={customWallpaperInput}
-                              onChange={(e) => setCustomWallpaperInput(e.target.value)}
-                              addonAfter={
-                                <Button
-                                  type="primary"
-                                  size="small"
-                                  onClick={() => {
-                                    updateTransparentSystem({
-                                      enabled: true,
-                                      preset: 'custom',
-                                      customWallpaperUrl: customWallpaperInput,
-                                    });
-                                    message.success(t('wallpaper_applied', 'Wallpaper updated!'));
-                                  }}
-                                >
-                                  {t('apply', 'Apply')}
-                                </Button>
-                              }
-                            />
+                            <Space.Compact style={{ width: '100%' }}>
+                              <Input
+                                placeholder="Paste high-res image URL (e.g. Unsplash or corporate wallpaper)"
+                                value={customWallpaperInput}
+                                onChange={(e) => setCustomWallpaperInput(e.target.value)}
+                              />
+                              <Button
+                                type="primary"
+                                onClick={() => {
+                                  updateTransparentSystem({
+                                    enabled: true,
+                                    preset: 'custom',
+                                    customWallpaperUrl: customWallpaperInput,
+                                  });
+                                  message.success(t('wallpaper_applied', 'Wallpaper updated!'));
+                                }}
+                              >
+                                {t('apply', 'Apply')}
+                              </Button>
+                            </Space.Compact>
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                               {Object.entries(WALLPAPER_PRESETS).slice(0, 5).map(([k, p]) => (
                                 <Tag
