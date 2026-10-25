@@ -506,38 +506,17 @@ class CostAdjustmentsModel {
           item.note,
         ]);
 
-        // If status is 'completed', update master product cost and warehouse avg_cost
+        // If status is 'completed', update master product cost, warehouse avg_cost, and product units
         if (status === 'completed') {
-          // 1. Update product table cost
-          await conn.query(`
-            UPDATE aura_products 
-            SET cost = ? 
-            WHERE id = ?
-          `, [item.new_cost, item.product_id]);
-
-          // 2. Update warehouse avg_cost (preserving physical quantities)
-          if (item.warehouse_id) {
-            await conn.query(`
-              UPDATE aura_warehouses_products 
-              SET avg_cost = ? 
-              WHERE product_id = ? AND warehouse_id = ?
-            `, [item.new_cost, item.product_id, item.warehouse_id]);
-          } else {
-            await conn.query(`
-              UPDATE aura_warehouses_products 
-              SET avg_cost = ? 
-              WHERE product_id = ?
-            `, [item.new_cost, item.product_id]);
-          }
-
-          // 3. If variant option exists, update variant cost
-          if (item.option_id) {
-            await conn.query(`
-              UPDATE aura_product_variants 
-              SET cost = ? 
-              WHERE id = ?
-            `, [item.new_cost, item.option_id]);
-          }
+          const applyAll = payload.apply_all_warehouses !== false;
+          await CostAdjustmentsModel.syncProductCostToAllLevels(
+            conn,
+            item.product_id,
+            item.new_cost,
+            item.warehouse_id,
+            applyAll,
+            item.option_id
+          );
         }
 
         // Insert Audit Trail
@@ -643,12 +622,15 @@ class CostAdjustmentsModel {
         ]);
 
         if (status === 'completed') {
-          await conn.query('UPDATE aura_products SET cost = ? WHERE id = ?', [newCost, item.product_id]);
-          if (warehouse_id && warehouse_id !== 'all') {
-            await conn.query('UPDATE aura_warehouses_products SET avg_cost = ? WHERE product_id = ? AND warehouse_id = ?', [newCost, item.product_id, warehouse_id]);
-          } else {
-            await conn.query('UPDATE aura_warehouses_products SET avg_cost = ? WHERE product_id = ?', [newCost, item.product_id]);
-          }
+          const applyAll = payload.apply_all_warehouses !== false;
+          await CostAdjustmentsModel.syncProductCostToAllLevels(
+            conn,
+            item.product_id,
+            newCost,
+            warehouse_id,
+            applyAll,
+            item.option_id
+          );
         }
       }
 
@@ -708,23 +690,18 @@ class CostAdjustmentsModel {
 
       const adjustment = rows[0];
 
-      // If completed, revert costs back to old_cost
+      // If completed, revert costs back to old_cost across all levels
       if (adjustment.status === 'completed') {
         const [items] = await conn.query('SELECT * FROM aura_cost_adjustment_items WHERE cost_adjustment_id = ?', [id]);
         for (const item of items) {
-          // Revert product cost
-          await conn.query('UPDATE aura_products SET cost = ? WHERE id = ?', [item.old_cost, item.product_id]);
-
-          // Revert warehouse avg_cost
-          if (item.warehouse_id) {
-            await conn.query('UPDATE aura_warehouses_products SET avg_cost = ? WHERE product_id = ? AND warehouse_id = ?', [item.old_cost, item.product_id, item.warehouse_id]);
-          } else {
-            await conn.query('UPDATE aura_warehouses_products SET avg_cost = ? WHERE product_id = ?', [item.old_cost, item.product_id]);
-          }
-
-          if (item.option_id) {
-            await conn.query('UPDATE aura_product_variants SET cost = ? WHERE id = ?', [item.old_cost, item.option_id]);
-          }
+          await CostAdjustmentsModel.syncProductCostToAllLevels(
+            conn,
+            item.product_id,
+            item.old_cost,
+            item.warehouse_id,
+            true, // revert globally
+            item.option_id
+          );
         }
       }
 
@@ -740,6 +717,99 @@ class CostAdjustmentsModel {
       throw err;
     } finally {
       conn.release();
+    }
+  }
+
+  /**
+   * 8. Synchronize product cost across:
+   * 1. aura_products.cost (Master Products List)
+   * 2. aura_cost_price_by_units (Base unit & all derived/sub units)
+   * 3. aura_warehouses_products.avg_cost (All warehouses or selected warehouse, upserting if missing)
+   * 4. aura_product_variants.cost (if option/variant specified)
+   */
+  static async syncProductCostToAllLevels(conn, productId, newCost, warehouseId = null, applyAllWarehouses = true, optionId = null) {
+    const costVal = parseFloat(newCost) || 0;
+
+    // 1. Update Master Product table cost
+    await conn.query('UPDATE aura_products SET cost = ? WHERE id = ?', [costVal, productId]);
+
+    // 2. Update Product Units in aura_cost_price_by_units
+    const [pRows] = await conn.query('SELECT id, code, unit, purchase_unit, sale_unit FROM aura_products WHERE id = ?', [productId]);
+    const prod = pRows[0];
+    const baseUnitId = prod ? (prod.unit || prod.purchase_unit || prod.sale_unit) : null;
+
+    if (baseUnitId) {
+      // 2a. Update or Insert base unit row
+      const [baseRows] = await conn.query(
+        'SELECT id FROM aura_cost_price_by_units WHERE product_id = ? AND unit_id = ? LIMIT 1',
+        [productId, baseUnitId]
+      );
+      if (baseRows.length > 0) {
+        await conn.query(
+          'UPDATE aura_cost_price_by_units SET cost = ?, product_code = ? WHERE id = ?',
+          [costVal, prod.code, baseRows[0].id]
+        );
+      } else {
+        await conn.query(
+          'INSERT INTO aura_cost_price_by_units (product_id, unit_id, cost, price, product_code) VALUES (?, ?, ?, 0, ?)',
+          [productId, baseUnitId, costVal, prod.code]
+        );
+      }
+
+      // 2b. Recalculate and update derived/sub units
+      const [childUnits] = await conn.query(`
+        SELECT cpu.id, cpu.unit_id, u.operator, u.operation_value
+        FROM aura_cost_price_by_units cpu
+        JOIN aura_units u ON u.id = cpu.unit_id
+        WHERE cpu.product_id = ? AND cpu.unit_id != ?
+      `, [productId, baseUnitId]);
+
+      for (const cu of childUnits) {
+        let childCost = costVal;
+        const opVal = parseFloat(cu.operation_value) || 1;
+        if (cu.operator === '*') {
+          childCost = costVal * opVal;
+        } else if (cu.operator === '/') {
+          childCost = opVal !== 0 ? costVal / opVal : costVal;
+        } else if (cu.operator === '+') {
+          childCost = costVal + opVal;
+        } else if (cu.operator === '-') {
+          childCost = costVal - opVal;
+        }
+        childCost = parseFloat(childCost.toFixed(4));
+        await conn.query('UPDATE aura_cost_price_by_units SET cost = ? WHERE id = ?', [childCost, cu.id]);
+      }
+    } else {
+      // If product has no base unit ID configured, update any existing rows in cost_price_by_units
+      await conn.query('UPDATE aura_cost_price_by_units SET cost = ? WHERE product_id = ?', [costVal, productId]);
+    }
+
+    // 3. Update Warehouse Stock (aura_warehouses_products)
+    if (applyAllWarehouses || !warehouseId || warehouseId === 'all') {
+      // Update ALL warehouses for this product
+      await conn.query('UPDATE aura_warehouses_products SET avg_cost = ? WHERE product_id = ?', [costVal, productId]);
+
+      // If specific warehouse selected, ensure it exists in aura_warehouses_products
+      if (warehouseId && warehouseId !== 'all') {
+        const whId = parseInt(warehouseId, 10);
+        await conn.query(`
+          INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity, avg_cost)
+          VALUES (?, ?, 0, ?)
+          ON DUPLICATE KEY UPDATE avg_cost = VALUES(avg_cost)
+        `, [productId, whId, costVal]);
+      }
+    } else {
+      const whId = parseInt(warehouseId, 10);
+      await conn.query(`
+        INSERT INTO aura_warehouses_products (product_id, warehouse_id, quantity, avg_cost)
+        VALUES (?, ?, 0, ?)
+        ON DUPLICATE KEY UPDATE avg_cost = VALUES(avg_cost)
+      `, [productId, whId, costVal]);
+    }
+
+    // 4. Update Variant Costs if option_id is provided
+    if (optionId) {
+      await conn.query('UPDATE aura_product_variants SET cost = ? WHERE id = ?', [costVal, optionId]);
     }
   }
 }

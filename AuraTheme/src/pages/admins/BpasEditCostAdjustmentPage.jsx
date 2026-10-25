@@ -20,7 +20,8 @@ import {
   Spin,
   Tooltip,
   Statistic,
-  Popconfirm
+  Popconfirm,
+  Switch
 } from 'antd';
 import {
   SaveOutlined,
@@ -335,6 +336,7 @@ export default function BpasEditCostAdjustmentPage({ adjustmentId = null, onBack
         biller_id: values.biller_id,
         reason: values.reason,
         status: values.status || 'completed',
+        apply_all_warehouses: values.apply_all_warehouses !== false,
         note: values.note || '',
         items: items.map((i) => ({
           id: i.item_id || null,
@@ -359,6 +361,10 @@ export default function BpasEditCostAdjustmentPage({ adjustmentId = null, onBack
 
       if (res.data?.success) {
         message.success(res.data.message || 'Cost adjustment updated successfully!');
+        try {
+          localStorage.removeItem('aura_admin_live_products_v2');
+          window.dispatchEvent(new CustomEvent('aura_live_products_updated'));
+        } catch (_) {}
         if (onSuccess) {
           onSuccess(res.data.data);
         } else if (onBack) {
@@ -665,6 +671,21 @@ export default function BpasEditCostAdjustmentPage({ adjustmentId = null, onBack
                   label={<strong style={{ fontSize: 13 }}>General Notes</strong>}
                 >
                   <Input placeholder="Adjustment justification..." />
+                </Form.Item>
+              </Col>
+
+              <Col xs={24} sm={24} md={12}>
+                <Form.Item
+                  name="apply_all_warehouses"
+                  valuePropName="checked"
+                  label={<strong style={{ fontSize: 13 }}>Multi-Level Cost Sync</strong>}
+                >
+                  <Space align="center" style={{ marginTop: 4 }}>
+                    <Switch defaultChecked />
+                    <span style={{ fontSize: 12, color: '#475569', fontWeight: 600 }}>
+                      Sync adjusted costs across all warehouses & update unit conversion price lists
+                    </span>
+                  </Space>
                 </Form.Item>
               </Col>
             </Row>

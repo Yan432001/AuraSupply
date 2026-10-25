@@ -203,6 +203,10 @@ export default function BpasCostAdjustmentsWorkspace({ embedded = false }) {
       });
       if (res.data?.success) {
         message.success('Cost adjustment deleted and product costs reverted successfully!');
+        try {
+          localStorage.removeItem('aura_admin_live_products_v2');
+          window.dispatchEvent(new CustomEvent('aura_live_products_updated'));
+        } catch (_) {}
         fetchRecords(pagination.current);
       } else {
         message.error(res.data?.message || 'Failed to delete adjustment');

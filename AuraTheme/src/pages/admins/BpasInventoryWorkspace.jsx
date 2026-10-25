@@ -383,7 +383,9 @@ export default function BpasInventoryWorkspace() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'attributes') {
+    if (activeTab === 'products') {
+      fetchLiveProducts();
+    } else if (activeTab === 'attributes') {
       fetchAttributes();
     } else if (activeTab === 'warehouse-stock') {
       fetchWarehouseStock();
@@ -391,6 +393,15 @@ export default function BpasInventoryWorkspace() {
       fetchMovements();
     }
   }, [activeTab, filterWarehouse]);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      fetchLiveProducts();
+      if (activeTab === 'warehouse-stock') fetchWarehouseStock();
+    };
+    window.addEventListener('aura_live_products_updated', handleUpdate);
+    return () => window.removeEventListener('aura_live_products_updated', handleUpdate);
+  }, [activeTab]);
 
   // Client-side Filtered Products fallback
   const filteredProducts = useMemo(() => {
@@ -1019,9 +1030,9 @@ export default function BpasInventoryWorkspace() {
       width: 100,
       align: 'right',
       sorter: (a, b) => (Number(a.cost) || 0) - (Number(b.cost) || 0),
-      render: (cost, record) => (
-        <span style={{ color: adminTheme.subtext, fontSize: 12 }}>
-          {formatCurrency(cost || record.price * 0.6)}
+      render: (cost) => (
+        <span style={{ color: '#0f172a', fontWeight: 700, fontSize: 12 }}>
+          {formatCurrency(Number(cost) || 0)}
         </span>
       ),
     },
@@ -2024,6 +2035,26 @@ export default function BpasInventoryWorkspace() {
                       </strong>
                     );
                   },
+                },
+                {
+                  title: 'Avg Unit Cost',
+                  key: 'avg_cost',
+                  align: 'right',
+                  render: (_, r) => (
+                    <span style={{ fontWeight: 600, color: '#0284c7' }}>
+                      {formatCurrency(r.avg_cost || r.product_cost || 0)}
+                    </span>
+                  ),
+                },
+                {
+                  title: 'Stock Valuation',
+                  key: 'valuation',
+                  align: 'right',
+                  render: (_, r) => (
+                    <strong style={{ color: '#059669' }}>
+                      {formatCurrency((Number(r.quantity || r.product_warehouse_quantity) || 0) * (Number(r.avg_cost || r.product_cost) || 0))}
+                    </strong>
+                  ),
                 },
                 {
                   title: 'Alert Qty',

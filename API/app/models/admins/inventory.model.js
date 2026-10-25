@@ -1611,6 +1611,8 @@ class InventoryModel {
           p.code AS product_code,
           p.alert_quantity,
           wp.quantity AS product_warehouse_quantity,
+          COALESCE(wp.avg_cost, p.cost, 0) AS avg_cost,
+          COALESCE(p.cost, 0) AS product_cost,
           wp.rack AS product_rack,
           pv.id AS variant_id,
           pv.id AS option_id,

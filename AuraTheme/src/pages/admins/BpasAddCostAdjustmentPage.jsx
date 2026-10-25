@@ -20,7 +20,8 @@ import {
   Spin,
   Tooltip,
   Radio,
-  Statistic
+  Statistic,
+  Switch
 } from 'antd';
 import {
   PlusOutlined,
@@ -308,6 +309,7 @@ export default function BpasAddCostAdjustmentPage({ onBack = null, onSuccess = n
         biller_id: values.biller_id,
         reason: values.reason,
         status: values.status || 'completed',
+        apply_all_warehouses: values.apply_all_warehouses !== false,
         note: values.note || '',
         items: items.map((i) => ({
           product_id: i.product_id,
@@ -331,6 +333,10 @@ export default function BpasAddCostAdjustmentPage({ onBack = null, onSuccess = n
 
       if (res.data?.success) {
         message.success(res.data.message || 'Cost adjustment created and product costs updated successfully!');
+        try {
+          localStorage.removeItem('aura_admin_live_products_v2');
+          window.dispatchEvent(new CustomEvent('aura_live_products_updated'));
+        } catch (_) {}
         if (onSuccess) {
           onSuccess(res.data.data);
         } else if (onBack) {
@@ -512,7 +518,8 @@ export default function BpasAddCostAdjustmentPage({ onBack = null, onSuccess = n
           onFinish={handleSubmit}
           initialValues={{
             status: 'completed',
-            reason: 'Supplier Price Revision'
+            reason: 'Supplier Price Revision',
+            apply_all_warehouses: true
           }}
         >
           {/* Header Action Bar */}
@@ -665,6 +672,21 @@ export default function BpasAddCostAdjustmentPage({ onBack = null, onSuccess = n
                   label={<strong style={{ fontSize: 13 }}>General Notes & Audit Justification</strong>}
                 >
                   <Input placeholder="e.g. Price increase from supplier invoice #INV-9921" />
+                </Form.Item>
+              </Col>
+
+              <Col xs={24} sm={24} md={12}>
+                <Form.Item
+                  name="apply_all_warehouses"
+                  valuePropName="checked"
+                  label={<strong style={{ fontSize: 13 }}>Multi-Level Cost Sync</strong>}
+                >
+                  <Space align="center" style={{ marginTop: 4 }}>
+                    <Switch defaultChecked />
+                    <span style={{ fontSize: 12, color: '#475569', fontWeight: 600 }}>
+                      Sync adjusted costs across all warehouses & update unit conversion price lists
+                    </span>
+                  </Space>
                 </Form.Item>
               </Col>
             </Row>
