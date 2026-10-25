@@ -151,3 +151,123 @@ exports.getStockMovements = async (req, res) => {
     return sendError(res, 'Failed to fetch stock movements', 500, err.message);
   }
 };
+
+/**
+ * GET /api/admin/inventory/overselling-config
+ * Retrieve global and warehouse-level overselling configurations
+ */
+exports.getOversellingConfig = async (req, res) => {
+  try {
+    const inventoryService = require('../../services/inventory.service');
+    const settings = await inventoryService.getSettings();
+    const db = require('../../config/utill/connection');
+    const [warehouses] = await db.query(
+      'SELECT id, code, name, overselling, saleable FROM aura_warehouses ORDER BY name ASC'
+    );
+
+    return sendSuccess(res, {
+      global_overselling: parseInt(settings.overselling, 10) === 1,
+      default_warehouse: settings.default_warehouse,
+      accounting_method: settings.accounting_method,
+      warehouses: warehouses.map(w => ({
+        id: w.id,
+        code: w.code,
+        name: w.name,
+        overselling: w.overselling !== null ? parseInt(w.overselling, 10) === 1 : null,
+        effective_overselling: (parseInt(settings.overselling, 10) === 1) && (w.overselling !== 0),
+        saleable: w.saleable !== null ? parseInt(w.saleable, 10) === 1 : true
+      }))
+    }, 'Overselling configuration retrieved');
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to fetch overselling config', 500);
+  }
+};
+
+/**
+ * PUT /api/admin/inventory/overselling-config
+ * Update global and warehouse-level overselling toggles
+ */
+exports.updateOversellingConfig = async (req, res) => {
+  try {
+    const { global_overselling, warehouse_configs } = req.body;
+    const db = require('../../config/utill/connection');
+
+    if (global_overselling !== undefined) {
+      await db.query(
+        'UPDATE aura_settings SET overselling = ? WHERE setting_id = 1',
+        [global_overselling ? 1 : 0]
+      );
+    }
+
+    if (Array.isArray(warehouse_configs)) {
+      for (const wc of warehouse_configs) {
+        if (wc.id) {
+          const val = wc.overselling === null || wc.overselling === undefined ? null : (wc.overselling ? 1 : 0);
+          await db.query(
+            'UPDATE aura_warehouses SET overselling = ? WHERE id = ?',
+            [val, wc.id]
+          );
+        }
+      }
+    }
+
+    return sendSuccess(res, null, 'Overselling configuration updated successfully');
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to update overselling config', 500);
+  }
+};
+
+/**
+ * POST /api/admin/inventory/sync-opening-stock
+ * Ensure every warehouse product has backing stock_movement rows
+ */
+exports.syncOpeningStock = async (req, res) => {
+  try {
+    const inventoryService = require('../../services/inventory.service');
+    const count = await inventoryService.syncMissingOpeningStock();
+    return sendSuccess(res, { synced_records: count }, `Successfully synchronized ${count} opening stock movements`);
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to sync opening stock', 500);
+  }
+};
+
+/**
+ * POST /api/admin/inventory/check-availability
+ * Check if a product can be sold/issued from warehouse given current stock and overselling rules
+ */
+exports.checkStockAvailability = async (req, res) => {
+  try {
+    const { product_id, warehouse_id, quantity, option_id, unit_id } = req.body;
+    const inventoryService = require('../../services/inventory.service');
+
+    if (!product_id || !warehouse_id) {
+      return sendError(res, 'Product ID and Warehouse ID are required', 400);
+    }
+
+    const unit = await inventoryService.getProductUnit(product_id, unit_id);
+    const requestedBaseQty = inventoryService.unitToBaseQty(quantity || 1, unit);
+    const currentQOH = await inventoryService.getWarehouseStock(product_id, warehouse_id, option_id);
+    const canOversellStock = await inventoryService.canOversell(warehouse_id);
+
+    const willOversell = (currentQOH - requestedBaseQty) < 0;
+    const isAllowed = canOversellStock || !willOversell;
+
+    return sendSuccess(res, {
+      product_id,
+      warehouse_id,
+      current_qoh: currentQOH,
+      requested_unit_qty: parseFloat(quantity) || 1,
+      requested_base_qty: requestedBaseQty,
+      remaining_qoh: currentQOH - requestedBaseQty,
+      can_oversell: canOversellStock,
+      is_allowed: isAllowed,
+      unit_info: {
+        code: unit.code,
+        operator: unit.operator,
+        operation_value: unit.operation_value
+      }
+    }, 'Stock availability calculated');
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to check stock availability', 500);
+  }
+};

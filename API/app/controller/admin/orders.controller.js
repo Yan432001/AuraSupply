@@ -365,7 +365,7 @@ exports.createOrder = async (req, res) => {
 
     const newSaleId = saleRes.insertId;
 
-    const { unitToBaseQty } = require('../../utils/unitConverter');
+    const inventoryService = require('../../services/inventory.service');
 
     for (const item of items) {
       const prodId = parseInt(item.product_id) || 0;
@@ -389,10 +389,20 @@ exports.createOrder = async (req, res) => {
       }
 
       const itemQty = parseFloat(item.quantity) || 1;
-      const baseUnitQty = unitToBaseQty(itemQty, unitObj);
+      const baseUnitQty = inventoryService.unitToBaseQty(itemQty, unitObj);
       const unitPrice = parseFloat(item.unit_price) || 0;
       const subtotal = parseFloat(item.subtotal || (itemQty * unitPrice)) || 0;
       const whId = parseInt(warehouse_id) || 1;
+
+      // Validate overselling rules from AURA_v1
+      if (prodId > 0) {
+        await inventoryService.checkOverselling({
+          productId: prodId,
+          warehouseId: whId,
+          requestedBaseQty: baseUnitQty,
+          productName: item.product_name
+        }, db);
+      }
 
       await db.query(`
         INSERT INTO aura_sale_items 
@@ -414,13 +424,25 @@ exports.createOrder = async (req, res) => {
         whId
       ]);
 
-      // Deduct warehouse stock in base units
-      if (prodId) {
-        await db.query(`
-          UPDATE aura_warehouses_products 
-          SET quantity = quantity - ? 
-          WHERE product_id = ? AND warehouse_id = ?
-        `, [baseUnitQty, prodId, whId]);
+      // Record in stock movement ledger (trigger insertStock updates warehouse & master products automatically)
+      if (prodId > 0) {
+        await inventoryService.recordStockMovement({
+          date: new Date(),
+          reference_no: refNo,
+          transaction: 'Sale',
+          transaction_id: newSaleId,
+          warehouse_id: whId,
+          product_id: prodId,
+          product_type: 'standard',
+          product_code: item.product_code || '',
+          product_name: item.product_name || 'Item',
+          real_unit_cost: 0,
+          quantity: -baseUnitQty,
+          unit_quantity: itemQty,
+          unit_code: unitCode || 'pcs',
+          unit_id: unitId || 1,
+          user_id: user_id || 1
+        }, db);
       }
     }
 

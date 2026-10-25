@@ -4,7 +4,11 @@ const {
   adjustStock,
   transferStock,
   getWarehouseStock,
-  getStockMovements
+  getStockMovements,
+  getOversellingConfig,
+  updateOversellingConfig,
+  syncOpeningStock,
+  checkStockAvailability
 } = require('../../../controller/admin/inventoryOperations.controller');
 
 module.exports = (app) => {
@@ -19,6 +23,12 @@ module.exports = (app) => {
 
   // Stock Movement History & Audit Trail
   app.get('/api/admin/inventory/movements', getStockMovements);
+
+  // Overselling Configuration & Stock Availability
+  app.get('/api/admin/inventory/overselling-config', getOversellingConfig);
+  app.put('/api/admin/inventory/overselling-config', updateOversellingConfig);
+  app.post('/api/admin/inventory/sync-opening-stock', syncOpeningStock);
+  app.post('/api/admin/inventory/check-availability', checkStockAvailability);
 
   console.log('[Route] Mounted admin/inventoryOperations.route');
 };
