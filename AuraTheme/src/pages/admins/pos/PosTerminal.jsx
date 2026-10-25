@@ -5,7 +5,6 @@ import {
   Spin,
   message,
   Grid,
-  Tabs,
 } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
@@ -13,14 +12,11 @@ import axios from 'axios';
 // Contexts & Hooks
 import { useAuth } from '../../../contexts/AuthContext';
 import { useTranslation } from '../../../contexts/LanguageContext';
-import { useAdminTheme } from '../../../hooks/useAdminTheme';
-import { useTheme } from '../../../contexts/ThemeContext';
 
 // Modular Creative POS Components matching cyspharma & AURA_v1
 import PosHeader from './components/PosHeader';
 import PosCart from './components/PosCart';
 import PosCatalog from './components/PosCatalog';
-import PosCheckoutPanel from './components/PosCheckoutPanel';
 import PosOpenRegisterView from './components/PosOpenRegisterView';
 import PosCheckoutModal from './components/PosCheckoutModal';
 import PosReceiptModal from './components/PosReceiptModal';
@@ -124,17 +120,11 @@ const DEFAULT_SAMPLE_PRODUCTS = [
 
 export default function PosTerminal() {
   const screens = useBreakpoint();
-  const isLargeScreen = screens.xl ?? (typeof window !== 'undefined' ? window.innerWidth >= 1280 : true);
-  const isMediumScreen = screens.md ?? (typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
   const isDesktop = screens.lg ?? (typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
-  const [activeTabletTab, setActiveTabletTab] = useState('cart');
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const { t } = useTranslation();
-  const adminTheme = useAdminTheme();
-  const { themeMode } = useTheme();
-  const isDark = Boolean(adminTheme.isDark || themeMode === 'dark');
 
   // 1. Clock, Sound & Fullscreen
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -562,49 +552,28 @@ export default function PosTerminal() {
     }
   }, [isRegisterOpen, fetchCatalog]);
 
-  // Add Item to Cart (Supports Variants and Stock Validation)
-  const handleAddToCart = (product, variant = null) => {
+  // Add Item to Cart
+  const handleAddToCart = (product) => {
     playPosAudio('beep', soundEnabled);
     setCart((prev) => {
-      const existingIndex = prev.findIndex((item) =>
-        item.id === product.id && (variant ? item.option_id === variant.id : !item.option_id)
-      );
-
-      const maxStock = variant
-        ? parseFloat(variant.quantity ?? 99)
-        : parseFloat(product.quantity ?? 99);
-
+      const existingIndex = prev.findIndex((item) => item.id === product.id);
       if (existingIndex > -1) {
         const next = [...prev];
-        const nextQty = next[existingIndex].quantity + 1;
-        if (posSettingsData?.overselling === 0 && maxStock !== undefined && nextQty > maxStock) {
-          message.warning(`Maximum warehouse stock available for this item is ${maxStock}`);
-        }
         next[existingIndex] = {
           ...next[existingIndex],
-          quantity: nextQty,
+          quantity: next[existingIndex].quantity + 1,
         };
         return next;
       }
-
-      const itemPrice = variant
-        ? parseFloat(variant.price || product.price || 0)
-        : parseFloat(product.price || product.unit_price || 0);
-
       return [
         ...prev,
         {
           id: product.id,
-          code: variant?.sku || product.code || `PRD-${product.id}`,
+          code: product.code || `PRD-${product.id}`,
           name: product.name,
-          unit_price: itemPrice,
+          unit_price: parseFloat(product.price || product.unit_price || 0),
           quantity: 1,
-          max_quantity: maxStock,
-          stock_quantity: maxStock,
-          option_id: variant ? variant.id : null,
-          variant_name: variant ? variant.name : null,
           unit_name: product.unit_name || 'Unit',
-          unit_id: product.unit_id || 1,
           item_discount: 0,
           item_note: '',
           image_url: product.image_url,
@@ -613,28 +582,10 @@ export default function PosTerminal() {
     });
   };
 
-  // Barcode Scan Handler (Supports Variant SKU & Barcode)
+  // Barcode Scan Handler
   const handleBarcodeScanSubmit = (scannedCode) => {
     if (!scannedCode || !scannedCode.trim()) return;
     const cleanCode = scannedCode.trim().toLowerCase();
-
-    // Check variant match first
-    for (const prod of products) {
-      if (prod.variants && prod.variants.length > 0) {
-        const matchedVariant = prod.variants.find(
-          v => (v.sku && v.sku.toLowerCase() === cleanCode) || (v.barcode && v.barcode.toLowerCase() === cleanCode)
-        );
-        if (matchedVariant) {
-          handleAddToCart(prod, matchedVariant);
-          setSearchProductKeyword('');
-          playPosAudio('success', soundEnabled);
-          message.success(`Scanned: ${prod.name} (${matchedVariant.name})`);
-          return;
-        }
-      }
-    }
-
-    // Check product match
     const matched = products.find(
       (p) =>
         (p.barcode && p.barcode.toLowerCase() === cleanCode) ||
@@ -643,13 +594,8 @@ export default function PosTerminal() {
     );
 
     if (matched) {
-      if (matched.variants && matched.variants.length > 0) {
-        handleAddToCart(matched, matched.variants[0]);
-      } else {
-        handleAddToCart(matched, null);
-      }
+      handleAddToCart(matched);
       setSearchProductKeyword('');
-      playPosAudio('success', soundEnabled);
       message.success(`Added: ${matched.name}`);
     } else {
       playPosAudio('error', soundEnabled);
@@ -990,7 +936,6 @@ export default function PosTerminal() {
       setCheckoutModalVisible(false);
       setReceiptModalVisible(true);
       clearCart();
-      fetchCatalog();
       playPosAudio('success', soundEnabled);
       message.success('Sale completed successfully!');
     } catch (err) {
@@ -1096,8 +1041,8 @@ export default function PosTerminal() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: adminTheme.pageBackground || (isDark ? '#0b0f19' : '#f8fafc'),
-          color: adminTheme.text,
+          background: '#f8fafc',
+          color: '#1e293b',
           gap: 16,
         }}
       >
@@ -1112,86 +1057,24 @@ export default function PosTerminal() {
   // =========================================================================
   if (!isRegisterOpen) {
     return (
-      <>
-        <PosOpenRegisterView
-          user={user}
-          openRegisterCashInHand={openRegisterCashInHand}
-          setOpenRegisterCashInHand={setOpenRegisterCashInHand}
-          openRegisterNote={openRegisterNote}
-          setOpenRegisterNote={setOpenRegisterNote}
-          handleOpenRegisterSubmit={handleOpenRegisterSubmit}
-          khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-          themeMode={themeMode}
-          adminTheme={adminTheme}
-          billerName={billers.find((b) => b.id === selectedBillerId)?.name || user?.biller_name || 'Main Store'}
-          warehouseName={warehouses.find((w) => w.id === selectedWarehouseId)?.name || currentWarehouse}
-          onExit={() => navigate('/admins')}
-          onViewSales={() => setSalesHistoryModalVisible(true)}
-          onViewRegisters={() => setListRegistersModalVisible(true)}
-          t={t}
-        />
-
-        {/* Allow Sales History and Shift Registers modals to be viewed directly from Gatekeeper or via ?tab=sales / ?tab=registers */}
-        <PosSalesHistoryModal
-          visible={salesHistoryModalVisible}
-          onClose={() => setSalesHistoryModalVisible(false)}
-          onReprintReceipt={async (sale) => {
-            try {
-              const res = await axios.get(`/api/admin/pos/sales/${sale.id}/receipt`);
-              if (res.data?.success) {
-                const inv = res.data.invoice || (res.data.sale ? { ...res.data.sale, items: res.data.items, payments: res.data.payments } : sale);
-                setCompletedInvoice(inv);
-                setReceiptModalVisible(true);
-              } else {
-                setCompletedInvoice(sale);
-                setReceiptModalVisible(true);
-              }
-            } catch (_) {
-              setCompletedInvoice(sale);
-              setReceiptModalVisible(true);
-            }
-          }}
-          themeMode={themeMode}
-          adminTheme={adminTheme}
-          t={t}
-        />
-
-        <PosRegistersListModal
-          visible={listRegistersModalVisible}
-          onClose={() => setListRegistersModalVisible(false)}
-          onViewShiftSummary={(reg) => {
-            setCurrentRegister(reg);
-            setRegisterDetailsVisible(true);
-          }}
-          themeMode={themeMode}
-          adminTheme={adminTheme}
-          t={t}
-        />
-
-        <PosReceiptModal
-          visible={receiptModalVisible}
-          onClose={() => setReceiptModalVisible(false)}
-          invoice={completedInvoice}
-          themeMode={themeMode}
-          adminTheme={adminTheme}
-          t={t}
-        />
-
-        <PosRegisterDetailsModal
-          visible={registerDetailsVisible}
-          onClose={() => setRegisterDetailsVisible(false)}
-          currentRegister={currentRegister}
-          khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-          themeMode={themeMode}
-          adminTheme={adminTheme}
-          t={t}
-        />
-      </>
+      <PosOpenRegisterView
+        user={user}
+        openRegisterCashInHand={openRegisterCashInHand}
+        setOpenRegisterCashInHand={setOpenRegisterCashInHand}
+        openRegisterNote={openRegisterNote}
+        setOpenRegisterNote={setOpenRegisterNote}
+        handleOpenRegisterSubmit={handleOpenRegisterSubmit}
+        khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
+        billerName={billers.find((b) => b.id === selectedBillerId)?.name || user?.biller_name || 'Main Store'}
+        warehouseName={warehouses.find((w) => w.id === selectedWarehouseId)?.name || currentWarehouse}
+        onExit={() => navigate('/admins')}
+        t={t}
+      />
     );
   }
 
   // =========================================================================
-  // CREATIVE POS TERMINAL MAIN VIEW (Full Theme Settings Integration)
+  // CREATIVE POS TERMINAL MAIN VIEW (High-Contrast Professional Theme)
   // =========================================================================
   return (
     <div
@@ -1203,21 +1086,18 @@ export default function PosTerminal() {
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        background: adminTheme.pageBackground || (isDark ? '#090d16' : '#f1f5f9'),
-        color: adminTheme.text,
+        background: '#f1f5f9',
+        color: '#0f172a',
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-        transition: 'background 0.25s ease, color 0.25s ease',
       }}
     >
-      {/* 1. PROFESSIONAL POS TOP HEADER (Controlled by Admin Theme Settings) */}
+      {/* 1. PROFESSIONAL POS TOP HEADER (No Dark/Light, No Theme Settings) */}
       <PosHeader
         user={user}
         currentRegister={currentRegister}
         currentTime={currentTime}
         isFullscreen={isFullscreen}
         toggleFullscreen={toggleFullscreen}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
         currentWarehouse={currentWarehouse}
@@ -1248,7 +1128,7 @@ export default function PosTerminal() {
         t={t}
       />
 
-      {/* 2. MAIN POS WORKSPACE: 3-PANEL RESPONSIVE ARCHITECTURE */}
+      {/* 2. MAIN POS WORKSPACE: ITEM DISPLAY (LEFT) & ORDER DISPLAY (RIGHT) */}
       <div
         style={{
           flex: 1,
@@ -1257,11 +1137,10 @@ export default function PosTerminal() {
           position: 'relative',
         }}
       >
-        {/* PANEL 1 (LEFT): PRODUCT NAVIGATION & CATALOG */}
+        {/* LEFT: ITEM DISPLAY AREA (PRODUCT CATALOG & CATEGORIES) */}
         <div
           style={{
-            flex: isLargeScreen ? '1 1 44%' : '1 1 50%',
-            minWidth: 380,
+            flex: 1,
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
@@ -1283,265 +1162,75 @@ export default function PosTerminal() {
             catalogViewMode={catalogViewMode}
             setCatalogViewMode={setCatalogViewMode}
             khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-            overselling={posSettingsData?.overselling || 0}
-            themeMode={themeMode}
-            adminTheme={adminTheme}
             t={t}
           />
         </div>
 
-        {/* ON LARGE DESKTOP: 3-PANELS SIDE-BY-SIDE */}
-        {isLargeScreen && (
-          <>
-            {/* PANEL 2 (CENTER): SHOPPING CART WORKSPACE */}
-            <div
-              style={{
-                width: '32%',
-                minWidth: 350,
-                maxWidth: 480,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                borderLeft: `1px solid ${adminTheme.border || (isDark ? 'rgba(51, 65, 85, 0.4)' : '#cbd5e1')}`,
-                background: isDark ? (adminTheme.card || '#0f172a') : '#ffffff',
-                boxShadow: isDark ? 'none' : '-2px 0 12px rgba(0, 0, 0, 0.03)',
-                zIndex: 10,
-              }}
-            >
-              <PosCart
-                cart={cart}
-                updateItemQuantity={updateItemQuantity}
-                onUpdateCartItem={handleUpdateCartItem}
-                removeItemFromCart={removeItemFromCart}
-                clearCart={clearCart}
-                selectedCustomerId={selectedCustomerId}
-                setSelectedCustomerId={setSelectedCustomerId}
-                customers={customers}
-                onOpenQuickAddCustomer={() => setQuickAddCustomerVisible(true)}
-                onOpenViewCustomer={() => setViewCustomerModalVisible(true)}
-                currentTable={currentTable}
-                setCurrentTable={setCurrentTable}
-                heldOrders={heldOrders}
-                resumeHeldOrder={resumeHeldOrder}
-                onHoldOrder={handleHoldOrder}
-                onPrintBill={handlePrintBill}
-                onOpenCheckout={() => setCheckoutModalVisible(true)}
-                onEditItem={(item) => {
-                  setEditingItem(item);
-                  setEditItemModalVisible(true);
-                }}
-                onCommentItem={(item) => {
-                  setCommentingItem(item);
-                  setItemCommentModalVisible(true);
-                }}
-                onOpenOrderDiscount={() => setOrderDiscountModalVisible(true)}
-                onOpenOrderTax={() => setOrderTaxModalVisible(true)}
-                onOpenDeliveryFee={() => setDeliveryFeeModalVisible(true)}
-                orderDiscountValue={orderDiscountValue}
-                orderDiscountType={orderDiscountType}
-                orderDiscountAmount={orderDiscountAmount}
-                productDiscountTotal={productDiscountTotal}
-                orderTaxRate={orderTaxRate}
-                shippingFee={shippingFee}
-                grossSubtotal={grossSubtotal}
-                subtotal={cartSubtotal}
-                totalDiscount={totalDiscount}
-                taxAmount={taxAmount}
-                grandTotal={grandTotalUSD}
-                khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-                thbExchangeRate={THB_EXCHANGE_RATE}
-                themeMode={themeMode}
-                adminTheme={adminTheme}
-                t={t}
-              />
-            </div>
-
-            {/* PANEL 3 (RIGHT): CHECKOUT AND PAYMENT STATION */}
-            <div
-              style={{
-                width: '24%',
-                minWidth: 310,
-                maxWidth: 400,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                borderLeft: `1px solid ${adminTheme.border || (isDark ? 'rgba(51, 65, 85, 0.4)' : '#cbd5e1')}`,
-                background: isDark ? (adminTheme.card || '#0f172a') : '#ffffff',
-                boxShadow: isDark ? 'none' : '-2px 0 12px rgba(0, 0, 0, 0.04)',
-                zIndex: 11,
-              }}
-            >
-              <PosCheckoutPanel
-                cart={cart}
-                customers={customers}
-                selectedCustomerId={selectedCustomerId}
-                setSelectedCustomerId={setSelectedCustomerId}
-                onOpenQuickAddCustomer={() => setQuickAddCustomerVisible(true)}
-                warehouses={warehouses}
-                selectedWarehouseId={selectedWarehouseId}
-                setSelectedWarehouseId={setSelectedWarehouseId}
-                billers={billers}
-                selectedBillerId={selectedBillerId}
-                setSelectedBillerId={setSelectedBillerId}
-                grossSubtotal={grossSubtotal}
-                cartSubtotal={cartSubtotal}
-                productDiscountTotal={productDiscountTotal}
-                orderDiscountAmount={orderDiscountAmount}
-                totalDiscount={totalDiscount}
-                taxAmount={taxAmount}
-                shippingFee={shippingFee}
-                grandTotalUSD={grandTotalUSD}
-                khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-                onOpenOrderDiscount={() => setOrderDiscountModalVisible(true)}
-                onOpenOrderTax={() => setOrderTaxModalVisible(true)}
-                onOpenDeliveryFee={() => setDeliveryFeeModalVisible(true)}
-                onFinalizePayment={handleFinalizePayment}
-                isSubmittingSale={isSubmittingSale}
-                onPrintBill={handlePrintBill}
-                onHoldOrder={handleHoldOrder}
-                onClearCart={clearCart}
-                onOpenSplitPayment={() => setCheckoutModalVisible(true)}
-                themeMode={themeMode}
-                adminTheme={adminTheme}
-                t={t}
-              />
-            </div>
-          </>
-        )}
-
-        {/* ON TABLET (768px - 1279px): 2 COLUMNS (CATALOG ON LEFT, TABBED CART & CHECKOUT ON RIGHT) */}
-        {!isLargeScreen && isMediumScreen && (
+        {/* RIGHT: ORDER DISPLAY AREA (CART, TOTALS, AND CHECKOUT) - PROPORTIONAL 38% SPLIT */}
+        {isDesktop && (
           <div
             style={{
-              width: '45%',
-              minWidth: 380,
-              maxWidth: 520,
+              width: '38%',
+              minWidth: 460,
+              maxWidth: 600,
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
-              borderLeft: `1px solid ${adminTheme.border || (isDark ? 'rgba(51, 65, 85, 0.4)' : '#cbd5e1')}`,
-              background: isDark ? (adminTheme.card || '#0f172a') : '#ffffff',
-              boxShadow: isDark ? 'none' : '-4px 0 20px rgba(0, 0, 0, 0.04)',
+              borderLeft: '1px solid #cbd5e1',
+              background: '#ffffff',
+              boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.04)',
               zIndex: 10,
             }}
           >
-            <div style={{ padding: '6px 12px', borderBottom: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
-              <Tabs
-                activeKey={activeTabletTab}
-                onChange={setActiveTabletTab}
-                size="small"
-                style={{ marginBottom: 0 }}
-                items={[
-                  {
-                    key: 'cart',
-                    label: (
-                      <span>
-                        🛒 Cart ({cart.reduce((sum, item) => sum + item.quantity, 0)})
-                      </span>
-                    ),
-                  },
-                  {
-                    key: 'checkout',
-                    label: (
-                      <span style={{ fontWeight: 700, color: '#2563eb' }}>
-                        💳 Pay (${grandTotalUSD.toFixed(2)})
-                      </span>
-                    ),
-                  },
-                ]}
-              />
-            </div>
-
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {activeTabletTab === 'cart' ? (
-                <PosCart
-                  cart={cart}
-                  updateItemQuantity={updateItemQuantity}
-                  onUpdateCartItem={handleUpdateCartItem}
-                  removeItemFromCart={removeItemFromCart}
-                  clearCart={clearCart}
-                  selectedCustomerId={selectedCustomerId}
-                  setSelectedCustomerId={setSelectedCustomerId}
-                  customers={customers}
-                  onOpenQuickAddCustomer={() => setQuickAddCustomerVisible(true)}
-                  onOpenViewCustomer={() => setViewCustomerModalVisible(true)}
-                  currentTable={currentTable}
-                  setCurrentTable={setCurrentTable}
-                  heldOrders={heldOrders}
-                  resumeHeldOrder={resumeHeldOrder}
-                  onHoldOrder={handleHoldOrder}
-                  onPrintBill={handlePrintBill}
-                  onOpenCheckout={() => setActiveTabletTab('checkout')}
-                  onEditItem={(item) => {
-                    setEditingItem(item);
-                    setEditItemModalVisible(true);
-                  }}
-                  onCommentItem={(item) => {
-                    setCommentingItem(item);
-                    setItemCommentModalVisible(true);
-                  }}
-                  onOpenOrderDiscount={() => setOrderDiscountModalVisible(true)}
-                  onOpenOrderTax={() => setOrderTaxModalVisible(true)}
-                  onOpenDeliveryFee={() => setDeliveryFeeModalVisible(true)}
-                  orderDiscountValue={orderDiscountValue}
-                  orderDiscountType={orderDiscountType}
-                  orderDiscountAmount={orderDiscountAmount}
-                  productDiscountTotal={productDiscountTotal}
-                  orderTaxRate={orderTaxRate}
-                  shippingFee={shippingFee}
-                  grossSubtotal={grossSubtotal}
-                  subtotal={cartSubtotal}
-                  totalDiscount={totalDiscount}
-                  taxAmount={taxAmount}
-                  grandTotal={grandTotalUSD}
-                  khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-                  thbExchangeRate={THB_EXCHANGE_RATE}
-                  themeMode={themeMode}
-                  adminTheme={adminTheme}
-                  t={t}
-                />
-              ) : (
-                <PosCheckoutPanel
-                  cart={cart}
-                  customers={customers}
-                  selectedCustomerId={selectedCustomerId}
-                  setSelectedCustomerId={setSelectedCustomerId}
-                  onOpenQuickAddCustomer={() => setQuickAddCustomerVisible(true)}
-                  warehouses={warehouses}
-                  selectedWarehouseId={selectedWarehouseId}
-                  setSelectedWarehouseId={setSelectedWarehouseId}
-                  billers={billers}
-                  selectedBillerId={selectedBillerId}
-                  setSelectedBillerId={setSelectedBillerId}
-                  grossSubtotal={grossSubtotal}
-                  cartSubtotal={cartSubtotal}
-                  productDiscountTotal={productDiscountTotal}
-                  orderDiscountAmount={orderDiscountAmount}
-                  totalDiscount={totalDiscount}
-                  taxAmount={taxAmount}
-                  shippingFee={shippingFee}
-                  grandTotalUSD={grandTotalUSD}
-                  khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-                  onOpenOrderDiscount={() => setOrderDiscountModalVisible(true)}
-                  onOpenOrderTax={() => setOrderTaxModalVisible(true)}
-                  onOpenDeliveryFee={() => setDeliveryFeeModalVisible(true)}
-                  onFinalizePayment={handleFinalizePayment}
-                  isSubmittingSale={isSubmittingSale}
-                  onPrintBill={handlePrintBill}
-                  onHoldOrder={handleHoldOrder}
-                  onClearCart={clearCart}
-                  onOpenSplitPayment={() => setCheckoutModalVisible(true)}
-                  themeMode={themeMode}
-                  adminTheme={adminTheme}
-                  t={t}
-                />
-              )}
-            </div>
+            <PosCart
+              cart={cart}
+              updateItemQuantity={updateItemQuantity}
+              onUpdateCartItem={handleUpdateCartItem}
+              removeItemFromCart={removeItemFromCart}
+              clearCart={clearCart}
+              selectedCustomerId={selectedCustomerId}
+              setSelectedCustomerId={setSelectedCustomerId}
+              customers={customers}
+              onOpenQuickAddCustomer={() => setQuickAddCustomerVisible(true)}
+              onOpenViewCustomer={() => setViewCustomerModalVisible(true)}
+              currentTable={currentTable}
+              setCurrentTable={setCurrentTable}
+              heldOrders={heldOrders}
+              resumeHeldOrder={resumeHeldOrder}
+              onHoldOrder={handleHoldOrder}
+              onPrintBill={handlePrintBill}
+              onOpenCheckout={() => setCheckoutModalVisible(true)}
+              onEditItem={(item) => {
+                setEditingItem(item);
+                setEditItemModalVisible(true);
+              }}
+              onCommentItem={(item) => {
+                setCommentingItem(item);
+                setItemCommentModalVisible(true);
+              }}
+              onOpenOrderDiscount={() => setOrderDiscountModalVisible(true)}
+              onOpenOrderTax={() => setOrderTaxModalVisible(true)}
+              onOpenDeliveryFee={() => setDeliveryFeeModalVisible(true)}
+              orderDiscountValue={orderDiscountValue}
+              orderDiscountType={orderDiscountType}
+              orderDiscountAmount={orderDiscountAmount}
+              productDiscountTotal={productDiscountTotal}
+              orderTaxRate={orderTaxRate}
+              shippingFee={shippingFee}
+              grossSubtotal={grossSubtotal}
+              subtotal={cartSubtotal}
+              totalDiscount={totalDiscount}
+              taxAmount={taxAmount}
+              grandTotal={grandTotalUSD}
+              khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
+              thbExchangeRate={THB_EXCHANGE_RATE}
+              t={t}
+            />
           </div>
         )}
 
-        {/* ON MOBILE (< 768px): BOTTOM FLOATING BAR */}
-        {!isMediumScreen && (
+        {/* MOBILE BOTTOM CART FLOATING BAR */}
+        {!isDesktop && (
           <div
             style={{
               position: 'fixed',
@@ -1549,8 +1238,8 @@ export default function PosTerminal() {
               left: 0,
               right: 0,
               padding: '10px 16px',
-              background: isDark ? (adminTheme.card || '#0f172a') : '#ffffff',
-              borderTop: `1px solid ${adminTheme.border || (isDark ? 'rgba(51, 65, 85, 0.4)' : '#cbd5e1')}`,
+              background: '#ffffff',
+              borderTop: '1px solid #cbd5e1',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -1592,119 +1281,62 @@ export default function PosTerminal() {
         )}
       </div>
 
-      {/* MOBILE CART & CHECKOUT DRAWER */}
+      {/* MOBILE CART DRAWER */}
       <Drawer
         title="Current Cart & Checkout"
         placement="bottom"
-        height="92vh"
+        height="90vh"
         onClose={() => setMobileCartDrawerOpen(false)}
-        open={mobileCartDrawerOpen && !isMediumScreen}
+        open={mobileCartDrawerOpen && !isDesktop}
         bodyStyle={{ padding: 0 }}
       >
-        <div style={{ padding: '6px 12px', borderBottom: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
-          <Tabs
-            activeKey={activeTabletTab}
-            onChange={setActiveTabletTab}
-            size="small"
-            style={{ marginBottom: 0 }}
-            items={[
-              {
-                key: 'cart',
-                label: `Cart (${cart.reduce((sum, item) => sum + item.quantity, 0)})`,
-              },
-              {
-                key: 'checkout',
-                label: `Pay ($${grandTotalUSD.toFixed(2)})`,
-              },
-            ]}
-          />
-        </div>
-
-        <div style={{ height: 'calc(92vh - 100px)', overflowY: 'auto' }}>
-          {activeTabletTab === 'cart' ? (
-            <PosCart
-              cart={cart}
-              updateItemQuantity={updateItemQuantity}
-              onUpdateCartItem={handleUpdateCartItem}
-              removeItemFromCart={removeItemFromCart}
-              clearCart={clearCart}
-              selectedCustomerId={selectedCustomerId}
-              setSelectedCustomerId={setSelectedCustomerId}
-              customers={customers}
-              onOpenQuickAddCustomer={() => setQuickAddCustomerVisible(true)}
-              onOpenViewCustomer={() => setViewCustomerModalVisible(true)}
-              currentTable={currentTable}
-              setCurrentTable={setCurrentTable}
-              heldOrders={heldOrders}
-              resumeHeldOrder={resumeHeldOrder}
-              onHoldOrder={handleHoldOrder}
-              onPrintBill={handlePrintBill}
-              onOpenCheckout={() => setActiveTabletTab('checkout')}
-              onEditItem={(item) => {
-                setEditingItem(item);
-                setEditItemModalVisible(true);
-              }}
-              onCommentItem={(item) => {
-                setCommentingItem(item);
-                setItemCommentModalVisible(true);
-              }}
-              onOpenOrderDiscount={() => setOrderDiscountModalVisible(true)}
-              onOpenOrderTax={() => setOrderTaxModalVisible(true)}
-              onOpenDeliveryFee={() => setDeliveryFeeModalVisible(true)}
-              orderDiscountValue={orderDiscountValue}
-              orderDiscountType={orderDiscountType}
-              orderDiscountAmount={orderDiscountAmount}
-              productDiscountTotal={productDiscountTotal}
-              orderTaxRate={orderTaxRate}
-              shippingFee={shippingFee}
-              grossSubtotal={grossSubtotal}
-              subtotal={cartSubtotal}
-              totalDiscount={totalDiscount}
-              taxAmount={taxAmount}
-              grandTotal={grandTotalUSD}
-              khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-              thbExchangeRate={THB_EXCHANGE_RATE}
-              themeMode={themeMode}
-              adminTheme={adminTheme}
-              t={t}
-            />
-          ) : (
-            <PosCheckoutPanel
-              cart={cart}
-              customers={customers}
-              selectedCustomerId={selectedCustomerId}
-              setSelectedCustomerId={setSelectedCustomerId}
-              onOpenQuickAddCustomer={() => setQuickAddCustomerVisible(true)}
-              warehouses={warehouses}
-              selectedWarehouseId={selectedWarehouseId}
-              setSelectedWarehouseId={setSelectedWarehouseId}
-              billers={billers}
-              selectedBillerId={selectedBillerId}
-              setSelectedBillerId={setSelectedBillerId}
-              grossSubtotal={grossSubtotal}
-              cartSubtotal={cartSubtotal}
-              productDiscountTotal={productDiscountTotal}
-              orderDiscountAmount={orderDiscountAmount}
-              totalDiscount={totalDiscount}
-              taxAmount={taxAmount}
-              shippingFee={shippingFee}
-              grandTotalUSD={grandTotalUSD}
-              khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-              onOpenOrderDiscount={() => setOrderDiscountModalVisible(true)}
-              onOpenOrderTax={() => setOrderTaxModalVisible(true)}
-              onOpenDeliveryFee={() => setDeliveryFeeModalVisible(true)}
-              onFinalizePayment={handleFinalizePayment}
-              isSubmittingSale={isSubmittingSale}
-              onPrintBill={handlePrintBill}
-              onHoldOrder={handleHoldOrder}
-              onClearCart={clearCart}
-              onOpenSplitPayment={() => setCheckoutModalVisible(true)}
-              themeMode={themeMode}
-              adminTheme={adminTheme}
-              t={t}
-            />
-          )}
-        </div>
+        <PosCart
+          cart={cart}
+          updateItemQuantity={updateItemQuantity}
+          onUpdateCartItem={handleUpdateCartItem}
+          removeItemFromCart={removeItemFromCart}
+          clearCart={clearCart}
+          selectedCustomerId={selectedCustomerId}
+          setSelectedCustomerId={setSelectedCustomerId}
+          customers={customers}
+          onOpenQuickAddCustomer={() => setQuickAddCustomerVisible(true)}
+          onOpenViewCustomer={() => setViewCustomerModalVisible(true)}
+          currentTable={currentTable}
+          setCurrentTable={setCurrentTable}
+          heldOrders={heldOrders}
+          resumeHeldOrder={resumeHeldOrder}
+          onHoldOrder={handleHoldOrder}
+          onPrintBill={handlePrintBill}
+          onOpenCheckout={() => {
+            setMobileCartDrawerOpen(false);
+            setCheckoutModalVisible(true);
+          }}
+          onEditItem={(item) => {
+            setEditingItem(item);
+            setEditItemModalVisible(true);
+          }}
+          onCommentItem={(item) => {
+            setCommentingItem(item);
+            setItemCommentModalVisible(true);
+          }}
+          onOpenOrderDiscount={() => setOrderDiscountModalVisible(true)}
+          onOpenOrderTax={() => setOrderTaxModalVisible(true)}
+          onOpenDeliveryFee={() => setDeliveryFeeModalVisible(true)}
+          orderDiscountValue={orderDiscountValue}
+          orderDiscountType={orderDiscountType}
+          orderDiscountAmount={orderDiscountAmount}
+          productDiscountTotal={productDiscountTotal}
+          orderTaxRate={orderTaxRate}
+          shippingFee={shippingFee}
+          grossSubtotal={grossSubtotal}
+          subtotal={cartSubtotal}
+          totalDiscount={totalDiscount}
+          taxAmount={taxAmount}
+          grandTotal={grandTotalUSD}
+          khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
+          thbExchangeRate={THB_EXCHANGE_RATE}
+          t={t}
+        />
       </Drawer>
 
       {/* ========================================================================= */}
@@ -1727,8 +1359,6 @@ export default function PosTerminal() {
         selectedCustomerName={selectedCustomerName}
         billers={billers}
         selectedBillerId={selectedBillerId}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1745,8 +1375,6 @@ export default function PosTerminal() {
         }}
         khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
         thbExchangeRate={THB_EXCHANGE_RATE}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1758,8 +1386,6 @@ export default function PosTerminal() {
         loadingSummary={loadingSummary}
         onConfirmClose={handleConfirmCloseRegister}
         isClosing={isClosingRegister}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1769,8 +1395,6 @@ export default function PosTerminal() {
         onClose={() => setRegisterDetailsVisible(false)}
         shiftSummary={shiftSummary}
         currentRegister={currentRegister}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1779,8 +1403,6 @@ export default function PosTerminal() {
         visible={todaySaleModalVisible}
         onClose={() => setTodaySaleModalVisible(false)}
         khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1792,8 +1414,6 @@ export default function PosTerminal() {
           setCurrentRegister(reg);
           setRegisterDetailsVisible(true);
         }}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1817,8 +1437,6 @@ export default function PosTerminal() {
             setReceiptModalVisible(true);
           }
         }}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1829,8 +1447,6 @@ export default function PosTerminal() {
         onSelectCardForSale={(card) => {
           message.success(`Card #${card.card_no} selected for sale!`);
         }}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1843,8 +1459,6 @@ export default function PosTerminal() {
           setOrderDiscountType('fixed');
           message.success(`Coupon applied: $${coupon.value} off`);
         }}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1866,8 +1480,6 @@ export default function PosTerminal() {
           });
           message.success('Stock deposit item added to cart for redemption ($0)!');
         }}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1875,8 +1487,6 @@ export default function PosTerminal() {
       <PosPrintersModal
         visible={printersModalVisible}
         onClose={() => setPrintersModalVisible(false)}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1887,8 +1497,6 @@ export default function PosTerminal() {
         onAddExpense={(expense) => {
           message.success(`Drawer cash expense of $${expense.amount} recorded!`);
         }}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1896,8 +1504,6 @@ export default function PosTerminal() {
       <PosShortcutsModal
         visible={shortcutsModalVisible}
         onClose={() => setShortcutsModalVisible(false)}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1905,8 +1511,6 @@ export default function PosTerminal() {
       <PosCalculatorModal
         visible={calculatorModalVisible}
         onClose={() => setCalculatorModalVisible(false)}
-        themeMode={themeMode}
-        adminTheme={adminTheme}
         t={t}
       />
 

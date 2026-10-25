@@ -12,22 +12,15 @@ import {
   EyeOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
-import { useAdminTheme } from '../../../../hooks/useAdminTheme';
 
 const PosRegistersListModal = ({
   visible,
   onClose,
   onViewShiftSummary,
-  themeMode: propThemeMode,
-  adminTheme: propAdminTheme,
+  themeMode,
   t,
 }) => {
-  const hookAdminTheme = useAdminTheme();
-  const adminTheme = propAdminTheme || hookAdminTheme;
-  const isDark = Boolean(adminTheme.isDark || propThemeMode === 'dark');
-  const primaryColor = adminTheme.primary || '#2563eb';
-  const textColor = adminTheme.text || (isDark ? '#f8fafc' : '#0f172a');
-  const subtextColor = adminTheme.subtext || (isDark ? '#94a3b8' : '#64748b');
+  const isDark = themeMode === 'dark';
   const [registers, setRegisters] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -136,11 +129,11 @@ const PosRegistersListModal = ({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: textColor }}>
-            <UnorderedListOutlined style={{ color: primaryColor, marginRight: 8 }} />
+          <div style={{ fontSize: 18, fontWeight: 800, color: isDark ? '#f8fafc' : '#0f172a' }}>
+            <UnorderedListOutlined style={{ color: '#3b82f6', marginRight: 8 }} />
             Cash Registers Shift History
           </div>
-          <div style={{ fontSize: 12, color: subtextColor }}>
+          <div style={{ fontSize: 12, color: '#94a3b8' }}>
             Shift records, opening cash, closing times, and cash drawer reconciliations
           </div>
         </div>
