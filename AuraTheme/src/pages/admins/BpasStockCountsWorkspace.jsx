@@ -332,6 +332,14 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
 
   // Initiate New Count Submission
   const handleCreateStockCount = async (values) => {
+    if (countTypeChoice === 'partial') {
+      const hasCats = Array.isArray(values.categories) && values.categories.length > 0;
+      const hasBrands = Array.isArray(values.brands) && values.brands.length > 0;
+      if (!hasCats && !hasBrands) {
+        message.warning('Please select at least one Category or Brand for a Partial Audit, or switch to Full Warehouse Count.');
+        return;
+      }
+    }
     setSubmittingCreate(true);
     try {
       const payload = {
@@ -357,7 +365,8 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
         }
       }
     } catch (err) {
-      message.error(err.response?.data?.message || 'Failed to initiate stock count');
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to initiate stock count';
+      message.error(errorMsg);
     } finally {
       setSubmittingCreate(false);
     }
@@ -1057,7 +1066,7 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
                   <Select mode="multiple" placeholder="Select categories..." style={{ width: '100%' }}>
                     {metaOptions.categories.map((c) => (
                       <Option key={c.id} value={String(c.id)}>
-                        📁 {c.name}
+                        📁 {c.name} {c.product_count > 0 ? `(${c.product_count} items)` : '(0 items)'}
                       </Option>
                     ))}
                   </Select>
@@ -1068,7 +1077,7 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
                   <Select mode="multiple" placeholder="Select brands..." style={{ width: '100%' }}>
                     {metaOptions.brands.map((b) => (
                       <Option key={b.id} value={String(b.id)}>
-                        🏷️ {b.name}
+                        🏷️ {b.name} {b.product_count > 0 ? `(${b.product_count} items)` : '(0 items)'}
                       </Option>
                     ))}
                   </Select>

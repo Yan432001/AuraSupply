@@ -3,7 +3,7 @@ const { logError } = require("../../config/utill/logErr");
 
 /**
  * Website & Shop Authentication Model
- * Ported from CodeIgniter 3 AURA_v1 (bpas/models/shop/Shop_model.php)
+ * Single Source of Truth: aura_users (All profile data consolidated directly in aura_users)
  */
 class ShopAuth_Model {
   /**
@@ -13,15 +13,14 @@ class ShopAuth_Model {
     try {
       const cleanIdentity = identity.trim().toLowerCase();
       const sql = `
-        SELECT u.id, u.username, u.email, u.password, u.password_algo, u.salt, u.group_id,
-               u.status, u.active, u.first_name, u.last_name, u.company, u.phone, u.avatar,
+        SELECT u.id, u.uuid, u.username, u.email, u.password, u.password_hash, u.password_algo, u.salt, u.group_id,
+               u.status, u.active, u.first_name, u.last_name, u.company, u.phone, u.avatar, u.avatar_url,
                u.failed_login_count, u.locked_until, u.deleted_at,
                g.name AS group_name, g.description AS group_description, g.level AS group_level,
                g.allow_web_login, g.allow_admin_login,
-               p.company_kh, p.vat_no, p.address, p.business_type
+               u.company_kh, u.vat_no, u.address, u.business_type, u.contact_person, u.city, u.country
         FROM aura_users u
         JOIN aura_groups g ON g.id = u.group_id
-        LEFT JOIN aura_user_profiles p ON p.user_id = u.id
         WHERE (LOWER(u.username) = ? OR LOWER(u.email) = ?) AND u.deleted_at IS NULL
         LIMIT 1
       `;
@@ -39,13 +38,12 @@ class ShopAuth_Model {
   static async findCustomerById(userId) {
     try {
       const sql = `
-        SELECT u.id, u.username, u.email, u.group_id,
-               u.status, u.active, u.first_name, u.last_name, u.company, u.phone, u.avatar,
+        SELECT u.id, u.uuid, u.username, u.email, u.group_id,
+               u.status, u.active, u.first_name, u.last_name, u.company, u.phone, u.avatar, u.avatar_url,
                g.name AS group_name, g.level AS group_level,
-               p.company_kh, p.vat_no, p.address, p.business_type
+               u.company_kh, u.vat_no, u.address, u.business_type, u.contact_person, u.city, u.country
         FROM aura_users u
         JOIN aura_groups g ON g.id = u.group_id
-        LEFT JOIN aura_user_profiles p ON p.user_id = u.id
         WHERE u.id = ? AND u.deleted_at IS NULL
         LIMIT 1
       `;
@@ -58,20 +56,22 @@ class ShopAuth_Model {
   }
 
   /**
-   * Register a new customer / buyer / supplier
+   * Register a new customer / buyer / supplier directly into aura_users
    */
   static async registerCustomer(data) {
     try {
+      const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
       const sqlUser = `
         INSERT INTO aura_users (
-          username, email, password, password_algo, group_id,
+          uuid, username, email, password, password_hash, password_algo, group_id,
           first_name, last_name, company, phone, status, register_source,
-          active, created_at
-        ) VALUES (?, ?, ?, 'bcrypt', ?, ?, ?, ?, ?, ?, 'website', ?, NOW())
+          active, contact_person, business_type, vat_no, address, created_at
+        ) VALUES (UUID(), ?, ?, ?, ?, 'bcrypt', ?, ?, ?, ?, ?, ?, 'website', ?, ?, ?, ?, ?, NOW())
       `;
       const [result] = await db.query(sqlUser, [
         data.username,
         data.email,
+        data.passwordHash,
         data.passwordHash,
         data.groupId,
         data.firstName,
@@ -79,25 +79,14 @@ class ShopAuth_Model {
         data.company || null,
         data.phone,
         data.status,
-        data.active
-      ]);
-
-      const newUserId = result.insertId;
-
-      const sqlProfile = `
-        INSERT INTO aura_user_profiles (
-          user_id, contact_person, business_type, vat_no, address, updated_at
-        ) VALUES (?, ?, ?, ?, ?, NOW())
-      `;
-      await db.query(sqlProfile, [
-        newUserId,
-        `${data.firstName} ${data.lastName || ''}`.trim(),
+        data.active,
+        fullName || data.username,
         data.businessType || null,
         data.vatNo || null,
         data.address || null
       ]);
 
-      return newUserId;
+      return result.insertId;
     } catch (err) {
       logError("ShopAuth_Model.registerCustomer", err, null);
       throw err;
@@ -105,39 +94,55 @@ class ShopAuth_Model {
   }
 
   /**
-   * Update customer profile
+   * Update customer profile directly in aura_users
    */
   static async updateCustomerProfile(userId, profileData) {
     try {
-      if (profileData.username || profileData.first_name || profileData.last_name || profileData.phone || profileData.company) {
-        await db.query(`
-          UPDATE aura_users
-          SET username = COALESCE(?, username),
-              first_name = COALESCE(?, first_name),
-              last_name = COALESCE(?, last_name),
-              phone = COALESCE(?, phone),
-              company = COALESCE(?, company),
-              updated_at = NOW()
-          WHERE id = ?
-        `, [
-          profileData.username ? profileData.username.trim() : null,
-          profileData.first_name ? profileData.first_name.trim() : null,
-          profileData.last_name ? profileData.last_name.trim() : null,
-          profileData.phone ? profileData.phone.trim() : null,
-          profileData.company ? profileData.company.trim() : null,
-          userId
-        ]);
+      const updates = [];
+      const params = [];
+
+      if (profileData.username) {
+        updates.push('username = ?');
+        params.push(profileData.username.trim());
+      }
+      if (profileData.first_name !== undefined) {
+        updates.push('first_name = ?');
+        params.push(profileData.first_name ? profileData.first_name.trim() : null);
+      }
+      if (profileData.last_name !== undefined) {
+        updates.push('last_name = ?');
+        params.push(profileData.last_name ? profileData.last_name.trim() : null);
+      }
+      if (profileData.phone !== undefined) {
+        updates.push('phone = ?');
+        params.push(profileData.phone ? profileData.phone.trim() : null);
+      }
+      if (profileData.company !== undefined) {
+        updates.push('company = ?');
+        params.push(profileData.company ? profileData.company.trim() : null);
+      }
+      if (profileData.name || profileData.contact_person) {
+        updates.push('contact_person = ?');
+        params.push((profileData.contact_person || profileData.name).trim());
+      }
+      if (profileData.vat_no !== undefined) {
+        updates.push('vat_no = ?');
+        params.push(profileData.vat_no ? profileData.vat_no.trim() : null);
+      }
+      if (profileData.address !== undefined) {
+        updates.push('address = ?');
+        params.push(profileData.address ? profileData.address.trim() : null);
+      }
+      if (profileData.business_type !== undefined) {
+        updates.push('business_type = ?');
+        params.push(profileData.business_type ? profileData.business_type.trim() : null);
       }
 
-      await db.query(`
-        INSERT INTO aura_user_profiles (user_id, contact_person, vat_no, address, updated_at)
-        VALUES (?, ?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE
-          contact_person = COALESCE(VALUES(contact_person), contact_person),
-          vat_no = COALESCE(VALUES(vat_no), vat_no),
-          address = COALESCE(VALUES(address), address),
-          updated_at = NOW()
-      `, [userId, profileData.name || null, profileData.vat_no || null, profileData.address || null]);
+      if (updates.length > 0) {
+        updates.push('updated_at = NOW()');
+        params.push(userId);
+        await db.query(`UPDATE aura_users SET ${updates.join(', ')} WHERE id = ?`, params);
+      }
 
       return true;
     } catch (err) {

@@ -162,7 +162,10 @@ const SaleDetailPage = () => {
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '100px 0' }}>
-        <Spin size="large" tip={t('loading_sale_details', 'Loading sale details...')} />
+        <Spin size="large" />
+        <div style={{ marginTop: 16, color: '#64748b', fontSize: 13 }}>
+          {t('loading_sale_details', 'Loading sale details...')}
+        </div>
       </div>
     );
   }

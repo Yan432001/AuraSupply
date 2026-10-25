@@ -48,9 +48,9 @@ async function authenticate(req, res, next) {
       });
     }
 
-    // Hydrate user core identity from `users`
+    // Hydrate user core identity from `aura_users`
     const [rows] = await query(
-      'SELECT id, uuid, username, email, first_name, last_name, status, is_system_admin FROM users WHERE id = :id AND deleted_at IS NULL LIMIT 1',
+      'SELECT id, uuid, username, email, first_name, last_name, status, is_system_admin FROM aura_users WHERE id = :id AND deleted_at IS NULL LIMIT 1',
       { id: userId }
     );
 
@@ -143,10 +143,10 @@ router.get('/api/erp-modules', authenticate, async (req, res) => {
 router.get('/api/user-groups', authenticate, async (req, res) => {
   try {
     const [groups] = await query(`
-      SELECT g.*, COUNT(ugm.user_id) AS member_count
-      FROM user_groups g
-      LEFT JOIN user_group_mappings ugm ON ugm.group_id = g.id
-      GROUP BY g.id
+      SELECT g.id, UPPER(g.name) AS code, g.description AS name, g.description, g.level, COUNT(u.id) AS member_count
+      FROM aura_groups g
+      LEFT JOIN aura_users u ON u.group_id = g.id AND u.deleted_at IS NULL
+      GROUP BY g.id, g.name, g.description, g.level
       ORDER BY g.level ASC
     `);
     return res.json({ success: true, data: groups });
@@ -234,11 +234,10 @@ router.get('/api/user-groups/:id/users', authenticate, async (req, res) => {
   try {
     const groupId = parseInt(req.params.id, 10);
     const [users] = await query(`
-      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.status, ugm.is_primary, ugm.assigned_at
-      FROM users u
-      JOIN user_group_mappings ugm ON ugm.user_id = u.id
-      WHERE ugm.group_id = ? AND u.deleted_at IS NULL
-      ORDER BY ugm.is_primary DESC, u.username ASC
+      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.status, 1 AS is_primary, u.created_at AS assigned_at
+      FROM aura_users u
+      WHERE u.group_id = ? AND u.deleted_at IS NULL
+      ORDER BY u.username ASC
     `, [groupId]);
     return res.json({ success: true, data: users });
   } catch (err) {
@@ -250,13 +249,13 @@ router.get('/api/user-groups/:id/users', authenticate, async (req, res) => {
 router.post('/api/user-groups/:id/users', authenticate, checkPermission('SETTINGS', 'update'), async (req, res) => {
   try {
     const groupId = parseInt(req.params.id, 10);
-    const { user_id, is_primary = 1 } = req.body;
+    const { user_id } = req.body;
 
     await query(`
-      INSERT INTO user_group_mappings (user_id, group_id, is_primary, assigned_by, assigned_at)
-      VALUES (?, ?, ?, ?, NOW())
-      ON DUPLICATE KEY UPDATE is_primary = VALUES(is_primary)
-    `, [user_id, groupId, is_primary ? 1 : 0, req.user.id]);
+      UPDATE aura_users 
+      SET group_id = ? 
+      WHERE id = ?
+    `, [groupId, user_id]);
 
     invalidateUserPermissionCache(user_id);
     return res.json({ success: true, message: 'User assigned to group successfully.' });
@@ -268,10 +267,9 @@ router.post('/api/user-groups/:id/users', authenticate, checkPermission('SETTING
 // DELETE /api/user-groups/:id/users/:userId — Remove user from role
 router.delete('/api/user-groups/:id/users/:userId', authenticate, checkPermission('SETTINGS', 'delete'), async (req, res) => {
   try {
-    const groupId = parseInt(req.params.id, 10);
     const userId = parseInt(req.params.userId, 10);
 
-    await query('DELETE FROM user_group_mappings WHERE user_id = ? AND group_id = ?', [userId, groupId]);
+    await query('UPDATE aura_users SET group_id = NULL WHERE id = ?', [userId]);
     invalidateUserPermissionCache(userId);
     return res.json({ success: true, message: 'User removed from group.' });
   } catch (err) {
@@ -285,7 +283,7 @@ router.get('/api/users/search', authenticate, async (req, res) => {
     const term = req.query.q ? `%${req.query.q}%` : '%';
     const [users] = await query(`
       SELECT id, username, email, first_name, last_name, status
-      FROM users
+      FROM aura_users
       WHERE deleted_at IS NULL AND (username LIKE ? OR email LIKE ? OR first_name LIKE ? OR last_name LIKE ?)
       ORDER BY username ASC
       LIMIT 20

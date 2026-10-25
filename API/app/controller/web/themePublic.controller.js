@@ -1157,13 +1157,16 @@ const ThemePublicController = {
       );
       const customerGroupId = groups && groups.length > 0 ? Number(groups[0].id) : 4;
 
+      const crypto = require('crypto');
+      const userUuid = crypto.randomUUID ? crypto.randomUUID() : `usr-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+
       // Insert customer user in aura_users with group_id = customerGroupId (customer role)
       const [userResult] = await db.query(`
         INSERT INTO aura_users (
-          username, password, password_algo, email, first_name, last_name,
-          phone, group_id, active, status, register_source, created_on, created_at
-        ) VALUES (?, ?, 'bcrypt', ?, ?, ?, ?, ?, 1, 'active', 'website', UNIX_TIMESTAMP(), NOW())
-      `, [username, hashedPassword, email, firstName, lastName, phone || '', customerGroupId]);
+          uuid, username, password, password_hash, password_algo, email, first_name, last_name,
+          phone, group_id, role, active, status, register_source, created_on, created_at
+        ) VALUES (?, ?, ?, ?, 'bcrypt', ?, ?, ?, ?, ?, 'customer', 1, 'active', 'website', UNIX_TIMESTAMP(), NOW())
+      `, [userUuid, username, hashedPassword, hashedPassword, email, firstName, lastName, phone || '', customerGroupId]);
 
       const newUserId = userResult.insertId;
 
@@ -1173,24 +1176,6 @@ const ThemePublicController = {
           INSERT INTO aura_companies (group_id, group_name, customer_group_id, customer_group_name, name, company, email, phone)
           VALUES (?, 'customer', 1, 'General', ?, ?, ?, ?)
         `, [customerGroupId, fullName, fullName, email, phone || '']);
-      } catch (_) {}
-
-      // Sync to RBAC users and user_group_mappings table if present
-      try {
-        const crypto = require('crypto');
-        const userUuid = crypto.randomUUID ? crypto.randomUUID() : `usr-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-        const [uRes] = await db.query(`
-          INSERT INTO users (uuid, username, email, password_hash, first_name, last_name, phone, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
-        `, [userUuid, username, email, hashedPassword, firstName, lastName, phone || '']);
-
-        const [ugRows] = await db.query("SELECT id FROM user_groups WHERE code = 'CUSTOMER' LIMIT 1");
-        if (ugRows && ugRows.length > 0) {
-          await db.query(`
-            INSERT INTO user_group_mappings (user_id, group_id, assigned_by)
-            VALUES (?, ?, ?)
-          `, [uRes.insertId, ugRows[0].id, uRes.insertId]);
-        }
       } catch (_) {}
 
       let token = `aura_jwt_${newUserId}_${Date.now()}`;

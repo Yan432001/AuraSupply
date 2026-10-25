@@ -173,8 +173,20 @@ class StockCountsModel {
   static async getMetadataOptions() {
     try {
       const [warehouses] = await db.query('SELECT id, code, name FROM aura_warehouses ORDER BY name ASC');
-      const [categories] = await db.query('SELECT id, code, name FROM aura_categories ORDER BY name ASC');
-      const [brands] = await db.query('SELECT id, code, name FROM aura_brands ORDER BY name ASC');
+      const [categories] = await db.query(`
+        SELECT c.id, c.code, c.name, COUNT(p.id) AS product_count 
+        FROM aura_categories c
+        LEFT JOIN aura_products p ON (p.category_id = c.id OR p.subcategory_id = c.id)
+        GROUP BY c.id, c.code, c.name
+        ORDER BY product_count DESC, c.name ASC
+      `);
+      const [brands] = await db.query(`
+        SELECT b.id, b.code, b.name, COUNT(p.id) AS product_count 
+        FROM aura_brands b
+        LEFT JOIN aura_products p ON (p.brand = b.id OR p.brand_id = b.id)
+        GROUP BY b.id, b.code, b.name
+        ORDER BY product_count DESC, b.name ASC
+      `);
 
       const yearSuffix = new Date().getFullYear().toString().slice(-2);
       const [lastRef] = await db.query(`
@@ -286,14 +298,18 @@ class StockCountsModel {
 
       if (type === 'partial') {
         if (categoryIdsStr) {
-          const catIds = categoryIdsStr.split(',').map(Number);
-          prodConditions.push(`p.category_id IN (${catIds.map(() => '?').join(',')})`);
-          prodParams.push(...catIds);
+          const catIds = categoryIdsStr.split(',').map(Number).filter(Boolean);
+          if (catIds.length > 0) {
+            prodConditions.push(`(p.category_id IN (${catIds.map(() => '?').join(',')}) OR p.subcategory_id IN (${catIds.map(() => '?').join(',')}))`);
+            prodParams.push(...catIds, ...catIds);
+          }
         }
         if (brandIdsStr) {
-          const brIds = brandIdsStr.split(',').map(Number);
-          prodConditions.push(`p.brand IN (${brIds.map(() => '?').join(',')})`);
-          prodParams.push(...brIds);
+          const brIds = brandIdsStr.split(',').map(Number).filter(Boolean);
+          if (brIds.length > 0) {
+            prodConditions.push(`(p.brand IN (${brIds.map(() => '?').join(',')}) OR p.brand_id IN (${brIds.map(() => '?').join(',')}))`);
+            prodParams.push(...brIds, ...brIds);
+          }
         }
       }
 
@@ -310,24 +326,26 @@ class StockCountsModel {
       );
 
       if (!products.length) {
-        throw new Error('No products found matching the selected warehouse and category/brand criteria.');
+        throw new Error('No products found matching the selected warehouse and category/brand criteria. Please select a category or brand containing active inventory products, or run a Full Warehouse count.');
       }
 
       const countDate = date ? new Date(date) : new Date();
+      const initialFileName = `${refNo.replace(/[^a-zA-Z0-9]/g, '_')}_initial.csv`;
 
       // Insert stock count header
       const [headerRes] = await conn.query(
         `INSERT INTO aura_stock_counts (
-          date, reference_no, warehouse_id, type, categories, category_names,
+          date, reference_no, warehouse_id, type, initial_file, categories, category_names,
           brands, brand_names, note, products, \`rows\`, created_by, finalized, status
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0, 0
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0, 0
         )`,
         [
           countDate,
           refNo,
           whId,
           type,
+          initialFileName,
           categoryIdsStr,
           categoryNamesStr,
           brandIdsStr,

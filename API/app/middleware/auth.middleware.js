@@ -107,8 +107,8 @@ const verifyAdminSession = async (req, res, next) => {
 
     // 3. User & Group verification from database
     const sql = `
-      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.group_id, u.active,
-             u.biller_id, u.warehouse_id, u.company_id, u.view_right, u.edit_right, u.show_cost, u.show_price,
+      SELECT u.*,
+             u.emp_id AS employee_id,
              g.name AS role, g.name AS group_name, g.description AS role_description,
              g.level, g.allow_admin_login, g.allow_web_login
       FROM aura_users u

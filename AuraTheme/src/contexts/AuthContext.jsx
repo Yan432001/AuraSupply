@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 
 // Ensure all Axios HTTP requests carry secure cookies across origins
@@ -49,8 +50,8 @@ const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [currentPath, setCurrentPath] = useState(() => (typeof window !== 'undefined' ? window.location.pathname : '/'));
-  const isAdminArea = currentPath.startsWith('/admins') || currentPath.startsWith('/pos');
+  const location = useLocation();
+  const isAdminArea = location.pathname.startsWith('/admins') || location.pathname.startsWith('/pos');
 
   // --------------------------------------------------------------------------
   // 1. Admin Authentication State (aura_admin_*)
@@ -103,13 +104,11 @@ export const AuthProvider = ({ children }) => {
   const [loadingSession, setLoadingSession] = useState(true);
   const lastHeartbeatRef = useRef(0);
 
-  // Sync active path changes
+  // Initialize fresh user activity timestamp on mount
   useEffect(() => {
-    const onLocationChange = () => {
-      setCurrentPath(window.location.pathname);
-    };
-    window.addEventListener('popstate', onLocationChange);
-    return () => window.removeEventListener('popstate', onLocationChange);
+    const now = Date.now();
+    localStorage.setItem(ADMIN_KEYS.activity, String(now));
+    localStorage.setItem(WEB_KEYS.activity, String(now));
   }, []);
 
   // Update Authorization header according to current section
@@ -355,11 +354,14 @@ export const AuthProvider = ({ children }) => {
       const idleTime = now - lastActivity;
 
       if (idleTime >= DEFAULT_INACTIVITY_TIMEOUT_MS) {
-        // Inactivity exceeded -> trigger auto logout
-        if (isAdminArea && adminToken) {
-          logoutAdmin('inactivity');
-        } else if (!isAdminArea && webToken) {
-          logoutWeb('inactivity');
+        // Inactivity exceeded -> trigger auto logout (unless user is already on a login page)
+        const isLoginRoute = location.pathname.startsWith('/admins/login') || location.pathname === '/login';
+        if (!isLoginRoute) {
+          if (isAdminArea && adminToken) {
+            logoutAdmin('inactivity');
+          } else if (!isAdminArea && webToken) {
+            logoutWeb('inactivity');
+          }
         }
       }
     }, 10000);

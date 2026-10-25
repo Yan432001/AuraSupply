@@ -39,7 +39,7 @@ const { Title, Text, Paragraph } = Typography;
 const ModernAuraLogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { loginAdmin, login } = useAuth();
+  const { loginAdmin, loginWeb, login } = useAuth();
   const adminTheme = useAdminTheme();
   const { currentLanguage, setLanguage, activeLanguage, languages } = useLanguage();
   const { t } = useTranslation();
@@ -113,9 +113,14 @@ const ModernAuraLogin = () => {
 
         if (loginAdmin) {
           loginAdmin({ token, user: enrichedUser });
-        } else {
-          login({ token, user: enrichedUser });
         }
+        if (loginWeb) {
+          loginWeb({ token, user: enrichedUser });
+        }
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(enrichedUser));
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
         message.success(`Welcome back, ${user.first_name || user.username || 'Admin'}!`);
         navigate(from, { replace: true });
       } else {
@@ -136,6 +141,7 @@ const ModernAuraLogin = () => {
       password: pass,
       remember_me: true
     });
+    onFinish({ username: user, password: pass, remember_me: true });
   };
 
   const handleForgotSubmit = async () => {
@@ -559,7 +565,7 @@ const ModernAuraLogin = () => {
               <Button
                 type="dashed"
                 size="small"
-                onClick={() => handleQuickFill('sbcsolutions', 'admin')}
+                onClick={() => handleQuickFill('heanyan1@gmail.com', 'Sbc@12345')}
                 style={{
                   borderRadius: 20,
                   fontSize: 12,
@@ -568,7 +574,21 @@ const ModernAuraLogin = () => {
                   background: '#ecfdf5'
                 }}
               >
-                ⚡ sbcsolutions / admin
+                ⚡ heanyan1@gmail.com / Sbc@12345
+              </Button>
+              <Button
+                type="dashed"
+                size="small"
+                onClick={() => handleQuickFill('sbcsolutions', 'Sbc@12345')}
+                style={{
+                  borderRadius: 20,
+                  fontSize: 12,
+                  color: '#7c3aed',
+                  borderColor: '#c4b5fd',
+                  background: '#f5f3ff'
+                }}
+              >
+                ⚡ sbcsolutions / Sbc@12345
               </Button>
             </div>
           </Card>

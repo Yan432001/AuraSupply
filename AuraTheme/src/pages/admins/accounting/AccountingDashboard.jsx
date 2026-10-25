@@ -65,7 +65,10 @@ const AccountingDashboard = ({ onNavigateTab }) => {
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '60px 0' }}>
-        <Spin size="large" tip={t('loading_accounting_data', 'Loading financial indicators...')} />
+        <Spin size="large" />
+        <div style={{ marginTop: 16, color: '#64748b', fontSize: 13 }}>
+          {t('loading_accounting_data', 'Loading financial indicators...')}
+        </div>
       </div>
     );
   }

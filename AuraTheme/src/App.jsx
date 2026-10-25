@@ -243,23 +243,23 @@ const AppContent = () => {
 };
 
 const App = () => (
-  <NetworkStatusProvider>
-    <AuthProvider>
-      <LanguageProvider>
-        <AdminModulesProvider>
-          <WishlistProvider>
-            <CartProvider>
-              <Router>
+  <Router>
+    <NetworkStatusProvider>
+      <AuthProvider>
+        <LanguageProvider>
+          <AdminModulesProvider>
+            <WishlistProvider>
+              <CartProvider>
                 <AntApp>
                   <AppContent />
                 </AntApp>
-              </Router>
-            </CartProvider>
-          </WishlistProvider>
-        </AdminModulesProvider>
-      </LanguageProvider>
-    </AuthProvider>
-  </NetworkStatusProvider>
+              </CartProvider>
+            </WishlistProvider>
+          </AdminModulesProvider>
+        </LanguageProvider>
+      </AuthProvider>
+    </NetworkStatusProvider>
+  </Router>
 );
 
 export default App;

@@ -393,7 +393,8 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
   if (loading) {
     return (
       <Card style={{ borderRadius: 12, padding: '40px', textAlign: 'center' }}>
-        <Spin tip="Loading adjustment voucher..." />
+        <Spin size="large" />
+        <div style={{ marginTop: 12, color: '#64748b', fontSize: 13 }}>Loading adjustment voucher...</div>
       </Card>
     );
   }

@@ -446,7 +446,8 @@ export default function BpasAddQuantityAdjustmentPage({ onBack, onSuccess }) {
         >
           {loadingMeta ? (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <Spin tip="Loading metadata..." />
+              <Spin size="default" />
+              <div style={{ marginTop: 10, color: '#64748b', fontSize: 13 }}>Loading metadata...</div>
             </div>
           ) : (
             <>

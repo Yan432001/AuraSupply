@@ -100,7 +100,13 @@ exports.createStockCount = async (req, res) => {
       data: created
     });
   } catch (err) {
-    return sendError(res, err.message || 'Failed to initiate stock count', 500);
+    const isValidation = err.message && (
+      err.message.includes('No products found') ||
+      err.message.includes('not found') ||
+      err.message.includes('required') ||
+      err.message.includes('selection')
+    );
+    return sendError(res, err.message || 'Failed to initiate stock count', isValidation ? 400 : 500);
   }
 };
 
@@ -152,7 +158,8 @@ exports.updateStockCountItems = async (req, res) => {
 exports.scanBarcodeItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { barcode, quantity_delta = 1, set_quantity = null } = req.body;
+    const barcode = req.body.barcode || req.body.barcode_or_code || req.body.code || req.body.sku;
+    const { quantity_delta = 1, set_quantity = null } = req.body;
 
     const scanned = await StockCountsModel.scanBarcodeItem(id, {
       barcode,
