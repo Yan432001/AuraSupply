@@ -9,7 +9,6 @@ import {
   Space,
   Row,
   Col,
-  Statistic,
   Typography,
   Modal,
   Form,
@@ -468,26 +467,6 @@ export default function BpasInventoryWorkspace() {
       return matchSearch && matchCategory && matchBrand && matchType && matchStockStatus && matchWarehouse;
     });
   }, [productsList, filterSearch, filterCategory, filterBrand, filterType, filterStockStatus, filterWarehouse]);
-
-  // Catalog Metrics
-  const metrics = useMemo(() => {
-    const list = Array.isArray(productsList) ? productsList : [];
-    const total = list.length;
-    const inStock = list.filter((p) => (p.quantity ?? p.stockCount ?? 0) > 0).length;
-    const lowStock = list.filter((p) => {
-      const q = p.quantity ?? p.stockCount ?? 0;
-      const a = p.alert_quantity ?? p.alertQuantity ?? 10;
-      return q <= a;
-    }).length;
-    const totalValuation = list.reduce((acc, p) => acc + (Number(p.price) || 0) * (p.quantity ?? p.stockCount ?? 40), 0);
-
-    return {
-      total,
-      inStock,
-      lowStock,
-      totalValuation,
-    };
-  }, [productsList]);
 
   // Navigation handlers
   const handleOpenAddProduct = () => {
@@ -1356,251 +1335,7 @@ export default function BpasInventoryWorkspace() {
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* 1. Top Metrics Cards */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} md={6}>
-          <Card
-            bordered
-            style={{ borderRadius: 12, background: adminTheme.card, border: `1px solid ${adminTheme.border}` }}
-            styles={{ body: { padding: '16px 20px' } }}
-          >
-            <Statistic
-              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>{t('total_catalog_items', 'TOTAL CATALOG ITEMS')}</span>}
-              value={metrics.total}
-              prefix={<BarcodeOutlined style={{ color: '#2563eb' }} />}
-              suffix={<span style={{ fontSize: 13, color: adminTheme.subtext }}>Products</span>}
-              valueStyle={{ fontWeight: 900, color: adminTheme.text }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card
-            bordered
-            style={{ borderRadius: 12, background: adminTheme.card, border: `1px solid ${adminTheme.border}` }}
-            styles={{ body: { padding: '16px 20px' } }}
-          >
-            <Statistic
-              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>{t('available_in_stock', 'IN STOCK')}</span>}
-              value={metrics.inStock}
-              prefix={<CheckCircleOutlined style={{ color: '#16a34a' }} />}
-              suffix={<span style={{ fontSize: 13, color: '#16a34a' }}>Available</span>}
-              valueStyle={{ fontWeight: 900, color: '#16a34a' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card
-            bordered
-            style={{ borderRadius: 12, background: adminTheme.card, border: `1px solid ${adminTheme.border}` }}
-            styles={{ body: { padding: '16px 20px' } }}
-          >
-            <Statistic
-              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>{t('low_stock_warnings', 'LOW STOCK WARNINGS')}</span>}
-              value={metrics.lowStock}
-              prefix={<WarningOutlined style={{ color: '#ea580c' }} />}
-              suffix={<span style={{ fontSize: 13, color: '#ea580c' }}>Under Alert</span>}
-              valueStyle={{ fontWeight: 900, color: '#ea580c' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card
-            bordered
-            style={{ borderRadius: 12, background: adminTheme.card, border: `1px solid ${adminTheme.border}` }}
-            styles={{ body: { padding: '16px 20px' } }}
-          >
-            <Statistic
-              title={<span style={{ fontWeight: 700, fontSize: 12, color: adminTheme.subtext }}>{t('total_stock_valuation', 'TOTAL STOCK VALUATION')}</span>}
-              value={metrics.totalValuation}
-              formatter={(v) => formatCurrency(v)}
-              prefix={<DollarOutlined style={{ color: '#059669' }} />}
-              valueStyle={{ fontWeight: 900, color: '#059669' }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 2. Sub-Navigation Tabs across the top */}
-      <Card
-        style={{ borderRadius: 12, border: `1px solid ${adminTheme.border}` }}
-        styles={{ body: { padding: '10px 16px' } }}
-      >
-        <Flex justify="space-between" align="center" wrap="wrap" gap={10}>
-          <Space size={6} wrap>
-            <Button
-              type={activeTab === 'products' ? 'primary' : 'default'}
-              icon={<BarcodeOutlined />}
-              onClick={() => {
-                setPageMode('list');
-                setActiveTab('products');
-              }}
-              style={{ fontWeight: 700 }}
-            >
-              {t('products', 'List Products')}
-            </Button>
-            <Button
-              type={activeTab === 'attributes' ? 'primary' : 'default'}
-              icon={<TagsOutlined />}
-              onClick={() => setActiveTab('attributes')}
-              style={{ fontWeight: 700 }}
-            >
-              Product Attributes & Values
-            </Button>
-            <Button
-              type={activeTab === 'warehouse-stock' ? 'primary' : 'default'}
-              icon={<ApartmentOutlined />}
-              onClick={() => setActiveTab('warehouse-stock')}
-              style={{ fontWeight: 700 }}
-            >
-              Warehouse Stock Breakdown
-            </Button>
-            <Button
-              type={activeTab === 'movements' ? 'primary' : 'default'}
-              icon={<HistoryOutlined />}
-              onClick={() => setActiveTab('movements')}
-              style={{ fontWeight: 700 }}
-            >
-              Stock Movements Ledger
-            </Button>
-            <Button
-              type={activeTab === 'quantity-adjustments' || activeTab === 'quantity_adjustments' ? 'primary' : 'default'}
-              icon={<ToolOutlined />}
-              onClick={() => {
-                setPageMode('list');
-                setActiveTab('quantity-adjustments');
-                navigate('/admins/products?tab=quantity-adjustments');
-              }}
-              style={{ fontWeight: 700 }}
-            >
-              Adjustments
-            </Button>
-            <Button
-              type={activeTab === 'stock-counts' || activeTab === 'stock_counts' ? 'primary' : 'default'}
-              icon={<CheckSquareOutlined />}
-              onClick={() => {
-                setPageMode('list');
-                setActiveTab('stock-counts');
-                navigate('/admins/products?tab=stock-counts');
-              }}
-              style={{ fontWeight: 700 }}
-            >
-              Stock Counts
-            </Button>
-            <Button
-              type={activeTab === 'transfers' ? 'primary' : 'default'}
-              icon={<SwapOutlined />}
-              onClick={() => setActiveTab('transfers')}
-              style={{ fontWeight: 700 }}
-            >
-              Transfers
-            </Button>
-            <Button
-              type={activeTab === 'stock-received' || activeTab === 'stock_received' ? 'primary' : 'default'}
-              icon={<InboxOutlined />}
-              onClick={() => {
-                setPageMode('list');
-                setActiveTab('stock-received');
-                navigate('/admins/products?tab=stock-received');
-              }}
-              style={{ fontWeight: 700 }}
-            >
-              Stock Received
-            </Button>
-            <Button
-              type={activeTab === 'consignments' ? 'primary' : 'default'}
-              icon={<ShopOutlined />}
-              onClick={() => {
-                setPageMode('list');
-                setActiveTab('consignments');
-                navigate('/admins/products?tab=consignments');
-              }}
-              style={{ fontWeight: 700 }}
-            >
-              Consignments
-            </Button>
-            <Button
-              type={activeTab === 'rewards-exchange' || activeTab === 'rewards_exchange' ? 'primary' : 'default'}
-              icon={<GiftOutlined />}
-              onClick={() => {
-                setPageMode('list');
-                setActiveTab('rewards-exchange');
-                navigate('/admins/products?tab=rewards-exchange');
-              }}
-              style={{ fontWeight: 700 }}
-            >
-              Rewards Exchange
-            </Button>
-            <Button
-              type={activeTab === 'purchase-requests' || activeTab === 'purchase_requests' ? 'primary' : 'default'}
-              icon={<ShoppingCartOutlined />}
-              onClick={() => {
-                setPageMode('list');
-                setActiveTab('purchase-requests');
-                navigate('/admins/products?tab=purchase-requests');
-              }}
-              style={{ fontWeight: 700 }}
-            >
-              Purchase Requests
-            </Button>
-            <Button
-              type={activeTab === 'purchase-orders' || activeTab === 'purchase_orders' ? 'primary' : 'default'}
-              icon={<ShoppingCartOutlined />}
-              onClick={() => {
-                setPageMode('list');
-                setActiveTab('purchase-orders');
-                navigate('/admins/products?tab=purchase-orders');
-              }}
-              style={{ fontWeight: 700 }}
-            >
-              Purchase Orders
-            </Button>
-            <Button
-              type={activeTab === 'cost-adjustments' || activeTab === 'cost_adjustments' ? 'primary' : 'default'}
-              icon={<DollarOutlined />}
-              onClick={() => {
-                setPageMode('list');
-                setActiveTab('cost-adjustments');
-                navigate('/admins/products?tab=cost-adjustments');
-              }}
-              style={{ fontWeight: 700 }}
-            >
-              Cost Adjustments
-            </Button>
-            <Button
-              type={activeTab === 'using-stock' || activeTab === 'using_stock' ? 'primary' : 'default'}
-              icon={<FileTextOutlined />}
-              onClick={() => {
-                setPageMode('list');
-                setActiveTab('using-stock');
-                navigate('/admins/products?tab=using-stock');
-              }}
-              style={{ fontWeight: 700 }}
-            >
-              Stock Usage
-            </Button>
-          </Space>
-
-          <Space size={8}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleOpenAddProduct}
-              style={{ fontWeight: 700, background: '#16a34a', borderColor: '#16a34a' }}
-            >
-              {t('add_product', 'Add Product')}
-            </Button>
-            <Button
-              icon={<SyncOutlined spin={isSyncing} />}
-              onClick={fetchLiveProducts}
-              style={{ fontWeight: 700 }}
-            >
-              {t('sync_db', 'Sync DB')}
-            </Button>
-          </Space>
-        </Flex>
-      </Card>
-
-      {/* 3. Main Workspace Container */}
+      {/* Main Workspace Container */}
       <Card
         style={{
           borderRadius: 14,
@@ -1630,6 +1365,7 @@ export default function BpasInventoryWorkspace() {
             {activeTab === 'consignments' && <ShopOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {(activeTab === 'rewards-exchange' || activeTab === 'rewards_exchange') && <GiftOutlined style={{ color: '#d97706', fontSize: 20 }} />}
             {(activeTab === 'purchase-requests' || activeTab === 'purchase_requests') && <ShoppingCartOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+            {(activeTab === 'purchase-orders' || activeTab === 'purchase_orders') && <FileTextOutlined style={{ color: '#059669', fontSize: 20 }} />}
             {(activeTab === 'cost-adjustments' || activeTab === 'cost_adjustments') && <DollarOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {(activeTab === 'using-stock' || activeTab === 'using_stock') && <FileTextOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
 
@@ -1645,6 +1381,7 @@ export default function BpasInventoryWorkspace() {
               {activeTab === 'consignments' && 'Customer Consignments Management & Sales Reconciliation'}
               {(activeTab === 'rewards-exchange' || activeTab === 'rewards_exchange') && 'Rewards Exchange & Customer Point Redemptions'}
               {(activeTab === 'purchase-requests' || activeTab === 'purchase_requests') && 'Purchase Requests Management (Department Requisition)'}
+              {(activeTab === 'purchase-orders' || activeTab === 'purchase_orders') && 'Purchase Orders Management (Vendor Procurement)'}
               {(activeTab === 'cost-adjustments' || activeTab === 'cost_adjustments') && 'Inventory Cost Adjustments & Valuation'}
               {(activeTab === 'using-stock' || activeTab === 'using_stock') && 'Using Stock Management (Material & Internal Consumption)'}
             </span>
@@ -1652,6 +1389,17 @@ export default function BpasInventoryWorkspace() {
         }
         extra={
           <Space size={10}>
+            {activeTab === 'products' && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleOpenAddProduct}
+                style={{ fontWeight: 700, background: '#16a34a', borderColor: '#16a34a' }}
+              >
+                {t('add_product', 'Add Product')}
+              </Button>
+            )}
+
             {activeTab === 'products' && (
               <Tooltip title={showFilterDrawer ? t('hide_filters', 'Hide Filters') : t('show_advanced_filters', 'Show Advanced Filters')}>
                 <Button
