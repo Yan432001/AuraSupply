@@ -156,8 +156,13 @@ exports.getDashboardData = async (req, res) => {
     `);
 
     // 10. Module status & License health
-    const [licenseInfo] = await db.query('SELECT status, expires_at FROM aura_license ORDER BY id DESC LIMIT 1');
-    const license = licenseInfo?.[0] || { status: 'active', expires_at: '2030-12-31' };
+    let license = { status: 'active', expires_at: '2030-12-31' };
+    try {
+      const [licenseInfo] = await db.query('SELECT status, expires_at FROM aura_license ORDER BY id DESC LIMIT 1');
+      if (licenseInfo && licenseInfo[0]) {
+        license = licenseInfo[0];
+      }
+    } catch (_) {}
 
     const s = salesKpis[0] || {};
     const pur = purchaseKpis[0] || {};
