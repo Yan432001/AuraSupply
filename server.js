@@ -153,7 +153,12 @@ async function startServer() {
     'barcode',
     'stockCounts',
     'transfers',
-    'costAdjustments'
+    'costAdjustments',
+    'stockReceived',
+    'consignments',
+    'rewardsExchange',
+    'purchaseRequests',
+    'purchaseOrders'
   ];
 
   for (const routeName of adminRoutes) {

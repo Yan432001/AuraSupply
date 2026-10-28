@@ -61,6 +61,21 @@ import BpasEditTransferPage from './pages/admins/BpasEditTransferPage';
 import BpasCostAdjustmentsWorkspace from './pages/admins/BpasCostAdjustmentsWorkspace';
 import BpasAddCostAdjustmentPage from './pages/admins/BpasAddCostAdjustmentPage';
 import BpasEditCostAdjustmentPage from './pages/admins/BpasEditCostAdjustmentPage';
+import BpasStockReceivedWorkspace from './pages/admins/BpasStockReceivedWorkspace';
+import BpasAddStockReceivedPage from './pages/admins/BpasAddStockReceivedPage';
+import BpasEditStockReceivedPage from './pages/admins/BpasEditStockReceivedPage';
+import BpasConsignmentsWorkspace from './pages/admins/BpasConsignmentsWorkspace';
+import BpasAddConsignmentPage from './pages/admins/BpasAddConsignmentPage';
+import BpasEditConsignmentPage from './pages/admins/BpasEditConsignmentPage';
+import BpasRewardsExchangeWorkspace from './pages/admins/BpasRewardsExchangeWorkspace';
+import BpasAddRewardsExchangePage from './pages/admins/BpasAddRewardsExchangePage';
+import BpasEditRewardsExchangePage from './pages/admins/BpasEditRewardsExchangePage';
+import BpasPurchaseRequestsWorkspace from './pages/admins/BpasPurchaseRequestsWorkspace';
+import BpasAddPurchaseRequestPage from './pages/admins/BpasAddPurchaseRequestPage';
+import BpasEditPurchaseRequestPage from './pages/admins/BpasEditPurchaseRequestPage';
+import BpasPurchaseOrdersWorkspace from './pages/admins/BpasPurchaseOrdersWorkspace';
+import BpasAddPurchaseOrderPage from './pages/admins/BpasAddPurchaseOrderPage';
+import BpasEditPurchaseOrderPage from './pages/admins/BpasEditPurchaseOrderPage';
 import { AdminModulesProvider } from './contexts/AdminModulesContext';
 
 // E-Menu Telegram Mini App Layout & Views
@@ -187,9 +202,75 @@ const AppContent = () => {
         <Route path="products/cost-adjustments/add" element={<BpasAddCostAdjustmentPage />} />
         <Route path="products/cost_adjustments/edit/:id" element={<BpasEditCostAdjustmentPage />} />
         <Route path="products/cost-adjustments/edit/:id" element={<BpasEditCostAdjustmentPage />} />
+        <Route path="products/stock_received" element={<AdminProducts />} />
+        <Route path="products/stock-received" element={<AdminProducts />} />
+        <Route path="products/stock_received/add" element={<BpasAddStockReceivedPage />} />
+        <Route path="products/stock-received/add" element={<BpasAddStockReceivedPage />} />
+        <Route path="products/stock_received/edit/:id" element={<BpasEditStockReceivedPage />} />
+        <Route path="products/stock-received/edit/:id" element={<BpasEditStockReceivedPage />} />
+        <Route path="products/consignments" element={<AdminProducts />} />
+        <Route path="products/consignments/add" element={<BpasAddConsignmentPage />} />
+        <Route path="products/consignments/edit/:id" element={<BpasEditConsignmentPage />} />
+        <Route path="products/rewards_exchange" element={<AdminProducts />} />
+        <Route path="products/rewards-exchange" element={<AdminProducts />} />
+        <Route path="products/rewards_exchange/add" element={<BpasAddRewardsExchangePage />} />
+        <Route path="products/rewards-exchange/add" element={<BpasAddRewardsExchangePage />} />
+        <Route path="products/rewards_exchange/edit/:id" element={<BpasEditRewardsExchangePage />} />
+        <Route path="products/rewards-exchange/edit/:id" element={<BpasEditRewardsExchangePage />} />
+        <Route path="products/purchase_requests" element={<AdminProducts />} />
+        <Route path="products/purchase-requests" element={<AdminProducts />} />
+        <Route path="products/purchase_requests/add" element={<BpasAddPurchaseRequestPage />} />
+        <Route path="products/purchase-requests/add" element={<BpasAddPurchaseRequestPage />} />
+        <Route path="products/purchase_requests/edit/:id" element={<BpasEditPurchaseRequestPage />} />
+        <Route path="products/purchase-requests/edit/:id" element={<BpasEditPurchaseRequestPage />} />
+        <Route path="products/purchase_orders" element={<AdminProducts />} />
+        <Route path="products/purchase-orders" element={<AdminProducts />} />
+        <Route path="products/purchase_orders/add" element={<BpasAddPurchaseOrderPage />} />
+        <Route path="products/purchase-orders/add" element={<BpasAddPurchaseOrderPage />} />
+        <Route path="products/purchase_orders/edit/:id" element={<BpasEditPurchaseOrderPage />} />
+        <Route path="products/purchase-orders/edit/:id" element={<BpasEditPurchaseOrderPage />} />
+        <Route path="products/purchases_orders" element={<AdminProducts />} />
+        <Route path="products/purchases-orders" element={<AdminProducts />} />
+        <Route path="products/purchases_orders/add" element={<BpasAddPurchaseOrderPage />} />
+        <Route path="products/purchases-orders/add" element={<BpasAddPurchaseOrderPage />} />
+        <Route path="products/purchases_orders/edit/:id" element={<BpasEditPurchaseOrderPage />} />
+        <Route path="products/purchases-orders/edit/:id" element={<BpasEditPurchaseOrderPage />} />
         <Route path="cost_adjustments" element={<BpasCostAdjustmentsWorkspace />} />
         <Route path="cost_adjustments/add" element={<BpasAddCostAdjustmentPage />} />
         <Route path="cost_adjustments/edit/:id" element={<BpasEditCostAdjustmentPage />} />
+        <Route path="stock_received" element={<BpasStockReceivedWorkspace />} />
+        <Route path="stock-received" element={<BpasStockReceivedWorkspace />} />
+        <Route path="stock_received/add" element={<BpasAddStockReceivedPage />} />
+        <Route path="stock-received/add" element={<BpasAddStockReceivedPage />} />
+        <Route path="stock_received/edit/:id" element={<BpasEditStockReceivedPage />} />
+        <Route path="stock-received/edit/:id" element={<BpasEditStockReceivedPage />} />
+        <Route path="consignments" element={<BpasConsignmentsWorkspace />} />
+        <Route path="consignments/add" element={<BpasAddConsignmentPage />} />
+        <Route path="consignments/edit/:id" element={<BpasEditConsignmentPage />} />
+        <Route path="rewards_exchange" element={<BpasRewardsExchangeWorkspace />} />
+        <Route path="rewards-exchange" element={<BpasRewardsExchangeWorkspace />} />
+        <Route path="rewards_exchange/add" element={<BpasAddRewardsExchangePage />} />
+        <Route path="rewards-exchange/add" element={<BpasAddRewardsExchangePage />} />
+        <Route path="rewards_exchange/edit/:id" element={<BpasEditRewardsExchangePage />} />
+        <Route path="rewards-exchange/edit/:id" element={<BpasEditRewardsExchangePage />} />
+        <Route path="purchase_requests" element={<BpasPurchaseRequestsWorkspace />} />
+        <Route path="purchase-requests" element={<BpasPurchaseRequestsWorkspace />} />
+        <Route path="purchase_requests/add" element={<BpasAddPurchaseRequestPage />} />
+        <Route path="purchase-requests/add" element={<BpasAddPurchaseRequestPage />} />
+        <Route path="purchase_requests/edit/:id" element={<BpasEditPurchaseRequestPage />} />
+        <Route path="purchase-requests/edit/:id" element={<BpasEditPurchaseRequestPage />} />
+        <Route path="purchases_orders" element={<BpasPurchaseOrdersWorkspace />} />
+        <Route path="purchases-orders" element={<BpasPurchaseOrdersWorkspace />} />
+        <Route path="purchases_orders/add" element={<BpasAddPurchaseOrderPage />} />
+        <Route path="purchases-orders/add" element={<BpasAddPurchaseOrderPage />} />
+        <Route path="purchases_orders/edit/:id" element={<BpasEditPurchaseOrderPage />} />
+        <Route path="purchases-orders/edit/:id" element={<BpasEditPurchaseOrderPage />} />
+        <Route path="purchase_orders" element={<BpasPurchaseOrdersWorkspace />} />
+        <Route path="purchase-orders" element={<BpasPurchaseOrdersWorkspace />} />
+        <Route path="purchase_orders/add" element={<BpasAddPurchaseOrderPage />} />
+        <Route path="purchase-orders/add" element={<BpasAddPurchaseOrderPage />} />
+        <Route path="purchase_orders/edit/:id" element={<BpasEditPurchaseOrderPage />} />
+        <Route path="purchase-orders/edit/:id" element={<BpasEditPurchaseOrderPage />} />
         <Route path="transfers" element={<BpasTransfersWorkspace />} />
         <Route path="transfers/add" element={<BpasAddTransferPage />} />
         <Route path="transfers/edit/:id" element={<BpasEditTransferPage />} />

@@ -77,6 +77,11 @@ import BpasQuantityAdjustmentsWorkspace from './BpasQuantityAdjustmentsWorkspace
 import BpasStockCountsWorkspace from './BpasStockCountsWorkspace';
 import BpasTransfersWorkspace from './BpasTransfersWorkspace';
 import BpasCostAdjustmentsWorkspace from './BpasCostAdjustmentsWorkspace';
+import BpasStockReceivedWorkspace from './BpasStockReceivedWorkspace';
+import BpasConsignmentsWorkspace from './BpasConsignmentsWorkspace';
+import BpasRewardsExchangeWorkspace from './BpasRewardsExchangeWorkspace';
+import BpasPurchaseRequestsWorkspace from './BpasPurchaseRequestsWorkspace';
+import BpasPurchaseOrdersWorkspace from './BpasPurchaseOrdersWorkspace';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -138,11 +143,21 @@ export default function BpasInventoryWorkspace() {
   const [editingRecord, setEditingRecord] = useState(null);
   const [barcodeSelectedItems, setBarcodeSelectedItems] = useState([]);
 
-  // Active Tab: products | attributes | warehouse-stock | movements | stock-counts | quantity-adjustments | cost-adjustments | using-stock | transfers | consignments
+  // Active Tab: products | attributes | warehouse-stock | movements | stock-counts | quantity-adjustments | cost-adjustments | stock-received | using-stock | transfers | consignments | rewards-exchange | purchase-requests | purchase-orders
   const initialTab =
     searchParams.get('tab') ||
     searchParams.get('menu') ||
-    (location.pathname.includes('cost_adjustments') || location.pathname.includes('cost-adjustments')
+    (location.pathname.includes('purchase_orders') || location.pathname.includes('purchase-orders') || location.pathname.includes('purchases_orders') || location.pathname.includes('purchases-orders')
+      ? 'purchase-orders'
+      : location.pathname.includes('purchase_requests') || location.pathname.includes('purchase-requests')
+      ? 'purchase-requests'
+      : location.pathname.includes('rewards_exchange') || location.pathname.includes('rewards-exchange')
+      ? 'rewards-exchange'
+      : location.pathname.includes('consignments')
+      ? 'consignments'
+      : location.pathname.includes('stock_received') || location.pathname.includes('stock-received')
+      ? 'stock-received'
+      : location.pathname.includes('cost_adjustments') || location.pathname.includes('cost-adjustments')
       ? 'cost-adjustments'
       : location.pathname.includes('using_stock') || location.pathname.includes('using-stock')
       ? 'using-stock'
@@ -167,7 +182,17 @@ export default function BpasInventoryWorkspace() {
       setPageMode('barcode');
     } else {
       setPageMode('list');
-      if (location.pathname.includes('using_stock') || location.pathname.includes('using-stock')) {
+      if (location.pathname.includes('purchase_orders') || location.pathname.includes('purchase-orders') || location.pathname.includes('purchases_orders') || location.pathname.includes('purchases-orders')) {
+        setActiveTab('purchase-orders');
+      } else if (location.pathname.includes('purchase_requests') || location.pathname.includes('purchase-requests')) {
+        setActiveTab('purchase-requests');
+      } else if (location.pathname.includes('rewards_exchange') || location.pathname.includes('rewards-exchange')) {
+        setActiveTab('rewards-exchange');
+      } else if (location.pathname.includes('consignments')) {
+        setActiveTab('consignments');
+      } else if (location.pathname.includes('stock_received') || location.pathname.includes('stock-received')) {
+        setActiveTab('stock-received');
+      } else if (location.pathname.includes('using_stock') || location.pathname.includes('using-stock')) {
         setActiveTab('using-stock');
       } else if (location.pathname.includes('quantity_adjustments') || location.pathname.includes('quantity-adjustments')) {
         setActiveTab('quantity-adjustments');
@@ -1469,6 +1494,66 @@ export default function BpasInventoryWorkspace() {
               Transfers
             </Button>
             <Button
+              type={activeTab === 'stock-received' || activeTab === 'stock_received' ? 'primary' : 'default'}
+              icon={<InboxOutlined />}
+              onClick={() => {
+                setPageMode('list');
+                setActiveTab('stock-received');
+                navigate('/admins/products?tab=stock-received');
+              }}
+              style={{ fontWeight: 700 }}
+            >
+              Stock Received
+            </Button>
+            <Button
+              type={activeTab === 'consignments' ? 'primary' : 'default'}
+              icon={<ShopOutlined />}
+              onClick={() => {
+                setPageMode('list');
+                setActiveTab('consignments');
+                navigate('/admins/products?tab=consignments');
+              }}
+              style={{ fontWeight: 700 }}
+            >
+              Consignments
+            </Button>
+            <Button
+              type={activeTab === 'rewards-exchange' || activeTab === 'rewards_exchange' ? 'primary' : 'default'}
+              icon={<GiftOutlined />}
+              onClick={() => {
+                setPageMode('list');
+                setActiveTab('rewards-exchange');
+                navigate('/admins/products?tab=rewards-exchange');
+              }}
+              style={{ fontWeight: 700 }}
+            >
+              Rewards Exchange
+            </Button>
+            <Button
+              type={activeTab === 'purchase-requests' || activeTab === 'purchase_requests' ? 'primary' : 'default'}
+              icon={<ShoppingCartOutlined />}
+              onClick={() => {
+                setPageMode('list');
+                setActiveTab('purchase-requests');
+                navigate('/admins/products?tab=purchase-requests');
+              }}
+              style={{ fontWeight: 700 }}
+            >
+              Purchase Requests
+            </Button>
+            <Button
+              type={activeTab === 'purchase-orders' || activeTab === 'purchase_orders' ? 'primary' : 'default'}
+              icon={<ShoppingCartOutlined />}
+              onClick={() => {
+                setPageMode('list');
+                setActiveTab('purchase-orders');
+                navigate('/admins/products?tab=purchase-orders');
+              }}
+              style={{ fontWeight: 700 }}
+            >
+              Purchase Orders
+            </Button>
+            <Button
               type={activeTab === 'cost-adjustments' || activeTab === 'cost_adjustments' ? 'primary' : 'default'}
               icon={<DollarOutlined />}
               onClick={() => {
@@ -1540,6 +1625,10 @@ export default function BpasInventoryWorkspace() {
             {activeTab === 'quantity-adjustments' && <ToolOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {(activeTab === 'stock-counts' || activeTab === 'stock_counts') && <CheckSquareOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {activeTab === 'transfers' && <SwapOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+            {(activeTab === 'stock-received' || activeTab === 'stock_received') && <InboxOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+            {activeTab === 'consignments' && <ShopOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+            {(activeTab === 'rewards-exchange' || activeTab === 'rewards_exchange') && <GiftOutlined style={{ color: '#d97706', fontSize: 20 }} />}
+            {(activeTab === 'purchase-requests' || activeTab === 'purchase_requests') && <ShoppingCartOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {(activeTab === 'cost-adjustments' || activeTab === 'cost_adjustments') && <DollarOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
             {(activeTab === 'using-stock' || activeTab === 'using_stock') && <FileTextOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
 
@@ -1551,6 +1640,10 @@ export default function BpasInventoryWorkspace() {
               {activeTab === 'quantity-adjustments' && 'Inventory Quantity Adjustments'}
               {(activeTab === 'stock-counts' || activeTab === 'stock_counts') && 'Stock Counts & Physical Inventory Audits'}
               {activeTab === 'transfers' && 'Warehouse Stock Transfers'}
+              {(activeTab === 'stock-received' || activeTab === 'stock_received') && 'Stock Received Management (Goods Received Note / GRN)'}
+              {activeTab === 'consignments' && 'Customer Consignments Management & Sales Reconciliation'}
+              {(activeTab === 'rewards-exchange' || activeTab === 'rewards_exchange') && 'Rewards Exchange & Customer Point Redemptions'}
+              {(activeTab === 'purchase-requests' || activeTab === 'purchase_requests') && 'Purchase Requests Management (Department Requisition)'}
               {(activeTab === 'cost-adjustments' || activeTab === 'cost_adjustments') && 'Inventory Cost Adjustments & Valuation'}
               {(activeTab === 'using-stock' || activeTab === 'using_stock') && 'Using Stock Management (Material & Internal Consumption)'}
             </span>
@@ -2221,6 +2314,31 @@ export default function BpasInventoryWorkspace() {
         {/* TAB 9: Cost Adjustments & Valuation */}
         {(activeTab === 'cost-adjustments' || activeTab === 'cost_adjustments') && (
           <BpasCostAdjustmentsWorkspace embedded={true} />
+        )}
+
+        {/* TAB 10: Stock Received (GRN) */}
+        {(activeTab === 'stock-received' || activeTab === 'stock_received') && (
+          <BpasStockReceivedWorkspace embedded={true} />
+        )}
+
+        {/* TAB 11: Consignments Management */}
+        {activeTab === 'consignments' && (
+          <BpasConsignmentsWorkspace embedded={true} />
+        )}
+
+        {/* TAB 12: Rewards Exchange & Point Redemption */}
+        {(activeTab === 'rewards-exchange' || activeTab === 'rewards_exchange') && (
+          <BpasRewardsExchangeWorkspace embedded={true} />
+        )}
+
+        {/* TAB 13: Purchase Requests Management */}
+        {(activeTab === 'purchase-requests' || activeTab === 'purchase_requests') && (
+          <BpasPurchaseRequestsWorkspace embedded={true} />
+        )}
+
+        {/* TAB 14: Purchase Orders Management */}
+        {(activeTab === 'purchase-orders' || activeTab === 'purchase_orders') && (
+          <BpasPurchaseOrdersWorkspace embedded={true} />
         )}
       </Card>
 

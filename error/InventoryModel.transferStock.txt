@@ -10,3 +10,11 @@
     at InventoryModel.transferStock (C:\AuraSupply\API\app\models\admins\inventory.model.js:1502:19)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
     at async exports.transferStock (C:\AuraSupply\API\app\controller\admin\inventoryOperations.controller.js:106:20)
+[26/10/2026 22:37:35]Error: Insufficient stock for '3-Month Business English Mastery (Grammar Guide, Audio CDs, Flashcards)' in Office Furniture (0 available, 10 requested). Negative stock prevented.
+    at InventoryModel.transferStock (C:\AuraSupply\API\app\models\admins\inventory.model.js:1502:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.transferStock (C:\AuraSupply\API\app\controller\admin\inventoryOperations.controller.js:106:20)
+[26/10/2026 22:37:39]Error: Insufficient stock for '3-Month Business English Mastery (Grammar Guide, Audio CDs, Flashcards)' in Office Furniture (0 available, 10222 requested). Negative stock prevented.
+    at InventoryModel.transferStock (C:\AuraSupply\API\app\models\admins\inventory.model.js:1502:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.transferStock (C:\AuraSupply\API\app\controller\admin\inventoryOperations.controller.js:106:20)
