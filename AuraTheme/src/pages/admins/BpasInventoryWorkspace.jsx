@@ -63,6 +63,7 @@ import {
   HistoryOutlined,
   ArrowDownOutlined,
   ArrowUpOutlined,
+  ShoppingCartOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
