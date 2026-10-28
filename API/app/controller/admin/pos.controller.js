@@ -1147,15 +1147,16 @@ exports.suspendSale = async (req, res) => {
     const ref = `HOLD-${Date.now().toString().slice(-6)}`;
     const effectiveTableName = table_name || suspend_note || 'Walk-in';
     let suspendId = suspended_bill_id;
+    const numTotal = parseFloat(total) || 0;
 
     // Check if updating existing open bill vs creating new sub-bill on the table
     if (suspendId) {
       await connection.query(`
         UPDATE aura_suspended_bills
-        SET customer_id = ?, customer = ?, count = ?, total = ?, biller_id = ?, warehouse_id = ?, 
-            sub_bill_name = COALESCE(?, sub_bill_name)
+        SET customer_id = ?, customer = ?, count = ?, total = ?, original_price = ?, biller_id = ?, warehouse_id = ?, 
+            sub_bill_name = COALESCE(?, sub_bill_name), bill_status = COALESCE(bill_status, 'open')
         WHERE id = ?
-      `, [customer_id, customer, items.length, parseFloat(total) || 0, biller_id, warehouse_id, sub_bill_name, suspendId]);
+      `, [customer_id, customer, items.length, numTotal, numTotal, biller_id, warehouse_id, sub_bill_name, suspendId]);
 
       await connection.query('DELETE FROM aura_suspended_items WHERE suspend_id = ?', [suspendId]);
     } else {
@@ -1171,14 +1172,15 @@ exports.suspendSale = async (req, res) => {
 
       const [billResult] = await connection.query(`
         INSERT INTO aura_suspended_bills
-        (date, refer, customer_id, customer, count, total, biller_id, warehouse_id, created_by, suspend_note, table_id, table_name, sub_bill_name, bill_status)
-        VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
+        (date, refer, customer_id, customer, count, total, original_price, biller_id, warehouse_id, created_by, suspend_note, table_id, table_name, sub_bill_name, bill_status)
+        VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
       `, [
         ref,
         customer_id,
         customer,
         items.length,
-        parseFloat(total) || 0,
+        numTotal,
+        numTotal,
         biller_id,
         warehouse_id,
         user_id,
@@ -1196,11 +1198,34 @@ exports.suspendSale = async (req, res) => {
         const qty = parseFloat(item.quantity) || 1;
         const price = parseFloat(item.unit_price || item.price) || 0;
         const note = item.item_note || item.comment || '';
+        const prodId = item.product_id || item.id || 0;
+        const prodCode = item.product_code || item.code || '';
+        const prodName = item.product_name || item.name || '';
+        const unitCode = item.product_unit_code || item.unit_code || 'pcs';
+        const unitId = item.product_unit_id || item.unit_id || null;
+        const lineSubtotal = qty * price;
+
         await connection.query(`
           INSERT INTO aura_suspended_items
-          (suspend_id, product_id, product_code, product_name, unit_price, quantity, subtotal, product_unit_code, comment, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-        `, [suspendId, item.id, item.code || '', item.name, price, qty, qty * price, item.unit_code || 'pcs', note]);
+          (suspend_id, product_id, product_code, product_name, net_unit_price, unit_price, real_unit_price, original_price, unit_quantity, quantity, subtotal, product_unit_id, product_unit_code, warehouse_id, comment, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+        `, [
+          suspendId,
+          prodId,
+          prodCode,
+          prodName,
+          price,
+          price,
+          price,
+          price,
+          qty,
+          qty,
+          lineSubtotal,
+          unitId,
+          unitCode,
+          warehouse_id || 1,
+          note
+        ]);
       }
     }
 
@@ -1249,7 +1274,8 @@ exports.getSuspendedSales = async (req, res) => {
 
     return res.json({
       success: true,
-      bills
+      bills,
+      data: bills
     });
   } catch (error) {
     console.error('[POS] getSuspendedSales error:', error);
