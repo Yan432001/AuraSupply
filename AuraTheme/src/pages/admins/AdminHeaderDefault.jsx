@@ -9,7 +9,7 @@ import {
   CloseOutlined,
   CreditCardOutlined,
 } from '@ant-design/icons';
-import { buildModulePath, getDefaultMenuKey } from '../../data/erpModules';
+import { buildModulePath, getDefaultMenuKey, resolveActiveModuleAndMenu } from '../../data/erpModules';
 import ErpModuleSidebar from '../../components/web/shared/ErpModuleSidebar';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -27,61 +27,9 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick, isMobile }) => {
   const searchParams = new URLSearchParams(location.search);
   
   // Active module and menu detection
-  let activeModuleKey = null;
-  let activeMenuKey = null;
-
-  if (location.pathname === '/admins' || location.pathname === '/admins/') {
-    // Default to first module or null for dashboard
-    activeModuleKey = searchParams.get('module') || null;
-  } else if (location.pathname === '/admins/dashboard') {
-    activeModuleKey = searchParams.get('module') || null;
-  } else if (location.pathname.startsWith('/admins/products')) {
-    activeModuleKey = 'inventory';
-  } else if (location.pathname.startsWith('/admins/users')) {
-    activeModuleKey = 'hr';
-  } else if (location.pathname.startsWith('/admins/reports')) {
-    activeModuleKey = 'reports';
-  } else if (location.pathname.startsWith('/admins/settings')) {
-    activeModuleKey = 'settings';
-  } else if (location.pathname.startsWith('/admins/modules')) {
-    activeModuleKey = 'settings';
-    activeMenuKey = 'module-settings';
-  } else if (location.pathname.startsWith('/admins/branches') || location.pathname.startsWith('/admins/settings/branches')) {
-    activeModuleKey = 'settings';
-    activeMenuKey = 'branches';
-  } else if (location.pathname.startsWith('/admins/billers') || location.pathname.startsWith('/admins/settings/billers')) {
-    activeModuleKey = 'settings';
-    activeMenuKey = 'billers';
-  } else if (location.pathname.startsWith('/admins/qrcode') || location.pathname.startsWith('/admins/qr-generator')) {
-    activeModuleKey = 'cms';
-  }
-
-  // Detect active menu if not already set
-  if (!activeMenuKey) {
-    if (location.pathname.startsWith('/admins/qrcode') || location.pathname.startsWith('/admins/qr-generator')) {
-      activeMenuKey = 'cms-qrcode';
-    } else if (location.pathname === '/admins' || location.pathname === '/admins/') {
-      activeMenuKey = searchParams.get('menu') || (activeModuleKey ? getDefaultMenuKey(activeModuleKey) : null);
-    } else if (location.pathname === '/admins/dashboard') {
-      activeMenuKey = searchParams.get('menu') || (activeModuleKey ? getDefaultMenuKey(activeModuleKey) : null);
-    } else if (location.pathname.startsWith('/admins/settings')) {
-      // Extract the menu key from the URL path
-      const pathParts = location.pathname.split('/');
-      const lastPart = pathParts[pathParts.length - 1];
-      // Map URL segments to menu keys
-      if (lastPart === 'categories') {
-        activeMenuKey = 'categories';
-      } else if (lastPart === 'users') {
-        activeMenuKey = 'users';
-      } else if (lastPart === 'system') {
-        activeMenuKey = 'system-settings';
-      } else if (lastPart === 'modules') {
-        activeMenuKey = 'module-settings';
-      } else {
-        activeMenuKey = 'system-settings'; // Default for settings
-      }
-    }
-  }
+  const resolved = resolveActiveModuleAndMenu(location.pathname, location.search);
+  const activeModuleKey = resolved.moduleKey || 'dashboard';
+  const activeMenuKey = resolved.menuKey;
 
   const handleNavigate = (moduleKey, menuKey) => {
     navigate(buildModulePath(moduleKey, menuKey));

@@ -38,6 +38,7 @@ import {
   GoldOutlined,
   RestOutlined,
   AuditOutlined,
+  DashboardOutlined,
 } from '@ant-design/icons';
 import { erpModules, getMenuLineage } from '../../../data/erpModules';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
@@ -48,6 +49,7 @@ import { useTranslation } from '../../../contexts/LanguageContext';
 const { Text } = Typography;
 
 const moduleIconMap = {
+  dashboard: DashboardOutlined,
   clinic: MedicineBoxOutlined,
   inventory: AppstoreOutlined,
   asset: BuildOutlined,
@@ -132,11 +134,16 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
             <div key={item.key}>
               <button
                 type="button"
+                data-group-key={item.key}
                 onClick={() => onToggleGroup(itemPath)}
                 style={{
                   width: '100%',
-                  border: 'none',
-                  background: 'transparent',
+                  border: isInActivePath
+                    ? `1px solid ${adminTheme.primary}44`
+                    : '1px solid transparent',
+                  background: isInActivePath
+                    ? (adminTheme.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(37, 99, 235, 0.05)')
+                    : 'transparent',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
@@ -144,7 +151,7 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
                   borderRadius: 8,
                   cursor: 'pointer',
                   textAlign: 'left',
-                  color: isInActivePath ? adminTheme.sidebarActiveText : adminTheme.subtext,
+                  color: isInActivePath ? (adminTheme.sidebarActiveText || adminTheme.primary) : adminTheme.subtext,
                   fontSize: 12.5,
                   fontWeight: isInActivePath ? 600 : 500,
                   transition: 'all 0.15s ease',
@@ -158,16 +165,17 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
               >
                 <span
                   style={{
-                    width: 4,
-                    height: 4,
+                    width: 5,
+                    height: 5,
                     borderRadius: '50%',
-                    background: isInActivePath ? 'currentColor' : adminTheme.subtext,
+                    background: isInActivePath ? adminTheme.primary : adminTheme.subtext,
+                    boxShadow: isInActivePath ? `0 0 6px ${adminTheme.primary}` : 'none',
                     opacity: isInActivePath ? 1 : 0.5,
                     flexShrink: 0,
                   }}
                 />
                 <span style={{ flex: 1 }} className="truncate">{t(item.key, item.label)}</span>
-                <DownOutlined rotate={isOpen ? 0 : -90} style={{ fontSize: 8.5, opacity: 0.55 }} />
+                <DownOutlined rotate={isOpen ? 0 : -90} style={{ fontSize: 8.5, opacity: isInActivePath ? 0.9 : 0.55 }} />
               </button>
               {isOpen && (
                 <FlatMenuTree
@@ -192,11 +200,15 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
           <button
             key={item.key}
             type="button"
+            data-menu-key={item.key}
+            data-module-key={moduleKey}
             onClick={() => onNavigate(moduleKey, item.key)}
             style={{
               width: '100%',
-              border: isActive ? `1px solid ${adminTheme.sidebarActiveBg}` : '1px solid transparent',
-              background: isActive ? adminTheme.sidebarActiveBg : 'transparent',
+              border: isActive ? `1px solid ${adminTheme.primary}` : '1px solid transparent',
+              background: isActive
+                ? (adminTheme.sidebarActiveBg || (adminTheme.isDark ? 'rgba(37, 99, 235, 0.2)' : 'rgba(37, 99, 235, 0.1)'))
+                : 'transparent',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
@@ -204,15 +216,16 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
               borderRadius: 8,
               cursor: 'pointer',
               textAlign: 'left',
-              color: isActive ? adminTheme.sidebarActiveText : adminTheme.subtext,
+              color: isActive ? (adminTheme.sidebarActiveText || adminTheme.primary) : adminTheme.subtext,
               fontSize: 12.5,
               fontWeight: isActive ? 600 : 500,
+              boxShadow: isActive ? `0 1px 6px ${adminTheme.primary}22` : 'none',
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
               if (!isActive) {
                 e.currentTarget.style.color = adminTheme.text;
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                e.currentTarget.style.background = adminTheme.isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)';
               }
             }}
             onMouseLeave={(e) => {
@@ -224,15 +237,27 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
           >
             <span
               style={{
-                width: 4,
-                height: 4,
+                width: 6,
+                height: 6,
                 borderRadius: '50%',
                 background: isActive ? adminTheme.primary : 'currentColor',
-                boxShadow: isActive ? `0 0 6px ${adminTheme.primary}` : 'none',
+                boxShadow: isActive ? `0 0 8px ${adminTheme.primary}` : 'none',
                 flexShrink: 0,
+                transition: 'all 0.18s ease',
               }}
             />
-            <span className="truncate">{t(item.key, item.label)}</span>
+            <span className="truncate" style={{ flex: 1 }}>{t(item.key, item.label)}</span>
+            {isActive && (
+              <span
+                style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: '50%',
+                  background: adminTheme.primary,
+                  opacity: 0.8,
+                }}
+              />
+            )}
           </button>
         );
       })}
@@ -270,9 +295,28 @@ const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigat
   const [openGroups, setOpenGroups] = useState(() => new Set(activeLineage));
 
   useEffect(() => {
-    setOpenModuleKey(activeModuleKey);
-    setOpenGroups(new Set(activeLineage));
-  }, [activeModuleKey, activeMenuKey]);
+    if (activeModuleKey && activeModuleKey !== 'dashboard') {
+      setOpenModuleKey(activeModuleKey);
+    }
+    if (activeLineage?.length) {
+      setOpenGroups((prev) => new Set([...prev, ...activeLineage]));
+    }
+  }, [activeModuleKey, activeMenuKey, activeLineage]);
+
+  // Smooth auto-scroll active route into view inside sidebar container
+  useEffect(() => {
+    if (!activeMenuKey && !activeModuleKey) return;
+    const timer = setTimeout(() => {
+      const targetSelector = activeMenuKey && activeMenuKey !== 'dashboard'
+        ? `[data-menu-key="${activeMenuKey}"]`
+        : `[data-module-key="${activeModuleKey}"]`;
+      const activeEl = document.querySelector(targetSelector);
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [activeMenuKey, activeModuleKey]);
 
   const toggleModule = (moduleKey) => {
     setOpenModuleKey((previous) => (previous === moduleKey ? null : moduleKey));
@@ -281,10 +325,13 @@ const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigat
   const toggleGroup = (groupPath) => {
     const groupKey = groupPath[groupPath.length - 1];
     setOpenGroups((previous) => {
-      if (previous.has(groupKey)) {
-        return new Set(groupPath.slice(0, -1));
+      const next = new Set(previous);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
       }
-      return new Set(groupPath);
+      return next;
     });
   };
 
@@ -353,8 +400,80 @@ const hasUserPermission = (user, moduleKey) => {
   }, [isModuleOpen, user, searchTerm, modulesByKey]);
 
   if (collapsed) {
+    const isDashboardActive = activeModuleKey === 'dashboard';
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: '100%' }}>
+        {/* Top Dashboard Hub (Collapsed) */}
+        <Tooltip
+          title={
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{t('dashboard', 'Dashboard')}</div>
+              <div style={{ fontSize: 11, opacity: 0.85 }}>{t('command_hub', 'ERP Command Hub')}</div>
+            </div>
+          }
+          placement="right"
+        >
+          <button
+            type="button"
+            data-module-key="dashboard"
+            onClick={() => onNavigate('dashboard', 'dashboard')}
+            style={{
+              width: 44,
+              height: 42,
+              borderRadius: 11,
+              position: 'relative',
+              border: isDashboardActive
+                ? `1px solid ${adminTheme.primary}`
+                : '1px solid transparent',
+              background: isDashboardActive
+                ? adminTheme.sidebarActiveBg
+                : 'transparent',
+              color: isDashboardActive
+                ? (adminTheme.sidebarActiveText || adminTheme.primary)
+                : adminTheme.subtext,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 18,
+              cursor: 'pointer',
+              transition: 'all 0.18s ease',
+              padding: 0,
+            }}
+            onMouseEnter={(e) => {
+              if (!isDashboardActive) {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.color = adminTheme.text;
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isDashboardActive) {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = adminTheme.subtext;
+                e.currentTarget.style.transform = 'none';
+              }
+            }}
+          >
+            {isDashboardActive && (
+              <span
+                style={{
+                  position: 'absolute',
+                  left: -6,
+                  top: 10,
+                  bottom: 10,
+                  width: 3.5,
+                  borderRadius: '0 4px 4px 0',
+                  background: adminTheme.primary,
+                  boxShadow: `0 0 10px ${adminTheme.primary}aa`,
+                }}
+              />
+            )}
+            <DashboardOutlined style={{ color: isDashboardActive ? adminTheme.primary : '#f97316' }} />
+          </button>
+        </Tooltip>
+
+        <div style={{ width: 28, height: 1, background: adminTheme.sidebarBorder || 'rgba(255, 255, 255, 0.08)', margin: '2px 0 4px', opacity: 0.6 }} />
+
         {visibleModules.map((module) => {
           const isActive = activeModuleKey === module.key;
           return (
@@ -370,6 +489,7 @@ const hasUserPermission = (user, moduleKey) => {
             >
               <button
                 type="button"
+                data-module-key={module.key}
                 onClick={() => onNavigate(module.key, null)}
                 style={{
                   width: 44,
@@ -377,13 +497,13 @@ const hasUserPermission = (user, moduleKey) => {
                   borderRadius: 11,
                   position: 'relative',
                   border: isActive
-                    ? `1px solid ${adminTheme.primary}66`
+                    ? `1px solid ${adminTheme.primary}`
                     : '1px solid transparent',
                   background: isActive
                     ? adminTheme.sidebarActiveBg
                     : 'transparent',
                   color: isActive
-                    ? adminTheme.sidebarActiveText
+                    ? (adminTheme.sidebarActiveText || adminTheme.primary)
                     : adminTheme.subtext,
                   display: 'flex',
                   alignItems: 'center',
@@ -452,7 +572,107 @@ const hasUserPermission = (user, moduleKey) => {
         />
       </div>
 
-      {/* 2. Pinned Favorites Quick Links */}
+      {/* 2. Command Hub / Dashboard Navigation Item */}
+      {(() => {
+        const isDashboardActive = activeModuleKey === 'dashboard';
+        return (
+          <div style={{ padding: '0 4px' }}>
+            <button
+              type="button"
+              data-module-key="dashboard"
+              data-menu-key="dashboard"
+              onClick={() => onNavigate('dashboard', 'dashboard')}
+              style={{
+                width: '100%',
+                position: 'relative',
+                border: isDashboardActive
+                  ? `1px solid ${adminTheme.primary}`
+                  : `1px solid ${adminTheme.sidebarBorder || 'transparent'}`,
+                background: isDashboardActive
+                  ? (adminTheme.sidebarActiveBg || (adminTheme.isDark ? 'rgba(37, 99, 235, 0.2)' : 'rgba(37, 99, 235, 0.1)'))
+                  : (adminTheme.isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)'),
+                color: isDashboardActive ? (adminTheme.sidebarActiveText || adminTheme.primary) : adminTheme.text,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '7px 10px',
+                borderRadius: 10,
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontWeight: isDashboardActive ? 700 : 500,
+                fontSize: 13,
+                transition: 'all 0.18s ease',
+                boxShadow: isDashboardActive ? `0 2px 8px ${adminTheme.primary}22` : 'none',
+              }}
+              onMouseEnter={(e) => {
+                if (!isDashboardActive) {
+                  e.currentTarget.style.background = adminTheme.sidebarHoverBg || (adminTheme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(37, 99, 235, 0.05)');
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isDashboardActive) {
+                  e.currentTarget.style.background = adminTheme.isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)';
+                }
+              }}
+            >
+              {isDashboardActive && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 6,
+                    bottom: 6,
+                    width: 3.5,
+                    borderRadius: '0 4px 4px 0',
+                    background: adminTheme.primary,
+                    boxShadow: `0 0 10px ${adminTheme.primary}`,
+                  }}
+                />
+              )}
+              <span
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 7,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 14,
+                  background: isDashboardActive
+                    ? adminTheme.sidebarActiveBg
+                    : 'rgba(249, 115, 22, 0.14)',
+                  color: isDashboardActive
+                    ? (adminTheme.sidebarActiveText || adminTheme.primary)
+                    : '#f97316',
+                  flexShrink: 0,
+                }}
+              >
+                <DashboardOutlined />
+              </span>
+              <span style={{ flex: 1, letterSpacing: '-0.01em' }} className="truncate">
+                {t('dashboard', 'Dashboard')}
+              </span>
+              <span
+                style={{
+                  fontSize: 9.5,
+                  fontWeight: 700,
+                  color: isDashboardActive ? adminTheme.primary : adminTheme.subtext,
+                  background: isDashboardActive ? `${adminTheme.primary}18` : (adminTheme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'),
+                  border: isDashboardActive ? `1px solid ${adminTheme.primary}33` : '1px solid transparent',
+                  padding: '1px 6px',
+                  borderRadius: 6,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {t('hub', 'Hub')}
+              </span>
+            </button>
+          </div>
+        );
+      })()}
+
+      {/* 3. Pinned Favorites Quick Links */}
       {!searchTerm && favorites.length > 0 && (
         <div style={{ padding: '0 6px 4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -539,19 +759,21 @@ const hasUserPermission = (user, moduleKey) => {
                 <div key={module.key}>
                   <button
                     type="button"
+                    data-module-key={module.key}
                     onClick={() => {
                       toggleModule(module.key);
                       onNavigate(module.key, null);
                     }}
                     style={{
                       width: '100%',
+                      position: 'relative',
                       border: isActive
-                        ? `1px solid ${adminTheme.primary}55`
+                        ? `1px solid ${adminTheme.primary}`
                         : '1px solid transparent',
                       background: isActive
                         ? adminTheme.sidebarActiveBg
                         : 'transparent',
-                      color: isActive ? adminTheme.sidebarActiveText : adminTheme.text,
+                      color: isActive ? (adminTheme.sidebarActiveText || adminTheme.primary) : adminTheme.text,
                       display: 'flex',
                       alignItems: 'center',
                       gap: 10,
@@ -561,6 +783,7 @@ const hasUserPermission = (user, moduleKey) => {
                       textAlign: 'left',
                       fontWeight: isActive ? 600 : 500,
                       fontSize: 13,
+                      boxShadow: isActive ? `0 2px 8px ${adminTheme.primary}22` : 'none',
                       transition: 'all 0.15s ease',
                     }}
                     onMouseEnter={(e) => {
@@ -574,6 +797,21 @@ const hasUserPermission = (user, moduleKey) => {
                       }
                     }}
                   >
+                    {/* Active Accent Bar on Left Edge */}
+                    {isActive && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          top: 6,
+                          bottom: 6,
+                          width: 3.5,
+                          borderRadius: '0 4px 4px 0',
+                          background: adminTheme.primary,
+                          boxShadow: `0 0 10px ${adminTheme.primary}`,
+                        }}
+                      />
+                    )}
                     {/* Icon container */}
                     <span
                       style={{

@@ -1371,33 +1371,42 @@ export const flattenMenuItems = (items = []) => {
 
 export const countLeafMenus = (items = []) => flattenMenuItems(items).length;
 
-export const getModuleByKey = (moduleKey) =>
-  erpModules.find((module) => module.key === moduleKey) || erpModules[0];
+export const getModuleByKey = (moduleKey) => {
+  if (!moduleKey) return null;
+  return erpModules.find((module) => module.key === moduleKey) || null;
+};
 
-export const getDefaultMenu = (moduleKey) => flattenMenuItems(getModuleByKey(moduleKey)?.menus || [])[0];
+export const getDefaultMenu = (moduleKey) => {
+  const mod = getModuleByKey(moduleKey);
+  if (!mod) return null;
+  return flattenMenuItems(mod.menus || [])[0] || null;
+};
 
 export const getDefaultMenuKey = (moduleKey) => getDefaultMenu(moduleKey)?.key || null;
 
 export const getMenuByKey = (moduleKey, menuKey) => {
   const module = getModuleByKey(moduleKey);
-  const flattened = flattenMenuItems(module?.menus || []);
+  if (!module) return null;
+  const flattened = flattenMenuItems(module.menus || []);
+  if (!flattened.length) return null;
   const normalizedKey = menuKey === 'pos-sales' || menuKey === 'list-pos' || menuKey === 'list_POS' ? 'list_pos' : menuKey;
 
-  return flattened.find((item) => item.key === menuKey || item.key === normalizedKey) || flattened[0];
+  return flattened.find((item) => item.key === menuKey || item.key === normalizedKey) || null;
 };
 
 export const getMenuLineage = (moduleKey, menuKey) => {
+  if (!moduleKey || !menuKey || moduleKey === 'dashboard') return [];
   const module = getModuleByKey(moduleKey);
   if (!module) return [];
   const matchedPath = findMenuPath(module.menus, menuKey);
   if (matchedPath?.length) {
     return matchedPath.map((item) => item.key);
   }
-  return getDefaultMenu(moduleKey)?.keyPath || [];
+  return [];
 };
 
 export const buildModulePath = (moduleKey, menuKey) => {
-  if (!moduleKey) {
+  if (!moduleKey || moduleKey === 'dashboard') {
     return '/admins';
   }
 
@@ -1419,5 +1428,240 @@ export const moduleHealthLabel = {
   stable: 'Healthy & Operational',
   watch: 'Attention Recommended',
   paused: 'Deactivated / Paused',
+};
+
+export const resolveActiveModuleAndMenu = (pathname = '', search = '') => {
+  const searchParams = new URLSearchParams(search);
+  const moduleParam = searchParams.get('module');
+  const menuParam = searchParams.get('menu');
+  const tabParam = searchParams.get('tab');
+  const actionParam = searchParams.get('action');
+
+  // 1. Explicit ?module=... parameter (e.g. /admins?module=sales&menu=quotes)
+  if (moduleParam) {
+    let resolvedMenu = menuParam;
+    if (!resolvedMenu) {
+      if (tabParam) resolvedMenu = tabParam;
+      else resolvedMenu = getDefaultMenuKey(moduleParam);
+    }
+    return {
+      moduleKey: moduleParam,
+      menuKey: resolvedMenu,
+    };
+  }
+
+  // 2. Exact match against leaf routes in erpModules
+  const fullPath = pathname + (search || '');
+  for (const module of erpModules) {
+    const leaves = flattenMenuItems(module.menus || []);
+    for (const leaf of leaves) {
+      if (leaf.route && leaf.route === fullPath) {
+        return { moduleKey: module.key, menuKey: leaf.key };
+      }
+    }
+  }
+
+  // 3. Match against pathname + query param combination
+  for (const module of erpModules) {
+    const leaves = flattenMenuItems(module.menus || []);
+    for (const leaf of leaves) {
+      if (!leaf.route) continue;
+      const [leafPath, leafQuery] = leaf.route.split('?');
+      if (leafPath === pathname) {
+        if (leafQuery) {
+          const leafParams = new URLSearchParams(leafQuery);
+          let allMatch = true;
+          for (const [k, v] of leafParams.entries()) {
+            if (searchParams.get(k) !== v) {
+              allMatch = false;
+              break;
+            }
+          }
+          if (allMatch) {
+            return { moduleKey: module.key, menuKey: leaf.key };
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Specific path-based route mappings
+  const cleanPath = (pathname || '').toLowerCase();
+
+  // Dashboard
+  if (cleanPath === '/admins' || cleanPath === '/admins/' || cleanPath === '/admins/dashboard') {
+    return { moduleKey: 'dashboard', menuKey: 'dashboard' };
+  }
+
+  // Products & Inventory / Procurement sub-routes
+  if (cleanPath.startsWith('/admins/products')) {
+    if (actionParam === 'add' || cleanPath.endsWith('/add')) {
+      return { moduleKey: 'inventory', menuKey: 'add-product' };
+    }
+    if (actionParam === 'import' || cleanPath.endsWith('/import')) {
+      return { moduleKey: 'inventory', menuKey: 'import-products' };
+    }
+    if (actionParam === 'barcode' || cleanPath.includes('barcode')) {
+      return { moduleKey: 'inventory', menuKey: 'print-barcodes' };
+    }
+
+    const effectiveTab = tabParam || (
+      cleanPath.includes('purchase_order') || cleanPath.includes('purchase-order') ? 'purchase-orders' :
+      cleanPath.includes('purchase_request') || cleanPath.includes('purchase-request') ? 'purchase-requests' :
+      cleanPath.includes('stock_received') || cleanPath.includes('stock-received') ? 'stock-received' :
+      cleanPath.includes('consignments') ? 'consignments' :
+      cleanPath.includes('rewards_exchange') || cleanPath.includes('rewards-exchange') ? 'rewards-exchange' :
+      cleanPath.includes('cost_adjustment') || cleanPath.includes('cost-adjustment') ? 'cost-adjustments' :
+      cleanPath.includes('using_stock') || cleanPath.includes('using-stock') ? 'using-stock' :
+      cleanPath.includes('quantity_adjustment') || cleanPath.includes('quantity-adjustment') || cleanPath.includes('add_adjustment') ? 'quantity-adjustments' :
+      cleanPath.includes('stock_count') || cleanPath.includes('stock-count') ? 'stock-counts' :
+      'products'
+    );
+
+    // Procurement tabs under /admins/products
+    if (effectiveTab === 'purchase-orders' || effectiveTab === 'purchase_orders') {
+      if (cleanPath.endsWith('/add')) return { moduleKey: 'procurement', menuKey: 'add-purchase-order' };
+      return { moduleKey: 'procurement', menuKey: 'purchase-orders' };
+    }
+    if (effectiveTab === 'purchase-requests' || effectiveTab === 'purchase_requests') {
+      if (cleanPath.endsWith('/add')) return { moduleKey: 'procurement', menuKey: 'add-purchase-request' };
+      return { moduleKey: 'procurement', menuKey: 'purchase-requests' };
+    }
+    if (effectiveTab === 'stock-received' || effectiveTab === 'stock_received') {
+      if (cleanPath.endsWith('/add')) return { moduleKey: 'inventory', menuKey: 'add-stock-received' };
+      return { moduleKey: 'inventory', menuKey: 'stock-received' };
+    }
+    if (effectiveTab === 'consignments') {
+      if (cleanPath.endsWith('/add')) return { moduleKey: 'inventory', menuKey: 'add-consignment' };
+      return { moduleKey: 'inventory', menuKey: 'consignments' };
+    }
+    if (effectiveTab === 'rewards-exchange' || effectiveTab === 'rewards_exchange') {
+      if (cleanPath.endsWith('/add')) return { moduleKey: 'inventory', menuKey: 'add-reward-exchange' };
+      return { moduleKey: 'inventory', menuKey: 'rewards-exchange' };
+    }
+    if (effectiveTab === 'cost-adjustments' || effectiveTab === 'cost_adjustments') {
+      if (cleanPath.endsWith('/add')) return { moduleKey: 'inventory', menuKey: 'add-cost-adjustment' };
+      return { moduleKey: 'inventory', menuKey: 'cost-adjustments' };
+    }
+    if (effectiveTab === 'quantity-adjustments' || effectiveTab === 'quantity_adjustments') {
+      return { moduleKey: 'inventory', menuKey: 'quantity-adjustments' };
+    }
+    if (effectiveTab === 'stock-counts' || effectiveTab === 'stock_counts') {
+      return { moduleKey: 'inventory', menuKey: 'stock-counts' };
+    }
+    if (effectiveTab === 'using-stock' || effectiveTab === 'using_stock') {
+      return { moduleKey: 'inventory', menuKey: 'using-stock' };
+    }
+    if (effectiveTab === 'transfers') {
+      return { moduleKey: 'inventory', menuKey: 'transfers' };
+    }
+    if (effectiveTab === 'warehouses') {
+      return { moduleKey: 'inventory', menuKey: 'warehouses-list' };
+    }
+    return { moduleKey: 'inventory', menuKey: 'products' };
+  }
+
+  // Purchases / Procurement standalone paths
+  if (cleanPath.startsWith('/admins/purchase_orders') || cleanPath.startsWith('/admins/purchases_orders') || cleanPath.startsWith('/admins/purchase-orders')) {
+    if (cleanPath.endsWith('/add')) return { moduleKey: 'procurement', menuKey: 'add-purchase-order' };
+    return { moduleKey: 'procurement', menuKey: 'purchase-orders' };
+  }
+  if (cleanPath.startsWith('/admins/purchase_requests') || cleanPath.startsWith('/admins/purchase-requests')) {
+    if (cleanPath.endsWith('/add')) return { moduleKey: 'procurement', menuKey: 'add-purchase-request' };
+    return { moduleKey: 'procurement', menuKey: 'purchase-requests' };
+  }
+  if (cleanPath.startsWith('/admins/purchases')) {
+    return { moduleKey: 'procurement', menuKey: 'purchases-list' };
+  }
+  if (cleanPath.startsWith('/admins/transfers')) {
+    if (cleanPath.endsWith('/add')) return { moduleKey: 'inventory', menuKey: 'add-transfer' };
+    return { moduleKey: 'inventory', menuKey: 'transfers' };
+  }
+
+  // Sales & Quotes
+  if (cleanPath.startsWith('/admins/sales')) {
+    if (cleanPath.endsWith('/add')) return { moduleKey: 'sales', menuKey: 'add-sale' };
+    return { moduleKey: 'sales', menuKey: 'sales-list' };
+  }
+  if (cleanPath.startsWith('/admins/orders')) {
+    return { moduleKey: 'sales', menuKey: 'sales-list' };
+  }
+
+  // POS
+  if (cleanPath.startsWith('/admins/pos')) {
+    if (cleanPath.includes('/settings')) return { moduleKey: 'pos', menuKey: 'pos-settings' };
+    if (tabParam === 'sales') return { moduleKey: 'pos', menuKey: 'list_pos' };
+    return { moduleKey: 'pos', menuKey: 'pos-screen' };
+  }
+
+  // Assets
+  if (cleanPath.startsWith('/admins/assets')) {
+    if (cleanPath.includes('/add')) return { moduleKey: 'asset', menuKey: 'add-asset' };
+    return { moduleKey: 'asset', menuKey: 'assets-dashboard' };
+  }
+
+  // Accounting
+  if (cleanPath.startsWith('/admins/accounting') || cleanPath.startsWith('/admins/accounts')) {
+    if (cleanPath.includes('/journal')) return { moduleKey: 'accounting', menuKey: 'journal' };
+    if (cleanPath.includes('/chart')) return { moduleKey: 'accounting', menuKey: 'chart-of-accounts' };
+    return { moduleKey: 'accounting', menuKey: 'chart-of-accounts' };
+  }
+
+  // CRM / Customers / Suppliers
+  if (cleanPath.startsWith('/admins/customers')) {
+    return { moduleKey: 'crm', menuKey: 'customers-list' };
+  }
+  if (cleanPath.startsWith('/admins/suppliers')) {
+    return { moduleKey: 'procurement', menuKey: 'suppliers' };
+  }
+
+  // HR & Users
+  if (cleanPath.startsWith('/admins/users')) {
+    return { moduleKey: 'hr', menuKey: 'users-list' };
+  }
+
+  // Reports
+  if (cleanPath.startsWith('/admins/reports')) {
+    if (cleanPath.includes('/inventory')) return { moduleKey: 'reports', menuKey: 'report-stock-value' };
+    if (cleanPath.includes('/sales')) return { moduleKey: 'reports', menuKey: 'report-product-quantity' };
+    return { moduleKey: 'reports', menuKey: 'report-stock-value' };
+  }
+
+  // Settings & Branches & Modules
+  if (cleanPath.startsWith('/admins/settings') || cleanPath.startsWith('/admins/modules') || cleanPath.startsWith('/admins/branches') || cleanPath.startsWith('/admins/billers')) {
+    if (cleanPath.includes('modules')) return { moduleKey: 'settings', menuKey: 'template-settings' };
+    if (cleanPath.includes('branches') || cleanPath.includes('billers')) return { moduleKey: 'settings', menuKey: 'branches-list' };
+    if (cleanPath.includes('categories')) return { moduleKey: 'settings', menuKey: 'change-logo' };
+    if (cleanPath.includes('users')) return { moduleKey: 'settings', menuKey: 'user-groups' };
+    if (cleanPath.includes('roles') || cleanPath.includes('permissions') || cleanPath.includes('access')) return { moduleKey: 'settings', menuKey: 'audit-trail' };
+    return { moduleKey: 'settings', menuKey: 'system-settings' };
+  }
+
+  // Access Control
+  if (cleanPath.startsWith('/admins/access-control')) {
+    return { moduleKey: 'access-control', menuKey: 'access-control' };
+  }
+
+  // CMS & QR
+  if (cleanPath.startsWith('/admins/qrcode') || cleanPath.startsWith('/admins/qr-generator') || cleanPath.startsWith('/admins/cms')) {
+    return { moduleKey: 'cms', menuKey: 'cms-qrcode' };
+  }
+
+  // Front-End
+  if (cleanPath.startsWith('/admins/frontend') || cleanPath.startsWith('/admins/storefront')) {
+    return { moduleKey: 'front-end', menuKey: 'storefront-controls' };
+  }
+
+  // Fallback: match any module whose route starts with cleanPath
+  for (const module of erpModules) {
+    const leaves = flattenMenuItems(module.menus || []);
+    for (const leaf of leaves) {
+      if (leaf.route && leaf.route.split('?')[0] === cleanPath) {
+        return { moduleKey: module.key, menuKey: leaf.key };
+      }
+    }
+  }
+
+  return { moduleKey: 'dashboard', menuKey: 'dashboard' };
 };
 

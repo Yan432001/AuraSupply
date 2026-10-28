@@ -42,7 +42,7 @@ import {
   AuditOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { erpModules, buildModulePath } from '../../../data/erpModules';
+import { erpModules, buildModulePath, resolveActiveModuleAndMenu } from '../../../data/erpModules';
 import { useAdminModules } from '../../../hooks/useAdminModules';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -153,36 +153,8 @@ export default function AdminModuleScrollSlidebar() {
   const [canScrollRight, setCanScrollRight] = useState(false);
 
   // Parse active module from URL
-  const searchParams = new URLSearchParams(location.search);
-  const activeModuleParam = searchParams.get('module');
-  const path = location.pathname;
-
-  let activeKey = 'dashboard';
-  if (path === '/admins' || path === '/admins/' || path === '/admins/dashboard') {
-    activeKey = activeModuleParam || 'dashboard';
-  } else if (path.startsWith('/admins/products')) {
-    activeKey = 'inventory';
-  } else if (path.startsWith('/admins/users')) {
-    activeKey = 'hr';
-  } else if (path.startsWith('/admins/orders')) {
-    activeKey = 'sales';
-  } else if (path.startsWith('/admins/access-control') || path.startsWith('/admins/settings/access') || path.startsWith('/admins/settings/roles') || path.startsWith('/admins/settings/permissions')) {
-    activeKey = 'access-control';
-  } else if (path.startsWith('/admins/reports')) {
-    activeKey = 'reports';
-  } else if (path.startsWith('/admins/settings')) {
-    activeKey = 'settings';
-  } else if (path.startsWith('/admins/modules')) {
-    activeKey = 'settings';
-  } else if (path.startsWith('/admins/branches') || path.startsWith('/admins/billers')) {
-    activeKey = 'settings';
-  } else if (path.startsWith('/admins/qrcode') || path.startsWith('/admins/cms')) {
-    activeKey = 'cms';
-  } else if (path.startsWith('/admins/frontend')) {
-    activeKey = 'front-end';
-  } else if (activeModuleParam) {
-    activeKey = activeModuleParam;
-  }
+  const resolved = resolveActiveModuleAndMenu(location.pathname, location.search);
+  const activeKey = resolved.moduleKey || 'dashboard';
 
   // Permission check
   const hasPermission = (modKey) => {

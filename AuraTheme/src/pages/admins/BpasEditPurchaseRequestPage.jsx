@@ -442,12 +442,21 @@ export default function BpasEditPurchaseRequestPage({ onBack = null, onSuccess =
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: 1250, margin: '0 auto' }}>
+    <div style={{ padding: '20px 24px', width: '100%', boxSizing: 'border-box' }}>
       {/* Top Header Card */}
-      <Card bordered={false} style={{ marginBottom: 16, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Space align="center" size={12}>
+      <Card
+        bordered={false}
+        style={{
+          marginBottom: 16,
+          borderRadius: 12,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          background: adminTheme.cardBg,
+          borderColor: adminTheme.sidebarBorder,
+        }}
+      >
+        <Row justify="space-between" align="middle" gutter={[16, 16]}>
+          <Col xs={24} sm={16}>
+            <Space align="center" size={12} wrap>
               <Button icon={<RollbackOutlined />} onClick={handleBack}>
                 Back to Requests
               </Button>
@@ -455,7 +464,7 @@ export default function BpasEditPurchaseRequestPage({ onBack = null, onSuccess =
                 width: 38,
                 height: 38,
                 borderRadius: 8,
-                background: '#eff6ff',
+                background: adminTheme.isDark ? 'rgba(37, 99, 235, 0.2)' : '#eff6ff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -463,17 +472,25 @@ export default function BpasEditPurchaseRequestPage({ onBack = null, onSuccess =
                 <ShoppingCartOutlined style={{ fontSize: 20, color: '#2563eb' }} />
               </div>
               <div>
-                <Title level={4} style={{ margin: 0, fontWeight: 700 }}>
-                  Edit Purchase Request #{id}
-                </Title>
-                <Text type="secondary" style={{ fontSize: 13 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Title level={4} style={{ margin: 0, fontWeight: 700, color: adminTheme.text }}>
+                    Edit Purchase Request #{id}
+                  </Title>
+                  <Tag
+                    color={currentStatus === 'approved' ? 'green' : currentStatus === 'rejected' ? 'red' : 'gold'}
+                    style={{ fontWeight: 700, margin: 0 }}
+                  >
+                    {currentStatus.toUpperCase()}
+                  </Tag>
+                </div>
+                <Text type="secondary" style={{ fontSize: 13, color: adminTheme.subtext }}>
                   Modify requisition line items, destination depot, and department allocation
                 </Text>
               </div>
             </Space>
           </Col>
 
-          <Col>
+          <Col xs={24} sm={8} style={{ textAlign: 'right' }}>
             <Space>
               <Button onClick={handleBack}>Cancel</Button>
               <Button
@@ -503,251 +520,264 @@ export default function BpasEditPurchaseRequestPage({ onBack = null, onSuccess =
       )}
 
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Row gutter={[16, 16]}>
-          {/* Main Form Information */}
-          <Col xs={24} lg={16}>
-            <Card
-              title={<Space><FileTextOutlined style={{ color: '#2563eb' }} /><span>Requisition Information</span></Space>}
-              bordered={false}
-              style={{ borderRadius: 12, marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
-            >
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    label="Requesting Department"
-                    name="department_id"
-                    rules={[{ required: true, message: 'Department is required' }]}
-                  >
-                    <Select placeholder="Select Department" disabled={isCompleted}>
-                      {departments.map(d => (
-                        <Option key={d.id} value={d.id}>{d.name} ({d.code || 'Dept'})</Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    label="Destination Warehouse"
-                    name="warehouse_id"
-                    rules={[{ required: true, message: 'Warehouse is required' }]}
-                  >
-                    <Select
-                      placeholder="Select Warehouse"
-                      onChange={(val) => setSelectedWarehouseId(val)}
-                      disabled={isCompleted}
-                    >
-                      {warehouses.map(w => (
-                        <Option key={w.id} value={w.id}>{w.name}</Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    label="Suggested Supplier (Optional)"
-                    name="supplier_id"
-                  >
-                    <Select
-                      showSearch
-                      filterOption={(input, opt) => (opt?.children || '').toLowerCase().includes(input.toLowerCase())}
-                      placeholder="Select Supplier"
-                      disabled={isCompleted}
-                    >
-                      {suppliers.map(s => (
-                        <Option key={s.id} value={s.id}>
-                          {s.company && s.company !== '-' ? `${s.company} (${s.name})` : s.name}
-                        </Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    label="Biller / Entity"
-                    name="biller_id"
-                  >
-                    <Select placeholder="Select Biller" disabled={isCompleted}>
-                      {billers.map(b => (
-                        <Option key={b.id} value={b.id}>{b.company || b.name}</Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    label="PR Reference No"
-                    name="reference_no"
-                    rules={[{ required: true, message: 'Reference number is required' }]}
-                  >
-                    <Input disabled={isCompleted} />
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    label="Request Date"
-                    name="date"
-                    rules={[{ required: true, message: 'Date is required' }]}
-                  >
-                    <DatePicker showTime style={{ width: '100%' }} disabled={isCompleted} />
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    label="Target Delivery Date / Text"
-                    name="required_date_text"
-                    rules={[{ required: true, message: 'Delivery expectation is required' }]}
-                  >
-                    <Input placeholder="e.g. Within 7 days, or Urgent" disabled={isCompleted} />
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24}>
-                  <Form.Item
-                    label="Purpose / Business Need"
-                    name="purpose"
-                    rules={[{ required: true, message: 'Purpose is required' }]}
-                  >
-                    <Input placeholder="Describe the reason for this purchase request..." disabled={isCompleted} />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Card>
-
-            {/* Product Selector and Items Table */}
-            <Card
-              title={<Space><ShoppingCartOutlined style={{ color: '#2563eb' }} /><span>Requested Products</span></Space>}
-              bordered={false}
-              style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
-            >
-              {/* Product Search Bar */}
-              {!isCompleted && (
-                <div style={{ marginBottom: 16 }}>
-                  <AutoComplete
-                    style={{ width: '100%' }}
-                    options={searchOptions}
-                    onSelect={handleSelectProduct}
-                    onSearch={handleProductSearch}
-                    value={searchTerm}
-                  >
-                    <Input
-                      size="large"
-                      placeholder="Type product name, code, or scan barcode to add requisition item..."
-                      prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
-                      suffix={searchingProducts ? <Spin size="small" /> : <BarcodeOutlined style={{ color: '#94a3b8' }} />}
-                    />
-                  </AutoComplete>
-                </div>
-              )}
-
-              {/* Items Table */}
-              <Table
-                dataSource={items}
-                columns={itemColumns}
-                rowKey="key"
-                pagination={false}
-                locale={{ emptyText: 'No products added to requisition.' }}
-              />
-
-              {/* Remarks */}
-              <Divider style={{ margin: '16px 0' }} />
-              <Form.Item label="Public Notes / Requisition Instructions" name="note">
-                <TextArea rows={3} placeholder="Additional instructions or notes..." disabled={isCompleted} />
+        {/* Requisition Information Card */}
+        <Card
+          title={
+            <Space>
+              <FileTextOutlined style={{ color: '#2563eb' }} />
+              <span style={{ color: adminTheme.text }}>Requisition Information</span>
+            </Space>
+          }
+          bordered={false}
+          style={{
+            borderRadius: 12,
+            marginBottom: 16,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            background: adminTheme.cardBg,
+            borderColor: adminTheme.sidebarBorder,
+          }}
+        >
+          <Row gutter={16}>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                label="Requesting Department"
+                name="department_id"
+                rules={[{ required: true, message: 'Department is required' }]}
+              >
+                <Select placeholder="Select Department" disabled={isCompleted}>
+                  {departments.map(d => (
+                    <Option key={d.id} value={d.id}>{d.name} ({d.code || 'Dept'})</Option>
+                  ))}
+                </Select>
               </Form.Item>
-            </Card>
-          </Col>
+            </Col>
 
-          {/* Right Summary Sidebar */}
-          <Col xs={24} lg={8}>
-            {/* Status & Review Workflow */}
-            <Card
-              bordered={false}
-              style={{
-                borderRadius: 12,
-                marginBottom: 16,
-                background: currentStatus === 'approved' ? 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)' : 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-                border: currentStatus === 'approved' ? '1px solid #a7f3d0' : '1px solid #bfdbfe',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-              }}
-            >
-              <Space direction="vertical" style={{ width: '100%' }} size={12}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Space>
-                    <AuditOutlined style={{ color: currentStatus === 'approved' ? '#059669' : '#1d4ed8', fontSize: 20 }} />
-                    <Text strong style={{ color: currentStatus === 'approved' ? '#065f46' : '#1e3a8a', fontSize: 15 }}>Requisition Status</Text>
-                  </Space>
-                  <Tag color={currentStatus === 'approved' ? 'green' : 'gold'} style={{ fontWeight: 700 }}>
-                    {currentStatus.toUpperCase()}
-                  </Tag>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                label="Destination Warehouse"
+                name="warehouse_id"
+                rules={[{ required: true, message: 'Warehouse is required' }]}
+              >
+                <Select
+                  placeholder="Select Warehouse"
+                  onChange={(val) => setSelectedWarehouseId(val)}
+                  disabled={isCompleted}
+                >
+                  {warehouses.map(w => (
+                    <Option key={w.id} value={w.id}>{w.name}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                label="Suggested Supplier (Optional)"
+                name="supplier_id"
+              >
+                <Select
+                  showSearch
+                  filterOption={(input, opt) => (opt?.children || '').toLowerCase().includes(input.toLowerCase())}
+                  placeholder="Select Supplier"
+                  disabled={isCompleted}
+                >
+                  {suppliers.map(s => (
+                    <Option key={s.id} value={s.id}>
+                      {s.company && s.company !== '-' ? `${s.company} (${s.name})` : s.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                label="Biller / Entity"
+                name="biller_id"
+              >
+                <Select placeholder="Select Biller" disabled={isCompleted}>
+                  {billers.map(b => (
+                    <Option key={b.id} value={b.id}>{b.company || b.name}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                label="PR Reference No"
+                name="reference_no"
+                rules={[{ required: true, message: 'Reference number is required' }]}
+              >
+                <Input disabled={isCompleted} />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                label="Request Date"
+                name="date"
+                rules={[{ required: true, message: 'Date is required' }]}
+              >
+                <DatePicker showTime style={{ width: '100%' }} disabled={isCompleted} />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                label="Target Delivery Date / Text"
+                name="required_date_text"
+                rules={[{ required: true, message: 'Delivery expectation is required' }]}
+              >
+                <Input placeholder="e.g. Within 7 days, or Urgent" disabled={isCompleted} />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                label="Purpose / Business Need"
+                name="purpose"
+                rules={[{ required: true, message: 'Purpose is required' }]}
+              >
+                <Input placeholder="Describe the reason for this purchase request..." disabled={isCompleted} />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Card>
+
+        {/* Requested Products Card */}
+        <Card
+          title={
+            <Space>
+              <ShoppingCartOutlined style={{ color: '#2563eb' }} />
+              <span style={{ color: adminTheme.text }}>Requested Products</span>
+            </Space>
+          }
+          bordered={false}
+          style={{
+            borderRadius: 12,
+            marginBottom: 16,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            background: adminTheme.cardBg,
+            borderColor: adminTheme.sidebarBorder,
+          }}
+        >
+          {/* Product Search Bar */}
+          {!isCompleted && (
+            <div style={{ marginBottom: 16 }}>
+              <AutoComplete
+                style={{ width: '100%' }}
+                options={searchOptions}
+                onSelect={handleSelectProduct}
+                onSearch={handleProductSearch}
+                value={searchTerm}
+              >
+                <Input
+                  size="large"
+                  placeholder="Type product name, code, or scan barcode to add requisition item..."
+                  prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+                  suffix={searchingProducts ? <Spin size="small" /> : <BarcodeOutlined style={{ color: '#94a3b8' }} />}
+                />
+              </AutoComplete>
+            </div>
+          )}
+
+          {/* Items Table */}
+          <Table
+            dataSource={items}
+            columns={itemColumns}
+            rowKey="key"
+            pagination={false}
+            locale={{ emptyText: 'No products added to requisition.' }}
+            summary={() => items.length > 0 && (
+              <Table.Summary fixed>
+                <Table.Summary.Row style={{ background: adminTheme.isDark ? 'rgba(255, 255, 255, 0.04)' : '#f8fafc', fontWeight: 600 }}>
+                  <Table.Summary.Cell index={0}>
+                    <Text strong style={{ color: adminTheme.text }}>Total ({items.length} line items)</Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} />
+                  <Table.Summary.Cell index={2} align="center">
+                    <Tag color="blue" style={{ fontSize: 13, padding: '2px 10px', fontWeight: 700 }}>
+                      {totalQuantity.toLocaleString()} units
+                    </Tag>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={3} />
+                  <Table.Summary.Cell index={4} align="right">
+                    <span style={{ fontSize: 15, fontWeight: 800, color: '#2563eb' }}>
+                      {formatCurrency(totalAmount)}
+                    </span>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={5} />
+                  <Table.Summary.Cell index={6} />
+                </Table.Summary.Row>
+              </Table.Summary>
+            )}
+          />
+
+          {/* Remarks */}
+          <Divider style={{ margin: '16px 0' }} />
+          <Form.Item label="Public Notes / Requisition Instructions" name="note">
+            <TextArea rows={3} placeholder="Additional instructions or notes..." disabled={isCompleted} />
+          </Form.Item>
+        </Card>
+
+        {/* Bottom Action & Requisition Summary Strip */}
+        <Card
+          bordered={false}
+          style={{
+            borderRadius: 12,
+            marginBottom: 24,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            background: adminTheme.cardBg,
+            borderColor: adminTheme.sidebarBorder,
+          }}
+        >
+          <Row justify="space-between" align="middle" gutter={[16, 16]}>
+            <Col xs={24} md={12}>
+              <Space size={24} wrap>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', color: adminTheme.subtext }}>Total Line Items</Text>
+                  <Text strong style={{ fontSize: 16, color: adminTheme.text }}>{items.length}</Text>
                 </div>
-
-                <Divider style={{ margin: '6px 0', borderColor: currentStatus === 'approved' ? '#a7f3d0' : '#bfdbfe' }} />
-
-                <Paragraph style={{ fontSize: 12, color: currentStatus === 'approved' ? '#065f46' : '#1e3a8a', margin: 0 }}>
-                  <InfoCircleOutlined style={{ marginRight: 6 }} />
-                  {currentStatus === 'approved'
-                    ? 'This request is officially approved for purchasing.'
-                    : 'Changes will be saved and reflected across pending manager approvals.'}
-                </Paragraph>
-              </Space>
-            </Card>
-
-            {/* Summary Card */}
-            <Card
-              title={<Space><CheckCircleOutlined style={{ color: '#10b981' }} /><span>Requisition Summary</span></Space>}
-              bordered={false}
-              style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
-            >
-              <Space direction="vertical" style={{ width: '100%' }} size={14}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text type="secondary">Total Line Items:</Text>
-                  <Text strong>{items.length}</Text>
+                <Divider type="vertical" style={{ height: 32 }} />
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', color: adminTheme.subtext }}>Total Units Requested</Text>
+                  <Text strong style={{ fontSize: 16, color: adminTheme.text }}>{totalQuantity.toLocaleString()} units</Text>
                 </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text type="secondary">Total Units Requested:</Text>
-                  <Text strong style={{ fontSize: 15 }}>{totalQuantity.toLocaleString()} units</Text>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text type="secondary">Estimated Requisition Value:</Text>
-                  <span style={{ fontWeight: 800, fontSize: 18, color: '#0f172a' }}>
+                <Divider type="vertical" style={{ height: 32 }} />
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', color: adminTheme.subtext }}>Estimated Value</Text>
+                  <span style={{ fontSize: 19, fontWeight: 800, color: '#2563eb' }}>
                     {formatCurrency(totalAmount)}
                   </span>
                 </div>
-
-                <Divider style={{ margin: '8px 0' }} />
-
+              </Space>
+            </Col>
+            <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+              <Space size={12}>
+                <Button size="large" onClick={handleBack} style={{ minWidth: 100 }}>
+                  Cancel
+                </Button>
                 <Button
                   type="primary"
-                  block
                   size="large"
                   icon={<SaveOutlined />}
                   loading={submitting}
                   disabled={isCompleted}
+                  onClick={() => form.submit()}
                   style={{
                     background: isCompleted ? undefined : '#2563eb',
                     borderColor: isCompleted ? undefined : '#2563eb',
                     fontWeight: 700,
-                    height: 46
+                    minWidth: 170,
                   }}
-                  onClick={() => form.submit()}
                 >
                   Save Changes
                 </Button>
-
-                <Button block onClick={handleBack}>
-                  Cancel
-                </Button>
               </Space>
-            </Card>
-          </Col>
-        </Row>
+            </Col>
+          </Row>
+        </Card>
       </Form>
     </div>
   );
