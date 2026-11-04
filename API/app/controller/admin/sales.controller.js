@@ -220,6 +220,67 @@ exports.deletePayment = async (req, res) => {
 };
 
 /**
+ * GET /api/admin/sales/suggestions
+ * Product autocomplete suggestions for Barcode Scanner & search input
+ * Replicated from AURA_v1 Sales.php suggestions()
+ */
+exports.getSuggestions = async (req, res) => {
+  try {
+    const { term = '', warehouse_id = 1, customer_id = null, limit = 25 } = req.query;
+    const suggestions = await SalesModel.getSuggestions({
+      term,
+      warehouseId: warehouse_id,
+      customerId: customer_id,
+      limit
+    });
+
+    res.json({
+      status: true,
+      data: suggestions
+    });
+  } catch (err) {
+    logError('sales.controller.getSuggestions', err, res);
+  }
+};
+
+/**
+ * GET /api/admin/sales/:id/deliveries
+ * Retrieve all deliveries associated with this sale
+ */
+exports.getDeliveries = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deliveries = await SalesModel.getDeliveries(id);
+
+    res.json({
+      status: true,
+      data: deliveries
+    });
+  } catch (err) {
+    logError('sales.controller.getDeliveries', err, res);
+  }
+};
+
+/**
+ * POST /api/admin/sales/:id/deliveries
+ * Create a new delivery order dispatch for this sale
+ */
+exports.addDelivery = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const delivery = await SalesModel.addDelivery(id, req.body, req.user || {});
+
+    res.status(201).json({
+      status: true,
+      message: 'Delivery order created successfully',
+      data: delivery
+    });
+  } catch (err) {
+    logError('sales.controller.addDelivery', err, res);
+  }
+};
+
+/**
  * DELETE /api/admin/sales/:id
  * Safe delete sale (prevents deletion if payments exist or stock has already been deducted)
  */

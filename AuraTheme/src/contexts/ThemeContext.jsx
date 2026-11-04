@@ -810,8 +810,16 @@ export const ThemeProvider = ({ children }) => {
         font-weight: 700 !important;
       }
 
-      .admin-layout .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+      .admin-layout .ant-radio-group-outline .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
         color: ${primary} !important;
+        border-color: ${primary} !important;
+      }
+
+      .admin-layout .ant-radio-group-solid .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled),
+      .admin-layout .ant-radio-group-solid .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) span,
+      .admin-layout .ant-radio-group-solid .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) .anticon {
+        color: #ffffff !important;
+        background: ${primary} !important;
         border-color: ${primary} !important;
       }
 

@@ -48,6 +48,7 @@ import {
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { formatCurrency } from '../../utils/uiTheme';
 
@@ -472,65 +473,60 @@ export default function BpasConsignmentsWorkspace({ embedded = false }) {
     {
       title: 'Actions',
       key: 'actions',
-      width: 130,
+      width: 100,
       align: 'center',
-      render: (_, row) => (
-        <Space size={2}>
-          <Tooltip title="View Consignment Note">
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined style={{ color: '#2563eb' }} />}
-              onClick={() => handleOpenDetail(row)}
-            />
-          </Tooltip>
-          {parseFloat(row.remaining_qty) > 0 && (
-            <>
-              <Tooltip title="Record Reported Sales">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<ShoppingOutlined style={{ color: '#059669' }} />}
-                  onClick={() => handleOpenSalesModal(row)}
-                />
-              </Tooltip>
-              <Tooltip title="Return Goods to Warehouse">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<RollbackOutlined style={{ color: '#7c3aed' }} />}
-                  onClick={() => handleOpenReturnModal(row)}
-                />
-              </Tooltip>
-            </>
-          )}
-          <Tooltip title="Edit Consignment">
-            <Button
-              type="text"
-              size="small"
-              icon={<EditOutlined style={{ color: '#0284c7' }} />}
-              onClick={() => navigate(`/admins/products/consignments/edit/${row.id}`)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Delete & Revert Consignment"
-            description="Are you sure you want to delete this consignment? Dispatched stock will be safely returned to the warehouse."
-            onConfirm={() => handleDelete(row.id)}
-            okText="Yes, Revert Stock"
-            cancelText="Cancel"
-            okButtonProps={{ danger: true }}
-          >
-            <Tooltip title="Delete Consignment">
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, row) => {
+        const hasRemaining = parseFloat(row.remaining_qty) > 0;
+        const actionItems = [
+          {
+            key: 'view',
+            icon: <EyeOutlined />,
+            label: 'View Consignment Note',
+            onClick: () => handleOpenDetail(row),
+          },
+          ...(hasRemaining ? [
+            {
+              key: 'sales',
+              icon: <ShoppingOutlined style={{ color: '#059669' }} />,
+              label: 'Record Reported Sales',
+              onClick: () => handleOpenSalesModal(row),
+            },
+            {
+              key: 'return',
+              icon: <RollbackOutlined style={{ color: '#7c3aed' }} />,
+              label: 'Return Goods to Warehouse',
+              onClick: () => handleOpenReturnModal(row),
+            },
+          ] : []),
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: 'Edit Consignment',
+            onClick: () => navigate(`/admins/products/consignments/edit/${row.id}`),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: 'Delete & Revert Stock',
+            onClick: () => {
+              Modal.confirm({
+                title: 'Delete & Revert Consignment?',
+                content: 'Are you sure you want to delete this consignment? Dispatched stock will be safely returned to the warehouse.',
+                okText: 'Yes, Revert Stock',
+                okType: 'danger',
+                cancelText: 'Cancel',
+                onOk: () => handleDelete(row.id),
+              });
+            },
+          },
+        ];
+
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 
@@ -567,65 +563,7 @@ export default function BpasConsignmentsWorkspace({ embedded = false }) {
         </div>
       )}
 
-      {/* 2. Key Metrics Summary Cards */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} md={4}>
-          <Card bordered={false} style={{ background: adminTheme.surface, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={<span style={{ fontSize: 12, color: adminTheme.subtext }}>Total Vouchers</span>}
-              value={summary.total_count}
-              prefix={<ShopOutlined style={{ color: '#2563eb', marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: adminTheme.text, fontSize: 20 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={5}>
-          <Card bordered={false} style={{ background: adminTheme.surface, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={<span style={{ fontSize: 12, color: adminTheme.subtext }}>Dispatched Units</span>}
-              value={summary.total_dispatched_qty}
-              precision={0}
-              prefix={<SendOutlined style={{ color: '#2563eb', marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: '#2563eb', fontSize: 20 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={5}>
-          <Card bordered={false} style={{ background: adminTheme.surface, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={<span style={{ fontSize: 12, color: adminTheme.subtext }}>Sold by Consignee</span>}
-              value={summary.total_sold_qty}
-              precision={0}
-              prefix={<CheckCircleOutlined style={{ color: '#059669', marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: '#059669', fontSize: 20 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={5}>
-          <Card bordered={false} style={{ background: adminTheme.surface, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={<span style={{ fontSize: 12, color: adminTheme.subtext }}>Returned to Depots</span>}
-              value={summary.total_returned_qty}
-              precision={0}
-              prefix={<RollbackOutlined style={{ color: '#7c3aed', marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: '#7c3aed', fontSize: 20 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={5}>
-          <Card bordered={false} style={{ background: adminTheme.surface, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={<span style={{ fontSize: 12, color: adminTheme.subtext }}>Outstanding Balance</span>}
-              value={summary.total_remaining_qty}
-              precision={0}
-              prefix={<ClockCircleOutlined style={{ color: '#d97706', marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 800, color: '#d97706', fontSize: 20 }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 3. Filter & Search Controls */}
+      {/* Filter & Search Controls */}
       <Card
         bordered={false}
         bodyStyle={{ padding: '14px 18px' }}

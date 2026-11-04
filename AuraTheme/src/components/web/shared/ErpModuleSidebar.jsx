@@ -103,12 +103,13 @@ const sectionGroups = [
   { label: 'Specialty & Industry', keys: ['clinic', 'schools', 'rooms', 'tickets', 'gym'] },
   { label: 'People & HR', keys: ['crm', 'people', 'hr', 'attendance', 'payroll'] },
   { label: 'Finance & Banking', keys: ['accounting', 'loans', 'pawns', 'savings', 'installments', 'property', 'commission', 'money_change', 'tax', 'expenses'] },
-  { label: 'Administration & Web', keys: ['companies', 'calendar', 'reports', 'settings', 'front-end', 'cms'] },
+  { label: 'Administration & Web', keys: ['companies', 'calendar', 'reports', 'settings', 'front-end', 'ecommerce', 'cms'] },
 ];
 
 const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGroups, onToggleGroup, onNavigate, depth = 1, parentPath = [] }) => {
   const adminTheme = useAdminTheme();
   const { t } = useTranslation();
+  const { isModuleOpen } = useAdminModules();
 
   return (
     <div
@@ -124,12 +125,20 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
       }}
     >
       {items.map((item) => {
+        // If this item is tied to a submodule toggle, respect isModuleOpen(item.submoduleKey)
+        if (item.submoduleKey && isModuleOpen && isModuleOpen(item.submoduleKey) === false) {
+          return null;
+        }
+
         const isGroup = Boolean(item.children?.length);
         const isInActivePath = activeLineage.includes(item.key);
         const isOpen = isGroup && openGroups.has(item.key);
         const itemPath = [...parentPath, item.key];
 
         if (isGroup) {
+          const visibleChildren = item.children.filter((child) => !child.submoduleKey || !isModuleOpen || isModuleOpen(child.submoduleKey) !== false);
+          if (visibleChildren.length === 0) return null;
+
           return (
             <div key={item.key}>
               <button

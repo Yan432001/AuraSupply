@@ -24,6 +24,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import { useTranslation } from '../../../contexts/LanguageContext';
+import TableActionDropdown from '../../../components/common/TableActionDropdown';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -182,20 +183,41 @@ const AssetCategoriesPage = () => {
       title: t('actions', 'Actions'),
       key: 'actions',
       align: 'center',
-      width: 120,
-      render: (_, r) => (
-        <Space size={6}>
-          <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(r)} />
-          <Popconfirm
-            title={t('confirm_delete_cat', 'Are you sure you want to delete this category?')}
-            onConfirm={() => handleDelete(r.id)}
-            okText={t('yes', 'Yes')}
-            cancelText={t('no', 'No')}
-          >
-            <Button size="small" danger icon={<DeleteOutlined />} disabled={parseInt(r.total_assets, 10) > 0} />
-          </Popconfirm>
-        </Space>
-      )
+      width: 100,
+      render: (_, r) => {
+        const hasAssets = parseInt(r.total_assets, 10) > 0;
+        const actionItems = [
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: t('edit_category', 'Edit Category'),
+            onClick: () => openEditModal(r),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            disabled: hasAssets,
+            label: hasAssets ? t('cannot_delete_has_assets', 'Cannot Delete (Has Assets)') : t('delete_category', 'Delete Category'),
+            onClick: () => {
+              if (hasAssets) return;
+              Modal.confirm({
+                title: t('confirm_delete_cat', 'Are you sure you want to delete this category?'),
+                content: `Category: ${r.name}`,
+                okText: t('yes', 'Yes, Delete'),
+                okType: 'danger',
+                cancelText: t('no', 'No'),
+                onOk: () => handleDelete(r.id),
+              });
+            },
+          },
+        ];
+
+        return <TableActionDropdown items={actionItems} />;
+      },
     }
   ];
 

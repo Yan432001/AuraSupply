@@ -32,6 +32,7 @@ import {
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { useTranslation } from '../../../contexts/LanguageContext';
+import TableActionDropdown from '../../../components/common/TableActionDropdown';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -183,38 +184,39 @@ const JournalEntriesPage = ({ onAddNewJournal }) => {
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      width: 120,
+      width: 100,
       align: 'center',
-      render: (_, r) => (
-        <Space size="small">
-          <Tooltip title={t('view_voucher', 'View Voucher')}>
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetail(r.id)}
-            />
-          </Tooltip>
+      render: (_, r) => {
+        const actionItems = [
+          {
+            key: 'view',
+            icon: <EyeOutlined style={{ color: '#2563eb' }} />,
+            label: t('view_voucher', 'View Voucher'),
+            onClick: () => handleViewDetail(r.id),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'cancel_reverse',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: t('cancel_reverse', 'Cancel & Reverse Entry'),
+            onClick: () => {
+              Modal.confirm({
+                title: t('confirm_cancel_voucher', 'Cancel & Reverse Voucher?'),
+                content: t('reverse_voucher_warn', 'This will reverse the double-entry postings from the General Ledger.'),
+                okText: t('yes_cancel', 'Yes, Reverse'),
+                okType: 'danger',
+                cancelText: t('no', 'No'),
+                onOk: () => handleDeleteJournal(r.id),
+              });
+            },
+          },
+        ];
 
-          <Tooltip title={t('cancel_reverse', 'Cancel & Reverse Entry')}>
-            <Popconfirm
-              title={t('confirm_cancel_voucher', 'Cancel & Reverse Voucher?')}
-              description={t('reverse_voucher_warn', 'This will reverse the double-entry postings from the General Ledger.')}
-              onConfirm={() => handleDeleteJournal(r.id)}
-              okText={t('yes_cancel', 'Yes, Reverse')}
-              cancelText={t('no', 'No')}
-              okButtonProps={{ danger: true }}
-            >
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Popconfirm>
-          </Tooltip>
-        </Space>
-      )
+        return <TableActionDropdown items={actionItems} />;
+      },
     }
   ];
 

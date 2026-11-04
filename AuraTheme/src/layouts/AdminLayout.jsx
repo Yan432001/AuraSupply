@@ -6,7 +6,6 @@ import { NotificationProvider } from '../pages/admins/NotificationContext';
 import HeaderDefault from '../pages/admins/AdminHeaderDefault';
 import Head from '../pages/admins/AdminHead';
 import FooterDefault from '../pages/admins/AdminFooterDefault';
-import AdminModuleScrollSlidebar from '../components/web/shared/AdminModuleScrollSlidebar';
 import { erpModules } from '../data/erpModules';
 import { useAdminTheme } from '../hooks/useAdminTheme';
 import { useAdminModules } from '../hooks/useAdminModules';
@@ -92,35 +91,23 @@ const AdminLayout = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Strict isolation: Activate admin-active while inside AdminLayout (POS isolated to website light theme)
+  // Activate admin-active and sync active theme mode (light/dark) and preset across AdminLayout & POS
   useEffect(() => {
     const isPos = location.pathname.startsWith('/admins/pos');
     const doc = document.documentElement;
     const body = document.body;
 
-    if (isPos) {
-      doc.classList.remove('admin-active', 'dark', 'theme-dark', 'admin-dark');
-      doc.classList.add('light', 'theme-light', 'pos-active');
-      doc.setAttribute('data-mode', 'light');
-      doc.setAttribute('data-theme', 'default');
-      doc.style.colorScheme = 'light';
-
-      if (body) {
-        body.classList.remove('admin-active', 'dark', 'theme-dark', 'admin-dark');
-        body.classList.add('light', 'theme-light', 'pos-active');
-        body.setAttribute('data-mode', 'light');
-        body.setAttribute('data-theme', 'default');
-        body.style.colorScheme = 'light';
-        body.style.backgroundColor = '#f8fafc';
-        body.style.color = '#0f172a';
-      }
-      return;
-    }
-
     const mode = themeMode === 'dark' ? 'dark' : 'light';
     const preset = themePreset || 'default';
 
-    doc.classList.remove('pos-active');
+    if (isPos) {
+      doc.classList.add('pos-active');
+      if (body) body.classList.add('pos-active');
+    } else {
+      doc.classList.remove('pos-active');
+      if (body) body.classList.remove('pos-active');
+    }
+
     doc.classList.add('admin-active');
     doc.classList.remove('light', 'dark', 'theme-light', 'theme-dark');
     doc.classList.add(mode, `theme-${mode}`);
@@ -129,17 +116,18 @@ const AdminLayout = () => {
     doc.style.colorScheme = mode;
 
     if (body) {
-      body.classList.remove('pos-active');
       body.classList.add('admin-active');
       body.classList.remove('light', 'dark', 'theme-light', 'theme-dark');
       body.classList.add(mode, `theme-${mode}`);
       body.setAttribute('data-mode', mode);
       body.setAttribute('data-theme', preset);
       body.style.colorScheme = mode;
-      body.style.backgroundColor = '';
-      body.style.color = '';
+      body.style.background = isPos
+        ? (adminTheme.pageBackground || (mode === 'dark' ? '#090d16' : '#f8fafc'))
+        : '';
+      body.style.color = isPos ? (adminTheme.text || '') : '';
     }
-  }, [location.pathname, themeMode, themePreset]);
+  }, [location.pathname, themeMode, themePreset, adminTheme]);
 
   // Clean up when unmounting AdminLayout (navigating away back to public website)
   useEffect(() => {
@@ -329,20 +317,21 @@ const AdminLayout = () => {
 
   const isPosPage = location.pathname.startsWith('/admins/pos');
   if (isPosPage) {
+    const isDark = themeMode === 'dark';
     return (
       <NotificationProvider>
         <div
-          className="pos-standalone-viewport pos-website-theme light theme-light"
-          data-theme="default"
-          data-mode="light"
+          className={`pos-standalone-viewport ${isDark ? 'dark theme-dark admin-dark' : 'light theme-light'}`}
+          data-theme={themePreset || 'default'}
+          data-mode={isDark ? 'dark' : 'light'}
           style={{
             width: '100vw',
             height: '100vh',
             maxWidth: '100vw',
             maxHeight: '100vh',
             overflow: 'hidden',
-            backgroundColor: '#f8fafc',
-            color: '#0f172a',
+            background: adminTheme.pageBackground || (isDark ? '#090d16' : '#f8fafc'),
+            color: adminTheme.text || (isDark ? '#f8fafc' : '#0f172a'),
           }}
         >
           <Outlet context={{ moduleState, onToggleModule: handleToggleModule }} />
@@ -420,8 +409,6 @@ const AdminLayout = () => {
             isMobile={isMobile}
             showModuleMenu={showSidebar}
           />
-
-          {showSidebar && <AdminModuleScrollSlidebar />}
 
           <Content
             style={{

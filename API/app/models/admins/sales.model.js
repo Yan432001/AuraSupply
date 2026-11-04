@@ -1286,7 +1286,7 @@ const SalesModel = {
   },
 
   /**
-   * Metadata options (Customers, Billers, Warehouses, Units, Next Ref)
+   * Metadata options (Customers, Billers, Warehouses, Units, Tax Rates, Next Ref)
    */
   async getMetadata() {
     const [customers] = await db.query(
@@ -1303,6 +1303,10 @@ const SalesModel = {
 
     const [units] = await db.query(
       `SELECT id, code, name, base_unit, operator, operation_value FROM aura_units ORDER BY name ASC`
+    );
+
+    const [taxRates] = await db.query(
+      `SELECT id, name, code, rate, type FROM aura_tax_rates ORDER BY id ASC`
     );
 
     const nextReference = await SalesModel.generateNextReference('SALE');
@@ -1337,7 +1341,202 @@ const SalesModel = {
         operator: u.operator,
         operationValue: parseFloat(u.operation_value || 1)
       })),
+      taxRates: taxRates.map(t => ({
+        id: t.id,
+        name: t.name,
+        code: t.code,
+        rate: parseFloat(t.rate || 0),
+        type: t.type
+      })),
       nextReference
+    };
+  },
+
+  /**
+   * Product Autocomplete Suggestions for Sales & POS
+   * Replicated from AURA_v1 getProductNames()
+   */
+  async getSuggestions({ term = '', warehouseId = 1, customerId = null, limit = 25 } = {}) {
+    const whId = parseInt(warehouseId, 10) || 1;
+    const numLimit = Math.min(Math.max(parseInt(limit, 10) || 25, 1), 100);
+
+    let whereClause = '1=1';
+    const params = [whId];
+
+    if (term && term.trim() !== '') {
+      whereClause += ' AND (p.code LIKE ? OR p.name LIKE ? OR CONCAT(p.name, " (", p.code, ")") LIKE ?)';
+      const t = `%${term.trim()}%`;
+      params.push(t, t, t);
+    }
+    params.push(numLimit);
+
+    const [rows] = await db.query(
+      `
+      SELECT 
+        p.id,
+        p.code,
+        p.name,
+        p.type,
+        p.cost,
+        p.price,
+        p.unit AS base_unit_id,
+        p.sale_unit AS sale_unit_id,
+        p.tax_rate AS tax_rate_id,
+        p.tax_method,
+        p.image,
+        COALESCE(wp.quantity, 0) AS qoh,
+        u.name AS unit_name,
+        u.code AS unit_code,
+        u.operator AS unit_operator,
+        u.operation_value AS unit_operation_value,
+        cat.name AS category_name
+      FROM aura_products p
+      LEFT JOIN aura_warehouses_products wp ON wp.product_id = p.id AND wp.warehouse_id = ?
+      LEFT JOIN aura_units u ON u.id = COALESCE(p.sale_unit, p.unit)
+      LEFT JOIN aura_categories cat ON cat.id = p.category_id
+      WHERE ${whereClause}
+      ORDER BY p.name ASC
+      LIMIT ?
+      `,
+      params
+    );
+
+    if (!rows || rows.length === 0) return [];
+
+    const productIds = rows.map(r => r.id);
+
+    // Fetch Variants for these products
+    const [variants] = await db.query(
+      `SELECT id, product_id, name, cost, price FROM aura_product_variants WHERE product_id IN (?) ORDER BY id ASC`,
+      [productIds]
+    );
+
+    const variantsByProd = {};
+    for (const v of variants) {
+      if (!variantsByProd[v.product_id]) variantsByProd[v.product_id] = [];
+      variantsByProd[v.product_id].push({
+        id: v.id,
+        name: v.name,
+        cost: parseFloat(v.cost || 0),
+        price: parseFloat(v.price || 0)
+      });
+    }
+
+    // Fetch Unit Families (base unit + sub units) for each product
+    const [allUnits] = await db.query(`SELECT id, code, name, base_unit, operator, operation_value FROM aura_units ORDER BY name ASC`);
+
+    return rows.map(r => {
+      const baseId = r.base_unit_id || r.sale_unit_id;
+      const unitFamily = allUnits.filter(u => u.id === baseId || u.base_unit === baseId);
+
+      return {
+        id: r.id,
+        code: r.code,
+        name: r.name,
+        label: `${r.name} (${r.code})`,
+        value: r.code,
+        type: r.type || 'standard',
+        cost: parseFloat(r.cost || 0),
+        price: parseFloat(r.price || 0),
+        base_unit_price: parseFloat(r.price || 0),
+        qoh: parseFloat(r.qoh || 0),
+        unit_id: r.sale_unit_id || r.base_unit_id,
+        unit_code: r.unit_code || 'Unit',
+        unit_name: r.unit_name || 'Unit',
+        tax_rate_id: r.tax_rate_id,
+        tax_method: r.tax_method,
+        image: r.image || null,
+        category_name: r.category_name || '',
+        variants: variantsByProd[r.id] || [],
+        units: unitFamily.length > 0 ? unitFamily : [
+          { id: r.sale_unit_id || 1, code: r.unit_code || 'Unit', name: r.unit_name || 'Unit' }
+        ]
+      };
+    });
+  },
+
+  /**
+   * Get Deliveries for a Sale
+   */
+  async getDeliveries(saleId) {
+    const sId = parseInt(saleId, 10);
+    const [rows] = await db.query(
+      `
+      SELECT 
+        d.*,
+        u.username AS created_by_name
+      FROM aura_deliveries d
+      LEFT JOIN aura_users u ON d.created_by = u.id
+      WHERE d.sale_id = ?
+      ORDER BY d.id DESC
+      `,
+      [sId]
+    );
+
+    return rows.map(d => ({
+      id: d.id,
+      date: d.date,
+      saleId: d.sale_id,
+      doReferenceNo: d.do_reference_no,
+      saleReferenceNo: d.sale_reference_no,
+      customer: d.customer,
+      address: d.address,
+      deliveredBy: d.delivered_by,
+      receivedBy: d.received_by,
+      status: d.status || 'delivering',
+      note: d.note,
+      createdByName: d.created_by_name
+    }));
+  },
+
+  /**
+   * Add Delivery for a Sale
+   */
+  async addDelivery(saleId, deliveryData, user = {}) {
+    const sId = parseInt(saleId, 10);
+    const sale = await SalesModel.getSaleById(sId);
+    if (!sale) {
+      throw new Error(`Sale #${sId} not found`);
+    }
+
+    const date = new Date();
+    const yearMonth = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const [cntRows] = await db.query('SELECT COUNT(*) AS total FROM aura_deliveries');
+    const doRef = deliveryData.do_reference_no || `DO-${yearMonth}-${String((cntRows[0]?.total || 0) + 1).padStart(4, '0')}`;
+
+    const [result] = await db.query(
+      `
+      INSERT INTO aura_deliveries
+      (
+        date, sale_id, sale_reference_no, do_reference_no, biller_id, biller,
+        warehouse_id, customer_id, customer, address, note, status,
+        delivered_by, received_by, created_by
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        deliveryData.date || new Date().toISOString().slice(0, 19).replace('T', ' '),
+        sId,
+        sale.referenceNo,
+        doRef,
+        sale.billerId,
+        sale.biller,
+        sale.warehouseId,
+        sale.customerId,
+        sale.customer,
+        deliveryData.address || sale.customerDetails?.address || '',
+        deliveryData.note || '',
+        deliveryData.status || 'delivering',
+        deliveryData.delivered_by || '',
+        deliveryData.received_by || '',
+        user.id || 1
+      ]
+    );
+
+    return {
+      id: result.insertId,
+      doReferenceNo: doRef,
+      status: deliveryData.status || 'delivering'
     };
   }
 };

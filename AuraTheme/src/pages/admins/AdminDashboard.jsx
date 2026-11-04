@@ -7,29 +7,43 @@ import {
   Col,
   Flex,
   Grid,
+  Input,
+  Modal,
+  Popconfirm,
   Row,
   Space,
+  Statistic,
   Table,
   Tag,
   Typography,
   Tooltip as AntTooltip,
+  message,
 } from 'antd';
 import { formatCurrency } from '../../utils/uiTheme';
 import {
   ApiOutlined,
   CheckCircleFilled,
+  CheckCircleOutlined,
+  CloseOutlined,
   CloudServerOutlined,
   CloudSyncOutlined,
   ClusterOutlined,
   DatabaseOutlined,
   DeleteOutlined,
+  DollarOutlined,
   ExclamationCircleFilled,
+  EyeInvisibleOutlined,
+  EyeOutlined,
   GlobalOutlined,
+  InboxOutlined,
   LockOutlined,
   PauseCircleOutlined,
+  PlusOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
   ScheduleOutlined,
+  SearchOutlined,
+  ShoppingOutlined,
   SyncOutlined,
   TeamOutlined,
   ToolOutlined,
@@ -45,6 +59,27 @@ import {
   BankOutlined,
   CheckOutlined,
   ArrowUpOutlined,
+  CarOutlined,
+  PercentageOutlined,
+  MoneyCollectOutlined,
+  GoldOutlined,
+  WalletOutlined,
+  CalendarOutlined,
+  RestOutlined,
+  RocketOutlined,
+  AuditOutlined,
+  ShopOutlined,
+  ThunderboltOutlined,
+  ReadOutlined,
+  ProjectOutlined,
+  SwapOutlined,
+  FileTextOutlined,
+  FieldTimeOutlined,
+  PayCircleOutlined,
+  ApartmentOutlined,
+  SettingOutlined,
+  HomeOutlined,
+  UsergroupAddOutlined,
 } from '@ant-design/icons';
 import {
   Area,
@@ -194,36 +229,6 @@ const AdminDashboard = () => {
   } = useAdminModules();
 
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all');
-  const [dateRange, setDateRange] = useState('month');
-  const [liveStats, setLiveStats] = useState(null);
-  const [dashboardData, setDashboardData] = useState(null);
-  const [recentOrders, setRecentOrders] = useState([]);
-  const [loadingStats, setLoadingStats] = useState(false);
-
-  const fetchStats = async () => {
-    setLoadingStats(true);
-    try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await axios.get(`/api/admin/dashboard?range=${dateRange}`, { headers });
-      if (res.data?.success && res.data?.data) {
-        setDashboardData(res.data.data);
-        setLiveStats(res.data.data.kpis);
-        setRecentOrders(res.data.data.recentTransactions || []);
-      } else if (res.data?.status) {
-        setLiveStats(res.data.stats);
-        setRecentOrders(res.data.recentOrders || []);
-      }
-    } catch (err) {
-      console.warn('Dashboard stats fetch notice:', err.message);
-    } finally {
-      setLoadingStats(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStats();
-  }, [dateRange]);
 
   const c = {
     teal: adminTheme.systemTeal,
@@ -395,193 +400,6 @@ const AdminDashboard = () => {
           );
         })}
       </Row>
-
-      {/* 3b. Live ERP Core KPIs (Direct from MySQL aura_v1_db) */}
-      <Card style={cardStyle} styles={{ body: { padding: 22 } }}>
-        {/* Top Header: Title + Date Range Selector + Refresh */}
-        <Flex justify="space-between" align="center" wrap="wrap" gap={12} style={{ marginBottom: 18 }}>
-          <div>
-            <Title level={5} style={{ margin: 0, color: adminTheme.text, fontWeight: 700 }}>
-              📊 {t('live_erp_telemetry_performance', 'Live ERP Telemetry & Performance')}
-            </Title>
-            <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
-              {t('centralized_operational_data_desc', 'Centralized operational data aggregated solely across MySQL tables (Single source: aura_users)')}
-            </Text>
-          </div>
-
-          <Flex align="center" gap={8} wrap="wrap">
-            {/* Date-Range Preset Filter */}
-            <Space size={4}>
-              {[
-                { key: 'today', label: t('today', 'Today') },
-                { key: '7d', label: t('7_days', '7 Days') },
-                { key: 'month', label: t('this_month', 'This Month') },
-                { key: 'all', label: t('all_time', 'All Time') },
-              ].map(p => (
-                <Button
-                  key={p.key}
-                  size="small"
-                  type={dateRange === p.key ? 'primary' : 'default'}
-                  onClick={() => setDateRange(p.key)}
-                  style={{
-                    borderRadius: 8,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    ...(dateRange === p.key ? { background: '#2563eb' } : { borderColor: adminTheme.border })
-                  }}
-                >
-                  {p.label}
-                </Button>
-              ))}
-            </Space>
-
-            <Button
-              size="small"
-              icon={<ReloadOutlined />}
-              loading={loadingStats}
-              onClick={fetchStats}
-              style={{ borderRadius: 8, fontSize: 12 }}
-            >
-              {t('refresh', 'Refresh')}
-            </Button>
-          </Flex>
-        </Flex>
-
-        {/* Quick Action Buttons */}
-        <div style={{ marginBottom: 18, padding: '10px 14px', background: adminTheme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(15,23,42,0.02)', borderRadius: 12, border: `1px solid ${adminTheme.border}` }}>
-          <Flex align="center" justify="space-between" wrap="wrap" gap={10}>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: adminTheme.subtext }}>
-              ⚡ {t('quick_actions', 'Quick Actions')}:
-            </Text>
-            <Space size={8} wrap>
-              <Button
-                size="small"
-                type="primary"
-                icon={<ShoppingCartOutlined />}
-                onClick={() => navigate('/admins/orders')}
-                style={{ background: '#2563eb', borderRadius: 8, fontSize: 12, fontWeight: 600 }}
-              >
-                + {t('new_sale', 'New Sale')}
-              </Button>
-              <Button
-                size="small"
-                icon={<ReconciliationOutlined />}
-                onClick={() => navigate('/admins?module=procurement')}
-                style={{ borderRadius: 8, fontSize: 12, fontWeight: 600 }}
-              >
-                + {t('new_purchase', 'New Purchase')}
-              </Button>
-              <Button
-                size="small"
-                icon={<AppstoreOutlined />}
-                onClick={() => navigate('/admins/products')}
-                style={{ borderRadius: 8, fontSize: 12, fontWeight: 600 }}
-              >
-                + {t('add_product', 'Add Product')}
-              </Button>
-              <Button
-                size="small"
-                icon={<TeamOutlined />}
-                onClick={() => navigate('/admins/settings/users')}
-                style={{ borderRadius: 8, fontSize: 12, fontWeight: 600 }}
-              >
-                + {t('add_user', 'Add User')}
-              </Button>
-            </Space>
-          </Flex>
-        </div>
-
-        {/* Soft-Tinted KPI Grid */}
-        <Row gutter={[16, 16]}>
-          {/* Card 1: Sales Revenue */}
-          <Col xs={24} sm={12} xl={6}>
-            <div style={{
-              padding: isMobile ? '16px 14px' : '16px',
-              background: adminTheme.isDark ? 'rgba(22, 163, 74, 0.12)' : '#f0fdf4',
-              borderRadius: 14,
-              border: '1px solid rgba(22, 163, 74, 0.22)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-            }}>
-              <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                <Text style={{ color: '#15803d', fontSize: isMobile ? 13 : 12, fontWeight: 700 }}>{t('sales', 'Sales Revenue')}</Text>
-                <Tag color="green" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>+14.2%</Tag>
-              </Flex>
-              <div style={{ margin: '2px 0 4px', color: '#16a34a', fontWeight: 800, fontSize: isMobile ? 24 : 22, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                {formatCurrency(liveStats?.revenue?.value || liveStats?.totalRevenue || 117000)}
-              </div>
-              <Text style={{ fontSize: isMobile ? 12 : 11.5, color: adminTheme.subtext, fontWeight: 500 }}>
-                {liveStats?.orders?.value || liveStats?.totalSales || 384} {t('orders', 'wholesale orders')}
-              </Text>
-            </div>
-          </Col>
-
-          {/* Card 2: Procurement Spend */}
-          <Col xs={24} sm={12} xl={6}>
-            <div style={{
-              padding: isMobile ? '16px 14px' : '16px',
-              background: adminTheme.isDark ? 'rgba(2, 132, 199, 0.12)' : '#f0f9ff',
-              borderRadius: 14,
-              border: '1px solid rgba(2, 132, 199, 0.22)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-            }}>
-              <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                <Text style={{ color: '#0369a1', fontSize: isMobile ? 13 : 12, fontWeight: 700 }}>{t('purchases', 'Procurement Spend')}</Text>
-                <Tag color="blue" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>-3.8%</Tag>
-              </Flex>
-              <div style={{ margin: '2px 0 4px', color: '#0284c7', fontWeight: 800, fontSize: isMobile ? 24 : 22, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                {formatCurrency(liveStats?.purchases?.value || 61000)}
-              </div>
-              <Text style={{ fontSize: isMobile ? 12 : 11.5, color: adminTheme.subtext, fontWeight: 500 }}>
-                {t('suppliers', 'Supplier purchase settlements')}
-              </Text>
-            </div>
-          </Col>
-
-          {/* Card 3: Commercial Network (Buyers & Suppliers) */}
-          <Col xs={24} sm={12} xl={6}>
-            <div style={{
-              padding: isMobile ? '16px 14px' : '16px',
-              background: adminTheme.isDark ? 'rgba(124, 58, 237, 0.12)' : '#f5f3ff',
-              borderRadius: 14,
-              border: '1px solid rgba(124, 58, 237, 0.22)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-            }}>
-              <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                <Text style={{ color: '#6d28d9', fontSize: isMobile ? 13 : 12, fontWeight: 700 }}>{t('customers', 'B2B Network')}</Text>
-                <Tag color="purple" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>{t('active', 'Live')}</Tag>
-              </Flex>
-              <div style={{ margin: '2px 0 4px', color: '#7c3aed', fontWeight: 800, fontSize: isMobile ? 24 : 22, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                {liveStats?.customers?.value || 35} / {liveStats?.suppliers?.value || 9}
-              </div>
-              <Text style={{ fontSize: isMobile ? 12 : 11.5, color: adminTheme.subtext, fontWeight: 500 }}>
-                {liveStats?.customers?.value || 35} {t('customers', 'Buyers')} &bull; {liveStats?.suppliers?.value || 9} {t('suppliers', 'Suppliers')}
-              </Text>
-            </div>
-          </Col>
-
-          {/* Card 4: Inventory & Operations */}
-          <Col xs={24} sm={12} xl={6}>
-            <div style={{
-              padding: isMobile ? '16px 14px' : '16px',
-              background: adminTheme.isDark ? 'rgba(234, 88, 12, 0.12)' : '#fff7ed',
-              borderRadius: 14,
-              border: '1px solid rgba(234, 88, 12, 0.22)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-            }}>
-              <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                <Text style={{ color: '#c2410c', fontSize: isMobile ? 13 : 12, fontWeight: 700 }}>{t('inventory', 'Stock Valuation')}</Text>
-                <Tag color="orange" style={{ borderRadius: 6, margin: 0, fontWeight: 700, fontSize: 11 }}>12.4K Units</Tag>
-              </Flex>
-              <div style={{ margin: '2px 0 4px', color: '#ea580c', fontWeight: 800, fontSize: isMobile ? 24 : 22, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                {formatCurrency(liveStats?.stockValuation?.value || 665000)}
-              </div>
-              <Text style={{ fontSize: isMobile ? 12 : 11.5, color: adminTheme.subtext, fontWeight: 500 }}>
-                {liveStats?.products?.value || liveStats?.totalProducts || 12450} {t('products', 'Catalog SKUs')}
-              </Text>
-            </div>
-          </Col>
-        </Row>
-      </Card>
 
       {/* 4. Filter Toolbar for Module Charts */}
       <Card style={cardStyle} styles={{ body: { padding: '12px 18px' } }}>
@@ -1152,8 +970,17 @@ const AdminDashboard = () => {
                 Quickly toggle features on or off. Disabled modules immediately disappear from the sidebar menu and dashboard charts.
               </Text>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {erpModules.slice(0, 5).map((m) => {
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  maxHeight: 310,
+                  overflowY: 'auto',
+                  paddingRight: 4,
+                }}
+              >
+                {erpModules.map((m) => {
                   const isOpen = isModuleOpen(m.key);
                   return (
                     <Flex
@@ -1170,24 +997,30 @@ const AdminDashboard = () => {
                         <span style={{ color: m.accent || '#2563eb', fontWeight: 600, fontSize: 13 }}>
                           {m.label}
                         </span>
-                        {m.key === 'asset' && (
-                          <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px' }}>
-                            Assets
-                          </Tag>
-                        )}
                       </Flex>
-                      <Button
-                        size="small"
-                        type={isOpen ? 'text' : 'primary'}
-                        style={
-                          isOpen
-                            ? { color: '#16a34a', fontWeight: 700, fontSize: 11 }
-                            : { background: '#ea580c', borderColor: '#ea580c', fontSize: 11, borderRadius: 6 }
-                        }
-                        onClick={() => toggleModule(m.key, !isOpen)}
-                      >
-                        {isOpen ? 'ACTIVE' : 'RE-OPEN'}
-                      </Button>
+                      <Space size={6}>
+                        {isOpen ? (
+                          <Button
+                            size="small"
+                            danger
+                            type="text"
+                            icon={<DeleteOutlined />}
+                            style={{ fontWeight: 600, fontSize: 11 }}
+                            onClick={() => toggleModule(m.key, false)}
+                          >
+                            Remove
+                          </Button>
+                        ) : (
+                          <Button
+                            size="small"
+                            type="primary"
+                            style={{ background: '#16a34a', borderColor: '#16a34a', color: '#ffffff', fontSize: 11, borderRadius: 6 }}
+                            onClick={() => toggleModule(m.key, true)}
+                          >
+                            Restore
+                          </Button>
+                        )}
+                      </Space>
                     </Flex>
                   );
                 })}

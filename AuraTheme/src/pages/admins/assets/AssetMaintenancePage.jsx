@@ -28,6 +28,7 @@ import {
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useTranslation } from '../../../contexts/LanguageContext';
+import TableActionDropdown from '../../../components/common/TableActionDropdown';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -241,16 +242,20 @@ const AssetMaintenancePage = () => {
     {
       title: t('actions', 'Actions'),
       key: 'actions',
+      width: 100,
       align: 'center',
-      render: (_, r) => (
-        <Button
-          size="small"
-          icon={<EditOutlined />}
-          onClick={() => openUpdateModal(r)}
-        >
-          {t('update', 'Update')}
-        </Button>
-      )
+      render: (_, r) => {
+        const actionItems = [
+          {
+            key: 'update',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: t('update', 'Update / Resolve Work Order'),
+            onClick: () => openUpdateModal(r),
+          },
+        ];
+
+        return <TableActionDropdown items={actionItems} />;
+      },
     }
   ];
 

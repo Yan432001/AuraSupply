@@ -71,6 +71,7 @@ import {
   syncStoreTelegramConfigsWithServer,
 } from '../../data/telegramStoreGroupManager';
 import { fetchCategories, fetchBranches, fetchShops, fetchProducts, fetchBanners, fetchShopSettings } from '../../utils/apiconfig';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 
 const FRONTEND_STORES_KEY = 'aura_frontend_stores_v3';
 const FRONTEND_SETTINGS_KEY = 'aura_frontend_settings_v2';
@@ -1337,72 +1338,63 @@ function StoresControllerTab({
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      align: 'right',
-      render: (_, record) => (
-        <Space size={6}>
-          <Tooltip title={t('manage_store_catalog', 'Manage catalog products specifically for this store')}>
-            <Button
-              size="small"
-              icon={<AppstoreOutlined />}
-              onClick={() => onInspectProducts(record.id)}
-              style={{ borderRadius: 8, fontWeight: 600, color: '#2563eb', borderColor: '#93c5fd' }}
-            >
-              {t('catalog', 'Catalog')}
-            </Button>
-          </Tooltip>
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'catalog',
+            icon: <AppstoreOutlined style={{ color: '#2563eb' }} />,
+            label: t('catalog', 'Catalog Products'),
+            onClick: () => onInspectProducts(record.id),
+          },
+          {
+            key: 'e_menu',
+            icon: <CoffeeOutlined style={{ color: '#A31D1D' }} />,
+            label: t('e_menu', 'Digital E-Menu'),
+            onClick: () => window.open(`/shop/menu/${record.slug || record.id}`, '_blank'),
+          },
+          {
+            key: 'telegram',
+            icon: <SendOutlined style={{ color: '#0284c7' }} />,
+            label: t('telegram', 'Telegram Mini App'),
+            onClick: () => window.open(`https://t.me/aura_emenu_order_bot/menu?startapp=shop_${record.slug || record.id}`, '_blank'),
+          },
+          {
+            key: 'open_store',
+            icon: <ExportOutlined />,
+            label: t('open_store', 'Open Store Page'),
+            onClick: () => window.open(`/shops/${record.id}`, '_blank'),
+          },
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#059669' }} />,
+            label: t('edit_store', 'Edit Store'),
+            onClick: () => onEditStore(record),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: t('remove_store', 'Remove Store'),
+            onClick: () => {
+              Modal.confirm({
+                title: t('remove_store_title', 'Remove store from website?'),
+                content: t('remove_store_desc', 'This will remove the store showcase from the public directory.'),
+                okText: t('delete', 'Delete'),
+                okType: 'danger',
+                cancelText: t('cancel', 'Cancel'),
+                onOk: () => onDeleteStore(record.id),
+              });
+            },
+          },
+        ];
 
-          <Tooltip title={`Open Digital E-Menu (/shop/menu/${record.slug || record.id})`}>
-            <Button
-              size="small"
-              icon={<CoffeeOutlined />}
-              onClick={() => window.open(`/shop/menu/${record.slug || record.id}`, '_blank')}
-              style={{ borderRadius: 8, fontWeight: 600, color: '#A31D1D', borderColor: '#fca5a5' }}
-            >
-              {t('e_menu', 'E-Menu')}
-            </Button>
-          </Tooltip>
-
-          <Tooltip title={`Open Telegram Mini App (t.me/...startapp=shop_${record.slug || record.id})`}>
-            <Button
-              size="small"
-              icon={<SendOutlined />}
-              onClick={() => window.open(`https://t.me/aura_emenu_order_bot/menu?startapp=shop_${record.slug || record.id}`, '_blank')}
-              style={{ borderRadius: 8, fontWeight: 600, color: '#0284c7', borderColor: '#bae6fd' }}
-            >
-              {t('telegram', 'Telegram')}
-            </Button>
-          </Tooltip>
-
-          <Tooltip title={t('open_store_new_tab', 'Direct link: Open store customer page in new tab')}>
-            <Button
-              size="small"
-              icon={<ExportOutlined />}
-              onClick={() => window.open(`/shops/${record.id}`, '_blank')}
-              style={{ borderRadius: 8 }}
-            />
-          </Tooltip>
-
-          <Tooltip title={t('edit_store_branding', 'Edit store branding and settings')}>
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => onEditStore(record)}
-              style={{ borderRadius: 8 }}
-            />
-          </Tooltip>
-
-          <Popconfirm
-            title={t('remove_store_title', 'Remove store from website?')}
-            description={t('remove_store_desc', 'This will remove the store showcase from the public directory.')}
-            onConfirm={() => onDeleteStore(record.id)}
-            okText={t('delete', 'Delete')}
-            cancelText={t('cancel', 'Cancel')}
-            okButtonProps={{ danger: true }}
-          >
-            <Button size="small" danger icon={<DeleteOutlined />} style={{ borderRadius: 8 }} />
-          </Popconfirm>
-        </Space>
-      ),
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 
@@ -1590,29 +1582,38 @@ function ProductsControllerTab({
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      align: 'right',
-      render: (_, record) => (
-        <Space size={6}>
-          <Tooltip title={t('edit_price_badge_desc', 'Edit price, badge, description')}>
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => onEditProduct(record)}
-              style={{ borderRadius: 8 }}
-            />
-          </Tooltip>
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: t('edit_product', 'Edit Price & Description'),
+            onClick: () => onEditProduct(record),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: t('delete_product', 'Delete Product'),
+            onClick: () => {
+              Modal.confirm({
+                title: t('delete_product_confirm', 'Delete product from store catalog?'),
+                okText: t('delete', 'Delete'),
+                okType: 'danger',
+                cancelText: t('cancel', 'Cancel'),
+                onOk: () => onDeleteProduct(record.id),
+              });
+            },
+          },
+        ];
 
-          <Popconfirm
-            title={t('delete_product_confirm', 'Delete product from store catalog?')}
-            onConfirm={() => onDeleteProduct(record.id)}
-            okText={t('delete', 'Delete')}
-            cancelText={t('cancel', 'Cancel')}
-            okButtonProps={{ danger: true }}
-          >
-            <Button size="small" danger icon={<DeleteOutlined />} style={{ borderRadius: 8 }} />
-          </Popconfirm>
-        </Space>
-      ),
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 
@@ -2037,26 +2038,38 @@ function HeroSlidersTab({
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      align: 'right',
-      render: (_, record) => (
-        <Space size={6}>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => onEditSlide(record)}
-            style={{ borderRadius: 8 }}
-          />
-          <Popconfirm
-            title={t('delete_slide_confirm', 'Delete slide from hero carousel?')}
-            onConfirm={() => onDeleteSlide(record.id)}
-            okText={t('delete', 'Delete')}
-            cancelText={t('cancel', 'Cancel')}
-            okButtonProps={{ danger: true }}
-          >
-            <Button size="small" danger icon={<DeleteOutlined />} style={{ borderRadius: 8 }} />
-          </Popconfirm>
-        </Space>
-      ),
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: t('edit_slide', 'Edit Slide'),
+            onClick: () => onEditSlide(record),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: t('delete_slide', 'Delete Slide'),
+            onClick: () => {
+              Modal.confirm({
+                title: t('delete_slide_confirm', 'Delete slide from hero carousel?'),
+                okText: t('delete', 'Delete'),
+                okType: 'danger',
+                cancelText: t('cancel', 'Cancel'),
+                onOk: () => onDeleteSlide(record.id),
+              });
+            },
+          },
+        ];
+
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 
@@ -2165,25 +2178,26 @@ function WebsitePagesTab({ pages, setPages, adminTheme }) {
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      align: 'right',
-      render: (_, record) => (
-        <Space size={6}>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-            style={{ borderRadius: 8 }}
-          >
-            {t('edit', 'Edit')}
-          </Button>
-          <Button
-            size="small"
-            icon={<ExportOutlined />}
-            onClick={() => window.open(`/${record.slug}`, '_blank')}
-            style={{ borderRadius: 8 }}
-          />
-        </Space>
-      ),
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: t('edit_page', 'Edit Page'),
+            onClick: () => handleEdit(record),
+          },
+          {
+            key: 'preview',
+            icon: <ExportOutlined style={{ color: '#059669' }} />,
+            label: t('open_page', 'Open Live Page'),
+            onClick: () => window.open(`/${record.slug}`, '_blank'),
+          },
+        ];
+
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 
@@ -2490,46 +2504,33 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      align: 'right',
-      render: (_, record) => (
-        <Space size={6}>
-          <Tooltip title={t('send_verification_test', "Send a verification test message to this store's Telegram Group")}>
-            <Button
-              size="small"
-              icon={<ThunderboltFilled style={{ color: '#0284c7' }} />}
-              loading={sendingTestMap[record.storeSlug]}
-              onClick={() => handleSendTest(record.storeSlug)}
-              style={{ borderRadius: 8, fontWeight: 600 }}
-            >
-              {t('test_connection', 'Test Connection')}
-            </Button>
-          </Tooltip>
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const botName = (record.botUsername || record.telegram_bot_username || '@aura_emenu_order_bot').replace('@', '');
+        const actionItems = [
+          {
+            key: 'test',
+            icon: <ThunderboltFilled style={{ color: '#0284c7' }} />,
+            label: t('test_connection', 'Test Connection'),
+            onClick: () => handleSendTest(record.storeSlug),
+          },
+          {
+            key: 'settings',
+            icon: <SettingOutlined style={{ color: '#2563eb' }} />,
+            label: t('settings', 'Configure Telegram Bot'),
+            onClick: () => handleOpenEdit(record),
+          },
+          {
+            key: 'open_bot',
+            icon: <ExportOutlined />,
+            label: 'Open Bot in Telegram',
+            onClick: () => window.open(`https://t.me/${botName}?startgroup=true`, '_blank'),
+          },
+        ];
 
-          <Button
-            type="primary"
-            size="small"
-            icon={<SettingOutlined />}
-            onClick={() => handleOpenEdit(record)}
-            style={{ borderRadius: 8, fontWeight: 600, background: '#2563eb' }}
-          >
-            {t('settings', 'Settings')}
-          </Button>
-
-          <Tooltip title="Open bot in Telegram">
-            <Button
-              size="small"
-              icon={<ExportOutlined />}
-              onClick={() =>
-                window.open(
-                  `https://t.me/${(record.botUsername || record.telegram_bot_username || '@aura_emenu_order_bot').replace('@', '')}?startgroup=true`,
-                  '_blank'
-                )
-              }
-              style={{ borderRadius: 8 }}
-            />
-          </Tooltip>
-        </Space>
-      ),
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 

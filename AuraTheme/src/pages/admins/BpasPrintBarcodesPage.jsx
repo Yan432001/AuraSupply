@@ -138,9 +138,12 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
   const isRollStyle = (style) => ['1', '4025', '50', 'jewellery'].includes(String(style));
   const [selectedPaperStyle, setSelectedPaperStyle] = useState(() => localStorage.getItem('bcstyle') || '4025');
   const [previewViewMode, setPreviewViewMode] = useState(() => {
+    const savedMode = localStorage.getItem('bc_preview_mode');
+    if (savedMode === 'rows' || savedMode === 'grid') return savedMode;
     const saved = localStorage.getItem('bcstyle') || '4025';
-    return isRollStyle(saved) ? 'rows' : 'rows';
+    return isRollStyle(saved) ? 'rows' : 'grid';
   });
+  const printCanvasRef = useRef(null);
   const [customWidth, setCustomWidth] = useState(() => localStorage.getItem('cf_width') || '4');
   const [customHeight, setCustomHeight] = useState(() => localStorage.getItem('cf_height') || '2');
   const [customOrientation, setCustomOrientation] = useState(() => localStorage.getItem('cf_orientation') || '0');
@@ -316,6 +319,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
   // Save config options to localStorage
   useEffect(() => {
     localStorage.setItem('bcstyle', selectedPaperStyle);
+    localStorage.setItem('bc_preview_mode', previewViewMode);
     localStorage.setItem('cf_width', customWidth);
     localStorage.setItem('cf_height', customHeight);
     localStorage.setItem('cf_orientation', customOrientation);
@@ -331,6 +335,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
     localStorage.setItem('bc_check_promo', checkPromo ? '1' : '0');
   }, [
     selectedPaperStyle,
+    previewViewMode,
     customWidth,
     customHeight,
     customOrientation,
@@ -744,6 +749,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
           height: '24.8mm',
           itemWidthPx: 200,
           itemHeightPx: 120,
+          gridCols: 'repeat(auto-fill, minmax(195px, 1fr))',
           barcodeHeight: 28,
           barcodeWidth: 1.1,
           isRoll: true,
@@ -757,6 +763,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
           height: '29.5mm',
           itemWidthPx: 230,
           itemHeightPx: 135,
+          gridCols: 'repeat(auto-fill, minmax(225px, 1fr))',
           barcodeHeight: 32,
           barcodeWidth: 1.15,
           isRoll: true,
@@ -770,6 +777,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
           height: `${customHeight}in`,
           itemWidthPx: 240,
           itemHeightPx: 140,
+          gridCols: 'repeat(auto-fill, minmax(235px, 1fr))',
           barcodeHeight: 32,
           barcodeWidth: 1.2,
           isCustom: true,
@@ -784,6 +792,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
           height: '90px',
           itemWidthPx: 300,
           itemHeightPx: 95,
+          gridCols: 'repeat(auto-fill, minmax(290px, 1fr))',
           barcodeHeight: 26,
           barcodeWidth: 1.0,
           isJewellery: true,
@@ -952,14 +961,12 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
 
   // Render Barcode Label Item (matches AURA_v1 layout & hierarchy)
   const renderBarcodeLabel = (lbl, isSingleSample = false) => {
-    const isRowLayout = (styleConfig.isRoll || previewViewMode === 'rows' || isSingleSample);
+    const isRowLayout = isSingleSample || previewViewMode === 'rows';
 
     return (
       <div
         key={lbl.uniqueKey || 'sample'}
-        className={`barcode-single-item ${
-          styleConfig.key === '4025' ? 'barcode1_40x25' : styleConfig.key === '1' ? 'barcode1_50x30' : ''
-        } ${isRowLayout ? 'barcode-roll-item' : ''} ${styleConfig.isRoll && !isSingleSample ? 'page-break' : ''}`}
+        className={`barcode-single-item ${isRowLayout ? 'barcode-roll-item' : 'barcode-grid-item'}`}
         style={{
           width: isSingleSample ? '185px' : (isRowLayout ? `${styleConfig.itemWidthPx || 200}px` : '100%'),
           maxWidth: isRowLayout ? `${styleConfig.itemWidthPx || 210}px` : `${(styleConfig.itemWidthPx || 220) + 40}px`,
@@ -1092,7 +1099,7 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
     );
   };
 
-  // Print Execution: saves print log to database audit trail, then executes window.print()
+  // Print Execution: saves print log to database audit trail, then prints the exact active preview canvas
   const handlePrint = async () => {
     if (itemsToPrint.length === 0) {
       message.warning('No barcode labels in list to print.');
@@ -1117,7 +1124,102 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
       console.warn('Logging print error:', e);
     }
 
-    window.print();
+    if (printCanvasRef.current) {
+      const existingIframe = document.getElementById('aura-barcode-print-iframe');
+      if (existingIframe) {
+        existingIframe.remove();
+      }
+
+      const iframe = document.createElement('iframe');
+      iframe.id = 'aura-barcode-print-iframe';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+
+      const canvasHtml = printCanvasRef.current.outerHTML;
+      const isRowMode = previewViewMode === 'rows';
+      const gridColsCss = styleConfig.gridCols || 'repeat(auto-fill, minmax(195px, 1fr))';
+      const itemWidthPx = styleConfig.itemWidthPx || 200;
+      const itemHeightPx = styleConfig.itemHeightPx || 120;
+
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Print Barcode Labels</title>
+            <style>
+              @page {
+                margin: 8mm;
+              }
+              * {
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              html, body {
+                margin: 0;
+                padding: 0;
+                background: #ffffff;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              }
+              .barcode-print-canvas {
+                width: 100% !important;
+                background: #ffffff !important;
+                border: none !important;
+                padding: 8px !important;
+                margin: 0 auto !important;
+                display: ${isRowMode ? 'flex' : 'grid'} !important;
+                ${isRowMode
+                  ? 'flex-direction: column !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important;'
+                  : `grid-template-columns: ${gridColsCss} !important; gap: 10px !important; align-items: start !important;`
+                }
+              }
+              .barcode-single-item {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                text-align: center !important;
+                background: #ffffff !important;
+                border: 1px solid #cbd5e1 !important;
+                border-radius: 4px !important;
+                padding: 6px 8px !important;
+                width: ${isRowMode ? `${itemWidthPx}px` : '100%'} !important;
+                max-width: ${isRowMode ? `${itemWidthPx}px` : `${itemWidthPx + 40}px`} !important;
+                min-height: ${itemHeightPx}px !important;
+                margin: 0 auto !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                box-shadow: none !important;
+              }
+              svg.bcimg {
+                max-width: 100% !important;
+                height: auto !important;
+                display: block !important;
+                margin: 0 auto !important;
+              }
+            </style>
+          </head>
+          <body>
+            ${canvasHtml}
+          </body>
+        </html>
+      `);
+      doc.close();
+
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      }, 150);
+    } else {
+      window.print();
+    }
   };
 
   return (
@@ -1136,49 +1238,31 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
             visibility: visible !important;
           }
           .barcode-print-canvas {
-            position: absolute !important;
+            position: fixed !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 8px !important;
             background: #fff !important;
             border: none !important;
             box-shadow: none !important;
           }
-          .no-print {
+          .no-print,
+          .barcode-preview-card > .ant-card-head {
             display: none !important;
           }
-          .page-break {
-            page-break-after: always !important;
-            break-after: page !important;
-          }
           .barcode-single-item {
-            border: none !important;
+            border: 1px solid #cbd5e1 !important;
             box-shadow: none !important;
             page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           .barcode-roll-container {
-            padding: 0 !important;
-            gap: 0 !important;
+            padding: 8px !important;
+            gap: 8px !important;
             background: #fff !important;
             border: none !important;
-          }
-          .barcode1_40x25 {
-            width: 40mm !important;
-            height: 24.8mm !important;
-            margin: 0 auto !important;
-            page-break-after: always !important;
-            break-after: page !important;
-            padding: 1.5mm 0 !important;
-          }
-          .barcode1_50x30 {
-            width: 50mm !important;
-            height: 29.5mm !important;
-            margin: 0 auto !important;
-            page-break-after: always !important;
-            break-after: page !important;
-            padding: 2mm 0 !important;
           }
         }
         .barcode-single-item {
@@ -1580,6 +1664,8 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
                     setSelectedPaperStyle(val);
                     if (isRollStyle(val)) {
                       setPreviewViewMode('rows');
+                    } else {
+                      setPreviewViewMode('grid');
                     }
                   }}
                   style={{ width: '100%' }}
@@ -1767,8 +1853,9 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
           <div style={{ textAlign: 'center', padding: '36px 0', color: adminTheme.subtext }}>
             No labels in print queue. Use "Browse Catalog" or search products to begin.
           </div>
-        ) : (previewViewMode === 'rows' || styleConfig.isRoll) ? (
+        ) : previewViewMode === 'rows' ? (
           <div
+            ref={printCanvasRef}
             className="barcode-print-canvas barcode-roll-container"
             style={{
               display: 'flex',
@@ -1786,13 +1873,16 @@ export default function BpasPrintBarcodesPage({ onBack, preselectedItems = [] })
           </div>
         ) : (
           <div
+            ref={printCanvasRef}
             className="barcode-print-canvas"
             style={{
               display: 'grid',
-              gridTemplateColumns: styleConfig.gridCols,
+              gridTemplateColumns: styleConfig.gridCols || 'repeat(auto-fill, minmax(195px, 1fr))',
               gap: 10,
               padding: 12,
-              background: '#fff'
+              background: '#fff',
+              borderRadius: 8,
+              border: '1px dashed #cbd5e1'
             }}
           >
             {generatedLabels.map((lbl) => renderBarcodeLabel(lbl, false))}

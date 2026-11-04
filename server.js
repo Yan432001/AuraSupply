@@ -158,7 +158,8 @@ async function startServer() {
     'consignments',
     'rewardsExchange',
     'purchaseRequests',
-    'purchaseOrders'
+    'purchaseOrders',
+    'sales_order'
   ];
 
   for (const routeName of adminRoutes) {

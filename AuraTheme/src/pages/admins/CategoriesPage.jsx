@@ -34,6 +34,7 @@ import {
 } from "@ant-design/icons";
 
 import { request } from '../../utils/helpers';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { useNotification } from './NotificationContext';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -337,56 +338,52 @@ const CategoriesPage = () => {
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      width: isMobile ? 120 : 180,
+      width: 100,
+      align: 'center',
       fixed: isMobile ? 'right' : false,
-      render: (_, record) => (
-        <Space size={isMobile ? 4 : 8}>
-          <Tooltip title={t('print', 'Print')}>
-            <Button 
-              type="default" 
-              size={isMobile ? "small" : "middle"}
-              icon={<PrinterOutlined />}
-              onClick={() => onPrintCategory(record)}
-              style={{ minWidth: isMobile ? 32 : 40 }}
-            />
-          </Tooltip>
-          <Tooltip title={t('edit', 'Edit')}>
-            <Button 
-              type="default" 
-              size={isMobile ? "small" : "middle"}
-              icon={<EditOutlined />}
-              onClick={() => onEditCategory(record)}
-              style={{ minWidth: isMobile ? 32 : 40 }}
-            />
-          </Tooltip>
-          
-          <Popconfirm
-            title={t('delete_category', 'Delete Category')}
-            description={
-              <div>
-                <p>{t('confirm_delete_category', 'Are you sure you want to delete this category?')}</p>
-                <p><strong>{record.name}</strong></p>
-                <Text type="danger">{t('action_cannot_undone', 'This action cannot be undone.')}</Text>
-              </div>
-            }
-            onConfirm={() => onDeleteCategory(record)}
-            okText={t('delete', 'Delete')}
-            okType="danger"
-            cancelText={t('cancel', 'Cancel')}
-            placement="topRight"
-          >
-            <Tooltip title={t('delete', 'Delete')}>
-              <Button 
-                danger 
-                type="default" 
-                size={isMobile ? "small" : "middle"}
-                icon={<DeleteOutlined />}
-                style={{ minWidth: isMobile ? 32 : 40 }}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      )
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'print',
+            icon: <PrinterOutlined />,
+            label: t('print', 'Print Category'),
+            onClick: () => onPrintCategory(record),
+          },
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: t('edit', 'Edit Category'),
+            onClick: () => onEditCategory(record),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: t('delete', 'Delete Category'),
+            onClick: () => {
+              Modal.confirm({
+                title: t('delete_category', 'Delete Category'),
+                content: (
+                  <div>
+                    <p>{t('confirm_delete_category', 'Are you sure you want to delete this category?')}</p>
+                    <p><strong>{record.name}</strong></p>
+                    <Text type="danger">{t('action_cannot_undone', 'This action cannot be undone.')}</Text>
+                  </div>
+                ),
+                okText: t('delete', 'Delete'),
+                okType: 'danger',
+                cancelText: t('cancel', 'Cancel'),
+                onOk: () => onDeleteCategory(record),
+              });
+            },
+          },
+        ];
+
+        return <TableActionDropdown items={actionItems} />;
+      },
     }
   ];
 

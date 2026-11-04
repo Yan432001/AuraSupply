@@ -259,7 +259,7 @@ export default function PosSettingsPage() {
                       <Card
                         size="small"
                         title={
-                          <span style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>
+                          <span style={{ fontWeight: 800, fontSize: 15, color: adminTheme.isDark ? '#f8fafc' : '#0f172a' }}>
                             <CoffeeOutlined style={{ color: '#f59e0b', marginRight: 6 }} />
                             {t('pos_operation_mode_title', 'POS Operation Mode & Restaurant Tables (ប្រភេទ POS និងការគ្រប់គ្រងតុ)')}
                           </span>
@@ -267,8 +267,8 @@ export default function PosSettingsPage() {
                         style={{
                           marginBottom: 24,
                           borderRadius: 14,
-                          border: '1.5px solid #fed7aa',
-                          background: '#fffaf5',
+                          border: `1.5px solid ${adminTheme.isDark ? '#475569' : '#fed7aa'}`,
+                          background: adminTheme.isDark ? 'rgba(245, 158, 11, 0.08)' : '#fffaf5',
                         }}
                       >
                         <Row gutter={[20, 16]}>

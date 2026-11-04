@@ -307,7 +307,9 @@ export const OrderDiscountModal = ({
   onApply,
   cartSubtotal = 0,
   khrExchangeRate = 4200,
+  themeMode,
 }) => {
+  const isDark = themeMode === 'dark';
   const [type, setType] = useState(discountType || 'fixed');
   const [value, setValue] = useState(discountValue || 0);
 
@@ -419,16 +421,20 @@ export const OrderDiscountModal = ({
           style={{
             padding: '12px 14px',
             borderRadius: 10,
-            background: calculatedDiscountUSD > 0 ? '#fff1f2' : '#f8fafc',
-            border: `1px solid ${calculatedDiscountUSD > 0 ? '#fecdd3' : '#e2e8f0'}`,
+            background: calculatedDiscountUSD > 0
+              ? (isDark ? 'rgba(225, 29, 72, 0.15)' : '#fff1f2')
+              : (isDark ? '#1e293b' : '#f8fafc'),
+            border: `1px solid ${calculatedDiscountUSD > 0
+              ? (isDark ? 'rgba(225, 29, 72, 0.35)' : '#fecdd3')
+              : (isDark ? '#334155' : '#e2e8f0')}`,
             display: 'flex',
             flexDirection: 'column',
             gap: 5,
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-            <span style={{ color: '#64748b' }}>Cart Subtotal:</span>
-            <span style={{ fontWeight: 700 }}>${subtotalNum.toFixed(2)}</span>
+            <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Cart Subtotal:</span>
+            <span style={{ fontWeight: 700, color: isDark ? '#f8fafc' : '#0f172a' }}>${subtotalNum.toFixed(2)}</span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#e11d48' }}>
@@ -445,10 +451,10 @@ export const OrderDiscountModal = ({
             <span style={{ fontWeight: 600, color: '#e11d48' }}>-៛{calculatedDiscountKHR.toLocaleString()} KHR</span>
           </div>
 
-          <Divider style={{ margin: '6px 0', borderColor: calculatedDiscountUSD > 0 ? '#fecdd3' : '#e2e8f0' }} />
+          <Divider style={{ margin: '6px 0', borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : (calculatedDiscountUSD > 0 ? '#fecdd3' : '#e2e8f0') }} />
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-            <span style={{ fontWeight: 700, color: '#1e293b' }}>Net Total After Discount:</span>
+            <span style={{ fontWeight: 700, color: isDark ? '#f8fafc' : '#1e293b' }}>Net Total After Discount:</span>
             <span style={{ fontWeight: 900, color: '#2F6FED' }}>${payableAfterDiscount.toFixed(2)}</span>
           </div>
         </div>

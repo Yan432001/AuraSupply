@@ -1,33 +1,26 @@
-const db = require('../../config/utill/connection');
+const UnitsModel = require('../../models/admins/units.model');
 const { logError } = require('../../config/utill/logErr');
-const { unitToBaseQty, baseToUnitQty, convertToBasePrice, convertFromBasePrice, convertUnitToString } = require('../../utils/unitConverter');
+const {
+  unitToBaseQty,
+  baseToUnitQty,
+  convertToBasePrice,
+  convertFromBasePrice,
+  convertUnitToString
+} = require('../../utils/unitConverter');
+
+const VALID_OPERATORS = ['*', '/', '+', '-'];
 
 /**
- * GET /api/admin/units
+ * GET /api/admin/units & GET /api/units
  * Retrieve all units with base unit hierarchy and usage counts
+ * Replicates System_settings::getUnits()
  */
 exports.getUnits = async (req, res) => {
   try {
-    const [rows] = await db.query(`
-      SELECT 
-        u.id, 
-        u.code, 
-        u.name, 
-        u.base_unit, 
-        b.name AS base_unit_name, 
-        b.code AS base_unit_code,
-        u.operator, 
-        u.unit_value, 
-        u.operation_value,
-        (SELECT COUNT(*) FROM aura_products p WHERE p.unit = u.id OR p.sale_unit = u.id OR p.purchase_unit = u.id) AS product_count,
-        (SELECT COUNT(*) FROM aura_units sub WHERE sub.base_unit = u.id) AS sub_unit_count
-      FROM aura_units u
-      LEFT JOIN aura_units b ON b.id = u.base_unit
-      ORDER BY COALESCE(u.base_unit, u.id), u.base_unit IS NOT NULL, u.id
-    `);
-
+    const rows = await UnitsModel.getUnits();
     res.json({
       status: true,
+      success: true,
       data: rows
     });
   } catch (err) {
@@ -38,18 +31,14 @@ exports.getUnits = async (req, res) => {
 /**
  * GET /api/admin/units/base
  * Retrieve only base units (where base_unit IS NULL or 0)
+ * Replicates Site::getAllBaseUnits()
  */
 exports.getBaseUnits = async (req, res) => {
   try {
-    const [rows] = await db.query(`
-      SELECT id, code, name 
-      FROM aura_units 
-      WHERE base_unit IS NULL OR base_unit = 0 
-      ORDER BY name ASC
-    `);
-
+    const rows = await UnitsModel.getAllBaseUnits();
     res.json({
       status: true,
+      success: true,
       data: rows
     });
   } catch (err) {
@@ -58,18 +47,36 @@ exports.getBaseUnits = async (req, res) => {
 };
 
 /**
+ * GET /api/admin/units/by-base/:baseUnitId
+ * Retrieve the base unit and all its sub-units ordered by id ASC
+ * Replicates Products::getSubUnits($unit_id) -> Site::getUnitsByBUID($unit_id)
+ */
+exports.getUnitsByBUID = async (req, res) => {
+  try {
+    const { baseUnitId } = req.params;
+    const rows = await UnitsModel.getUnitsByBUID(baseUnitId);
+    res.json({
+      status: true,
+      data: rows
+    });
+  } catch (err) {
+    logError('units.controller.getUnitsByBUID', err, res);
+  }
+};
+
+/**
  * GET /api/admin/units/sub-units/:baseUnitId
- * Retrieve sub-units linked to a given base unit
+ * Retrieve sub-units linked to a given base unit.
+ * By default returns the full unit family (base + sub-units) like AURA_v1 Products::getSubUnits($unit_id),
+ * or only child sub-units when ?only_children=1 is passed.
  */
 exports.getSubUnits = async (req, res) => {
   try {
     const { baseUnitId } = req.params;
-    const [rows] = await db.query(`
-      SELECT id, code, name, base_unit, operator, operation_value
-      FROM aura_units
-      WHERE base_unit = ?
-      ORDER BY CAST(operation_value AS DECIMAL(15,4)) DESC
-    `, [baseUnitId]);
+    const onlyChildren = req.query.only_children === '1' || req.query.only_children === 'true';
+    const rows = onlyChildren
+      ? await UnitsModel.getUnitChildren(baseUnitId)
+      : await UnitsModel.getUnitsByBUID(baseUnitId);
 
     res.json({
       status: true,
@@ -81,37 +88,67 @@ exports.getSubUnits = async (req, res) => {
 };
 
 /**
+ * GET /api/admin/units/:id
+ * Retrieve a single unit by ID
+ * Replicates Site::getUnitByID($id)
+ */
+exports.getUnitById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const unit = await UnitsModel.getUnitByID(id);
+    if (!unit) {
+      return res.status(404).json({ status: false, message: 'Unit not found' });
+    }
+    res.json({
+      status: true,
+      data: unit
+    });
+  } catch (err) {
+    logError('units.controller.getUnitById', err, res);
+  }
+};
+
+/**
  * POST /api/admin/units
  * Create a new unit (either base unit or sub-unit with operator & operation_value)
+ * Replicates System_settings::add_unit()
  */
 exports.createUnit = async (req, res) => {
   try {
-    const { code, name, base_unit, operator, operation_value } = req.body;
+    const { code, name, base_unit, operator, operation_value, unit_value } = req.body;
 
-    if (!code || !name) {
+    if (!code || !String(code).trim() || !name || !String(name).trim()) {
       return res.status(400).json({ status: false, message: 'Unit code and name are required' });
     }
 
-    // Check duplicate code
-    const [existing] = await db.query('SELECT id FROM aura_units WHERE code = ? LIMIT 1', [code.trim()]);
-    if (existing.length > 0) {
-      return res.status(400).json({ status: false, message: `Unit code '${code}' already exists` });
+    const existing = await UnitsModel.getUnitByCode(code);
+    if (existing) {
+      return res.status(400).json({ status: false, message: `Unit code '${String(code).trim()}' already exists` });
     }
 
     const isSubUnit = base_unit && parseInt(base_unit, 10) > 0;
-    const buId = isSubUnit ? parseInt(base_unit, 10) : null;
-    const op = isSubUnit ? (operator || '*') : null;
-    const opVal = isSubUnit ? (operation_value || '1').toString() : null;
+    if (isSubUnit) {
+      if (!operator || !VALID_OPERATORS.includes(operator)) {
+        return res.status(400).json({ status: false, message: 'Valid operator (*, /, +, -) is required when Base Unit is selected' });
+      }
+      if (operation_value === undefined || operation_value === null || String(operation_value).trim() === '') {
+        return res.status(400).json({ status: false, message: 'Operation value is required when Base Unit is selected' });
+      }
+    }
 
-    const [result] = await db.query(`
-      INSERT INTO aura_units (code, name, base_unit, operator, operation_value)
-      VALUES (?, ?, ?, ?, ?)
-    `, [code.trim(), name.trim(), buId, op, opVal]);
+    const created = await UnitsModel.addUnit({
+      code,
+      name,
+      base_unit: isSubUnit ? parseInt(base_unit, 10) : null,
+      operator: isSubUnit ? operator : null,
+      unit_value: isSubUnit ? (unit_value ?? operation_value) : null,
+      operation_value: isSubUnit ? operation_value : null
+    });
 
     res.status(201).json({
       status: true,
-      message: 'Unit created successfully',
-      data: { id: result.insertId, code, name, base_unit: buId, operator: op, operation_value: opVal }
+      message: 'Unit successfully added',
+      data: created
     });
   } catch (err) {
     logError('units.controller.createUnit', err, res);
@@ -121,43 +158,51 @@ exports.createUnit = async (req, res) => {
 /**
  * PUT /api/admin/units/:id
  * Update an existing unit
+ * Replicates System_settings::edit_unit($id)
  */
 exports.updateUnit = async (req, res) => {
   try {
     const { id } = req.params;
-    const { code, name, base_unit, operator, operation_value } = req.body;
+    const { code, name, base_unit, operator, operation_value, unit_value } = req.body;
 
-    const [unit] = await db.query('SELECT * FROM aura_units WHERE id = ?', [id]);
-    if (!unit.length) {
+    const unit = await UnitsModel.getUnitByID(id);
+    if (!unit) {
       return res.status(404).json({ status: false, message: 'Unit not found' });
     }
 
-    // Check code duplication excluding self
-    if (code) {
-      const [duplicate] = await db.query('SELECT id FROM aura_units WHERE code = ? AND id != ? LIMIT 1', [code.trim(), id]);
-      if (duplicate.length > 0) {
-        return res.status(400).json({ status: false, message: `Unit code '${code}' is already used by another unit` });
+    if (code && String(code).trim() !== unit.code) {
+      const duplicate = await UnitsModel.getUnitByCode(code);
+      if (duplicate && Number(duplicate.id) !== Number(id)) {
+        return res.status(400).json({ status: false, message: `Unit code '${String(code).trim()}' is already used by another unit` });
       }
     }
 
     const isSubUnit = base_unit && parseInt(base_unit, 10) > 0;
-    const buId = isSubUnit ? parseInt(base_unit, 10) : null;
-    const op = isSubUnit ? (operator || '*') : null;
-    const opVal = isSubUnit ? (operation_value || '1').toString() : null;
+    if (isSubUnit) {
+      if (Number(base_unit) === Number(id)) {
+        return res.status(400).json({ status: false, message: 'A unit cannot be its own base unit' });
+      }
+      if (!operator || !VALID_OPERATORS.includes(operator)) {
+        return res.status(400).json({ status: false, message: 'Valid operator (*, /, +, -) is required when Base Unit is selected' });
+      }
+      if (operation_value === undefined || operation_value === null || String(operation_value).trim() === '') {
+        return res.status(400).json({ status: false, message: 'Operation value is required when Base Unit is selected' });
+      }
+    }
 
-    await db.query(`
-      UPDATE aura_units SET
-        code = COALESCE(?, code),
-        name = COALESCE(?, name),
-        base_unit = ?,
-        operator = ?,
-        operation_value = ?
-      WHERE id = ?
-    `, [code ? code.trim() : null, name ? name.trim() : null, buId, op, opVal, id]);
+    const updated = await UnitsModel.updateUnit(id, {
+      code: code || unit.code,
+      name: name || unit.name,
+      base_unit: isSubUnit ? parseInt(base_unit, 10) : null,
+      operator: isSubUnit ? operator : null,
+      unit_value: isSubUnit ? (unit_value ?? operation_value) : null,
+      operation_value: isSubUnit ? operation_value : null
+    });
 
     res.json({
       status: true,
-      message: 'Unit updated successfully'
+      message: 'Unit successfully updated',
+      data: updated
     });
   } catch (err) {
     logError('units.controller.updateUnit', err, res);
@@ -167,37 +212,39 @@ exports.updateUnit = async (req, res) => {
 /**
  * DELETE /api/admin/units/:id
  * Delete unit with safety dependency checks
+ * Replicates System_settings::delete_unit($id):
+ *   if ($this->settings_model->getUnitChildren($id)) {
+ *       $this->bpas->send_json(['error' => 1, 'msg' => lang('unit_has_subunit')]);
+ *   }
+ *   if ($this->settings_model->deleteUnit($id)) {
+ *       $this->bpas->send_json(['error' => 0, 'msg' => lang('unit_deleted')]);
+ *   }
+ * Note: Returns HTTP 200 with { error: 1, status: false, msg: ... } like Bpas::send_json()
+ * so the browser console does not log a red 400 Bad Request network error.
  */
 exports.deleteUnit = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check if any sub-units depend on this unit
-    const [childUnits] = await db.query('SELECT COUNT(*) as count FROM aura_units WHERE base_unit = ?', [id]);
-    if (childUnits[0]?.count > 0) {
-      return res.status(400).json({
+    const children = await UnitsModel.getUnitChildren(id);
+    if (children.length > 0) {
+      return res.status(200).json({
         status: false,
-        message: 'Cannot delete unit because other sub-units depend on it as their base unit.'
+        success: false,
+        error: 1,
+        msg: 'Unit can not be deleted! Unit has sub-units.',
+        message: 'Unit can not be deleted! Unit has sub-units.'
       });
     }
 
-    // Check if products use this unit
-    const [products] = await db.query(
-      'SELECT COUNT(*) as count FROM aura_products WHERE unit = ? OR sale_unit = ? OR purchase_unit = ?',
-      [id, id, id]
-    );
-    if (products[0]?.count > 0) {
-      return res.status(400).json({
-        status: false,
-        message: 'Cannot delete unit because it is currently assigned to existing products.'
-      });
-    }
+    await UnitsModel.deleteUnit(id);
 
-    await db.query('DELETE FROM aura_units WHERE id = ?', [id]);
-
-    res.json({
+    res.status(200).json({
       status: true,
-      message: 'Unit deleted successfully'
+      success: true,
+      error: 0,
+      msg: 'Unit successfully deleted',
+      message: 'Unit successfully deleted'
     });
   } catch (err) {
     logError('units.controller.deleteUnit', err, res);
@@ -205,82 +252,188 @@ exports.deleteUnit = async (req, res) => {
 };
 
 /**
+ * POST /api/admin/units/actions
+ * Bulk unit actions: delete or export_excel
+ * Replicates System_settings::unit_actions()
+ */
+exports.unitActions = async (req, res) => {
+  try {
+    const { form_action, val = [] } = req.body;
+    const ids = Array.isArray(val) ? val : [val].filter(Boolean);
+
+    if (!ids.length) {
+      return res.status(200).json({
+        status: false,
+        success: false,
+        error: 1,
+        msg: 'No record selected, please select at least one row',
+        message: 'No record selected, please select at least one row'
+      });
+    }
+
+    if (form_action === 'delete') {
+      const skipped = [];
+      let deletedCount = 0;
+
+      for (const id of ids) {
+        const children = await UnitsModel.getUnitChildren(id);
+        if (children.length > 0) {
+          const u = await UnitsModel.getUnitByID(id);
+          skipped.push(`${u?.name || id} (has sub-units)`);
+          continue;
+        }
+        await UnitsModel.deleteUnit(id);
+        deletedCount += 1;
+      }
+
+      if (deletedCount === 0 && skipped.length > 0) {
+        return res.status(200).json({
+          status: false,
+          success: false,
+          error: 1,
+          msg: `Unit can not be deleted! Unit has sub-units (${skipped.join(', ')})`,
+          message: `Unit can not be deleted! Unit has sub-units (${skipped.join(', ')})`
+        });
+      }
+
+      return res.status(200).json({
+        status: true,
+        success: true,
+        error: 0,
+        deletedCount,
+        skipped,
+        msg: skipped.length > 0
+          ? `${deletedCount} units deleted. Skipped: ${skipped.join(', ')}`
+          : 'Units successfully deleted',
+        message: skipped.length > 0
+          ? `${deletedCount} units deleted. Skipped: ${skipped.join(', ')}`
+          : 'Units successfully deleted'
+      });
+    }
+
+    if (form_action === 'export_excel') {
+      const exportRows = [];
+      for (const id of ids) {
+        const u = await UnitsModel.getUnitByID(id);
+        if (u) {
+          exportRows.push({
+            id: u.id,
+            code: u.code,
+            name: u.name,
+            base_unit: u.base_unit_code || u.base_unit_name || '',
+            operator: u.operator || '',
+            unit_value: u.unit_value || '',
+            operation_value: u.operation_value || ''
+          });
+        }
+      }
+      return res.json({
+        status: true,
+        data: exportRows
+      });
+    }
+
+    return res.status(400).json({
+      status: false,
+      message: 'Please select a valid action.'
+    });
+  } catch (err) {
+    logError('units.controller.unitActions', err, res);
+  }
+};
+
+/**
+ * GET /api/admin/units/change-unit-price & GET /api/admin/units/change-unit-price/:groupId
+ * Look up unit price by product_id, unit_id, and optional price groupId
+ * Replicates System_settings::ChangeUnitToGetNewPrice($group_id)
+ */
+exports.changeUnitToGetNewPrice = async (req, res) => {
+  try {
+    const groupId = req.params.groupId || req.query.group_id || null;
+    const unitId = req.query.unit_id;
+    const productId = req.query.product_id;
+
+    if (!productId || !unitId) {
+      return res.status(400).json({ status: false, message: 'product_id and unit_id are required' });
+    }
+
+    let rows = await UnitsModel.getPriceByUnit(productId, unitId, groupId);
+    if (!rows) {
+      rows = await UnitsModel.elseGetPriceByUnit(productId, unitId);
+    }
+
+    res.json(rows || { status: false, price: 0 });
+  } catch (err) {
+    logError('units.controller.changeUnitToGetNewPrice', err, res);
+  }
+};
+
+/**
+ * GET /api/admin/units/product-suggestions
+ * Product suggestions with multi-unit options
+ * Replicates System_settings::productSuggestionByMultiUnit()
+ */
+exports.productSuggestionByMultiUnit = async (req, res) => {
+  try {
+    const term = req.query.term || '';
+    if (!term || String(term).length < 1) {
+      return res.json([]);
+    }
+
+    const rows = await UnitsModel.getProductNamesByMultiunit(term, 10);
+    if (!rows.length) {
+      return res.json([{ id: 0, label: 'No matching result found', value: term }]);
+    }
+
+    const pr = rows.map((row) => ({
+      id: `${row.id}_${Date.now()}`,
+      item_id: row.id,
+      label: `${row.name} (${row.code})`,
+      row,
+      units: row.units || []
+    }));
+
+    res.json(pr);
+  } catch (err) {
+    logError('units.controller.productSuggestionByMultiUnit', err, res);
+  }
+};
+
+/**
+ * GET /api/admin/units/check-duplicate-code
+ * Check if a unit barcode/product_code already exists
+ * Replicates AURA_v1 products/add.php check_dupplicate_code
+ */
+exports.checkDuplicateUnitCode = async (req, res) => {
+  try {
+    const productCode = req.query.product_code || req.query.code || '';
+    const excludeProductId = req.query.exclude_product_id || null;
+    const found = await UnitsModel.checkDuplicateUnitCode(productCode, excludeProductId);
+    res.json({
+      status: true,
+      exists: Boolean(found),
+      data: found || false
+    });
+  } catch (err) {
+    logError('units.controller.checkDuplicateUnitCode', err, res);
+  }
+};
+
+/**
  * GET /api/admin/products/:id/units
  * Retrieve multi-unit configuration and price overrides for a product
- * Exactly replicates Site::getUnitsDetailsByProduct in AURA_v1
  */
 exports.getProductUnits = async (req, res) => {
   try {
     const { id: productId } = req.params;
-
-    const [productRows] = await db.query(`
-      SELECT id, code, name, cost, price, unit, sale_unit, purchase_unit 
-      FROM aura_products 
-      WHERE id = ?
-    `, [productId]);
-
-    if (!productRows.length) {
+    const details = await UnitsModel.getProductUnitsDetails(productId);
+    if (!details) {
       return res.status(404).json({ status: false, message: 'Product not found' });
     }
 
-    const product = productRows[0];
-    const baseUnitId = product.unit;
-
-    if (!baseUnitId) {
-      return res.json({
-        status: true,
-        data: {
-          product,
-          baseUnit: null,
-          units: []
-        }
-      });
-    }
-
-    // Fetch Base Unit + all derived sub-units
-    const [units] = await db.query(`
-      SELECT 
-        u.id, 
-        u.code, 
-        u.name, 
-        u.base_unit, 
-        u.operator, 
-        u.operation_value,
-        CASE WHEN u.id = ? THEN 1 ELSE COALESCE(CAST(u.operation_value AS DECIMAL(15,4)), 1) END AS unit_qty,
-        COALESCE(cp.price, CASE WHEN u.id = ? THEN ? ELSE NULL END) AS unit_price,
-        COALESCE(cp.cost, CASE WHEN u.id = ? THEN ? ELSE NULL END) AS unit_cost,
-        cp.product_code AS unit_barcode
-      FROM aura_units u
-      LEFT JOIN aura_cost_price_by_units cp 
-        ON cp.unit_id = u.id AND cp.product_id = ?
-      WHERE u.id = ? OR u.base_unit = ?
-      ORDER BY (u.id = ?) DESC, CAST(u.operation_value AS DECIMAL(15,4)) DESC
-    `, [
-      baseUnitId,
-      baseUnitId, product.price || 0,
-      baseUnitId, product.cost || 0,
-      productId,
-      baseUnitId, baseUnitId,
-      baseUnitId
-    ]);
-
-    // Format human-readable string representation of default stock
-    const [stockRows] = await db.query(
-      'SELECT COALESCE(SUM(quantity), 0) AS total_base_qty FROM aura_warehouses_products WHERE product_id = ?',
-      [productId]
-    );
-    const totalBaseQty = stockRows[0]?.total_base_qty || 0;
-    const stockString = convertUnitToString(totalBaseQty, units);
-
     res.json({
       status: true,
-      data: {
-        product,
-        baseUnitId,
-        totalBaseQty,
-        stockFormatted: stockString,
-        units
-      }
+      data: details
     });
   } catch (err) {
     logError('units.controller.getProductUnits', err, res);
@@ -296,66 +449,12 @@ exports.saveProductUnits = async (req, res) => {
     const { id: productId } = req.params;
     const { unit, sale_unit, purchase_unit, unitPrices = [] } = req.body;
 
-    // Update product base units
-    await db.query(`
-      UPDATE aura_products SET
-        unit = COALESCE(?, unit),
-        sale_unit = COALESCE(?, sale_unit),
-        purchase_unit = COALESCE(?, purchase_unit)
-      WHERE id = ?
-    `, [unit, sale_unit, purchase_unit, productId]);
-
-    // Update or insert cost_price_by_units & product_units for each defined unit
-    for (const item of unitPrices) {
-      if (!item.unit_id) continue;
-
-      const unitId = item.unit_id;
-      const cost = parseFloat(item.cost) || 0;
-      const price = parseFloat(item.price) || 0;
-      const barcode = item.product_code || item.barcode || null;
-      const unitQty = parseFloat(item.unit_qty || item.operation_value || 1);
-
-      // Check existing cost_price_by_units
-      const [existingCp] = await db.query(
-        'SELECT id FROM aura_cost_price_by_units WHERE product_id = ? AND unit_id = ? LIMIT 1',
-        [productId, unitId]
-      );
-
-      if (existingCp.length > 0) {
-        await db.query(`
-          UPDATE aura_cost_price_by_units SET
-            cost = ?,
-            price = ?,
-            product_code = ?
-          WHERE id = ?
-        `, [cost, price, barcode, existingCp[0].id]);
-      } else {
-        await db.query(`
-          INSERT INTO aura_cost_price_by_units (product_id, unit_id, cost, price, product_code)
-          VALUES (?, ?, ?, ?, ?)
-        `, [productId, unitId, cost, price, barcode]);
-      }
-
-      // Check existing aura_product_units
-      const [existingPu] = await db.query(
-        'SELECT id FROM aura_product_units WHERE product_id = ? AND unit_id = ? LIMIT 1',
-        [productId, unitId]
-      );
-
-      if (existingPu.length > 0) {
-        await db.query(`
-          UPDATE aura_product_units SET
-            unit_qty = ?,
-            unit_price = ?
-          WHERE id = ?
-        `, [unitQty, price, existingPu[0].id]);
-      } else {
-        await db.query(`
-          INSERT INTO aura_product_units (product_id, unit_id, unit_qty, unit_price)
-          VALUES (?, ?, ?, ?)
-        `, [productId, unitId, unitQty, price]);
-      }
-    }
+    await UnitsModel.saveProductUnits(productId, {
+      unit,
+      sale_unit,
+      purchase_unit,
+      unitPrices
+    });
 
     res.json({
       status: true,

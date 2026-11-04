@@ -477,11 +477,13 @@ export default function BpasTransfersWorkspace({ embedded = false }) {
     {
       title: 'Actions',
       key: 'actions',
-      width: 90,
+      width: 100,
       align: 'center',
       render: (_, r) => (
-        <Dropdown menu={getActionMenu(r)} trigger={['click']}>
-          <Button icon={<MoreOutlined />} size="small" />
+        <Dropdown menu={getActionMenu(r)} trigger={['click']} placement="bottomRight">
+          <Button size="small" type="default" icon={<MoreOutlined />} style={{ borderRadius: 6 }}>
+            Action
+          </Button>
         </Dropdown>
       ),
     },
@@ -489,70 +491,7 @@ export default function BpasTransfersWorkspace({ embedded = false }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* 1. Header & Quick Metrics */}
-      <Row gutter={[16, 16]}>
-        <Col xs={12} sm={6} md={3}>
-          <Card bodyStyle={{ padding: '14px 16px' }} style={{ background: adminTheme.surface, borderColor: adminTheme.border }}>
-            <Statistic title="Total Transfers" value={stats.total_count || 0} valueStyle={{ fontWeight: 800, fontSize: 20 }} />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={3}>
-          <Card bodyStyle={{ padding: '14px 16px' }} style={{ background: adminTheme.surface, borderColor: adminTheme.border }}>
-            <Statistic
-              title="Pending Requests"
-              value={stats.count_pending || 0}
-              valueStyle={{ color: '#f59e0b', fontWeight: 800, fontSize: 20 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={3}>
-          <Card bodyStyle={{ padding: '14px 16px' }} style={{ background: adminTheme.surface, borderColor: adminTheme.border }}>
-            <Statistic
-              title="Approved Orders"
-              value={stats.count_approved || 0}
-              valueStyle={{ color: '#2563eb', fontWeight: 800, fontSize: 20 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={3}>
-          <Card bodyStyle={{ padding: '14px 16px' }} style={{ background: adminTheme.surface, borderColor: adminTheme.border }}>
-            <Statistic
-              title="In Transit"
-              value={stats.count_in_transit || 0}
-              valueStyle={{ color: '#9333ea', fontWeight: 800, fontSize: 20 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={3}>
-          <Card bodyStyle={{ padding: '14px 16px' }} style={{ background: adminTheme.surface, borderColor: adminTheme.border }}>
-            <Statistic
-              title="Completed"
-              value={stats.count_completed || 0}
-              valueStyle={{ color: '#16a34a', fontWeight: 800, fontSize: 20 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={4}>
-          <Card bodyStyle={{ padding: '14px 16px' }} style={{ background: adminTheme.surface, borderColor: adminTheme.border }}>
-            <Statistic
-              title="In-Transit Units"
-              value={Number(stats.total_in_transit_qty || 0).toLocaleString()}
-              valueStyle={{ color: '#0284c7', fontWeight: 800, fontSize: 20 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={5}>
-          <Card bodyStyle={{ padding: '14px 16px' }} style={{ background: adminTheme.surface, borderColor: adminTheme.border }}>
-            <Statistic
-              title="Transferred Value"
-              value={formatCurrency(stats.total_grand_total || 0)}
-              valueStyle={{ color: '#16a34a', fontWeight: 800, fontSize: 20 }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 2. Filters & Actions Bar */}
+      {/* Filters & Actions Bar */}
       <Card style={{ background: adminTheme.surface, borderColor: adminTheme.border }} bodyStyle={{ padding: '14px 16px' }}>
         <Row justify="space-between" align="middle" gutter={[12, 12]}>
           <Col xs={24} md={18}>

@@ -52,6 +52,7 @@ import {
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 
 const LIVE_PRODUCTS_KEY = 'aura_admin_live_products_v2';
 const getLiveProducts = () => {
@@ -824,45 +825,45 @@ export default function AdminProductsManager() {
     {
       title: 'Actions',
       key: 'actions',
-      width: 120,
-      render: (_, record) => (
-        <Space size={6}>
-          <Tooltip title="Edit Product">
-            <Button
-              type="text"
-              size="small"
-              icon={<EditOutlined style={{ color: '#2563eb' }} />}
-              onClick={() => handleEditClick(record)}
-            />
-          </Tooltip>
-          <Tooltip title="View on Store Website">
-            <Link to={`/products#${record.id}`} target="_blank" rel="noopener noreferrer">
-              <Button
-                type="text"
-                size="small"
-                icon={<EyeOutlined style={{ color: '#059669' }} />}
-              />
-            </Link>
-          </Tooltip>
-          <Tooltip title="Delete Product">
-            <Popconfirm
-              title="Delete this product?"
-              description={`Are you sure you want to remove "${record.name}" from the store catalog?`}
-              onConfirm={() => handleDeleteSingle(record.id)}
-              okText="Yes, delete"
-              cancelText="Cancel"
-              okButtonProps={{ danger: true }}
-            >
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Popconfirm>
-          </Tooltip>
-        </Space>
-      ),
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: 'Edit Product',
+            onClick: () => handleEditClick(record),
+          },
+          {
+            key: 'view',
+            icon: <EyeOutlined style={{ color: '#059669' }} />,
+            label: 'View on Store',
+            onClick: () => window.open(`/products#${record.id}`, '_blank', 'noopener,noreferrer'),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: 'Delete Product',
+            onClick: () => {
+              Modal.confirm({
+                title: 'Delete this product?',
+                content: `Are you sure you want to remove "${record.name}" from the store catalog?`,
+                okText: 'Yes, delete',
+                okType: 'danger',
+                cancelText: 'Cancel',
+                onOk: () => handleDeleteSingle(record.id),
+              });
+            },
+          },
+        ];
+
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 

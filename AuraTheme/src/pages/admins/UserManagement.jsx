@@ -46,6 +46,7 @@ import {
   FilterOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
 
@@ -477,67 +478,68 @@ const UserManagement = () => {
       }
     },
     {
-      title: t('actions', 'Actions & Permissions'),
+      title: t('actions', 'Actions'),
       key: 'actions',
-      width: 220,
-      render: (_, record) => (
-        <Space orientation="horizontal" size={4}>
-          <Tooltip title={t('configure_permissions', 'Configure Permission Matrix')}>
-            <Button
-              type="text"
-              size="small"
-              icon={<SafetyCertificateOutlined style={{ color: '#7c3aed' }} />}
-              onClick={() => handleOpenMatrix(record)}
-            >
-              {t('matrix', 'Matrix')}
-            </Button>
-          </Tooltip>
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'matrix',
+            icon: <SafetyCertificateOutlined style={{ color: '#7c3aed' }} />,
+            label: t('configure_permissions', 'Permission Matrix'),
+            onClick: () => handleOpenMatrix(record),
+          },
+          {
+            key: 'audit',
+            icon: <HistoryOutlined style={{ color: '#0284c7' }} />,
+            label: t('view_audit', 'Activity Audit Log'),
+            onClick: () => handleOpenActivity(record),
+          },
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: t('edit_details_password', 'Edit Details & Password'),
+            onClick: () => handleOpenEdit(record),
+          },
+          {
+            key: 'force_logout',
+            icon: <PoweroffOutlined style={{ color: '#ea580c' }} />,
+            label: t('force_logout', 'Force Terminate Session'),
+            onClick: () => {
+              Modal.confirm({
+                title: t('force_logout', 'Force Logout'),
+                content: t('force_logout_desc', 'Revoke active token and force @{username} to log in again?').replace('{username}', record.username),
+                okText: t('force_logout', 'Force Logout'),
+                cancelText: t('cancel', 'Cancel'),
+                onOk: () => handleForceLogout(record),
+              });
+            },
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: t('delete_account', 'Delete Account'),
+            onClick: () => {
+              Modal.confirm({
+                title: t('delete_user_account', 'Delete User Account'),
+                content: t('delete_user_desc', 'Permanently delete @{username}? Soft-delete will mark as deleted_at.').replace('{username}', record.username),
+                okText: t('delete', 'Delete'),
+                okType: 'danger',
+                cancelText: t('cancel', 'Cancel'),
+                onOk: () => handleDeleteUser(record.id, record.username),
+              });
+            },
+          },
+        ];
 
-          <Tooltip title={t('view_audit', 'View User Activity Audit')}>
-            <Button
-              type="text"
-              size="small"
-              icon={<HistoryOutlined style={{ color: '#0284c7' }} />}
-              onClick={() => handleOpenActivity(record)}
-            />
-          </Tooltip>
-
-          <Tooltip title={t('edit_details_password', 'Edit Details & Password')}>
-            <Button
-              type="text"
-              size="small"
-              icon={<EditOutlined style={{ color: '#2563eb' }} />}
-              onClick={() => handleOpenEdit(record)}
-            />
-          </Tooltip>
-
-          <Tooltip title={t('force_terminate_session', 'Force Terminate Session')}>
-            <Popconfirm
-              title={t('force_logout', 'Force Logout')}
-              description={t('force_logout_desc', 'Revoke active token and force @{username} to log in again?').replace('{username}', record.username)}
-              onConfirm={() => handleForceLogout(record)}
-              okText={t('force_logout', 'Force Logout')}
-              cancelText={t('cancel', 'Cancel')}
-            >
-              <Button type="text" size="small" icon={<PoweroffOutlined style={{ color: '#ea580c' }} />} />
-            </Popconfirm>
-          </Tooltip>
-
-          <Popconfirm
-            title={t('delete_user_account', 'Delete User Account')}
-            description={t('delete_user_desc', 'Permanently delete @{username}? Soft-delete will mark as deleted_at.').replace('{username}', record.username)}
-            onConfirm={() => handleDeleteUser(record.id, record.username)}
-            okText={t('delete', 'Delete')}
-            cancelText={t('cancel', 'Cancel')}
-            okButtonProps={{ danger: true }}
-          >
-            <Tooltip title={t('delete_account', 'Delete Account')}>
-              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      )
-    }
+        return <TableActionDropdown items={actionItems} />;
+      },
+    },
   ];
 
   return (

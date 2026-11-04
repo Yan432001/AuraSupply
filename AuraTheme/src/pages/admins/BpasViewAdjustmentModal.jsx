@@ -84,10 +84,19 @@ export default function BpasViewAdjustmentModal({ open, onClose, adjustment }) {
       align: 'right',
       render: (qty, r) => {
         const isSub = r.type === 'subtraction';
+        const displayQty = r.unit_quantity != null ? Number(r.unit_quantity) : Number(qty);
+        const hasConv = r.unit_quantity != null && Number(r.unit_quantity) !== Number(qty);
         return (
-          <strong style={{ color: isSub ? '#dc2626' : '#16a34a', fontSize: 14 }}>
-            {isSub ? `-${Number(qty)}` : `+${Number(qty)}`} {r.unit_name || ''}
-          </strong>
+          <div style={{ textAlign: 'right' }}>
+            <strong style={{ color: isSub ? '#dc2626' : '#16a34a', fontSize: 14 }}>
+              {isSub ? `-${displayQty}` : `+${displayQty}`} {r.unit_name || ''}
+            </strong>
+            {hasConv && (
+              <div style={{ fontSize: 11, color: '#64748b' }}>
+                ({isSub ? `-${Number(qty)}` : `+${Number(qty)}`} Base Units)
+              </div>
+            )}
+          </div>
         );
       }
     },

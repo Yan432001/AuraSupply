@@ -47,6 +47,7 @@ import {
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { formatCurrency } from '../../utils/uiTheme';
 
@@ -309,45 +310,45 @@ export default function BpasStockReceivedWorkspace({ embedded = false }) {
     {
       title: 'Actions',
       key: 'actions',
-      width: 110,
+      width: 100,
       align: 'center',
-      render: (_, row) => (
-        <Space size={4}>
-          <Tooltip title="View Goods Received Note (GRN)">
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined style={{ color: '#2563eb' }} />}
-              onClick={() => handleOpenDetail(row)}
-            />
-          </Tooltip>
-          <Tooltip title="Edit Receipt Voucher">
-            <Button
-              type="text"
-              size="small"
-              icon={<EditOutlined style={{ color: '#0284c7' }} />}
-              onClick={() => navigate(`/admins/products/stock_received/edit/${row.id}`)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Delete & Revert Stock Receipt"
-            description="Are you sure you want to delete this receipt? Received quantities will be deducted from warehouse stock."
-            onConfirm={() => handleDelete(row.id)}
-            okText="Yes, Revert Stock"
-            cancelText="Cancel"
-            okButtonProps={{ danger: true }}
-          >
-            <Tooltip title="Delete Receipt">
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, row) => {
+        const actionItems = [
+          {
+            key: 'view',
+            icon: <EyeOutlined />,
+            label: 'View GRN Details',
+            onClick: () => handleOpenDetail(row),
+          },
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: 'Edit Receipt Voucher',
+            onClick: () => navigate(`/admins/products/stock_received/edit/${row.id}`),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: 'Delete & Revert Stock',
+            onClick: () => {
+              Modal.confirm({
+                title: 'Delete & Revert Stock Receipt?',
+                content: 'Are you sure you want to delete this receipt? Received quantities will be deducted from warehouse stock.',
+                okText: 'Yes, Revert Stock',
+                okType: 'danger',
+                cancelText: 'Cancel',
+                onOk: () => handleDelete(row.id),
+              });
+            },
+          },
+        ];
+
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 
@@ -383,53 +384,6 @@ export default function BpasStockReceivedWorkspace({ embedded = false }) {
           </Space>
         </div>
       )}
-
-      {/* 2. Key Metrics Summary Cards */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} md={6}>
-          <Card bordered={false} style={{ background: adminTheme.surface, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={<span style={{ fontSize: 13, color: adminTheme.subtext }}>Total Stock Receipts</span>}
-              value={summary.total_count}
-              prefix={<InboxOutlined style={{ color: '#2563eb', marginRight: 8 }} />}
-              valueStyle={{ fontWeight: 800, color: adminTheme.text }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card bordered={false} style={{ background: adminTheme.surface, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={<span style={{ fontSize: 13, color: adminTheme.subtext }}>Total Units Received</span>}
-              value={summary.total_received_quantity}
-              precision={0}
-              prefix={<CheckCircleOutlined style={{ color: '#059669', marginRight: 8 }} />}
-              valueStyle={{ fontWeight: 800, color: '#059669' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card bordered={false} style={{ background: adminTheme.surface, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={<span style={{ fontSize: 13, color: adminTheme.subtext }}>Received Value</span>}
-              value={summary.total_received_amount}
-              precision={2}
-              prefix={<DollarOutlined style={{ color: '#d97706', marginRight: 8 }} />}
-              valueStyle={{ fontWeight: 800, color: '#d97706' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card bordered={false} style={{ background: adminTheme.surface, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={<span style={{ fontSize: 13, color: adminTheme.subtext }}>Completed / Fully Received</span>}
-              value={summary.completed_count}
-              suffix={`/ ${summary.total_count}`}
-              prefix={<CheckCircleOutlined style={{ color: '#3b82f6', marginRight: 8 }} />}
-              valueStyle={{ fontWeight: 800, color: '#3b82f6' }}
-            />
-          </Card>
-        </Col>
-      </Row>
 
       {/* 3. Filter & Search Controls */}
       <Card

@@ -38,6 +38,7 @@ import {
   ArrowRightOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
+import { useAdminTheme } from '../../../../hooks/useAdminTheme';
 
 const { Option } = Select;
 
@@ -55,6 +56,15 @@ export default function PosTableModal({
   khrExchangeRate = 4200,
   t = (k, d) => d,
 }) {
+  const adminTheme = useAdminTheme();
+  const isDark = Boolean(adminTheme?.isDark);
+  const primaryColor = activeBillerColor || adminTheme?.colorPrimary || '#2F6FED';
+  const modalBg = isDark ? (adminTheme?.cardBg || '#1e293b') : '#ffffff';
+  const surfaceBg = isDark ? (adminTheme?.cardMuted || '#0f172a') : '#f8fafc';
+  const borderColor = isDark ? (adminTheme?.border || 'rgba(255, 255, 255, 0.12)') : '#e2e8f0';
+  const textColor = isDark ? (adminTheme?.text || '#f8fafc') : '#0f172a';
+  const subtextColor = isDark ? (adminTheme?.subtext || '#94a3b8') : '#64748b';
+
   const [loading, setLoading] = useState(false);
   const [tables, setTables] = useState([]);
   const [floors, setFloors] = useState([]);
@@ -324,8 +334,8 @@ export default function PosTableModal({
         className="pos-modal pos-table-modal"
         style={{ borderRadius: 20, overflow: 'hidden' }}
         styles={{
-          content: { background: '#ffffff', borderRadius: 20 },
-          body: { padding: '20px 24px', background: '#f8fafc' },
+          content: { background: modalBg, borderRadius: 20 },
+          body: { padding: '20px 24px', background: surfaceBg },
         }}
       >
         {/* Modal Top Header */}
@@ -336,25 +346,25 @@ export default function PosTableModal({
                 width: 44,
                 height: 44,
                 borderRadius: 12,
-                background: `${activeBillerColor}15`,
-                border: `1.5px solid ${activeBillerColor}30`,
+                background: `${primaryColor}15`,
+                border: `1.5px solid ${primaryColor}30`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: activeBillerColor,
+                color: primaryColor,
                 fontSize: 22,
               }}
             >
               <CoffeeOutlined />
             </div>
             <div>
-              <div style={{ fontSize: 19, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ fontSize: 19, fontWeight: 900, color: textColor, letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>{t('restaurant_floor_plan', 'Restaurant Floor Plan & Dynamic Dining')}</span>
                 <Tag color="cyan" style={{ borderRadius: 8, fontWeight: 800, fontSize: 11, margin: 0 }}>
                   AURA 2.0 Smart POS
                 </Tag>
               </div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
+              <div style={{ fontSize: 12, color: subtextColor }}>
                 {t('floor_plan_sub', 'Live seat capacities, shared tables with multi-group billing, and table transfers')}
               </div>
             </div>
@@ -388,8 +398,8 @@ export default function PosTableModal({
               onClick={() => setAddModalVisible(true)}
               style={{
                 borderRadius: 10,
-                background: activeBillerColor,
-                borderColor: activeBillerColor,
+                background: primaryColor,
+                borderColor: primaryColor,
                 fontWeight: 800,
               }}
             >
@@ -404,20 +414,20 @@ export default function PosTableModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: '#ffffff',
+            background: modalBg,
             padding: '12px 18px',
             borderRadius: 14,
-            border: '1px solid #e2e8f0',
+            border: `1px solid ${borderColor}`,
             marginBottom: 14,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+            boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.03)',
             flexWrap: 'wrap',
             gap: 12,
           }}
         >
           {/* Quick Filter Counters */}
           <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
-              <AppstoreOutlined style={{ color: activeBillerColor }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: textColor }}>
+              <AppstoreOutlined style={{ color: primaryColor }} />
               <span>{t('total_tables', 'Total')}:</span>
               <Tag color="blue" style={{ borderRadius: 6, fontWeight: 800, margin: 0 }}>
                 {counts.total}
@@ -518,36 +528,40 @@ export default function PosTableModal({
                   onClick={() => handleTableClick(tbl)}
                   style={{
                     background: isSelected
-                      ? `${activeBillerColor}08`
-                      : '#ffffff',
+                      ? `${primaryColor}18`
+                      : modalBg,
                     borderRadius: 16,
                     padding: '14px 14px 12px 14px',
                     border: isSelected
-                      ? `2.5px solid ${activeBillerColor}`
+                      ? `2.5px solid ${primaryColor}`
                       : isShared
                       ? '1.8px solid #c084fc'
                       : isOccupied
-                      ? '1.5px solid #fecaca'
-                      : '1.5px solid #e2e8f0',
+                      ? (isDark ? '1.5px solid rgba(239, 68, 68, 0.4)' : '1.5px solid #fecaca')
+                      : `1.5px solid ${borderColor}`,
                     cursor: 'pointer',
                     position: 'relative',
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                     boxShadow: isSelected
-                      ? `0 6px 20px ${activeBillerColor}25`
+                      ? `0 6px 20px ${primaryColor}30`
                       : isShared
                       ? '0 3px 12px rgba(147, 51, 234, 0.08)'
+                      : isDark
+                      ? '0 2px 8px rgba(0,0,0,0.3)'
                       : '0 2px 8px rgba(0,0,0,0.03)',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
+                    e.currentTarget.style.boxShadow = isDark ? '0 8px 24px rgba(0,0,0,0.5)' : '0 8px 24px rgba(0,0,0,0.08)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'translateY(0)';
                     e.currentTarget.style.boxShadow = isSelected
-                      ? `0 6px 20px ${activeBillerColor}25`
+                      ? `0 6px 20px ${primaryColor}30`
                       : isShared
                       ? '0 3px 12px rgba(147, 51, 234, 0.08)'
+                      : isDark
+                      ? '0 2px 8px rgba(0,0,0,0.3)'
                       : '0 2px 8px rgba(0,0,0,0.03)';
                   }}
                 >
@@ -558,13 +572,13 @@ export default function PosTableModal({
                         style={{
                           fontSize: 16,
                           fontWeight: 900,
-                          color: isSelected ? activeBillerColor : '#0f172a',
+                          color: isSelected ? primaryColor : textColor,
                           letterSpacing: '-0.2px',
                         }}
                       >
                         {tbl.name}
                       </div>
-                      <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
+                      <div style={{ fontSize: 11, color: subtextColor, fontWeight: 600 }}>
                         📍 {tbl.floor_name || 'Ground Floor'}
                       </div>
                     </div>

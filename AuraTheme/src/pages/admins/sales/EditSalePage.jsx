@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Card,
   Table,
@@ -16,6 +16,8 @@ import {
   Divider,
   Empty,
   Modal,
+  Tooltip,
+  AutoComplete,
   Spin,
   Alert
 } from 'antd';
@@ -23,11 +25,13 @@ import {
   ShoppingOutlined,
   DeleteOutlined,
   ArrowLeftOutlined,
-  SaveOutlined,
   DollarOutlined,
   CheckOutlined,
   UserOutlined,
   BarcodeOutlined,
+  EditOutlined,
+  SaveOutlined,
+  ReloadOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -35,6 +39,7 @@ import axios from 'axios';
 import { formatCurrency } from '../../../utils/uiTheme';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
 import { useTranslation } from '../../../contexts/LanguageContext';
+import BpasItemEditModal from '../../../components/common/BpasItemEditModal';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -45,12 +50,12 @@ const EditSalePage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
-  const { themeTokens } = useAdminTheme();
+  const { themeTokens, isDark } = useAdminTheme();
   const [form] = Form.useForm();
+  const searchInputRef = useRef(null);
 
-  // State
+  // States
   const [loading, setLoading] = useState(true);
-  const [loadingMeta, setLoadingMeta] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [originalSale, setOriginalSale] = useState(null);
 
@@ -58,12 +63,18 @@ const EditSalePage = () => {
     customers: [],
     billers: [],
     warehouses: [],
-    units: []
+    units: [],
+    taxRates: []
   });
 
   const [formItems, setFormItems] = useState([]);
-  const [availableProducts, setAvailableProducts] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [searchingProducts, setSearchingProducts] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+
+  // Item Edit Modal (BpasItemEditModal / Image 2)
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
   // Variant selector modal state
   const [variantModalVisible, setVariantModalVisible] = useState(false);
@@ -95,8 +106,8 @@ const EditSalePage = () => {
           date: sale.date ? sale.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
           due_date: sale.dueDate ? sale.dueDate.slice(0, 10) : undefined,
           sale_status: sale.saleStatus || 'completed',
-          order_discount: sale.orderDiscount || 0,
-          order_tax: sale.orderTax || 0,
+          order_discount: String(sale.orderDiscount || '0'),
+          order_tax_id: sale.orderTaxId || (metaRes.data?.data?.taxRates?.[0]?.id || null),
           shipping: sale.shipping || 0,
           note: sale.note || '',
           staff_note: sale.staffNote || ''
@@ -112,16 +123,24 @@ const EditSalePage = () => {
           product_type: it.productType || 'standard',
           option_id: it.optionId,
           variant_name: it.variantName,
-          product_unit_id: it.productUnitId,
-          product_unit_code: it.productUnitCode || 'Unit',
+          product_unit_id: it.unitId,
+          unit_id: it.unitId,
+          product_unit_code: it.unitCode || 'Unit',
+          unit_name: it.unitName || 'Unit',
           quantity: parseFloat(it.quantity) || 1,
+          unit_quantity: parseFloat(it.unitQuantity || it.quantity) || 1,
           unit_price: parseFloat(it.unitPrice) || 0,
+          net_unit_price: parseFloat(it.netUnitPrice || it.unitPrice) || 0,
+          real_unit_price: parseFloat(it.realUnitPrice || it.unitPrice) || 0,
           cost: parseFloat(it.cost) || 0,
+          qoh: 0, // populated on load
           item_discount: parseFloat(it.itemDiscount) || 0,
+          discount: String(it.discount || '0'),
           item_tax: parseFloat(it.itemTax) || 0,
           subtotal: parseFloat(it.subtotal) || 0,
           serial_no: it.serialNo || '',
-          comment: it.comment || ''
+          comment: it.comment || '',
+          description: it.comment || ''
         }));
         setFormItems(mappedItems);
       } else {
@@ -136,18 +155,23 @@ const EditSalePage = () => {
     }
   };
 
-  // Search Products for Catalog Selector
-  const searchProducts = async (term = '') => {
+  // Search product suggestions from API
+  const fetchSuggestions = async (term = '') => {
     setSearchingProducts(true);
     try {
-      const res = await axios.get('/api/admin/products', {
-        params: { search: term, limit: 30 }
+      const currentWh = form.getFieldValue('warehouse_id') || 1;
+      const res = await axios.get(`${API_BASE}/suggestions`, {
+        params: {
+          term: term.trim(),
+          warehouse_id: currentWh,
+          limit: 20
+        }
       });
-      if (res.data?.data) {
-        setAvailableProducts(res.data.data);
+      if (res.data?.status && Array.isArray(res.data.data)) {
+        setSuggestions(res.data.data);
       }
     } catch (err) {
-      console.error('Failed to search products:', err);
+      console.error('Failed to search suggestions:', err);
     } finally {
       setSearchingProducts(false);
     }
@@ -155,15 +179,78 @@ const EditSalePage = () => {
 
   useEffect(() => {
     fetchData();
-    searchProducts('');
+    fetchSuggestions('');
   }, [id]);
 
-  // Handle Product Select
-  const handleSelectProduct = (productId) => {
-    const prod = availableProducts.find(p => p.id === productId);
+  // Add Item to Order list
+  const addItemToCart = (product, variant = null) => {
+    const optId = variant ? variant.id : null;
+    const existingIndex = formItems.findIndex(
+      it => it.product_id === product.id && (optId ? it.option_id === optId : !it.option_id)
+    );
+
+    if (existingIndex >= 0) {
+      const updated = [...formItems];
+      const cur = updated[existingIndex];
+      const newQty = (parseFloat(cur.unit_quantity || cur.quantity) || 1) + 1;
+      cur.unit_quantity = newQty;
+      cur.quantity = newQty;
+      const price = parseFloat(cur.unit_price) || 0;
+      const disc = parseFloat(cur.item_discount) || 0;
+      const tax = parseFloat(cur.item_tax) || 0;
+      cur.subtotal = Math.max(0, (newQty * price) - disc + tax);
+      setFormItems(updated);
+      message.info(`${product.name} quantity increased to ${newQty}`);
+    } else {
+      const price = variant ? parseFloat(variant.price || product.price || 0) : parseFloat(product.price || 0);
+      const cost = variant ? parseFloat(variant.cost || product.cost || 0) : parseFloat(product.cost || 0);
+
+      const newItem = {
+        key: `item_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        product_id: product.id,
+        product_code: product.code || '',
+        product_name: product.name,
+        product_type: product.type || 'standard',
+        option_id: optId,
+        variant_name: variant ? variant.name : null,
+        product_unit_id: product.unit_id || 1,
+        unit_id: product.unit_id || 1,
+        product_unit_code: product.unit_code || 'Unit',
+        unit_name: product.unit_name || 'Unit',
+        base_unit_price: price,
+        unit_price: price,
+        real_unit_price: price,
+        net_unit_price: price,
+        cost: cost,
+        qoh: parseFloat(product.qoh || 0),
+        quantity: 1,
+        unit_quantity: 1,
+        item_discount: 0,
+        discount: '0',
+        item_tax: 0,
+        tax_rate_id: product.tax_rate_id || null,
+        subtotal: price,
+        serial_no: '',
+        comment: '',
+        variants: product.variants || [],
+        units: product.units || []
+      };
+
+      setFormItems(prev => [...prev, newItem]);
+      message.success(`${product.name} added to order`);
+    }
+
+    setSearchValue('');
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  // Handle selection from autocomplete
+  const handleSelectProduct = (codeOrId) => {
+    const prod = suggestions.find(p => p.code === codeOrId || p.id === codeOrId);
     if (!prod) return;
 
-    // If product has variants, prompt variant selector
     if (prod.variants && prod.variants.length > 0) {
       setSelectedProductForVariant(prod);
       setVariantModalVisible(true);
@@ -172,97 +259,90 @@ const EditSalePage = () => {
     }
   };
 
-  // Add Item to Sale Table
-  const addItemToCart = (product, variant = null) => {
-    const existingIndex = formItems.findIndex(
-      it => it.product_id === product.id && (variant ? it.option_id === variant.id : !it.option_id)
-    );
-
-    if (existingIndex >= 0) {
-      const updated = [...formItems];
-      updated[existingIndex].quantity = (parseFloat(updated[existingIndex].quantity) || 1) + 1;
-      const unitPrice = parseFloat(updated[existingIndex].unit_price) || 0;
-      const disc = parseFloat(updated[existingIndex].item_discount) || 0;
-      const tax = parseFloat(updated[existingIndex].item_tax) || 0;
-      updated[existingIndex].subtotal = Math.max(0, (updated[existingIndex].quantity * unitPrice) - disc + tax);
-      setFormItems(updated);
-    } else {
-      const price = variant ? parseFloat(variant.price || product.price || 0) : parseFloat(product.price || 0);
-      const cost = variant ? parseFloat(variant.cost || product.cost || 0) : parseFloat(product.cost || 0);
-
-      const newItem = {
-        key: Date.now() + Math.random(),
-        product_id: product.id,
-        product_code: product.code || '',
-        product_name: product.name,
-        product_type: product.type || 'standard',
-        option_id: variant ? variant.id : null,
-        variant_name: variant ? variant.name : null,
-        product_unit_id: product.sale_unit || product.unit || 1,
-        product_unit_code: product.unit_name || 'Unit',
-        quantity: 1,
-        unit_price: price,
-        cost: cost,
-        item_discount: 0,
-        item_tax: 0,
-        subtotal: price,
-        serial_no: '',
-        comment: ''
-      };
-      setFormItems([...formItems, newItem]);
-    }
+  // Open item edit popup (BpasItemEditModal / Image 2)
+  const handleOpenItemEditModal = (item) => {
+    setEditingItem(item);
+    setEditModalVisible(true);
   };
 
-  // Update item in table
-  const handleUpdateItem = (key, field, value) => {
-    const updated = formItems.map(it => {
+  // Save changes from BpasItemEditModal
+  const handleSaveEditedItem = (updatedItem) => {
+    setFormItems(prev => prev.map(it => it.key === updatedItem.key ? updatedItem : it));
+    message.success(t('item_updated_success', 'Item details updated'));
+  };
+
+  // Quick quantity change directly from table input
+  const handleQuantityChange = (key, newQty) => {
+    const qty = Math.max(parseFloat(newQty) || 1, 0.01);
+    setFormItems(prev => prev.map(it => {
       if (it.key === key) {
-        const item = { ...it, [field]: value };
-        const qty = parseFloat(field === 'quantity' ? value : item.quantity) || 0;
-        const price = parseFloat(field === 'unit_price' ? value : item.unit_price) || 0;
-        const disc = parseFloat(field === 'item_discount' ? value : item.item_discount) || 0;
-        const tax = parseFloat(field === 'item_tax' ? value : item.item_tax) || 0;
-        item.subtotal = Math.max(0, (qty * price) - disc + tax);
-        return item;
+        const price = parseFloat(it.unit_price) || 0;
+        const disc = parseFloat(it.item_discount) || 0;
+        const tax = parseFloat(it.item_tax) || 0;
+        return {
+          ...it,
+          quantity: qty,
+          unit_quantity: qty,
+          subtotal: Math.max(0, (qty * price) - disc + tax)
+        };
       }
       return it;
-    });
-    setFormItems(updated);
+    }));
   };
 
-  // Remove item
+  // Remove item from table
   const handleRemoveItem = (key) => {
-    setFormItems(formItems.filter(it => it.key !== key));
+    setFormItems(prev => prev.filter(it => it.key !== key));
   };
 
-  // Live Calculations
+  // Live order calculations
   const calculations = useMemo(() => {
-    const itemsSubtotal = formItems.reduce((acc, it) => acc + (parseFloat(it.subtotal) || 0), 0);
-    const orderDiscount = parseFloat(form.getFieldValue('order_discount') || 0);
-    const orderTax = parseFloat(form.getFieldValue('order_tax') || 0);
-    const shipping = parseFloat(form.getFieldValue('shipping') || 0);
-    const grandTotal = Math.max(0, (itemsSubtotal - orderDiscount) + orderTax + shipping);
-    const alreadyPaid = parseFloat(originalSale?.paid || 0);
-    const balance = Math.max(0, grandTotal - alreadyPaid);
+    const itemsTotal = formItems.reduce((acc, it) => acc + (parseFloat(it.subtotal) || 0), 0);
+    const totalQty = formItems.reduce((acc, it) => acc + (parseFloat(it.unit_quantity || it.quantity) || 0), 0);
+
+    let orderDiscountVal = 0;
+    const orderDiscRaw = String(form.getFieldValue('order_discount') || '0').trim();
+    if (orderDiscRaw.endsWith('%')) {
+      const pct = parseFloat(orderDiscRaw.replace('%', '')) || 0;
+      orderDiscountVal = (itemsTotal * pct) / 100;
+    } else {
+      orderDiscountVal = parseFloat(orderDiscRaw) || 0;
+    }
+
+    const netAfterDiscount = Math.max(0, itemsTotal - orderDiscountVal);
+
+    const taxId = form.getFieldValue('order_tax_id');
+    const taxObj = metadata.taxRates?.find(t => t.id === taxId);
+    let orderTaxVal = 0;
+    if (taxObj && taxObj.rate > 0) {
+      orderTaxVal = (netAfterDiscount * taxObj.rate) / 100;
+    }
+
+    const shippingVal = parseFloat(form.getFieldValue('shipping') || 0);
+    const grandTotal = Math.max(0, netAfterDiscount + orderTaxVal + shippingVal);
+    const paidVal = parseFloat(originalSale?.paid || 0);
+    const balance = Math.max(0, grandTotal - paidVal);
 
     return {
-      itemsSubtotal,
-      orderDiscount,
-      orderTax,
-      shipping,
+      itemsTotal,
+      totalQty,
+      orderDiscountVal,
+      orderTaxVal,
+      shippingVal,
       grandTotal,
-      alreadyPaid,
+      paidVal,
       balance
     };
   }, [
     formItems,
+    metadata.taxRates,
     originalSale,
     Form.useWatch('order_discount', form),
-    Form.useWatch('order_tax', form),
+    Form.useWatch('order_tax_id', form),
     Form.useWatch('shipping', form)
   ]);
 
-  // Submit Sale Update
+  // Submit Updated Sale
   const handleSubmit = async (values) => {
     if (formItems.length === 0) {
       message.error(t('please_add_sale_items', 'Please add at least one product item to the sale.'));
@@ -272,164 +352,58 @@ const EditSalePage = () => {
     setSubmitting(true);
     try {
       const payload = {
-        ...values,
+        date: values.date,
+        due_date: values.due_date || null,
+        reference_no: values.reference_no,
+        customer_id: values.customer_id,
+        biller_id: values.biller_id,
+        warehouse_id: values.warehouse_id,
+        sale_status: values.sale_status || 'completed',
+        order_discount: calculations.orderDiscountVal,
+        order_tax: calculations.orderTaxVal,
+        order_tax_id: values.order_tax_id || null,
+        shipping: parseFloat(values.shipping) || 0,
+        note: values.note || '',
+        staff_note: values.staff_note || '',
         items: formItems.map(it => ({
           product_id: it.product_id,
           product_code: it.product_code,
           product_name: it.product_name,
           product_type: it.product_type,
-          option_id: it.option_id,
-          product_unit_id: it.product_unit_id,
-          product_unit_code: it.product_unit_code,
+          option_id: it.option_id || null,
+          product_unit_id: it.product_unit_id || it.unit_id,
+          product_unit_code: it.product_unit_code || it.unit_name || 'Unit',
           quantity: it.quantity,
+          unit_quantity: it.unit_quantity,
           unit_price: it.unit_price,
-          cost: it.cost,
-          item_discount: it.item_discount,
-          item_tax: it.item_tax,
+          net_unit_price: it.net_unit_price || it.unit_price,
+          cost: it.cost || 0,
+          item_discount: it.item_discount || 0,
+          discount: it.discount || '0',
+          item_tax: it.item_tax || 0,
           subtotal: it.subtotal,
-          serial_no: it.serial_no,
-          comment: it.comment
+          serial_no: it.serial_no || '',
+          comment: it.comment || ''
         }))
       };
 
       const res = await axios.put(`${API_BASE}/${id}`, payload);
       if (res.data?.status) {
-        message.success(t('sale_updated_success', 'Sale updated successfully.'));
+        message.success(t('sale_updated_successfully', 'Sale updated and stock recalculated successfully!'));
         navigate(`/admins/sales/view/${id}`);
-      } else {
-        message.error(res.data?.message || t('failed_to_update_sale', 'Failed to update sale.'));
       }
     } catch (err) {
-      console.error('Update sale error:', err);
-      message.error(err.response?.data?.message || t('failed_to_update_sale', 'Failed to update sale.'));
+      console.error('Failed to update sale:', err);
+      message.error(err.response?.data?.message || err.message || 'Failed to update sale');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Table Columns
-  const columns = [
-    {
-      title: '#',
-      dataIndex: 'index',
-      key: 'index',
-      width: 50,
-      render: (_, __, idx) => idx + 1
-    },
-    {
-      title: t('product', 'Product'),
-      dataIndex: 'product_name',
-      key: 'product_name',
-      render: (name, record) => (
-        <div>
-          <Text strong style={{ fontSize: '13px' }}>{name}</Text>
-          <div style={{ fontSize: '11px', color: '#64748b' }}>
-            {record.product_code && <span style={{ marginRight: 8 }}>SKU: {record.product_code}</span>}
-            {record.variant_name && (
-              <Tag color="cyan" style={{ fontSize: '11px', padding: '0 4px', margin: 0 }}>
-                {record.variant_name}
-              </Tag>
-            )}
-          </div>
-        </div>
-      )
-    },
-    {
-      title: t('unit_price', 'Unit Price ($)'),
-      dataIndex: 'unit_price',
-      key: 'unit_price',
-      width: 140,
-      render: (val, record) => (
-        <InputNumber
-          min={0}
-          step={0.01}
-          value={val}
-          onChange={(v) => handleUpdateItem(record.key, 'unit_price', v)}
-          style={{ width: '100%' }}
-          prefix="$"
-        />
-      )
-    },
-    {
-      title: t('quantity', 'Quantity'),
-      dataIndex: 'quantity',
-      key: 'quantity',
-      width: 130,
-      render: (val, record) => (
-        <InputNumber
-          min={1}
-          step={1}
-          value={val}
-          onChange={(v) => handleUpdateItem(record.key, 'quantity', v)}
-          style={{ width: '100%' }}
-        />
-      )
-    },
-    {
-      title: t('discount', 'Discount ($)'),
-      dataIndex: 'item_discount',
-      key: 'item_discount',
-      width: 120,
-      render: (val, record) => (
-        <InputNumber
-          min={0}
-          step={0.01}
-          value={val}
-          onChange={(v) => handleUpdateItem(record.key, 'item_discount', v)}
-          style={{ width: '100%' }}
-        />
-      )
-    },
-    {
-      title: t('tax', 'Tax ($)'),
-      dataIndex: 'item_tax',
-      key: 'item_tax',
-      width: 110,
-      render: (val, record) => (
-        <InputNumber
-          min={0}
-          step={0.01}
-          value={val}
-          onChange={(v) => handleUpdateItem(record.key, 'item_tax', v)}
-          style={{ width: '100%' }}
-        />
-      )
-    },
-    {
-      title: t('subtotal', 'Subtotal ($)'),
-      dataIndex: 'subtotal',
-      key: 'subtotal',
-      width: 130,
-      align: 'right',
-      render: (val) => (
-        <Text strong style={{ color: themeTokens.colorPrimary, fontSize: '14px' }}>
-          {formatCurrency(val)}
-        </Text>
-      )
-    },
-    {
-      title: '',
-      key: 'action',
-      width: 50,
-      align: 'center',
-      render: (_, record) => (
-        <Button
-          type="text"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleRemoveItem(record.key)}
-        />
-      )
-    }
-  ];
-
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '100px 0' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: 16, color: '#64748b', fontSize: 13 }}>
-          {t('loading_sale_details', 'Loading sale details...')}
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+        <Spin size="large" tip={t('loading_sale_data', 'Loading sale details...')} />
       </div>
     );
   }
@@ -437,60 +411,32 @@ const EditSalePage = () => {
   const isCancelled = originalSale?.saleStatus === 'cancelled';
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Top Header */}
+    <div style={{ padding: '24px', minHeight: '100vh', background: themeTokens.colorBgLayout || '#f8fafc' }}>
+      {/* Header bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <Space direction="horizontal" align="center" size="middle">
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/admins/sales')}
-            style={{ borderRadius: '8px' }}
-          >
-            {t('back_to_sales', 'Back to Sales')}
-          </Button>
-          <div>
-            <Title level={4} style={{ margin: 0, fontWeight: 700, color: '#0f172a' }}>
-              {t('edit_sale', 'Edit Sale')} #{originalSale?.referenceNo}
+        <div>
+          <Space>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admins/sales')}>
+              {t('back_to_sales', 'Back to Sales')}
+            </Button>
+            <Title level={3} style={{ margin: 0, color: '#1e293b' }}>
+              {t('edit_sale', 'Edit Sale Invoice')}: {originalSale?.referenceNo}
             </Title>
-            <Text type="secondary" style={{ fontSize: '13px' }}>
-              {t('edit_sale_subtitle', 'Update sale items, prices, discounts, and dispatch parameters with transactional stock synchronization.')}
+          </Space>
+          <div style={{ marginTop: 4 }}>
+            <Text type="secondary">
+              {t('edit_sale_desc', 'Update invoice items, adjust quantities or units, and recalculate warehouse stock movements.')}
             </Text>
           </div>
-        </Space>
-
-        <Space>
-          <Button
-            onClick={() => navigate(`/admins/sales/view/${id}`)}
-            style={{ borderRadius: '8px' }}
-          >
-            {t('view_detail', 'View Detail')}
-          </Button>
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            loading={submitting}
-            disabled={isCancelled}
-            onClick={() => form.submit()}
-            style={{
-              background: themeTokens.colorPrimary,
-              borderColor: themeTokens.colorPrimary,
-              borderRadius: '8px',
-              fontWeight: 600
-            }}
-          >
-            {t('save_changes', 'Save Changes')}
-          </Button>
-        </Space>
+        </div>
       </div>
 
       {isCancelled && (
         <Alert
-          type="warning"
+          message={t('sale_is_cancelled', 'This sale has been cancelled and cannot be modified.')}
+          type="error"
           showIcon
-          icon={<ExclamationCircleOutlined />}
-          message={t('cancelled_sale_readonly', 'This sale is CANCELLED')}
-          description={t('cancelled_sale_desc', 'Stock movements have been reversed. Modifications are disabled to preserve audit trail integrity.')}
-          style={{ marginBottom: 20, borderRadius: '8px' }}
+          style={{ marginBottom: 20 }}
         />
       )}
 
@@ -500,351 +446,456 @@ const EditSalePage = () => {
         onFinish={handleSubmit}
         disabled={isCancelled}
       >
-        {/* Header Information Card */}
-        <Card
-          bordered={false}
-          style={{
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-            marginBottom: '20px'
-          }}
-          title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <UserOutlined style={{ color: themeTokens.colorPrimary }} />
-              <span>{t('sale_parameters', 'Sale Information & Customer')}</span>
-            </div>
-          }
-        >
+        {/* Top Information Card */}
+        <Card bordered={false} style={{ borderRadius: 8, marginBottom: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <Row gutter={16}>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item
-                name="reference_no"
-                label={t('reference_no', 'Reference No')}
-                rules={[{ required: true, message: 'Reference number is required' }]}
-              >
-                <Input readOnly style={{ background: '#f8fafc', fontWeight: 600 }} />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} md={6}>
               <Form.Item
                 name="date"
-                label={t('sale_date', 'Sale Date')}
-                rules={[{ required: true, message: 'Sale date is required' }]}
+                label={<span>{t('date', 'Date')} <span style={{ color: 'red' }}>*</span></span>}
+                rules={[{ required: true }]}
               >
                 <Input type="date" />
               </Form.Item>
             </Col>
-
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} md={6}>
+              <Form.Item
+                name="reference_no"
+                label={t('reference_no', 'Reference No')}
+                rules={[{ required: true }]}
+              >
+                <Input disabled />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
               <Form.Item
                 name="biller_id"
                 label={t('biller', 'Biller / Branch')}
-                rules={[{ required: true, message: 'Please select biller' }]}
+                rules={[{ required: true }]}
               >
-                <Select placeholder="Select Biller">
+                <Select placeholder="Select biller">
                   {metadata.billers.map(b => (
-                    <Option key={b.id} value={b.id}>{b.company || b.name}</Option>
+                    <Option key={b.id} value={b.id}>{b.name} ({b.company || '-'})</Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
-
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} md={6}>
               <Form.Item
                 name="warehouse_id"
-                label={t('warehouse', 'Warehouse / Inventory Source')}
-                rules={[{ required: true, message: 'Please select warehouse' }]}
+                label={<span>{t('warehouse', 'Warehouse')} <span style={{ color: 'red' }}>*</span></span>}
+                rules={[{ required: true }]}
               >
-                <Select placeholder="Select Warehouse">
+                <Select placeholder="Select warehouse">
                   {metadata.warehouses.map(w => (
                     <Option key={w.id} value={w.id}>{w.name} ({w.code})</Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
+          </Row>
 
-            <Col xs={24} sm={12} md={6}>
+          <Row gutter={16}>
+            <Col xs={24} md={6}>
               <Form.Item
                 name="customer_id"
-                label={t('customer', 'Customer')}
-                rules={[{ required: true, message: 'Please select customer' }]}
+                label={<span>{t('customer', 'Customer')} <span style={{ color: 'red' }}>*</span></span>}
+                rules={[{ required: true }]}
               >
-                <Select
-                  showSearch
-                  placeholder="Select Customer"
-                  filterOption={(input, option) =>
-                    (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
-                  }
-                >
+                <Select placeholder="Select customer" showSearch optionFilterProp="children">
                   {metadata.customers.map(c => (
-                    <Option key={c.id} value={c.id}>
-                      {c.name} {c.company ? `(${c.company})` : ''}
-                    </Option>
+                    <Option key={c.id} value={c.id}>{c.name} ({c.phone || c.company || '-'})</Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
-
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item
-                name="sale_status"
-                label={t('sale_status', 'Sale Status')}
-                rules={[{ required: true }]}
-              >
-                <Select>
-                  <Option value="completed">
-                    <Tag color="success" style={{ margin: 0 }}>Completed (Deducts Stock)</Tag>
-                  </Option>
-                  <Option value="pending">
-                    <Tag color="warning" style={{ margin: 0 }}>Pending (Hold Order)</Tag>
-                  </Option>
-                </Select>
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item
-                name="due_date"
-                label={t('payment_due_date', 'Payment Due Date')}
-              >
+            <Col xs={24} md={6}>
+              <Form.Item name="due_date" label={t('due_date', 'Required / Due Date')}>
                 <Input type="date" />
               </Form.Item>
             </Col>
-
-            <Col xs={24} sm={12} md={6}>
-              <div style={{ paddingTop: '30px' }}>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  {t('original_channel', 'Sales Channel')}:{' '}
-                  <Tag color={originalSale?.pos ? 'orange' : 'blue'}>
-                    {originalSale?.pos ? 'POS Terminal Counter' : 'Commercial Invoice'}
-                  </Tag>
-                </Text>
-              </div>
+            <Col xs={24} md={6}>
+              <Form.Item name="sale_status" label={t('sale_status', 'Sale Status')}>
+                <Select>
+                  <Option value="completed">{t('completed', 'Completed (Stock Deducted)')}</Option>
+                  <Option value="pending">{t('pending', 'Pending (Draft / Quotation)')}</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item name="note" label={t('note', 'Invoice Note')}>
+                <Input placeholder="Invoice note for customer..." />
+              </Form.Item>
             </Col>
           </Row>
         </Card>
 
-        {/* Product Selection & Items Table */}
-        <Card
-          bordered={false}
-          style={{
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-            marginBottom: '20px'
-          }}
-          title={
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <BarcodeOutlined style={{ color: themeTokens.colorPrimary }} />
-                <span>{t('order_items', 'Order Items')} ({formItems.length})</span>
-              </div>
-              <Text type="secondary" style={{ fontSize: '13px', fontWeight: 'normal' }}>
-                {t('search_catalog_hint', 'Search and select products to append into sale')}
-              </Text>
-            </div>
-          }
-        >
-          {/* Product Quick-Add Bar */}
-          <div style={{ marginBottom: 16 }}>
-            <Select
-              showSearch
-              placeholder={t('search_product_placeholder', 'Type product name or SKU barcode to add to sale...')}
-              filterOption={false}
-              onSearch={searchProducts}
-              onChange={handleSelectProduct}
-              value={null}
-              loading={searchingProducts}
-              style={{ width: '100%', maxWidth: '600px' }}
-              notFoundContent={searchingProducts ? <Spin size="small" /> : <Empty description={t('no_products_found', 'No products found')} />}
-            >
-              {availableProducts.map(prod => (
-                <Option key={prod.id} value={prod.id}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>
-                      <strong>{prod.name}</strong> ({prod.code})
-                    </span>
-                    <span style={{ color: themeTokens.colorPrimary, fontWeight: 600 }}>
-                      {formatCurrency(prod.price)}
-                    </span>
+        {/* Scan / Add Products Bar & Items List */}
+        <Card bordered={false} style={{ borderRadius: 8, marginBottom: 20, boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.05)', background: themeTokens.colorBgContainer }}>
+          {/* Autocomplete Bar matching AURA_v1 #add_item search */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              border: isDark ? '1px solid rgba(255, 255, 255, 0.16)' : '1px solid #cbd5e1',
+              borderRadius: 8,
+              padding: '6px 14px',
+              background: isDark ? '#1e293b' : '#f8fafc',
+              marginBottom: 16,
+              boxShadow: isDark ? '0 2px 8px rgba(0, 0, 0, 0.35)' : '0 1px 2px rgba(0, 0, 0, 0.04)',
+              transition: 'all 0.2s'
+            }}
+          >
+            <BarcodeOutlined style={{ fontSize: 22, color: isDark ? '#a78bfa' : '#64748b', marginRight: 12 }} />
+            <AutoComplete
+              style={{ flex: 1, background: 'transparent' }}
+              value={searchValue}
+              options={suggestions.map(s => ({
+                value: s.code,
+                label: (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
+                    <div>
+                      <span style={{ fontWeight: 600, color: isDark ? '#f1f5f9' : '#1e293b' }}>{s.name}</span>
+                      <span style={{ color: isDark ? '#94a3b8' : '#64748b', marginLeft: 8, fontSize: 12 }}>({s.code})</span>
+                      {s.unit_name && <Tag color="blue" style={{ marginLeft: 6 }}>{s.unit_name}</Tag>}
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 700, color: isDark ? '#38bdf8' : '#0284c7', marginRight: 12 }}>
+                        ${s.price.toFixed(2)}
+                      </span>
+                      <Tag color={s.qoh > 0 ? 'green' : 'red'}>
+                        QOH: {s.qoh}
+                      </Tag>
+                    </div>
                   </div>
-                </Option>
-              ))}
-            </Select>
+                )
+              }))}
+              onSearch={(val) => {
+                setSearchValue(val);
+                fetchSuggestions(val);
+              }}
+              onSelect={(val) => handleSelectProduct(val)}
+              placeholder={t('scan_or_search_products', 'Please Scan barcode or add products to order list...')}
+            >
+              <Input
+                ref={searchInputRef}
+                bordered={false}
+                style={{ fontSize: 14, color: isDark ? '#f8fafc' : '#1e293b', background: 'transparent' }}
+                onPressEnter={(e) => {
+                  if (searchValue && suggestions.length > 0) {
+                    handleSelectProduct(suggestions[0].code);
+                  }
+                }}
+              />
+            </AutoComplete>
+            <Tooltip title={t('refresh_catalog', 'Reload product catalog')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined style={{ color: isDark ? '#94a3b8' : '#64748b' }} />}
+                onClick={() => fetchSuggestions(searchValue)}
+                loading={searchingProducts}
+              />
+            </Tooltip>
           </div>
 
           {/* Items Table */}
           <Table
             dataSource={formItems}
-            columns={columns}
-            pagination={false}
             rowKey="key"
+            pagination={false}
+            bordered
+            size="middle"
+            className="aura-bpas-items-table"
             locale={{
-              emptyText: (
-                <Empty
-                  description={t('no_sale_items', 'No items in this sale. Search and add products above.')}
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-              )
+              emptyText: <Empty description={t('no_items_in_sale', 'No items in order list.')} />
             }}
-            style={{ borderRadius: '8px', overflow: 'hidden' }}
+            columns={[
+              {
+                title: t('product_code_name', 'Product (Code - Name)'),
+                key: 'product',
+                render: (_, item) => (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Text strong style={{ color: isDark ? '#f8fafc' : '#1e293b', fontSize: 13 }}>
+                        {item.product_name}
+                      </Text>
+                      {/* Edit Icon to open popup Image 2 */}
+                      <Tooltip title={t('edit_item_popup', 'Edit Unit, Price, Discount, Tax')}>
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EditOutlined style={{ color: '#2563eb', fontSize: 15 }} />}
+                          onClick={() => handleOpenItemEditModal(item)}
+                          style={{ padding: '0 4px', height: 22 }}
+                        />
+                      </Tooltip>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                      <span>{item.product_code}</span>
+                      {item.variant_name && <Tag color="cyan" style={{ marginLeft: 6 }}>{item.variant_name}</Tag>}
+                      {item.unit_name && <Tag color="blue" style={{ marginLeft: 4 }}>{item.unit_name}</Tag>}
+                    </div>
+                    {item.description && (
+                      <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', marginTop: 2 }}>
+                        {item.description}
+                      </div>
+                    )}
+                  </div>
+                )
+              },
+              {
+                title: t('net_unit_price', 'Net Unit Price'),
+                dataIndex: 'net_unit_price',
+                key: 'net_unit_price',
+                width: 130,
+                align: 'right',
+                render: (val, item) => (
+                  <Text>{formatCurrency(val != null ? val : item.unit_price || 0)}</Text>
+                )
+              },
+              {
+                title: t('qoh', 'QOH'),
+                dataIndex: 'qoh',
+                key: 'qoh',
+                width: 90,
+                align: 'center',
+                render: (val) => {
+                  const q = parseFloat(val) || 0;
+                  return (
+                    <Tag color={q > 0 ? 'green' : q === 0 ? 'default' : 'red'}>
+                      {q}
+                    </Tag>
+                  );
+                }
+              },
+              {
+                title: t('quantity', 'Quantity'),
+                dataIndex: 'unit_quantity',
+                key: 'quantity',
+                width: 120,
+                render: (val, item) => (
+                  <InputNumber
+                    min={0.01}
+                    step={1}
+                    value={val != null ? val : item.quantity}
+                    onChange={(newVal) => handleQuantityChange(item.key, newVal)}
+                    style={{ width: '100%' }}
+                  />
+                )
+              },
+              {
+                title: t('product_discount', 'Product Discount'),
+                dataIndex: 'item_discount',
+                key: 'item_discount',
+                width: 120,
+                align: 'right',
+                render: (val) => <Text>{formatCurrency(val || 0)}</Text>
+              },
+              {
+                title: t('product_tax', 'Product Tax'),
+                dataIndex: 'item_tax',
+                key: 'item_tax',
+                width: 110,
+                align: 'right',
+                render: (val) => <Text>{formatCurrency(val || 0)}</Text>
+              },
+              {
+                title: t('subtotal', 'Subtotal'),
+                dataIndex: 'subtotal',
+                key: 'subtotal',
+                width: 130,
+                align: 'right',
+                render: (val) => <Text strong style={{ color: '#0f172a' }}>{formatCurrency(val || 0)}</Text>
+              },
+              {
+                title: '',
+                key: 'remove',
+                width: 50,
+                align: 'center',
+                render: (_, item) => (
+                  <Button
+                    type="text"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => handleRemoveItem(item.key)}
+                  />
+                )
+              }
+            ]}
           />
+
+          {/* Grand Total Summary Strip (Dark/Light mode adaptive) */}
+          <div
+            style={{
+              background: isDark
+                ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)'
+                : '#fef9c3',
+              border: isDark
+                ? '1px solid rgba(245, 158, 11, 0.35)'
+                : '1px solid #fde047',
+              borderRadius: 8,
+              padding: '12px 18px',
+              marginTop: 14,
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: 13,
+              fontWeight: 600,
+              color: isDark ? '#f8fafc' : '#854d0e',
+              boxShadow: isDark
+                ? '0 4px 14px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06)'
+                : 'none'
+            }}
+          >
+            <div>
+              <span style={{ color: isDark ? '#94a3b8' : '#854d0e' }}>{t('items', 'Items')}: </span>
+              <strong style={{ color: isDark ? '#f1f5f9' : '#854d0e' }}>{formItems.length} ({calculations.totalQty})</strong>
+            </div>
+            <div>
+              <span style={{ color: isDark ? '#94a3b8' : '#854d0e' }}>{t('total', 'Total')}: </span>
+              <strong style={{ color: isDark ? '#f1f5f9' : '#854d0e' }}>{formatCurrency(calculations.itemsTotal)}</strong>
+            </div>
+            <div>
+              <span style={{ color: isDark ? '#94a3b8' : '#854d0e' }}>{t('order_discount', 'Order Discount')}: </span>
+              <strong style={{ color: isDark ? '#f87171' : '#dc2626' }}>{formatCurrency(calculations.orderDiscountVal)}</strong>
+            </div>
+            <div>
+              <span style={{ color: isDark ? '#94a3b8' : '#854d0e' }}>{t('order_tax', 'Order Tax')}: </span>
+              <strong style={{ color: isDark ? '#60a5fa' : '#2563eb' }}>{formatCurrency(calculations.orderTaxVal)}</strong>
+            </div>
+            <div>
+              <span style={{ color: isDark ? '#94a3b8' : '#854d0e' }}>{t('shipping', 'Shipping')}: </span>
+              <strong style={{ color: isDark ? '#fbbf24' : '#d97706' }}>{formatCurrency(calculations.shippingVal)}</strong>
+            </div>
+            <div style={{ fontSize: 16 }}>
+              <span style={{ color: isDark ? '#e2e8f0' : '#854d0e', fontWeight: 700 }}>{t('grand_total', 'Grand Total')}: </span>
+              <strong style={{ color: isDark ? '#4ade80' : '#15803d', fontSize: 18 }}>{formatCurrency(calculations.grandTotal)}</strong>
+            </div>
+          </div>
         </Card>
 
-        {/* Financial Summary & Bottom Fields */}
-        <Row gutter={20}>
-          {/* Notes & Comments */}
-          <Col xs={24} lg={14}>
-            <Card
-              bordered={false}
-              style={{
-                borderRadius: '12px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                marginBottom: '20px'
-              }}
-              title={t('sale_notes', 'Sale Notes & Staff Comments')}
-            >
-              <Form.Item name="note" label={t('customer_invoice_note', 'Invoice Note (Printed on receipt)')}>
-                <Input.TextArea rows={3} placeholder={t('note_placeholder', 'Terms, warranties, or customer message...')} />
+        {/* Order Discount, Tax, Shipping & Notes Card */}
+        <Card bordered={false} style={{ borderRadius: 8, marginBottom: 20, boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <Row gutter={16}>
+            <Col xs={24} md={6}>
+              <Form.Item name="order_discount" label={t('order_discount', 'Order Discount (0 or 5%)')}>
+                <Input placeholder="e.g. 10 or 5%" />
               </Form.Item>
-
-              <Form.Item name="staff_note" label={t('internal_staff_note', 'Internal Staff Note (Confidential)')}>
-                <Input.TextArea rows={2} placeholder={t('staff_note_placeholder', 'Internal warehouse or accounting notes...')} />
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item name="order_tax_id" label={t('order_tax', 'Order Tax')}>
+                <Select placeholder="Select order tax" allowClear>
+                  {metadata.taxRates?.map(t => (
+                    <Option key={t.id} value={t.id}>{t.name} ({t.rate}%)</Option>
+                  ))}
+                </Select>
               </Form.Item>
-            </Card>
-          </Col>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item name="shipping" label={t('shipping', 'Shipping Cost')}>
+                <InputNumber min={0} step={1} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item name="staff_note" label={t('staff_note', 'Staff Note (Private)')}>
+                <Input placeholder="Internal remarks..." />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          {/* Financial Calculation Box */}
-          <Col xs={24} lg={10}>
-            <Card
-              bordered={false}
+          {/* Payment Status Summary Bar */}
+          <div
+            style={{
+              background: isDark ? 'rgba(30, 41, 59, 0.75)' : '#f1f5f9',
+              border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #e2e8f0',
+              borderRadius: 6,
+              padding: '12px 16px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 16
+            }}
+          >
+            <div>
+              <Text strong style={{ color: isDark ? '#e2e8f0' : '#1e293b' }}>{t('paid_amount', 'Paid Amount')}: </Text>
+              <span style={{ color: '#16a34a', fontWeight: 700, fontSize: 15 }}>
+                {formatCurrency(calculations.paidVal)}
+              </span>
+            </div>
+            <div>
+              <Text strong style={{ color: isDark ? '#e2e8f0' : '#1e293b' }}>{t('balance_due', 'Outstanding Balance Due')}: </Text>
+              <span style={{ color: calculations.balance > 0 ? '#ef4444' : '#16a34a', fontWeight: 700, fontSize: 15 }}>
+                {formatCurrency(calculations.balance)}
+              </span>
+            </div>
+          </div>
+
+          {/* Form Actions */}
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={submitting}
+              icon={<SaveOutlined />}
               style={{
-                borderRadius: '12px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                background: '#f8fafc',
-                marginBottom: '20px'
+                background: '#337ab7',
+                borderColor: '#2e6da4',
+                padding: '0 32px',
+                height: 38,
+                fontWeight: 600
               }}
-              title={
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <DollarOutlined style={{ color: themeTokens.colorPrimary }} />
-                  <span>{t('financial_totals', 'Financial Totals')}</span>
-                </div>
-              }
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                <Text style={{ color: '#64748b' }}>{t('items_subtotal', 'Items Subtotal')}:</Text>
-                <Text strong style={{ fontSize: '15px' }}>{formatCurrency(calculations.itemsSubtotal)}</Text>
-              </div>
-
-              <Row gutter={8} style={{ marginBottom: 12 }}>
-                <Col span={14}>
-                  <Text style={{ color: '#64748b' }}>{t('order_discount', 'Order Discount ($)')}:</Text>
-                </Col>
-                <Col span={10}>
-                  <Form.Item name="order_discount" noStyle>
-                    <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={8} style={{ marginBottom: 12 }}>
-                <Col span={14}>
-                  <Text style={{ color: '#64748b' }}>{t('order_tax', 'Order Tax ($)')}:</Text>
-                </Col>
-                <Col span={10}>
-                  <Form.Item name="order_tax" noStyle>
-                    <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={8} style={{ marginBottom: 12 }}>
-                <Col span={14}>
-                  <Text style={{ color: '#64748b' }}>{t('shipping_charge', 'Shipping Fee ($)')}:</Text>
-                </Col>
-                <Col span={10}>
-                  <Form.Item name="shipping" noStyle>
-                    <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Divider style={{ margin: '14px 0' }} />
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
-                <Text strong style={{ fontSize: '16px', color: '#0f172a' }}>{t('grand_total', 'Grand Total')}:</Text>
-                <Text strong style={{ fontSize: '20px', color: themeTokens.colorPrimary }}>
-                  {formatCurrency(calculations.grandTotal)}
-                </Text>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
-                <Text style={{ color: '#64748b' }}>{t('already_paid', 'Already Paid')}:</Text>
-                <Tag color={calculations.alreadyPaid >= calculations.grandTotal && calculations.grandTotal > 0 ? 'green' : 'blue'}>
-                  {formatCurrency(calculations.alreadyPaid)}
-                </Tag>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text strong style={{ color: calculations.balance > 0 ? '#ef4444' : '#10b981' }}>
-                  {t('balance_due', 'Balance Due')}:
-                </Text>
-                <Text strong style={{ fontSize: '16px', color: calculations.balance > 0 ? '#ef4444' : '#10b981' }}>
-                  {formatCurrency(calculations.balance)}
-                </Text>
-              </div>
-            </Card>
-          </Col>
-        </Row>
+              {t('update_sale', 'Update Sale')}
+            </Button>
+            <Button
+              onClick={() => navigate('/admins/sales')}
+              style={{ height: 38 }}
+            >
+              {t('cancel', 'Cancel')}
+            </Button>
+          </div>
+        </Card>
       </Form>
 
-      {/* Product Variant Picker Modal */}
+      {/* Item Edit Modal (BpasItemEditModal / Image 2) */}
+      <BpasItemEditModal
+        open={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        item={editingItem}
+        units={metadata.units}
+        taxRates={metadata.taxRates}
+        onSave={handleSaveEditedItem}
+        mode="sales"
+      />
+
+      {/* Variant Selector Modal */}
       <Modal
-        title={
-          <div>
-            <ShoppingOutlined style={{ marginRight: 8, color: themeTokens.colorPrimary }} />
-            <span>{t('choose_variant', 'Select Product Variant')}</span>
-          </div>
-        }
+        title={t('select_variant', 'Select Product Variant')}
         open={variantModalVisible}
         onCancel={() => setVariantModalVisible(false)}
         footer={null}
-        destroyOnClose
+        width={400}
       >
-        <p style={{ color: '#64748b', fontSize: '13px' }}>
-          <strong>{selectedProductForVariant?.name}</strong> has multiple variants. Please choose one:
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-          {selectedProductForVariant?.variants?.map(v => (
-            <Card
-              key={v.id}
-              hoverable
-              size="small"
-              onClick={() => {
-                addItemToCart(selectedProductForVariant, v);
-                setVariantModalVisible(false);
-              }}
-              style={{ borderRadius: '8px', cursor: 'pointer' }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <Text strong>{v.name}</Text>
-                  {v.sku && (
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>
-                      SKU: {v.sku}
-                    </div>
-                  )}
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <Text strong style={{ color: themeTokens.colorPrimary }}>
-                    {formatCurrency(v.price || selectedProductForVariant?.price)}
-                  </Text>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+        {selectedProductForVariant && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <Text>{selectedProductForVariant.name}</Text>
+            {selectedProductForVariant.variants?.map(v => (
+              <Button
+                key={v.id}
+                type="default"
+                style={{ textAlign: 'left', height: 42, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                onClick={() => {
+                  addItemToCart(selectedProductForVariant, v);
+                  setVariantModalVisible(false);
+                }}
+              >
+                <span>{v.name}</span>
+                <strong style={{ color: '#2563eb' }}>${v.price}</strong>
+              </Button>
+            ))}
+          </div>
+        )}
       </Modal>
     </div>
   );

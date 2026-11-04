@@ -45,6 +45,7 @@ import {
   InboxOutlined,
   LinkOutlined
 } from '@ant-design/icons';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
@@ -400,101 +401,74 @@ export default function BpasPurchaseOrdersWorkspace({ embedded = false }) {
       title: 'Actions',
       key: 'actions',
       align: 'center',
-      width: 170,
+      width: 100,
       render: (_, record) => {
         const isApproved = record.status === 'approved';
         const isPending = record.status === 'pending' || !record.status;
         const isRejected = record.status === 'rejected';
         const hasReceipt = record.received == 1 || record.order_status === 'completed';
 
-        return (
-          <Space size={4}>
-            <Tooltip title="View / Print PO">
-              <Button
-                type="text"
-                size="small"
-                icon={<EyeOutlined />}
-                onClick={() => handleOpenDetail(record)}
-              />
-            </Tooltip>
+        const actionItems = [
+          {
+            key: 'view',
+            icon: <EyeOutlined />,
+            label: 'View / Print PO',
+            onClick: () => handleOpenDetail(record),
+          },
+          ...(isPending ? [
+            {
+              key: 'approve',
+              icon: <CheckCircleOutlined style={{ color: '#16a34a' }} />,
+              label: 'Approve Purchase Order',
+              onClick: () => handleApprove(record.id),
+            },
+            {
+              key: 'reject',
+              icon: <CloseCircleOutlined style={{ color: '#dc2626' }} />,
+              label: 'Reject Purchase Order',
+              onClick: () => handleOpenRejectModal(record.id),
+            },
+          ] : []),
+          ...(isApproved && !hasReceipt ? [{
+            key: 'unapprove',
+            icon: <RollbackOutlined style={{ color: '#ca8a04' }} />,
+            label: 'Revert to Pending',
+            onClick: () => handleUnapprove(record.id),
+          }] : []),
+          ...(isRejected ? [{
+            key: 'reopen',
+            icon: <RollbackOutlined style={{ color: '#2563eb' }} />,
+            label: 'Reopen / Revert to Pending',
+            onClick: () => handleUnapprove(record.id),
+          }] : []),
+          ...(!hasReceipt ? [{
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: 'Edit Purchase Order',
+            onClick: () => navigate(`/admins/purchases_orders/edit/${record.id}`),
+          }] : []),
+          ...(!hasReceipt ? [
+            { type: 'divider' },
+            {
+              key: 'delete',
+              icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+              danger: true,
+              label: 'Delete Purchase Order',
+              onClick: () => {
+                Modal.confirm({
+                  title: 'Delete Purchase Order',
+                  content: `Are you sure you want to delete PO ${record.reference_no}?`,
+                  okText: 'Yes, Delete',
+                  okType: 'danger',
+                  cancelText: 'Cancel',
+                  onOk: () => handleDelete(record.id),
+                });
+              },
+            },
+          ] : []),
+        ];
 
-            {isPending && (
-              <>
-                <Tooltip title="Approve Purchase Order">
-                  <Button
-                    type="text"
-                    size="small"
-                    style={{ color: '#16a34a' }}
-                    icon={<CheckCircleOutlined />}
-                    onClick={() => handleApprove(record.id)}
-                  />
-                </Tooltip>
-                <Tooltip title="Reject Purchase Order">
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    icon={<CloseCircleOutlined />}
-                    onClick={() => handleOpenRejectModal(record.id)}
-                  />
-                </Tooltip>
-              </>
-            )}
-
-            {isApproved && !hasReceipt && (
-              <Tooltip title="Revert Approval to Pending">
-                <Button
-                  type="text"
-                  size="small"
-                  style={{ color: '#ca8a04' }}
-                  icon={<RollbackOutlined />}
-                  onClick={() => handleUnapprove(record.id)}
-                />
-              </Tooltip>
-            )}
-
-            {isRejected && (
-              <Tooltip title="Reopen / Revert to Pending">
-                <Button
-                  type="text"
-                  size="small"
-                  style={{ color: '#2563eb' }}
-                  icon={<RollbackOutlined />}
-                  onClick={() => handleUnapprove(record.id)}
-                />
-              </Tooltip>
-            )}
-
-            {!hasReceipt && (
-              <Tooltip title="Edit Purchase Order">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<EditOutlined />}
-                  onClick={() => navigate(`/admins/purchases_orders/edit/${record.id}`)}
-                />
-              </Tooltip>
-            )}
-
-            {!hasReceipt && (
-              <Popconfirm
-                title="Delete Purchase Order"
-                description={`Are you sure you want to delete PO ${record.reference_no}?`}
-                onConfirm={() => handleDelete(record.id)}
-                okText="Yes, Delete"
-                cancelText="Cancel"
-                okButtonProps={{ danger: true }}
-              >
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  icon={<DeleteOutlined />}
-                />
-              </Popconfirm>
-            )}
-          </Space>
-        );
+        return <TableActionDropdown items={actionItems} />;
       },
     },
   ];

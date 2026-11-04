@@ -11,10 +11,20 @@ import {
   FireOutlined,
   ThunderboltFilled,
 } from '@ant-design/icons';
+import { useAdminTheme } from '../../../hooks/useAdminTheme';
 
 const KHR_RATE = 4100;
 
 const PosViewBill = () => {
+  const adminTheme = useAdminTheme();
+  const isDark = Boolean(adminTheme?.isDark);
+  const primaryColor = adminTheme?.colorPrimary || '#2F6FED';
+  const pageBg = adminTheme?.pageBackground || (isDark ? '#0b1120' : '#f1f5f9');
+  const cardBg = adminTheme?.card || (isDark ? '#161f30' : '#ffffff');
+  const borderColor = adminTheme?.border || (isDark ? 'rgba(255, 255, 255, 0.12)' : '#cbd5e1');
+  const textColor = adminTheme?.text || (isDark ? '#f8fafc' : '#0f172a');
+  const subtextColor = adminTheme?.subtext || (isDark ? '#94a3b8' : '#64748b');
+
   const [billData, setBillData] = useState(() => {
     try {
       const saved = localStorage.getItem('aura_pos_customer_display');
@@ -120,9 +130,10 @@ const PosViewBill = () => {
         width: '100vw',
         height: '100vh',
         display: 'flex',
-        background: '#f1f5f9',
+        background: pageBg,
         fontFamily: "'Segoe UI', Aptos, -apple-system, BlinkMacSystemFont, sans-serif",
         overflow: 'hidden',
+        color: textColor,
       }}
     >
       {/* ================= LEFT SIDE: CUSTOMER BILL DISPLAY (MATCHING IMAGE 2) ================= */}
@@ -134,9 +145,9 @@ const PosViewBill = () => {
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          background: '#ffffff',
-          borderRight: '1px solid #cbd5e1',
-          boxShadow: '4px 0 20px rgba(0, 0, 0, 0.05)',
+          background: cardBg,
+          borderRight: `1px solid ${borderColor}`,
+          boxShadow: isDark ? '4px 0 20px rgba(0, 0, 0, 0.4)' : '4px 0 20px rgba(0, 0, 0, 0.05)',
           zIndex: 10,
         }}
       >
@@ -144,8 +155,8 @@ const PosViewBill = () => {
         <div
           style={{
             padding: '16px 20px 12px 20px',
-            borderBottom: '1px solid #e2e8f0',
-            background: '#ffffff',
+            borderBottom: `1px solid ${borderColor}`,
+            background: cardBg,
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -155,7 +166,7 @@ const PosViewBill = () => {
                   width: 34,
                   height: 34,
                   borderRadius: 9,
-                  background: 'linear-gradient(135deg, #2F6FED, #5B8DEF)',
+                  background: `linear-gradient(135deg, ${primaryColor}, #5B8DEF)`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -167,15 +178,15 @@ const PosViewBill = () => {
                 A
               </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', lineHeight: 1.2 }}>
+                <div style={{ fontSize: 16, fontWeight: 900, color: textColor, lineHeight: 1.2 }}>
                   AURA POS
                 </div>
-                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Customer Display Screen</div>
+                <div style={{ fontSize: 11, color: subtextColor, fontWeight: 600 }}>Customer Display Screen</div>
               </div>
             </div>
 
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#2F6FED', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: primaryColor, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <ClockCircleOutlined /> {currentTime}
               </div>
               <div style={{ fontSize: 11, color: '#059669', fontWeight: 700 }}>● Online</div>
@@ -216,11 +227,11 @@ const PosViewBill = () => {
               display: 'grid',
               gridTemplateColumns: '2fr 1fr 1fr 1.2fr',
               padding: '10px 16px',
-              background: '#f8fafc',
-              borderBottom: '1px solid #e2e8f0',
+              background: isDark ? '#1e293b' : '#f8fafc',
+              borderBottom: `1px solid ${borderColor}`,
               fontSize: 12,
               fontWeight: 800,
-              color: '#334155',
+              color: textColor,
               textTransform: 'uppercase',
               letterSpacing: 0.5,
             }}
@@ -271,15 +282,15 @@ const PosViewBill = () => {
                       gridTemplateColumns: '2fr 1fr 1fr 1.2fr',
                       padding: '10px 16px',
                       alignItems: 'center',
-                      borderBottom: '1px solid #f1f5f9',
-                      background: idx % 2 === 0 ? '#ffffff' : '#fafafa',
+                      borderBottom: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.06)' : '#f1f5f9'}`,
+                      background: idx % 2 === 0 ? (isDark ? '#161f30' : '#ffffff') : (isDark ? '#1a2436' : '#fafafa'),
                       fontSize: 12.5,
                       transition: 'background 0.15s ease',
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>{item.name}</div>
-                      <div style={{ fontSize: 10.5, color: '#64748b', marginTop: 2 }}>{item.code}</div>
+                      <div style={{ fontWeight: 700, color: textColor, lineHeight: 1.2 }}>{item.name}</div>
+                      <div style={{ fontSize: 10.5, color: subtextColor, marginTop: 2 }}>{item.code}</div>
                       {unitDisc > 0 && (
                         <Tag color="red" style={{ fontSize: 9.5, margin: '2px 0 0 0', padding: '0 4px', borderRadius: 4, fontWeight: 700 }}>
                           -{isPercent ? `${discVal}%` : `$${unitDisc.toFixed(2)}`} off
@@ -310,8 +321,8 @@ const PosViewBill = () => {
         {/* Totals Summary Rows (Matching Image 2) */}
         <div
           style={{
-            borderTop: '1px solid #e2e8f0',
-            background: '#ffffff',
+            borderTop: `1px solid ${borderColor}`,
+            background: cardBg,
             padding: '12px 18px',
           }}
         >
@@ -322,16 +333,16 @@ const PosViewBill = () => {
               justifyContent: 'space-between',
               alignItems: 'center',
               fontSize: 12.5,
-              color: '#334155',
+              color: textColor,
               marginBottom: 6,
             }}
           >
             <div>
-              <span style={{ color: '#64748b' }}>Items: </span>
+              <span style={{ color: subtextColor }}>Items: </span>
               <span style={{ fontWeight: 800 }}>{items.length} ({totalItemCount})</span>
             </div>
             <div>
-              <span style={{ color: '#64748b' }}>Total: </span>
+              <span style={{ color: subtextColor }}>Total: </span>
               <span style={{ fontWeight: 800 }}>${(grossTotal || grandTotalUSD).toFixed(2)}</span>
             </div>
           </div>
@@ -343,12 +354,12 @@ const PosViewBill = () => {
               justifyContent: 'space-between',
               alignItems: 'center',
               fontSize: 12.5,
-              color: '#334155',
+              color: textColor,
               marginBottom: 10,
             }}
           >
             <div>
-              <span style={{ color: '#64748b' }}>Order Tax: </span>
+              <span style={{ color: subtextColor }}>Order Tax: </span>
               <span style={{ fontWeight: 800 }}>${orderTax.toFixed(2)}</span>
             </div>
             <div>

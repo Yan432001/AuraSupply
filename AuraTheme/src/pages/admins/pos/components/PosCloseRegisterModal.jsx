@@ -98,57 +98,62 @@ const PosCloseRegisterModal = ({
           </div>
 
           {/* Tender Breakdown Table (from close_register.php) */}
-          <div
-            style={{
-              padding: '12px 16px',
-              borderRadius: 14,
-              background: isDark ? '#1e293b' : '#f8fafc',
-              border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
-              marginBottom: 16,
-              fontSize: 13,
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #e2e8f0' }}>
-              <span style={{ color: '#64748b' }}>Opening Cash In Hand:</span>
-              <span style={{ fontWeight: 700 }}>${cashInHand.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #e2e8f0' }}>
-              <span style={{ color: '#64748b' }}>Cash Sales:</span>
-              <span style={{ fontWeight: 700, color: '#10b981' }}>+${cashSales.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #e2e8f0' }}>
-              <span style={{ color: '#64748b' }}>ABA / KHQR Sales:</span>
-              <span style={{ fontWeight: 600 }}>${abaSales.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #e2e8f0' }}>
-              <span style={{ color: '#64748b' }}>ACLEDA Sales:</span>
-              <span style={{ fontWeight: 600 }}>${acledaSales.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #e2e8f0' }}>
-              <span style={{ color: '#64748b' }}>Credit Card Sales:</span>
-              <span style={{ fontWeight: 600 }}>${ccSales.toFixed(2)}</span>
-            </div>
-            {otherSales > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #e2e8f0' }}>
-                <span style={{ color: '#64748b' }}>Other (Wing / PiPay / Alipay):</span>
-                <span style={{ fontWeight: 600 }}>${otherSales.toFixed(2)}</span>
+          {(() => {
+            const rowBorder = `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0'}`;
+            return (
+            <div
+              style={{
+                padding: '12px 16px',
+                borderRadius: 14,
+                background: isDark ? '#1e293b' : '#f8fafc',
+                border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+                marginBottom: 16,
+                fontSize: 13,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: rowBorder }}>
+                <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Opening Cash In Hand:</span>
+                <span style={{ fontWeight: 700, color: isDark ? '#f8fafc' : '#0f172a' }}>${cashInHand.toFixed(2)}</span>
               </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #e2e8f0' }}>
-              <span style={{ color: '#64748b' }}>Expenses (Drawer Cash Out):</span>
-              <span style={{ fontWeight: 700, color: '#ef4444' }}>-${expenses.toFixed(2)}</span>
-            </div>
-            {refunds > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #e2e8f0' }}>
-                <span style={{ color: '#64748b' }}>Cash Refunds / Returns:</span>
-                <span style={{ fontWeight: 700, color: '#ef4444' }}>-${refunds.toFixed(2)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: rowBorder }}>
+                <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Cash Sales:</span>
+                <span style={{ fontWeight: 700, color: '#10b981' }}>+${cashSales.toFixed(2)}</span>
               </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 2px', fontSize: 15, fontWeight: 900 }}>
-              <span style={{ color: '#2F6FED' }}>Expected Drawer Cash:</span>
-              <span style={{ color: '#2F6FED' }}>${expectedCash.toFixed(2)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: rowBorder }}>
+                <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>ABA / KHQR Sales:</span>
+                <span style={{ fontWeight: 600, color: isDark ? '#f8fafc' : '#0f172a' }}>${abaSales.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: rowBorder }}>
+                <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>ACLEDA Sales:</span>
+                <span style={{ fontWeight: 600, color: isDark ? '#f8fafc' : '#0f172a' }}>${acledaSales.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: rowBorder }}>
+                <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Credit Card Sales:</span>
+                <span style={{ fontWeight: 600, color: isDark ? '#f8fafc' : '#0f172a' }}>${ccSales.toFixed(2)}</span>
+              </div>
+              {otherSales > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: rowBorder }}>
+                  <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Other (Wing / PiPay / Alipay):</span>
+                  <span style={{ fontWeight: 600, color: isDark ? '#f8fafc' : '#0f172a' }}>${otherSales.toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: rowBorder }}>
+                <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Expenses (Drawer Cash Out):</span>
+                <span style={{ fontWeight: 700, color: '#ef4444' }}>-${expenses.toFixed(2)}</span>
+              </div>
+              {refunds > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: rowBorder }}>
+                  <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Cash Refunds / Returns:</span>
+                  <span style={{ fontWeight: 700, color: '#ef4444' }}>-${refunds.toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 2px', fontSize: 15, fontWeight: 900 }}>
+                <span style={{ color: '#2F6FED' }}>Expected Drawer Cash:</span>
+                <span style={{ color: '#2F6FED' }}>${expectedCash.toFixed(2)}</span>
+              </div>
             </div>
-          </div>
+            );
+          })()}
 
           {/* Cashier Counted Cash Input */}
           <div style={{ marginBottom: 16 }}>

@@ -383,13 +383,6 @@ export default function SystemSettings() {
           </Button>
           <Button
             size="small"
-            icon={<ShopOutlined />}
-            onClick={() => navigate('/admins?module=settings&menu=warehouses')}
-          >
-            {t('warehouses', 'Warehouses')}
-          </Button>
-          <Button
-            size="small"
             icon={<LockOutlined />}
             onClick={() => navigate('/admins?module=settings&menu=permissions')}
           >

@@ -57,7 +57,15 @@ const adminThemeLight = {
   systemTealSoft: 'rgba(13, 148, 136, 0.12)',
   systemOrange: '#ff7a3d',
   systemOrangeSoft: 'rgba(255, 122, 61, 0.12)',
+  colorPrimary: '#2f6fed',
+  colorBgLayout: '#f8fafc',
+  colorTextHeading: '#0f172a',
+  colorText: '#0f172a',
+  colorTextSecondary: '#64748b',
+  colorBorder: 'rgba(226, 232, 240, 0.85)',
+  colorBgContainer: '#ffffff',
 };
+adminThemeLight.themeTokens = adminThemeLight;
 
 const adminThemeDark = {
   pageBackground:
@@ -92,7 +100,15 @@ const adminThemeDark = {
   systemTealSoft: 'rgba(20, 184, 166, 0.16)',
   systemOrange: '#ff9a5c',
   systemOrangeSoft: 'rgba(255, 154, 92, 0.18)',
+  colorPrimary: '#3b82f6',
+  colorBgLayout: '#0b0f19',
+  colorTextHeading: '#f8fafc',
+  colorText: '#f8fafc',
+  colorTextSecondary: '#94a3b8',
+  colorBorder: 'rgba(255, 255, 255, 0.08)',
+  colorBgContainer: '#1e293b',
 };
+adminThemeDark.themeTokens = adminThemeDark;
 
 // Static default (light) — for any code path outside a component render.
 // Prefer `useAdminTheme()` inside components so colors follow the dark-mode
@@ -199,7 +215,7 @@ export const getWallpaperBackground = (wallpaperKey, isDark, primary = '#2f6fed'
     case 'emerald':
       return `radial-gradient(at 10% 10%, rgba(16, 185, 129, ${isDark ? 0.4 : 0.26}) 0px, transparent 50%), radial-gradient(at 90% 20%, rgba(2, 132, 199, ${isDark ? 0.35 : 0.22}) 0px, transparent 50%), radial-gradient(at 80% 90%, rgba(217, 119, 6, ${isDark ? 0.25 : 0.16}) 0px, transparent 50%), linear-gradient(180deg, ${isDark ? '#03140e' : '#ecfdf5'} 0%, ${isDark ? '#021814' : '#d1fae5'} 100%)`;
     case 'cosmic':
-      return `radial-gradient(at 30% 30%, rgba(147, 51, 234, 0.45) 0px, transparent 50%), radial-gradient(at 70% 60%, rgba(59, 130, 246, 0.4) 0px, transparent 50%), radial-gradient(at 20% 80%, rgba(236, 72, 153, 0.3) 0px, transparent 50%), linear-gradient(145deg, #020617 0%, #0b0f19 100%)`;
+      return `radial-gradient(at 30% 30%, rgba(147, 51, 234, ${isDark ? 0.45 : 0.22}) 0px, transparent 50%), radial-gradient(at 70% 60%, rgba(59, 130, 246, ${isDark ? 0.4 : 0.2}) 0px, transparent 50%), radial-gradient(at 20% 80%, rgba(236, 72, 153, ${isDark ? 0.3 : 0.15}) 0px, transparent 50%), linear-gradient(145deg, ${isDark ? '#020617' : '#faf5ff'} 0%, ${isDark ? '#0b0f19' : '#ede9fe'} 100%)`;
     case 'minimal':
       return `radial-gradient(circle at 10% 10%, ${hexToRgba(primary, isDark ? 0.22 : 0.14)}, transparent 40%), radial-gradient(circle at 90% 90%, rgba(255, 122, 61, ${isDark ? 0.1 : 0.06}), transparent 40%), linear-gradient(180deg, ${isDark ? '#0a0e17' : '#f8fafc'} 0%, ${isDark ? '#0f172a' : '#f1f5f9'} 100%)`;
     case 'aurora':
@@ -310,7 +326,7 @@ export const useAdminThemeTokens = (themeMode = 'light', presetPrimary, customSe
     : `radial-gradient(circle at 8% 6%, ${hexToRgba(primary, 0.08)}, transparent 32%), radial-gradient(circle at 92% 8%, rgba(255, 122, 61, 0.04), transparent 25%), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)`;
 
   if (!isTransparent) {
-    return {
+    const nonTransparentResult = {
       ...base,
       isDark,
       themeMode,
@@ -334,7 +350,13 @@ export const useAdminThemeTokens = (themeMode = 'light', presetPrimary, customSe
       sidebarActiveText: primary,
       sidebarActiveBg: hexToRgba(primary, isDark ? 0.22 : 0.10),
       isTransparent: false,
+      colorPrimary: primary,
+      colorBgLayout: solidPageBg,
+      colorTextHeading: isDark ? '#f8fafc' : '#0f172a',
+      colorBgContainer: rawCardBg,
     };
+    nonTransparentResult.themeTokens = nonTransparentResult;
+    return nonTransparentResult;
   }
 
   const glow = transparentConfig.glassBorderGlow !== false;
@@ -358,7 +380,7 @@ export const useAdminThemeTokens = (themeMode = 'light', presetPrimary, customSe
     ? (glow ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)')
     : (glow ? 'rgba(255, 255, 255, 0.75)' : 'rgba(226, 232, 240, 0.7)');
 
-  return {
+  const transparentResult = {
     ...base,
     isDark,
     themeMode,
@@ -387,7 +409,13 @@ export const useAdminThemeTokens = (themeMode = 'light', presetPrimary, customSe
     glassShadow: isDark
       ? '0 12px 36px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
       : '0 12px 36px 0 rgba(47, 111, 237, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+    colorPrimary: primary,
+    colorBgLayout: pageBg,
+    colorTextHeading: isDark ? '#f8fafc' : '#0f172a',
+    colorBgContainer: cardRgba,
   };
+  transparentResult.themeTokens = transparentResult;
+  return transparentResult;
 };
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {

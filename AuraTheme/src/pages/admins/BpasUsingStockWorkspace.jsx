@@ -45,6 +45,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -632,71 +633,13 @@ export default function BpasUsingStockWorkspace({ embedded = false }) {
           }
         ];
 
-        return (
-          <Dropdown menu={{ items: menuItems }} trigger={['click']}>
-            <Button size="small" icon={<MoreOutlined />}>
-              Actions
-            </Button>
-          </Dropdown>
-        );
+        return <TableActionDropdown items={menuItems} />;
       }
     }
   ];
 
   return (
     <div className="bpas-using-stock-workspace" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* 
-        =========================================================================
-        TOP METRIC STATISTIC STRIP
-        =========================================================================
-      */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}>
-            <Statistic
-              title={<span style={{ color: adminTheme?.subtext || '#64748b' }}>Total Stock Consumptions</span>}
-              value={stats.count_use || 0}
-              prefix={<FileTextOutlined style={{ color: '#2563eb' }} />}
-              valueStyle={{ fontWeight: 800, color: adminTheme?.text || '#0f172a' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}>
-            <Statistic
-              title={<span style={{ color: adminTheme?.subtext || '#64748b' }}>Total Value Used</span>}
-              value={stats.total_use_cost || 0}
-              precision={2}
-              prefix={<DollarOutlined style={{ color: '#16a34a' }} />}
-              formatter={(val) => formatCurrency(val)}
-              valueStyle={{ fontWeight: 800, color: '#16a34a' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}>
-            <Statistic
-              title={<span style={{ color: adminTheme?.subtext || '#64748b' }}>Stock Returns</span>}
-              value={stats.count_return || 0}
-              prefix={<RollbackOutlined style={{ color: '#d97706' }} />}
-              valueStyle={{ fontWeight: 800, color: '#d97706' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}>
-            <Statistic
-              title={<span style={{ color: adminTheme?.subtext || '#64748b' }}>Total Returned Value</span>}
-              value={stats.total_return_cost || 0}
-              precision={2}
-              prefix={<DollarOutlined style={{ color: '#d97706' }} />}
-              formatter={(val) => formatCurrency(val)}
-              valueStyle={{ fontWeight: 800, color: '#d97706' }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
       {/* 
         =========================================================================
         MAIN WORKSPACE CARD & FILTER BAR

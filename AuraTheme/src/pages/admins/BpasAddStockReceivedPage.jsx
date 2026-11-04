@@ -522,15 +522,6 @@ export default function BpasAddStockReceivedPage({ onBack = null, onSuccess = nu
           <Button icon={<RollbackOutlined />} onClick={handleBack}>
             Back to List
           </Button>
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            loading={submitting}
-            onClick={() => form.submit()}
-            style={{ fontWeight: 600, background: '#2563eb' }}
-          >
-            Save & Post Stock Receipt
-          </Button>
         </Space>
       </div>
 
@@ -751,7 +742,12 @@ export default function BpasAddStockReceivedPage({ onBack = null, onSuccess = nu
             <Col xs={24} md={10}>
               <Card
                 bordered
-                style={{ background: '#f8fafc', borderColor: '#e2e8f0', borderRadius: 8 }}
+                style={{
+                  background: adminTheme?.isDark ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)' : '#f8fafc',
+                  borderColor: adminTheme?.isDark ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0',
+                  borderRadius: 8,
+                  boxShadow: adminTheme?.isDark ? '0 4px 12px rgba(0,0,0,0.3)' : 'none'
+                }}
                 bodyStyle={{ padding: 16 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>

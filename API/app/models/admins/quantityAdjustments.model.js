@@ -1,4 +1,5 @@
 const db = require('../../config/dbPool');
+const { unitToBaseQty } = require('../../utils/unitConverter');
 
 /**
  * QUANTITY ADJUSTMENTS MODEL (BPAS / AURA_v1 Standard)
@@ -219,20 +220,25 @@ class QuantityAdjustmentsModel {
           pv.name AS variant_name,
           pv.sku AS variant_sku,
           ai.quantity,
+          COALESCE(ai.unit_quantity, ai.quantity) AS unit_quantity,
+          COALESCE(ai.product_unit_id, p.unit) AS unit_id,
+          COALESCE(ai.product_unit_code, u.name, 'Unit') AS unit_name,
+          p.unit AS base_unit_id,
+          u.operator AS unit_operator,
+          u.operation_value AS unit_operation_value,
           ai.type,
           ai.serial_no,
           ai.expiry,
+          ai.description,
           ai.real_unit_cost,
           COALESCE(ai.real_unit_cost, p.cost, 0) AS unit_cost,
           (ai.quantity * COALESCE(ai.real_unit_cost, p.cost, 0)) AS subtotal,
-          p.unit AS unit_id,
-          u.name AS unit_name,
           COALESCE(wp.quantity, 0) AS warehouse_qoh,
           COALESCE(p.quantity, 0) AS total_qoh
         FROM aura_adjustment_items ai
         LEFT JOIN aura_products p ON p.id = ai.product_id
         LEFT JOIN aura_product_variants pv ON pv.id = ai.option_id
-        LEFT JOIN aura_units u ON u.id = p.unit
+        LEFT JOIN aura_units u ON u.id = COALESCE(ai.product_unit_id, p.unit)
         LEFT JOIN aura_warehouses_products wp ON wp.product_id = ai.product_id AND wp.warehouse_id = ai.warehouse_id
         WHERE ai.adjustment_id = ?
         ORDER BY ai.id ASC
@@ -253,7 +259,8 @@ class QuantityAdjustmentsModel {
     try {
       const [warehouses] = await db.query('SELECT id, code, name FROM aura_warehouses ORDER BY name ASC');
       const [billers] = await db.query('SELECT id, name, company FROM aura_companies WHERE group_name = "biller" OR id = 3 ORDER BY name ASC');
-      const [units] = await db.query('SELECT id, code, name FROM aura_units ORDER BY name ASC');
+      const [units] = await db.query('SELECT id, code, name, base_unit, operator, operation_value FROM aura_units ORDER BY name ASC');
+      const [taxRates] = await db.query('SELECT id, name, code, rate, type FROM aura_tax_rates ORDER BY id ASC');
 
       const yearSuffix = new Date().getFullYear().toString().slice(-2);
       const [lastRef] = await db.query(`
@@ -275,6 +282,7 @@ class QuantityAdjustmentsModel {
         warehouses,
         billers,
         units,
+        taxRates,
         nextReferenceNo
       };
     } catch (err) {
@@ -308,7 +316,13 @@ class QuantityAdjustmentsModel {
           p.cost,
           p.price,
           p.unit AS unit_id,
+          p.unit AS base_unit_id,
           u.name AS unit_name,
+          u.code AS unit_code,
+          u.base_unit AS unit_base_unit,
+          u.operator AS unit_operator,
+          u.operation_value AS unit_operation_value,
+          p.tax_rate AS tax_rate_id,
           p.image,
           COALESCE(wp.quantity, 0) AS warehouse_stock,
           COALESCE(p.quantity, 0) AS total_stock
@@ -420,13 +434,21 @@ class QuantityAdjustmentsModel {
       for (const item of items) {
         const pId = parseInt(item.product_id, 10);
         const optId = item.option_id ? parseInt(item.option_id, 10) : null;
-        const qty = parseFloat(item.quantity);
+        const unitId = item.unit_id ? parseInt(item.unit_id, 10) : (item.product_unit_id ? parseInt(item.product_unit_id, 10) : null);
+        const unitCode = item.unit_name || item.product_unit_code || 'Unit';
+        const unitQty = parseFloat(item.unit_quantity != null ? item.unit_quantity : item.quantity) || 0;
+        let baseQty = parseFloat(item.base_quantity != null ? item.base_quantity : item.quantity) || unitQty;
+
+        if (item.unit_operator && item.unit_operation_value) {
+          baseQty = unitToBaseQty(unitQty, { operator: item.unit_operator, operation_value: item.unit_operation_value });
+        }
+
         const type = (item.type === 'subtraction') ? 'subtraction' : 'addition';
         const isSub = (type === 'subtraction');
-        const delta = isSub ? -Math.abs(qty) : Math.abs(qty);
+        const delta = isSub ? -Math.abs(baseQty) : Math.abs(baseQty);
 
         if (!pId) throw new Error('Product ID is missing in adjustment item.');
-        if (!qty || qty <= 0) throw new Error(`Invalid quantity ${qty} for product item #${pId}. Must be > 0.`);
+        if (!unitQty || unitQty <= 0) throw new Error(`Invalid quantity for product item #${pId}. Must be > 0.`);
 
         // Fetch & lock master product
         const [pRows] = await conn.query(
@@ -456,8 +478,8 @@ class QuantityAdjustmentsModel {
               [optId, whId]
             );
             const currentVarQty = parseFloat(whv[0]?.quantity) || 0;
-            if (currentVarQty < qty) {
-              throw new Error(`Insufficient stock for variant "${variantName}". Current QOH in ${warehouse.name} is ${currentVarQty}, cannot subtract ${qty}.`);
+            if (currentVarQty < baseQty) {
+              throw new Error(`Insufficient stock for variant "${variantName}". Current QOH in ${warehouse.name} is ${currentVarQty}, cannot subtract ${baseQty}.`);
             }
           }
 
@@ -479,8 +501,8 @@ class QuantityAdjustmentsModel {
             [pId, whId]
           );
           const currentProdQty = parseFloat(whp[0]?.quantity) || 0;
-          if (currentProdQty < qty) {
-            throw new Error(`Insufficient stock for "${prod.name}". Current QOH in ${warehouse.name} is ${currentProdQty}, cannot subtract ${qty}.`);
+          if (currentProdQty < baseQty) {
+            throw new Error(`Insufficient stock for "${prod.name}". Current QOH in ${warehouse.name} is ${currentProdQty}, cannot subtract ${baseQty}.`);
           }
         }
 
@@ -497,19 +519,24 @@ class QuantityAdjustmentsModel {
         // Insert adjustment item
         await conn.query(`
           INSERT INTO aura_adjustment_items (
-            adjustment_id, product_id, option_id, quantity, warehouse_id,
-            serial_no, type, expiry, real_unit_cost
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            adjustment_id, product_id, option_id, product_unit_id, product_unit_code,
+            quantity, unit_quantity, warehouse_id,
+            serial_no, type, expiry, real_unit_cost, description
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           adjustmentId,
           pId,
           optId || null,
-          qty,
+          unitId || null,
+          unitCode,
+          baseQty,
+          unitQty,
           whId,
           item.serial_no || null,
           type,
           item.expiry || null,
-          unitCost
+          unitCost,
+          item.description || null
         ]);
 
         // Log Stock Movement Audit Ledger
@@ -520,7 +547,7 @@ class QuantityAdjustmentsModel {
             option_id, user_id, serial_no, expiry, actual_date
           ) VALUES (
             ?, ?, 'QuantityAdjustment', ?, ?, ?,
-            'standard', ?, ?, ?, ?, 1,
+            'standard', ?, ?, ?, ?, ?,
             ?, ?, ?, ?, ?
           )
         `, [
@@ -533,6 +560,7 @@ class QuantityAdjustmentsModel {
           variantName ? `${prod.name} (${variantName})` : prod.name,
           unitCost,
           delta,
+          unitQty,
           optId || null,
           user_id || 1,
           item.serial_no || null,
@@ -621,13 +649,21 @@ class QuantityAdjustmentsModel {
       for (const item of items) {
         const pId = parseInt(item.product_id, 10);
         const optId = item.option_id ? parseInt(item.option_id, 10) : null;
-        const qty = parseFloat(item.quantity);
+        const unitId = item.unit_id ? parseInt(item.unit_id, 10) : (item.product_unit_id ? parseInt(item.product_unit_id, 10) : null);
+        const unitCode = item.unit_name || item.product_unit_code || 'Unit';
+        const unitQty = parseFloat(item.unit_quantity != null ? item.unit_quantity : item.quantity) || 0;
+        let baseQty = parseFloat(item.base_quantity != null ? item.base_quantity : item.quantity) || unitQty;
+
+        if (item.unit_operator && item.unit_operation_value) {
+          baseQty = unitToBaseQty(unitQty, { operator: item.unit_operator, operation_value: item.unit_operation_value });
+        }
+
         const type = (item.type === 'subtraction') ? 'subtraction' : 'addition';
         const isSub = (type === 'subtraction');
-        const delta = isSub ? -Math.abs(qty) : Math.abs(qty);
+        const delta = isSub ? -Math.abs(baseQty) : Math.abs(baseQty);
 
         if (!pId) throw new Error('Product ID is missing in adjustment item.');
-        if (!qty || qty <= 0) throw new Error(`Invalid quantity ${qty} for product item #${pId}. Must be > 0.`);
+        if (!unitQty || unitQty <= 0) throw new Error(`Invalid quantity for product item #${pId}. Must be > 0.`);
 
         const [pRows] = await conn.query('SELECT id, name, code, cost, price, unit FROM aura_products WHERE id = ? LIMIT 1 FOR UPDATE', [pId]);
         if (!pRows.length) throw new Error(`Product #${pId} not found.`);
@@ -646,8 +682,8 @@ class QuantityAdjustmentsModel {
           if (isSub) {
             const [whv] = await conn.query('SELECT quantity FROM aura_warehouses_products_variants WHERE option_id = ? AND warehouse_id = ? LIMIT 1 FOR UPDATE', [optId, targetWhId]);
             const currentVarQty = parseFloat(whv[0]?.quantity) || 0;
-            if (currentVarQty < qty) {
-              throw new Error(`Insufficient stock for variant "${variantName}". Current QOH in ${warehouse.name} is ${currentVarQty}, cannot subtract ${qty}.`);
+            if (currentVarQty < baseQty) {
+              throw new Error(`Insufficient stock for variant "${variantName}". Current QOH in ${warehouse.name} is ${currentVarQty}, cannot subtract ${baseQty}.`);
             }
           }
 
@@ -663,8 +699,8 @@ class QuantityAdjustmentsModel {
         if (isSub) {
           const [whp] = await conn.query('SELECT quantity FROM aura_warehouses_products WHERE product_id = ? AND warehouse_id = ? LIMIT 1 FOR UPDATE', [pId, targetWhId]);
           const currentProdQty = parseFloat(whp[0]?.quantity) || 0;
-          if (currentProdQty < qty) {
-            throw new Error(`Insufficient stock for "${prod.name}". Current QOH in ${warehouse.name} is ${currentProdQty}, cannot subtract ${qty}.`);
+          if (currentProdQty < baseQty) {
+            throw new Error(`Insufficient stock for "${prod.name}". Current QOH in ${warehouse.name} is ${currentProdQty}, cannot subtract ${baseQty}.`);
           }
         }
 
@@ -678,19 +714,24 @@ class QuantityAdjustmentsModel {
 
         await conn.query(`
           INSERT INTO aura_adjustment_items (
-            adjustment_id, product_id, option_id, quantity, warehouse_id,
-            serial_no, type, expiry, real_unit_cost
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            adjustment_id, product_id, option_id, product_unit_id, product_unit_code,
+            quantity, unit_quantity, warehouse_id,
+            serial_no, type, expiry, real_unit_cost, description
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           adjId,
           pId,
           optId || null,
-          qty,
+          unitId || null,
+          unitCode,
+          baseQty,
+          unitQty,
           targetWhId,
           item.serial_no || null,
           type,
           item.expiry || null,
-          unitCost
+          unitCost,
+          item.description || null
         ]);
 
         await conn.query(`
@@ -700,7 +741,7 @@ class QuantityAdjustmentsModel {
             option_id, user_id, serial_no, expiry, actual_date
           ) VALUES (
             ?, ?, 'QuantityAdjustment', ?, ?, ?,
-            'standard', ?, ?, ?, ?, 1,
+            'standard', ?, ?, ?, ?, ?,
             ?, ?, ?, ?, ?
           )
         `, [
@@ -713,6 +754,7 @@ class QuantityAdjustmentsModel {
           variantName ? `${prod.name} (${variantName})` : prod.name,
           unitCost,
           delta,
+          unitQty,
           optId || null,
           user_id || 1,
           item.serial_no || null,

@@ -24,6 +24,7 @@ import {
   CheckOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
+import { useAdminTheme } from '../../../../hooks/useAdminTheme';
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -58,6 +59,17 @@ const PosCheckoutModal = ({
   currentTable = 'Takeaway / Walk-in',
   t,
 }) => {
+  const adminTheme = useAdminTheme();
+  const isDark = Boolean(adminTheme?.isDark);
+  const primaryColor = adminTheme?.colorPrimary || '#2F6FED';
+  const modalBg = isDark ? (adminTheme?.cardBg || '#1e293b') : '#ffffff';
+  const surfaceBg = isDark ? (adminTheme?.cardMuted || '#0f172a') : '#f8fafc';
+  const borderColor = isDark ? (adminTheme?.border || 'rgba(255, 255, 255, 0.12)') : '#e2e8f0';
+  const textColor = isDark ? (adminTheme?.text || '#f8fafc') : '#0f172a';
+  const subtextColor = isDark ? (adminTheme?.subtext || '#94a3b8') : '#64748b';
+  const inputBg = isDark ? '#1e293b' : '#ffffff';
+  const inputBorder = isDark ? '#334155' : '#cbd5e1';
+
   const totalUSD = Math.max(0, parseFloat(grandTotal) || 0);
   const totalKHR = Math.round(totalUSD * khrExchangeRate);
   const totalTHB = parseFloat((totalUSD * thbExchangeRate).toFixed(2));
@@ -258,25 +270,25 @@ const PosCheckoutModal = ({
       centered
       styles={{
         content: {
-          background: '#ffffff',
+          background: modalBg,
           borderRadius: 18,
-          boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.2)',
-          border: '1px solid rgba(226, 232, 240, 0.9)',
+          boxShadow: isDark ? '0 25px 60px -15px rgba(0, 0, 0, 0.6)' : '0 25px 60px -15px rgba(15, 23, 42, 0.2)',
+          border: `1px solid ${borderColor}`,
           padding: '20px 24px',
         },
         header: {
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
+          background: modalBg,
+          borderBottom: `1px solid ${borderColor}`,
           paddingBottom: 14,
           marginBottom: 16,
         },
         body: {
-          background: '#ffffff',
+          background: modalBg,
           padding: 0,
         },
         footer: {
-          background: '#ffffff',
-          borderTop: '1px solid #e2e8f0',
+          background: modalBg,
+          borderTop: `1px solid ${borderColor}`,
           paddingTop: 14,
           marginTop: 16,
         },
@@ -289,21 +301,21 @@ const PosCheckoutModal = ({
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                background: 'linear-gradient(135deg, #2F6FED 0%, #1D4ED8 100%)',
+                background: `linear-gradient(135deg, ${primaryColor} 0%, #1D4ED8 100%)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#ffffff',
-                boxShadow: '0 4px 10px rgba(47, 111, 237, 0.3)',
+                boxShadow: `0 4px 10px ${primaryColor}40`,
               }}
             >
               <DollarOutlined style={{ fontSize: 18 }} />
             </div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: textColor, lineHeight: 1.2 }}>
                 Finalize Sale
               </div>
-              <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 500 }}>
+              <div style={{ fontSize: 11.5, color: subtextColor, fontWeight: 500 }}>
                 Complete payment & print receipt
               </div>
             </div>
@@ -312,9 +324,9 @@ const PosCheckoutModal = ({
                 fontSize: 12,
                 fontWeight: 700,
                 borderRadius: 20,
-                background: '#eff6ff',
-                color: '#2F6FED',
-                borderColor: '#bfdbfe',
+                background: isDark ? 'rgba(47, 111, 237, 0.15)' : '#eff6ff',
+                color: primaryColor,
+                borderColor: isDark ? 'rgba(47, 111, 237, 0.3)' : '#bfdbfe',
                 padding: '2px 10px',
                 marginLeft: 6,
               }}
@@ -326,11 +338,11 @@ const PosCheckoutModal = ({
             style={{
               fontSize: 12,
               fontWeight: 700,
-              color: '#475569',
-              background: '#f1f5f9',
+              color: subtextColor,
+              background: surfaceBg,
               padding: '4px 12px',
               borderRadius: 20,
-              border: '1px solid #e2e8f0',
+              border: `1px solid ${borderColor}`,
             }}
           >
             {totalItemsCount} {totalItemsCount === 1 ? 'Item' : 'Items'} in Order
@@ -350,9 +362,9 @@ const PosCheckoutModal = ({
             fontSize: 17,
             fontWeight: 800,
             borderRadius: 12,
-            background: 'linear-gradient(135deg, #2F6FED 0%, #1D4ED8 100%)',
-            borderColor: '#2F6FED',
-            boxShadow: '0 8px 24px rgba(47, 111, 237, 0.35)',
+            background: `linear-gradient(135deg, ${primaryColor} 0%, #1D4ED8 100%)`,
+            borderColor: primaryColor,
+            boxShadow: `0 8px 24px ${primaryColor}55`,
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
@@ -376,13 +388,13 @@ const PosCheckoutModal = ({
               alignItems: 'center',
               gap: 10,
               padding: '10px 14px',
-              background: '#f8fafc',
+              background: surfaceBg,
               borderRadius: 10,
-              border: '1px solid #e2e8f0',
+              border: `1px solid ${borderColor}`,
             }}
           >
             <div>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 2 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: subtextColor, display: 'block', marginBottom: 2 }}>
                 Biller:
               </span>
               <Select
@@ -406,7 +418,7 @@ const PosCheckoutModal = ({
             </div>
 
             <div>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 2 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: subtextColor, display: 'block', marginBottom: 2 }}>
                 Salesman:
               </span>
               <Select
@@ -423,7 +435,7 @@ const PosCheckoutModal = ({
             </div>
 
             <div>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 2 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: subtextColor, display: 'block', marginBottom: 2 }}>
                 Project:
               </span>
               <Select
@@ -440,7 +452,7 @@ const PosCheckoutModal = ({
 
             {currentTable && currentTable !== 'Takeaway / Walk-in' && (
               <div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 2 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: subtextColor, display: 'block', marginBottom: 2 }}>
                   Dining Table:
                 </span>
                 <Tag color="orange" style={{ fontSize: 13, fontWeight: 900, padding: '3px 10px', borderRadius: 8, margin: 0 }}>
@@ -453,16 +465,16 @@ const PosCheckoutModal = ({
           {/* 2. DUAL-CURRENCY PAYABLE & PAID TABLE (cyspharma add.php lines 1000-1039) */}
           <div
             style={{
-              border: '1px solid #e2e8f0',
+              border: `1px solid ${borderColor}`,
               borderRadius: 12,
               overflow: 'hidden',
-              background: '#ffffff',
-              boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)',
+              background: modalBg,
+              boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(15, 23, 42, 0.03)',
             }}
           >
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr style={{ background: 'linear-gradient(135deg, #2F6FED 0%, #1D4ED8 100%)', color: '#ffffff', fontWeight: 800, fontSize: 13 }}>
+                <tr style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, #1D4ED8 100%)`, color: '#ffffff', fontWeight: 800, fontSize: 13 }}>
                   <th style={{ padding: '10px 14px', width: '30%' }}>Currency</th>
                   <th style={{ padding: '10px 14px', textAlign: 'center', width: '35%', borderLeft: '1px solid rgba(255, 255, 255, 0.2)' }}>
                     USD ($)
@@ -475,17 +487,17 @@ const PosCheckoutModal = ({
               <tbody>
                 {/* Total Discount Row (if any) */}
                 {totalDiscount > 0 && (
-                  <tr style={{ borderBottom: '1px solid #fee2e2', background: '#fff1f2' }}>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, fontSize: 13, color: '#e11d48' }}>
+                  <tr style={{ borderBottom: `1px solid ${isDark ? 'rgba(239, 68, 68, 0.25)' : '#fee2e2'}`, background: isDark ? 'rgba(239, 68, 68, 0.12)' : '#fff1f2' }}>
+                    <td style={{ padding: '10px 14px', fontWeight: 700, fontSize: 13, color: '#f43f5e' }}>
                       Discount {orderDiscountId ? `(${orderDiscountId})` : ''}
                     </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: '1px solid #fee2e2' }}>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: '#e11d48' }}>
+                    <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: `1px solid ${isDark ? 'rgba(239, 68, 68, 0.25)' : '#fee2e2'}` }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: '#f43f5e' }}>
                         -${totalDiscount.toFixed(2)}
                       </span>
                     </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: '1px solid #fee2e2' }}>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: '#e11d48' }}>
+                    <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: `1px solid ${isDark ? 'rgba(239, 68, 68, 0.25)' : '#fee2e2'}` }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: '#f43f5e' }}>
                         -៛{Math.round(totalDiscount * khrExchangeRate).toLocaleString()}
                       </span>
                     </td>
@@ -493,47 +505,47 @@ const PosCheckoutModal = ({
                 )}
 
                 {/* Total Payable Row */}
-                <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                  <td style={{ padding: '10px 14px', fontWeight: 700, fontSize: 13, color: '#334155' }}>
+                <tr style={{ borderBottom: `1px solid ${borderColor}`, background: surfaceBg }}>
+                  <td style={{ padding: '10px 14px', fontWeight: 700, fontSize: 13, color: isDark ? '#cbd5e1' : '#334155' }}>
                     Total Payable
                   </td>
-                  <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: 19, fontWeight: 900, color: '#0f172a' }}>
+                  <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: `1px solid ${borderColor}` }}>
+                    <span style={{ fontSize: 19, fontWeight: 900, color: textColor }}>
                       ${totalUSD.toFixed(2)}
                     </span>
                   </td>
-                  <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: 19, fontWeight: 900, color: '#2F6FED' }}>
+                  <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: `1px solid ${borderColor}` }}>
+                    <span style={{ fontSize: 19, fontWeight: 900, color: primaryColor }}>
                       ៛{totalKHR.toLocaleString()}
                     </span>
                   </td>
                 </tr>
 
                 {/* Paid Input Row */}
-                <tr style={{ background: '#ffffff' }}>
+                <tr style={{ background: modalBg }}>
                   <td style={{ padding: '10px 14px', fontWeight: 700, fontSize: 13, color: '#10b981' }}>
                     Paid
                   </td>
-                  <td style={{ padding: '8px 12px', borderLeft: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '8px 12px', borderLeft: `1px solid ${borderColor}` }}>
                     <Input
                       size="large"
-                      prefix={<span style={{ fontWeight: 800, color: '#2F6FED' }}>$</span>}
+                      prefix={<span style={{ fontWeight: 800, color: primaryColor }}>$</span>}
                       placeholder="0.00"
                       value={paidUSD}
                       onChange={(e) => setPaidUSD(e.target.value)}
                       style={{
                         fontWeight: 800,
                         fontSize: 16,
-                        borderColor: '#2F6FED',
+                        borderColor: primaryColor,
                         borderRadius: 8,
                         textAlign: 'right',
-                        background: '#ffffff',
-                        color: '#0f172a',
+                        background: inputBg,
+                        color: textColor,
                       }}
                       autoFocus
                     />
                   </td>
-                  <td style={{ padding: '8px 12px', borderLeft: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '8px 12px', borderLeft: `1px solid ${borderColor}` }}>
                     <Input
                       size="large"
                       prefix={<span style={{ fontWeight: 800, color: '#5B8DEF' }}>៛</span>}
@@ -543,11 +555,11 @@ const PosCheckoutModal = ({
                       style={{
                         fontWeight: 800,
                         fontSize: 16,
-                        borderColor: '#cbd5e1',
+                        borderColor: inputBorder,
                         borderRadius: 8,
                         textAlign: 'right',
-                        background: '#ffffff',
-                        color: '#0f172a',
+                        background: inputBg,
+                        color: textColor,
                       }}
                     />
                   </td>
@@ -560,9 +572,9 @@ const PosCheckoutModal = ({
           <div
             style={{
               padding: '12px 14px',
-              background: '#f8fafc',
+              background: surfaceBg,
               borderRadius: 10,
-              border: '1px solid #e2e8f0',
+              border: `1px solid ${borderColor}`,
               display: 'flex',
               flexDirection: 'column',
               gap: 10,
@@ -570,7 +582,7 @@ const PosCheckoutModal = ({
           >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#334155', display: 'block', marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: subtextColor, display: 'block', marginBottom: 4 }}>
                   Paying By:
                 </span>
                 <Select
@@ -590,7 +602,7 @@ const PosCheckoutModal = ({
               </div>
 
               <div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#334155', display: 'block', marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: subtextColor, display: 'block', marginBottom: 4 }}>
                   Payment Note:
                 </span>
                 <Input
@@ -598,7 +610,7 @@ const PosCheckoutModal = ({
                   placeholder="Reference number or note..."
                   value={paymentNote}
                   onChange={(e) => setPaymentNote(e.target.value)}
-                  style={{ background: '#ffffff', color: '#0f172a', borderColor: '#cbd5e1', borderRadius: 8 }}
+                  style={{ background: inputBg, color: textColor, borderColor: inputBorder, borderRadius: 8 }}
                 />
               </div>
             </div>
@@ -608,9 +620,9 @@ const PosCheckoutModal = ({
               <div
                 style={{
                   padding: 10,
-                  background: '#ffffff',
+                  background: modalBg,
                   borderRadius: 8,
-                  border: '1px solid #cbd5e1',
+                  border: `1px solid ${borderColor}`,
                   display: 'grid',
                   gridTemplateColumns: '2fr 2fr 1fr 1fr',
                   gap: 8,
@@ -620,11 +632,13 @@ const PosCheckoutModal = ({
                   placeholder="Card Number (xxxx-xxxx-xxxx-xxxx)"
                   value={ccNo}
                   onChange={(e) => setCcNo(e.target.value)}
+                  style={{ background: inputBg, color: textColor, borderColor: inputBorder }}
                 />
                 <Input
                   placeholder="Cardholder Name"
                   value={ccHolder}
                   onChange={(e) => setCcHolder(e.target.value)}
+                  style={{ background: inputBg, color: textColor, borderColor: inputBorder }}
                 />
                 <Select value={ccType} onChange={setCcType}>
                   <Option value="Visa">Visa</Option>
@@ -637,6 +651,7 @@ const PosCheckoutModal = ({
                   maxLength={4}
                   value={ccCvv}
                   onChange={(e) => setCcCvv(e.target.value)}
+                  style={{ background: inputBg, color: textColor, borderColor: inputBorder }}
                 />
               </div>
             )}
@@ -646,9 +661,9 @@ const PosCheckoutModal = ({
               <div
                 style={{
                   padding: 10,
-                  background: '#ffffff',
+                  background: modalBg,
                   borderRadius: 8,
-                  border: '1px solid #cbd5e1',
+                  border: `1px solid ${borderColor}`,
                   display: 'flex',
                   gap: 8,
                   alignItems: 'center',
@@ -658,13 +673,13 @@ const PosCheckoutModal = ({
                   placeholder="Enter Member Card / Gift Card Number"
                   value={giftCardNo}
                   onChange={(e) => setGiftCardNo(e.target.value)}
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, background: inputBg, color: textColor, borderColor: inputBorder }}
                 />
                 <Button
                   type="primary"
                   loading={loadingGiftCard}
                   onClick={handleCheckGiftCard}
-                  style={{ background: '#2F6FED', borderColor: '#2F6FED', borderRadius: 8 }}
+                  style={{ background: primaryColor, borderColor: primaryColor, borderRadius: 8 }}
                 >
                   Verify Balance
                 </Button>
@@ -681,15 +696,16 @@ const PosCheckoutModal = ({
               <div
                 style={{
                   padding: 10,
-                  background: '#ffffff',
+                  background: modalBg,
                   borderRadius: 8,
-                  border: '1px solid #cbd5e1',
+                  border: `1px solid ${borderColor}`,
                 }}
               >
                 <Input
                   placeholder="Cheque Number"
                   value={chequeNo}
                   onChange={(e) => setChequeNo(e.target.value)}
+                  style={{ background: inputBg, color: textColor, borderColor: inputBorder }}
                 />
               </div>
             )}
@@ -698,7 +714,7 @@ const PosCheckoutModal = ({
           {/* 4. MULTI-PAYMENT TENDER ROWS (cyspharma "addButton") */}
           {additionalPayments.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: subtextColor }}>
                 Additional Payment Split:
               </span>
               {additionalPayments.map((p, idx) => (
@@ -708,13 +724,13 @@ const PosCheckoutModal = ({
                     display: 'flex',
                     gap: 8,
                     alignItems: 'center',
-                    background: '#fff',
+                    background: modalBg,
                     padding: '8px 10px',
                     borderRadius: 8,
-                    border: '1px solid #e2e8f0',
+                    border: `1px solid ${borderColor}`,
                   }}
                 >
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: subtextColor }}>
                     #{idx + 2}
                   </span>
                   <InputNumber
@@ -739,7 +755,7 @@ const PosCheckoutModal = ({
                     placeholder="Note..."
                     value={p.note}
                     onChange={(e) => handleUpdatePaymentRow(p.id, 'note', e.target.value)}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, background: inputBg, color: textColor, borderColor: inputBorder }}
                   />
                   <Button
                     danger
@@ -755,7 +771,7 @@ const PosCheckoutModal = ({
             type="dashed"
             icon={<PlusOutlined />}
             onClick={handleAddPaymentRow}
-            style={{ borderRadius: 8, fontWeight: 700, color: '#2F6FED', borderColor: 'rgba(47, 111, 237, 0.4)', background: '#f8faff' }}
+            style={{ borderRadius: 8, fontWeight: 700, color: primaryColor, borderColor: `${primaryColor}60`, background: isDark ? 'rgba(47, 111, 237, 0.08)' : '#f8faff' }}
           >
             + Add More Payments (Split Bill)
           </Button>
@@ -767,41 +783,41 @@ const PosCheckoutModal = ({
               placeholder="Sale Note (Printed on Receipt)"
               value={saleNote}
               onChange={(e) => setSaleNote(e.target.value)}
-              style={{ borderRadius: 8, background: '#ffffff', color: '#0f172a', borderColor: '#cbd5e1' }}
+              style={{ borderRadius: 8, background: inputBg, color: textColor, borderColor: inputBorder }}
             />
             <Input.TextArea
               rows={2}
               placeholder="Staff Note (Internal Cashier Log)"
               value={staffNote}
               onChange={(e) => setStaffNote(e.target.value)}
-              style={{ borderRadius: 8, background: '#ffffff', color: '#0f172a', borderColor: '#cbd5e1' }}
+              style={{ borderRadius: 8, background: inputBg, color: textColor, borderColor: inputBorder }}
             />
           </div>
 
           {/* 6. BOTTOM SUMMARY TABLE: Total Items, Total Paying, Balance (lines 1150-1177) */}
           <div
             style={{
-              background: '#f8fafc',
+              background: surfaceBg,
               borderRadius: 10,
-              border: '1px solid #e2e8f0',
+              border: `1px solid ${borderColor}`,
               padding: '12px 16px',
             }}
           >
             <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
               <tbody>
                 <tr>
-                  <td style={{ width: '25%', color: '#64748b', fontWeight: 600 }}>Total Items:</td>
-                  <td style={{ width: '25%', fontWeight: 800, color: '#0f172a' }}>
+                  <td style={{ width: '25%', color: subtextColor, fontWeight: 600 }}>Total Items:</td>
+                  <td style={{ width: '25%', fontWeight: 800, color: textColor }}>
                     {totalItemsCount}
                   </td>
-                  <td style={{ width: '25%', color: '#64748b', fontWeight: 600 }}>Total Paying:</td>
-                  <td style={{ width: '25%', fontWeight: 800, fontSize: 16, color: '#2F6FED', textAlign: 'right' }}>
+                  <td style={{ width: '25%', color: subtextColor, fontWeight: 600 }}>Total Paying:</td>
+                  <td style={{ width: '25%', fontWeight: 800, fontSize: 16, color: primaryColor, textAlign: 'right' }}>
                     ${totalPayingUSD.toFixed(2)}
                   </td>
                 </tr>
                 <tr style={{ height: 10 }} />
-                <tr style={{ borderTop: '1px solid #e2e8f0', paddingTop: 8 }}>
-                  <td style={{ color: '#475569', fontWeight: 700, fontSize: 14 }}>Balance / Change:</td>
+                <tr style={{ borderTop: `1px solid ${borderColor}`, paddingTop: 8 }}>
+                  <td style={{ color: isDark ? '#cbd5e1' : '#475569', fontWeight: 700, fontSize: 14 }}>Balance / Change:</td>
                   <td colSpan={3} style={{ textAlign: 'right' }}>
                     <span
                       style={{
@@ -814,7 +830,7 @@ const PosCheckoutModal = ({
                       }}
                     >
                       <span>${balanceUSD >= 0 ? balanceUSD.toFixed(2) : `(${Math.abs(balanceUSD).toFixed(2)})`}</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: subtextColor }}>
                         (៛{Math.abs(balanceKHR).toLocaleString()})
                       </span>
                     </span>
@@ -833,14 +849,14 @@ const PosCheckoutModal = ({
             flexDirection: 'column',
             gap: 8,
             padding: '12px 10px',
-            background: '#f8fafc',
+            background: surfaceBg,
             borderRadius: 12,
-            border: '1px solid #e2e8f0',
+            border: `1px solid ${borderColor}`,
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 2 }}>
-            <DollarOutlined style={{ color: '#2F6FED' }} />
+          <div style={{ fontSize: 13, fontWeight: 800, color: textColor, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 2 }}>
+            <DollarOutlined style={{ color: primaryColor }} />
             <span>Quick Cash</span>
           </div>
 
@@ -852,12 +868,12 @@ const PosCheckoutModal = ({
               height: 42,
               fontSize: 14,
               fontWeight: 800,
-              background: 'linear-gradient(135deg, #2F6FED 0%, #1D4ED8 100%)',
+              background: `linear-gradient(135deg, ${primaryColor} 0%, #1D4ED8 100%)`,
               color: '#ffffff',
               border: 'none',
               borderRadius: 8,
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(47, 111, 237, 0.3)',
+              boxShadow: `0 4px 12px ${primaryColor}40`,
               transition: 'all 0.15s ease',
             }}
           >
@@ -874,26 +890,26 @@ const PosCheckoutModal = ({
                 height: 36,
                 fontSize: 13.5,
                 fontWeight: 700,
-                background: '#ffffff',
-                color: '#0f172a',
-                border: '1px solid #cbd5e1',
+                background: isDark ? '#1e293b' : '#ffffff',
+                color: textColor,
+                border: `1px solid ${inputBorder}`,
                 borderRadius: 8,
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                boxShadow: isDark ? '0 1px 3px rgba(0, 0, 0, 0.3)' : '0 1px 3px rgba(0, 0, 0, 0.04)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#2F6FED';
-                e.currentTarget.style.color = '#2F6FED';
-                e.currentTarget.style.background = '#eff6ff';
+                e.currentTarget.style.borderColor = primaryColor;
+                e.currentTarget.style.color = primaryColor;
+                e.currentTarget.style.background = isDark ? 'rgba(47, 111, 237, 0.15)' : '#eff6ff';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#cbd5e1';
-                e.currentTarget.style.color = '#0f172a';
-                e.currentTarget.style.background = '#ffffff';
+                e.currentTarget.style.borderColor = inputBorder;
+                e.currentTarget.style.color = textColor;
+                e.currentTarget.style.background = isDark ? '#1e293b' : '#ffffff';
               }}
             >
               + ${amt}
@@ -908,18 +924,18 @@ const PosCheckoutModal = ({
               height: 34,
               fontSize: 12,
               fontWeight: 700,
-              background: '#eff6ff',
-              color: '#2F6FED',
-              border: '1px solid #bfdbfe',
+              background: isDark ? 'rgba(47, 111, 237, 0.15)' : '#eff6ff',
+              color: primaryColor,
+              border: `1px solid ${isDark ? 'rgba(47, 111, 237, 0.3)' : '#bfdbfe'}`,
               borderRadius: 8,
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#dbeafe';
+              e.currentTarget.style.background = isDark ? 'rgba(47, 111, 237, 0.25)' : '#dbeafe';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#eff6ff';
+              e.currentTarget.style.background = isDark ? 'rgba(47, 111, 237, 0.15)' : '#eff6ff';
             }}
           >
             + ៛50,000
@@ -932,18 +948,18 @@ const PosCheckoutModal = ({
               height: 34,
               fontSize: 12,
               fontWeight: 700,
-              background: '#eff6ff',
-              color: '#2F6FED',
-              border: '1px solid #bfdbfe',
+              background: isDark ? 'rgba(47, 111, 237, 0.15)' : '#eff6ff',
+              color: primaryColor,
+              border: `1px solid ${isDark ? 'rgba(47, 111, 237, 0.3)' : '#bfdbfe'}`,
               borderRadius: 8,
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#dbeafe';
+              e.currentTarget.style.background = isDark ? 'rgba(47, 111, 237, 0.25)' : '#dbeafe';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#eff6ff';
+              e.currentTarget.style.background = isDark ? 'rgba(47, 111, 237, 0.15)' : '#eff6ff';
             }}
           >
             + ៛100,000
@@ -957,19 +973,19 @@ const PosCheckoutModal = ({
               height: 34,
               fontSize: 13,
               fontWeight: 700,
-              background: '#fff1f2',
-              color: '#e11d48',
-              border: '1px solid #fecdd3',
+              background: isDark ? 'rgba(239, 68, 68, 0.15)' : '#fff1f2',
+              color: isDark ? '#f87171' : '#e11d48',
+              border: `1px solid ${isDark ? 'rgba(239, 68, 68, 0.3)' : '#fecdd3'}`,
               borderRadius: 8,
               cursor: 'pointer',
               marginTop: 2,
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#ffe4e6';
+              e.currentTarget.style.background = isDark ? 'rgba(239, 68, 68, 0.25)' : '#ffe4e6';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#fff1f2';
+              e.currentTarget.style.background = isDark ? 'rgba(239, 68, 68, 0.15)' : '#fff1f2';
             }}
           >
             Clear

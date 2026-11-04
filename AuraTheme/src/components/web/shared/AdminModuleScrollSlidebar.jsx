@@ -40,6 +40,7 @@ import {
   GoldOutlined,
   RestOutlined,
   AuditOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { erpModules, buildModulePath, resolveActiveModuleAndMenu } from '../../../data/erpModules';
@@ -144,7 +145,7 @@ export default function AdminModuleScrollSlidebar() {
   const adminTheme = useAdminTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isModuleOpen } = useAdminModules();
+  const { isModuleOpen, toggleModule } = useAdminModules();
   const { user } = useAuth();
   const { t } = useTranslation();
   const scrollContainerRef = useRef(null);
@@ -405,6 +406,48 @@ export default function AdminModuleScrollSlidebar() {
                 >
                   {item.badge}
                 </span>
+              )}
+
+              {/* Remove module from available set button */}
+              {item.key !== 'dashboard' && item.key !== 'access-control' && (
+                <Tooltip title={t('remove_module_from_set', `Remove ${item.label} from available modules`)}>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleModule(item.key, false);
+                      if (isActive) {
+                        navigate('/admins');
+                      }
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      marginLeft: 2,
+                      color: adminTheme.subtext,
+                      opacity: 0.65,
+                      fontSize: 9,
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                      e.currentTarget.style.color = '#dc2626';
+                      e.currentTarget.style.background = 'rgba(220, 38, 38, 0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '0.65';
+                      e.currentTarget.style.color = adminTheme.subtext;
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <CloseOutlined />
+                  </span>
+                </Tooltip>
               )}
             </button>
           );

@@ -61,6 +61,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getMenuByKey, getModuleByKey, moduleHealthLabel } from '../../data/erpModules';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { fetchAdminCustomers } from '../../utils/apiconfig';
 import dayjs from 'dayjs';
 
@@ -318,57 +319,37 @@ const Patients = () => {
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      width: 120,
+      width: 100,
+      align: 'center',
       fixed: 'right',
-      render: (_, record) => (
-        <Space>
-          <Tooltip title={t('view_details', 'View Details')}>
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewPatient(record)}
-              style={{ color: adminTheme.primary }}
-            />
-          </Tooltip>
-          <Tooltip title={t('edit', 'Edit')}>
-            <Button
-              type="text"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEditPatient(record)}
-              style={{ color: adminTheme.primary }}
-            />
-          </Tooltip>
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: 'view',
-                  label: t('view_details', 'View Details'),
-                  icon: <EyeOutlined />,
-                  onClick: () => handleViewPatient(record),
-                },
-                {
-                  key: 'edit',
-                  label: t('edit_patient', 'Edit Patient'),
-                  icon: <EditOutlined />,
-                  onClick: () => handleEditPatient(record),
-                },
-                {
-                  key: 'delete',
-                  label: t('delete_patient', 'Delete Patient'),
-                  icon: <DeleteOutlined />,
-                  danger: true,
-                  onClick: () => handleDeletePatient(record),
-                },
-              ],
-            }}
-          >
-            <Button type="text" size="small" icon={<MoreOutlined />} />
-          </Dropdown>
-        </Space>
-      ),
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'view',
+            label: t('view_details', 'View Details'),
+            icon: <EyeOutlined />,
+            onClick: () => handleViewPatient(record),
+          },
+          {
+            key: 'edit',
+            label: t('edit_patient', 'Edit Patient'),
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            onClick: () => handleEditPatient(record),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            label: t('delete_patient', 'Delete Patient'),
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            onClick: () => handleDeletePatient(record),
+          },
+        ];
+
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 

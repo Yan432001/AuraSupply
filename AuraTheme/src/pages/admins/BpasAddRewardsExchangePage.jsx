@@ -422,22 +422,6 @@ export default function BpasAddRewardsExchangePage({ onBack = null, onSuccess = 
               </div>
             </Space>
           </Col>
-
-          <Col>
-            <Space>
-              <Button onClick={handleBack}>Cancel</Button>
-              <Button
-                type="primary"
-                icon={<SaveOutlined />}
-                loading={submitting}
-                disabled={hasInsufficientPoints}
-                style={{ background: hasInsufficientPoints ? undefined : '#d97706', borderColor: hasInsufficientPoints ? undefined : '#d97706', fontWeight: 600 }}
-                onClick={() => form.submit()}
-              >
-                Save & Issue Rewards
-              </Button>
-            </Space>
-          </Col>
         </Row>
       </Card>
 

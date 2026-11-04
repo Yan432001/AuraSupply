@@ -27,6 +27,7 @@ import {
   PhoneOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -216,32 +217,40 @@ const CustomersManagement = () => {
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      width: 110,
-      render: (_, record) => (
-        <Space size={6}>
-          <Tooltip title={t('edit_customer', 'Edit Customer')}>
-            <Button
-              type="text"
-              size="small"
-              icon={<EditOutlined style={{ color: '#2563eb' }} />}
-              onClick={() => handleOpenEdit(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title={t('delete_customer', 'Delete Customer')}
-            description={t('confirm_delete_customer', 'Are you sure you want to remove this customer record?')}
-            onConfirm={() => handleDelete(record.id)}
-            okText={t('yes_delete', 'Yes, Delete')}
-            cancelText={t('cancel', 'Cancel')}
-            okButtonProps={{ danger: true }}
-          >
-            <Tooltip title={t('delete', 'Delete')}>
-              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      )
-    }
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: t('edit_customer', 'Edit Customer'),
+            onClick: () => handleOpenEdit(record),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: t('delete_customer', 'Delete Customer'),
+            onClick: () => {
+              Modal.confirm({
+                title: t('delete_customer', 'Delete Customer'),
+                content: t('confirm_delete_customer', 'Are you sure you want to remove this customer record?'),
+                okText: t('yes_delete', 'Yes, Delete'),
+                okType: 'danger',
+                cancelText: t('cancel', 'Cancel'),
+                onOk: () => handleDelete(record.id),
+              });
+            },
+          },
+        ];
+
+        return <TableActionDropdown items={actionItems} />;
+      },
+    },
   ];
 
   return (

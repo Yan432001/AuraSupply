@@ -52,6 +52,7 @@ import {
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -65,7 +66,8 @@ const BpasPurchasesWorkspace = () => {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { themeTokens } = useAdminTheme();
+  const adminTheme = useAdminTheme();
+  const themeTokens = adminTheme?.themeTokens || adminTheme || {};
 
   // Navigation search params
   const searchParams = new URLSearchParams(location.search);
@@ -680,7 +682,7 @@ const BpasPurchasesWorkspace = () => {
       title: t('actions', 'Actions'),
       key: 'actions',
       align: 'center',
-      width: 160,
+      width: 100,
       render: (_, record) => {
         const isReceived = record.status === 'received';
         const isCancelled = record.status === 'cancelled';
@@ -695,21 +697,21 @@ const BpasPurchasesWorkspace = () => {
           },
           {
             key: 'receive',
-            icon: <InboxOutlined />,
+            icon: <InboxOutlined style={{ color: '#16a34a' }} />,
             label: t('receive_goods', 'Receive Goods'),
             disabled: isReceived || isCancelled,
             onClick: () => handleOpenReceiveModal(record)
           },
           {
             key: 'payment',
-            icon: <DollarOutlined />,
+            icon: <DollarOutlined style={{ color: '#d97706' }} />,
             label: t('add_payment', 'Add Payment'),
             disabled: isFullyPaid || isCancelled,
             onClick: () => handleOpenPaymentModal(record)
           },
           {
             key: 'edit',
-            icon: <EditOutlined />,
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
             label: t('edit_purchase', 'Edit Purchase'),
             disabled: isReceived || record.status === 'partial',
             onClick: () => handleOpenAddForm(record)
@@ -758,41 +760,7 @@ const BpasPurchasesWorkspace = () => {
           }
         ];
 
-        return (
-          <Space orientation="horizontal" size="small">
-            <Tooltip title={t('view', 'View')}>
-              <Button
-                type="text"
-                size="small"
-                icon={<EyeOutlined style={{ color: themeTokens.colorPrimary }} />}
-                onClick={() => handleViewPurchase(record.id)}
-              />
-            </Tooltip>
-            {!isReceived && !isCancelled && (
-              <Tooltip title={t('receive_goods', 'Receive Goods')}>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<InboxOutlined style={{ color: '#16a34a' }} />}
-                  onClick={() => handleOpenReceiveModal(record)}
-                />
-              </Tooltip>
-            )}
-            {!isFullyPaid && !isCancelled && (
-              <Tooltip title={t('add_payment', 'Add Payment')}>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<DollarOutlined style={{ color: '#d97706' }} />}
-                  onClick={() => handleOpenPaymentModal(record)}
-                />
-              </Tooltip>
-            )}
-            <Dropdown menu={{ items: actionMenuItems }} trigger={['click']}>
-              <Button type="text" size="small" icon={<DownOutlined style={{ fontSize: 10 }} />} />
-            </Dropdown>
-          </Space>
-        );
+        return <TableActionDropdown items={actionMenuItems} />;
       }
     }
   ];
@@ -834,61 +802,58 @@ const BpasPurchasesWorkspace = () => {
         </Space>
       </div>
 
-      {/* Top Metrics Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        <Col xs={24} sm={12} md={8} lg={4}>
-          <Card bordered={false} style={{ borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={t('total_purchases', 'Total Purchases')}
-              value={metrics.totalPurchases}
-              prefix={<ShoppingOutlined style={{ color: themeTokens.colorPrimary }} />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={8} lg={5}>
-          <Card bordered={false} style={{ borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={t('total_spend', 'Total Spend')}
-              value={metrics.totalSpend}
-              precision={2}
-              prefix={<DollarOutlined style={{ color: '#2563eb' }} />}
-              formatter={(val) => formatCurrency(val)}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={8} lg={5}>
-          <Card bordered={false} style={{ borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={t('total_paid', 'Total Paid')}
-              value={metrics.totalPaid}
-              precision={2}
-              prefix={<CheckCircleOutlined style={{ color: '#16a34a' }} />}
-              formatter={(val) => formatCurrency(val)}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={8} lg={5}>
-          <Card bordered={false} style={{ borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={t('outstanding_due', 'Outstanding Due')}
-              value={metrics.totalBalance}
-              precision={2}
-              prefix={<WarningOutlined style={{ color: '#dc2626' }} />}
-              formatter={(val) => formatCurrency(val)}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={8} lg={5}>
-          <Card bordered={false} style={{ borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={t('received_orders', 'Fully Received')}
-              value={metrics.received}
-              suffix={`/ ${metrics.totalPurchases}`}
-              prefix={<InboxOutlined style={{ color: '#16a34a' }} />}
-            />
-          </Card>
-        </Col>
-      </Row>
+      {/* Top Metrics Cards (5 evenly spaced cards in one row) */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+          gap: 16,
+          marginBottom: 20
+        }}
+      >
+        <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <Statistic
+            title={t('total_purchases', 'Total Purchases')}
+            value={metrics.totalPurchases}
+            prefix={<ShoppingOutlined style={{ color: themeTokens.colorPrimary }} />}
+          />
+        </Card>
+        <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <Statistic
+            title={t('total_spend', 'Total Spend')}
+            value={metrics.totalSpend}
+            precision={2}
+            prefix={<DollarOutlined style={{ color: '#2563eb' }} />}
+            formatter={(val) => formatCurrency(val)}
+          />
+        </Card>
+        <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <Statistic
+            title={t('total_paid', 'Total Paid')}
+            value={metrics.totalPaid}
+            precision={2}
+            prefix={<CheckCircleOutlined style={{ color: '#16a34a' }} />}
+            formatter={(val) => formatCurrency(val)}
+          />
+        </Card>
+        <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <Statistic
+            title={t('outstanding_due', 'Outstanding Due')}
+            value={metrics.totalBalance}
+            precision={2}
+            prefix={<WarningOutlined style={{ color: '#dc2626' }} />}
+            formatter={(val) => formatCurrency(val)}
+          />
+        </Card>
+        <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <Statistic
+            title={t('received_orders', 'Fully Received')}
+            value={metrics.received}
+            suffix={`/ ${metrics.totalPurchases}`}
+            prefix={<InboxOutlined style={{ color: '#16a34a' }} />}
+          />
+        </Card>
+      </div>
 
       {/* Main Content Area */}
       {activeTab === 'list' ? (

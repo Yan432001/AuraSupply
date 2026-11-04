@@ -1,5 +1,6 @@
 const { db } = require('../../config/utill/helper');
 const { logError } = require('../../config/utill/logErr');
+const UnitsModel = require('./units.model');
 
 /**
  * AURA Inventory & Variant Domain Model
@@ -342,6 +343,39 @@ class InventoryModel {
       // Gallery photos
       const [photos] = await db.query('SELECT photo FROM aura_product_photos WHERE product_id = ?', [id]);
 
+      // Multi-unit configuration (aura_cost_price_by_units & aura_product_units)
+      let unitPrices = [];
+      if (p.unit) {
+        const [uRows] = await db.query(`
+          SELECT 
+            u.id,
+            u.id AS unit_id,
+            u.code,
+            u.name,
+            u.base_unit,
+            u.operator,
+            u.unit_value,
+            u.operation_value,
+            CASE WHEN u.id = ? THEN 1 ELSE COALESCE(CAST(u.operation_value AS DECIMAL(15,4)), 1) END AS unit_qty,
+            COALESCE(cp.price, CASE WHEN u.id = ? THEN ? ELSE 0 END) AS price,
+            COALESCE(cp.cost, CASE WHEN u.id = ? THEN ? ELSE 0 END) AS cost,
+            cp.product_code AS product_code
+          FROM aura_units u
+          LEFT JOIN aura_cost_price_by_units cp ON cp.unit_id = u.id AND cp.product_id = ?
+          WHERE u.id = ? OR u.base_unit = ?
+          GROUP BY u.id
+          ORDER BY (u.id = ?) DESC, u.id ASC
+        `, [
+          p.unit,
+          p.unit, parseFloat(p.price) || 0,
+          p.unit, parseFloat(p.cost) || 0,
+          id,
+          p.unit, p.unit,
+          p.unit
+        ]);
+        unitPrices = uRows || [];
+      }
+
       let imageUrl = p.image || '/placeholder.png';
       if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
         imageUrl = `/assets/uploads/${imageUrl}`;
@@ -349,15 +383,18 @@ class InventoryModel {
 
       return {
         ...p,
+        unit_id: p.unit,
         price: parseFloat(p.price) || 0,
         cost: parseFloat(p.cost) || 0,
         quantity: parseFloat(p.quantity) || 0,
         alertQuantity: parseFloat(p.alert_quantity) || 10,
         category: p.category_name || 'Uncategorized',
-        unit: p.unit_name || 'Pcs',
+        unit: p.unit,
+        unit_label: p.unit_name || 'Pcs',
         image: imageUrl,
         variants: Array.from(variantMap.values()),
         warehouse_stocks: whStocks || [],
+        unit_prices: unitPrices,
         gallery: (photos || []).map(ph => ph.photo)
       };
     } catch (err) {
@@ -722,6 +759,30 @@ class InventoryModel {
         }
       }
 
+      // 5. Save Multi-Unit Cost/Price/Barcode records (aura_cost_price_by_units & aura_product_units)
+      const incomingUnitPrices = productData.unit_prices || productData.unitPrices || [];
+      if (Array.isArray(incomingUnitPrices) && incomingUnitPrices.length > 0) {
+        await UnitsModel.saveProductUnits(newProductId, {
+          unit,
+          sale_unit: sale_unit || unit,
+          purchase_unit: purchase_unit || unit,
+          unitPrices: incomingUnitPrices
+        }, conn);
+      } else if (unit) {
+        await UnitsModel.saveProductUnits(newProductId, {
+          unit,
+          sale_unit: sale_unit || unit,
+          purchase_unit: purchase_unit || unit,
+          unitPrices: [{
+            unit_id: unit,
+            cost: safeCost,
+            price: safePrice,
+            product_code: safeCode,
+            unit_qty: 1
+          }]
+        }, conn);
+      }
+
       await conn.commit();
       return this.getProductById(newProductId);
     } catch (err) {
@@ -1041,6 +1102,17 @@ class InventoryModel {
           VALUES (?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)
         `, [id, warehouse_id || 1, qVal, parseFloat(cost) || existing[0].cost]);
+      }
+
+      // Save Multi-Unit Cost/Price/Barcode records if supplied
+      const incomingUnitPrices = productData.unit_prices || productData.unitPrices || [];
+      if (Array.isArray(incomingUnitPrices) && incomingUnitPrices.length > 0) {
+        await UnitsModel.saveProductUnits(id, {
+          unit: unit || existing[0].unit,
+          sale_unit: sale_unit || unit || existing[0].sale_unit,
+          purchase_unit: purchase_unit || unit || existing[0].purchase_unit,
+          unitPrices: incomingUnitPrices
+        }, conn);
       }
 
       await conn.commit();

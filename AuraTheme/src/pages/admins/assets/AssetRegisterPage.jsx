@@ -41,6 +41,7 @@ import {
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useTranslation } from '../../../contexts/LanguageContext';
+import TableActionDropdown from '../../../components/common/TableActionDropdown';
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -469,43 +470,79 @@ const AssetRegisterPage = ({ onAddNewAsset }) => {
       title: t('actions', 'Actions'),
       key: 'actions',
       align: 'center',
-      width: 140,
-      render: (_, r) => (
-        <Space size={4}>
-          <Tooltip title={t('view_details', 'View Asset Details')}>
-            <Button size="small" icon={<EyeOutlined />} onClick={() => openDetailDrawer(r)} />
-          </Tooltip>
-          <Tooltip title={t('edit_asset', 'Edit Asset')}>
-            <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(r)} />
-          </Tooltip>
-          {r.status === 'available' && (
-            <Tooltip title={t('assign_asset', 'Check Out / Assign')}>
-              <Button size="small" icon={<UserSwitchOutlined />} style={{ color: '#2563eb' }} onClick={() => openAssignModal(r)} />
-            </Tooltip>
-          )}
-          {r.status !== 'disposed' && (
-            <>
-              <Tooltip title={t('transfer_asset', 'Transfer Location')}>
-                <Button size="small" icon={<SwapOutlined />} onClick={() => openTransferModal(r)} />
-              </Tooltip>
-              <Tooltip title={t('maintenance', 'Schedule Maintenance')}>
-                <Button size="small" icon={<ToolOutlined />} onClick={() => openMaintenanceModal(r)} />
-              </Tooltip>
-              <Tooltip title={t('retire_dispose', 'Dispose / Retire')}>
-                <Button size="small" icon={<StopOutlined />} style={{ color: '#ea580c' }} onClick={() => openDisposalModal(r)} />
-              </Tooltip>
-            </>
-          )}
-          <Popconfirm
-            title={t('confirm_delete', 'Are you sure you want to delete or archive this asset?')}
-            onConfirm={() => handleDeleteAsset(r.id)}
-            okText={t('yes', 'Yes')}
-            cancelText={t('no', 'No')}
-          >
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      )
+      width: 100,
+      render: (_, r) => {
+        const actionItems = [
+          {
+            key: 'view',
+            icon: <EyeOutlined style={{ color: '#2563eb' }} />,
+            label: t('view_details', 'View Asset Details'),
+            onClick: () => openDetailDrawer(r),
+          },
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#059669' }} />,
+            label: t('edit_asset', 'Edit Asset'),
+            onClick: () => openEditModal(r),
+          },
+        ];
+
+        if (r.status === 'available') {
+          actionItems.push({
+            key: 'assign',
+            icon: <UserSwitchOutlined style={{ color: '#2563eb' }} />,
+            label: t('assign_asset', 'Check Out / Assign'),
+            onClick: () => openAssignModal(r),
+          });
+        }
+
+        if (r.status !== 'disposed') {
+          actionItems.push(
+            {
+              key: 'transfer',
+              icon: <SwapOutlined />,
+              label: t('transfer_asset', 'Transfer Location'),
+              onClick: () => openTransferModal(r),
+            },
+            {
+              key: 'maintenance',
+              icon: <ToolOutlined />,
+              label: t('maintenance', 'Schedule Maintenance'),
+              onClick: () => openMaintenanceModal(r),
+            },
+            {
+              key: 'retire',
+              icon: <StopOutlined style={{ color: '#ea580c' }} />,
+              label: t('retire_dispose', 'Dispose / Retire'),
+              onClick: () => openDisposalModal(r),
+            }
+          );
+        }
+
+        actionItems.push(
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: t('delete_asset', 'Delete Asset'),
+            onClick: () => {
+              Modal.confirm({
+                title: t('confirm_delete', 'Are you sure you want to delete or archive this asset?'),
+                content: `Asset: ${r.name || r.asset_tag || r.id}`,
+                okText: t('yes', 'Yes, Delete'),
+                okType: 'danger',
+                cancelText: t('no', 'No'),
+                onOk: () => handleDeleteAsset(r.id),
+              });
+            },
+          }
+        );
+
+        return <TableActionDropdown items={actionItems} />;
+      },
     }
   ];
 

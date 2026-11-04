@@ -545,15 +545,6 @@ export default function BpasAddCostAdjustmentPage({ onBack = null, onSuccess = n
               <Button icon={<RollbackOutlined />} onClick={handleGoBack}>
                 Back to List
               </Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                icon={<SaveOutlined />}
-                loading={submitting}
-                style={{ background: '#2563eb', fontWeight: 700 }}
-              >
-                Save & Apply Cost Adjustment
-              </Button>
             </Space>
           </div>
 
@@ -811,16 +802,16 @@ export default function BpasAddCostAdjustmentPage({ onBack = null, onSuccess = n
               borderRadius: 12,
               marginBottom: 20,
               border: `1px solid ${adminTheme.border}`,
-              background: '#f8fafc'
+              background: adminTheme?.isDark ? 'rgba(30, 41, 59, 0.85)' : '#f8fafc'
             }}
             styles={{ body: { padding: '16px 24px' } }}
           >
             <Row gutter={24}>
               <Col xs={12} sm={6}>
                 <Statistic
-                  title={<span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>TOTAL PRODUCTS</span>}
+                  title={<span style={{ fontSize: 12, fontWeight: 700, color: adminTheme?.isDark ? '#94a3b8' : '#64748b' }}>TOTAL PRODUCTS</span>}
                   value={totals.totalItems}
-                  valueStyle={{ fontWeight: 800, color: '#0f172a' }}
+                  valueStyle={{ fontWeight: 800, color: adminTheme?.isDark ? '#f8fafc' : '#0f172a' }}
                 />
               </Col>
               <Col xs={12} sm={6}>

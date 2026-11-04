@@ -82,6 +82,7 @@ import BpasConsignmentsWorkspace from './BpasConsignmentsWorkspace';
 import BpasRewardsExchangeWorkspace from './BpasRewardsExchangeWorkspace';
 import BpasPurchaseRequestsWorkspace from './BpasPurchaseRequestsWorkspace';
 import BpasPurchaseOrdersWorkspace from './BpasPurchaseOrdersWorkspace';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -1205,13 +1206,7 @@ export default function BpasInventoryWorkspace() {
           },
         ];
 
-        return (
-          <Dropdown menu={{ items: actionItems }} trigger={['click']} placement="bottomRight">
-            <Button size="small" type="default" icon={<MoreOutlined />} style={{ borderRadius: 6 }}>
-              Action
-            </Button>
-          </Dropdown>
-        );
+        return <TableActionDropdown items={actionItems} />;
       },
     },
   ];

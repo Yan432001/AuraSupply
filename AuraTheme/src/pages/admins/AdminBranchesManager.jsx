@@ -45,6 +45,7 @@ import {
   GlobalOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useBranchesAndBillers } from '../../hooks/useBranchesAndBillers';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -435,52 +436,53 @@ const AdminBranchesManager = () => {
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      width: 160,
-      render: (_, record) => (
-        <Space size={6} wrap>
-          <Tooltip title="Switch to this Branch context">
-            <Button
-              size="small"
-              type={activeBranchId === record.id ? 'primary' : 'default'}
-              icon={<CheckOutlined />}
-              onClick={() => setActiveBranchId(record.id)}
-              style={activeBranchId === record.id ? { background: '#16a34a', borderColor: '#16a34a' } : {}}
-            >
-              {activeBranchId === record.id ? 'Selected' : 'Select'}
-            </Button>
-          </Tooltip>
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'select',
+            icon: <CheckOutlined style={{ color: activeBranchId === record.id ? '#16a34a' : undefined }} />,
+            label: activeBranchId === record.id ? 'Active Context (Selected)' : 'Select Branch Context',
+            onClick: () => setActiveBranchId(record.id),
+          },
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: 'Edit Branch',
+            onClick: () => handleOpenEditBranch(record),
+          },
+          ...(record.store_slug ? [
+            {
+              key: 'qrcode',
+              icon: <QrcodeOutlined style={{ color: '#059669' }} />,
+              label: 'View E-Menu / TMA QR',
+              onClick: () => navigate(`/admins?module=data&section=qrcode`),
+            },
+          ] : []),
+          ...(!record.is_default ? [
+            { type: 'divider' },
+            {
+              key: 'delete',
+              icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+              danger: true,
+              label: 'Delete Branch',
+              onClick: () => {
+                Modal.confirm({
+                  title: 'Delete this branch?',
+                  content: 'Associated sales and stock history will remain intact.',
+                  okText: 'Yes, Delete',
+                  okType: 'danger',
+                  cancelText: 'Cancel',
+                  onOk: () => deleteBranch(record.id),
+                });
+              },
+            },
+          ] : []),
+        ];
 
-          <Tooltip title="Edit Branch">
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleOpenEditBranch(record)}
-            />
-          </Tooltip>
-
-          {record.store_slug && (
-            <Tooltip title="View E-Menu / TMA QR">
-              <Button
-                size="small"
-                icon={<QrcodeOutlined />}
-                onClick={() => navigate(`/admins?module=data&section=qrcode`)}
-              />
-            </Tooltip>
-          )}
-
-          {!record.is_default && (
-            <Popconfirm
-              title="Delete this branch?"
-              description="Associated sales and stock history will remain intact."
-              onConfirm={() => deleteBranch(record.id)}
-              okText="Yes, Delete"
-              cancelText="Cancel"
-            >
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 
@@ -595,41 +597,45 @@ const AdminBranchesManager = () => {
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      width: 140,
-      render: (_, record) => (
-        <Space size={6}>
-          <Tooltip title="Edit Biller">
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleOpenEditBiller(record)}
-            />
-          </Tooltip>
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: 'Edit Biller',
+            onClick: () => handleOpenEditBiller(record),
+          },
+          ...(!record.is_default ? [
+            {
+              key: 'default',
+              icon: <CheckOutlined style={{ color: '#16a34a' }} />,
+              label: 'Set as Default Entity',
+              onClick: () => setDefaultBiller(record.id),
+            },
+            { type: 'divider' },
+            {
+              key: 'delete',
+              icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+              danger: true,
+              label: 'Delete Biller',
+              onClick: () => {
+                Modal.confirm({
+                  title: 'Delete this legal biller?',
+                  content: 'Make sure to reassign linked branches before deleting.',
+                  okText: 'Yes, Delete',
+                  okType: 'danger',
+                  cancelText: 'Cancel',
+                  onOk: () => deleteBiller(record.id),
+                });
+              },
+            },
+          ] : []),
+        ];
 
-          {!record.is_default && (
-            <Tooltip title="Set as Default Invoicing Entity">
-              <Button
-                size="small"
-                onClick={() => setDefaultBiller(record.id)}
-              >
-                Set Default
-              </Button>
-            </Tooltip>
-          )}
-
-          {!record.is_default && (
-            <Popconfirm
-              title="Delete this legal biller?"
-              description="Make sure to reassign linked branches before deleting."
-              onConfirm={() => deleteBiller(record.id)}
-              okText="Yes, Delete"
-              cancelText="Cancel"
-            >
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 

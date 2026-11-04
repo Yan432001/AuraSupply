@@ -127,6 +127,195 @@ const moduleCategories = {
   settings: 'System Administration'
 };
 
+// Classic BPAS / AURA_v1 Modules (Exact match to c:\wamp64\www\school_new_version\themes\default\admin\views\settings\modules.php)
+export const CLASSIC_MODULES = [
+  // Row 1
+  { key: 'module_inventory', label: 'Inventory', canonical: 'inventory' },
+  { key: 'module_asset', label: 'Asset', canonical: 'asset' },
+  { key: 'module_purchase', label: 'Purchase', canonical: 'procurement' },
+  { key: 'module_sale', label: 'Sales', canonical: 'sales' },
+  { key: 'pos', label: 'POS', canonical: 'pos' },
+  { key: 'project', label: 'Project', canonical: 'project' },
+
+  // Row 2
+  { key: 'module_manufacturing', label: 'Manufacturing', canonical: 'manufaturing' },
+  { key: 'module_account', label: 'Accounting', canonical: 'accounting' },
+  { key: 'module_hr', label: 'Core HR', canonical: 'hr' },
+  { key: 'payroll', label: 'Payroll', canonical: 'payroll' },
+  { key: 'attendance', label: 'Attendance', canonical: 'attendance' },
+  { key: 'module_crm', label: 'CRM', canonical: 'crm' },
+
+  // Row 3
+  { key: 'module_property', label: 'Property', canonical: 'property' },
+  { key: 'module_clinic', label: 'Clinic', canonical: 'clinic' },
+  { key: 'module_tax', label: 'Tax', canonical: 'tax' },
+  { key: 'module_school', label: 'School', canonical: 'school' },
+  { key: 'module_hotel_apartment', label: 'Hotel', canonical: 'hotel_apartment' },
+  { key: 'shop', label: 'Ecommerce', canonical: 'ecommerce', altKey: 'ecommerce' },
+
+  // Row 4
+  { key: 'module_email', label: 'Email Marketing', canonical: 'email_marketing' },
+  { key: 'module_express', label: 'Express', canonical: 'express' },
+  { key: 'module_loan', label: 'Loan', canonical: 'loan' },
+  { key: 'module_pawn', label: 'Pawns', canonical: 'pawn' },
+  { key: 'module_save', label: 'Savings', canonical: 'saving' },
+  { key: 'module_installment', label: 'Installmentings', canonical: 'installment' },
+
+  // Row 5
+  { key: 'module_gym', label: 'Gyms', canonical: 'gym' },
+  { key: 'module_repair', label: 'Repair', canonical: 'repair' },
+  { key: 'module_rental', label: 'Rental', canonical: 'rental' },
+  { key: 'module_concrete', label: 'Concrete', canonical: 'concrete' },
+  { key: 'module_truckings', label: 'Truckings', canonical: 'truckings' },
+  { key: 'module_clearance', label: 'Clearance', canonical: 'clearance' },
+
+  // Row 6
+  { key: 'reward_exchange', label: 'Reward Exchange', canonical: 'reward_exchange' },
+  { key: 'module_fuel', label: 'Module fuel', canonical: 'fuel' },
+  { key: 'module_e_ticket', label: 'E ticket', canonical: 'e_ticket', altKey: 'e_ticket' },
+  { key: 'module_expense', label: 'Module expense', canonical: 'expense' },
+];
+
+// Classic BPAS / AURA_v1 Sub-Modules (Exact match to c:\wamp64\www\school_new_version\themes\default\admin\views\settings\modules.php)
+export const CLASSIC_SUBMODULES = [
+  // Row 1
+  {
+    key: 'multi_level',
+    label: 'Multi level',
+    options: [
+      { value: 1, label: 'Yes' },
+      { value: 0, label: 'No' },
+    ],
+  },
+  {
+    key: 'multi_biller',
+    label: 'Multi biller',
+    options: [
+      { value: 1, label: 'Yes' },
+      { value: 0, label: 'No' },
+    ],
+  },
+  {
+    key: 'multi_warehouse',
+    label: 'Multi Warehouse',
+    options: [
+      { value: 1, label: 'Yes' },
+      { value: 0, label: 'No' },
+    ],
+  },
+  {
+    key: 'stock_using',
+    label: 'Stock using',
+    options: [
+      { value: 0, label: 'No' },
+      { value: 1, label: 'Yes' },
+    ],
+  },
+
+  // Row 2
+  {
+    key: 'sale_consignment',
+    label: 'Sale Consignment',
+    options: [
+      { value: 1, label: 'Yes' },
+      { value: 0, label: 'No' },
+    ],
+  },
+  {
+    key: 'quotation',
+    label: 'Quotation',
+    options: [
+      { value: 0, label: 'No' },
+      { value: 1, label: 'Yes' },
+    ],
+  },
+  {
+    key: 'sale_order',
+    label: 'Sale Order',
+    options: [
+      { value: 0, label: 'No' },
+      { value: 1, label: 'Yes' },
+    ],
+  },
+  {
+    key: 'monthly_auto_invoice',
+    label: 'Monthly auto invoice',
+    options: [
+      { value: 0, label: 'No' },
+      { value: 1, label: 'Yes' },
+    ],
+  },
+
+  // Row 3
+  {
+    key: 'purchase_request',
+    label: 'Purchase Request',
+    options: [
+      { value: 0, label: 'No' },
+      { value: 1, label: 'Yes' },
+    ],
+  },
+  {
+    key: 'purchase_order',
+    label: 'Purchase Order',
+    options: [
+      { value: 0, label: 'No' },
+      { value: 1, label: 'Yes' },
+    ],
+  },
+  {
+    key: 'sale_man',
+    label: 'Sale Man or Agency',
+    options: [
+      { value: 1, label: 'Yes' },
+      { value: 0, label: 'No' },
+    ],
+  },
+  {
+    key: 'commission',
+    label: 'Commission',
+    options: [
+      { value: 1, label: 'Yes' },
+      { value: 0, label: 'No' },
+    ],
+  },
+
+  // Row 4
+  {
+    key: 'maintenance',
+    label: 'Maintenance',
+    options: [
+      { value: 1, label: 'Yes' },
+      { value: 0, label: 'No' },
+    ],
+  },
+  {
+    key: 'delivery',
+    label: 'Delivery',
+    options: [
+      { value: 1, label: 'Yes' },
+      { value: 0, label: 'No' },
+    ],
+  },
+  {
+    key: 'driver',
+    label: 'Driver',
+    options: [
+      { value: 1, label: 'Yes' },
+      { value: 0, label: 'No' },
+    ],
+  },
+  {
+    key: 'school_level',
+    label: 'school level',
+    options: [
+      { value: 'all', label: 'All' },
+      { value: '0', label: 'University' },
+      { value: '1', label: 'School K12' },
+    ],
+  },
+];
+
 const categoryOrder = [
   'Core Operations',
   'Commerce & Orders',
@@ -163,6 +352,26 @@ const AdminModulesManager = () => {
     totalModulesCount
   } = useAdminModules();
 
+  // Active View Mode: 'classic' (BPAS / AURA_v1 System Control) | 'advanced' (Cards & Permissions Matrix)
+  const [activeViewMode, setActiveViewMode] = useState('classic');
+
+  // Classic System Control state (34 modules + 16 sub-modules)
+  const [classicModulesState, setClassicModulesState] = useState(() => {
+    const init = {};
+    CLASSIC_MODULES.forEach((m) => {
+      init[m.key] = 1;
+    });
+    return init;
+  });
+
+  const [classicSubmodulesState, setClassicSubmodulesState] = useState(() => {
+    const init = {};
+    CLASSIC_SUBMODULES.forEach((sub) => {
+      init[sub.key] = sub.key === 'school_level' ? 'all' : (sub.options?.[0]?.value ?? 1);
+    });
+    return init;
+  });
+
   // Active Website Template State
   const [selectedWebsiteTemplate, setSelectedWebsiteTemplate] = useState(
     () => activeWebsiteTemplate || 'default'
@@ -194,9 +403,11 @@ const AdminModulesManager = () => {
   const [initialSubmoduleStates, setInitialSubmoduleStates] = useState({});
 
   // Enterprise License Submission Form States (matching AURA_v1 modules.php)
-  const [licenseUserName, setLicenseUserName] = useState('aura_erp');
+  const [licenseUserName, setLicenseUserName] = useState(
+    () => sessionStorage.getItem('aura_license_user') || 'sbcsolution'
+  );
   const [licenseKeyInput, setLicenseKeyInput] = useState(
-    () => sessionStorage.getItem('aura_license_key') || 'hianyan@v1'
+    () => sessionStorage.getItem('aura_license_key') || 'Sbc@key4578'
   );
   const [submittingModules, setSubmittingModules] = useState(false);
 
@@ -246,7 +457,33 @@ const AdminModulesManager = () => {
 
       if (modRes.status === 'fulfilled' && modRes.value.data?.success) {
         const fetched = modRes.value.data.data?.modules || [];
+        const settingsObj = modRes.value.data.data?.settings || {};
         setDbModules(fetched);
+
+        // Populate classic view states from aura_settings
+        const cMods = {};
+        CLASSIC_MODULES.forEach((m) => {
+          const val = settingsObj[m.key] !== undefined
+            ? settingsObj[m.key]
+            : (m.altKey && settingsObj[m.altKey] !== undefined ? settingsObj[m.altKey] : 1);
+          cMods[m.key] = Number(val) === 1 ? 1 : 0;
+        });
+        setClassicModulesState(cMods);
+
+        const cSubs = {};
+        CLASSIC_SUBMODULES.forEach((sub) => {
+          if (sub.key === 'school_level') {
+            cSubs[sub.key] = settingsObj[sub.key] !== undefined ? String(settingsObj[sub.key]) : 'all';
+          } else {
+            const val = settingsObj[sub.key] !== undefined ? settingsObj[sub.key] : (sub.options?.[0]?.value ?? 1);
+            cSubs[sub.key] = Number(val) === 1 ? 1 : 0;
+          }
+        });
+        setClassicSubmodulesState(cSubs);
+
+        if (settingsObj.license_key) {
+          setLicenseKeyInput(settingsObj.license_key);
+        }
 
         const modMap = {};
         fetched.forEach((m) => {
@@ -294,6 +531,69 @@ const AdminModulesManager = () => {
   useEffect(() => {
     fetchModuleData();
   }, []);
+
+  // Submit Classic System Settings (Modules & Sub-Modules)
+  const handleSubmitClassicSettings = async () => {
+    if (!licenseKeyInput || !licenseKeyInput.trim()) {
+      message.error(t('enter_license_key_msg', 'Please enter your License Activation Key to authorize module updates.'));
+      return;
+    }
+
+    setSubmittingModules(true);
+    try {
+      const res = await axios.post(
+        '/api/admin/modules/bulk-update',
+        {
+          user_name: licenseUserName.trim(),
+          license_key: licenseKeyInput.trim(),
+          modules: classicModulesState,
+          submodules: classicSubmodulesState,
+          active_template: selectedWebsiteTemplate
+        },
+        {
+          headers: {
+            ...getAuthHeader(),
+            'x-license-key': licenseKeyInput.trim()
+          }
+        }
+      );
+
+      if (res.data?.success) {
+        message.success(t('setting_updated', 'Setting updated successfully!'));
+        const verifiedKey = licenseKeyInput.trim();
+        setIsLicenseVerified(true);
+        setVerifiedLicenseKey(verifiedKey);
+        sessionStorage.setItem('aura_license_verified', 'true');
+        sessionStorage.setItem('aura_license_key', verifiedKey);
+        sessionStorage.setItem('aura_license_user', licenseUserName.trim());
+
+        // Sync with AdminModulesContext so application navigation reacts immediately
+        const contextMap = {};
+        CLASSIC_MODULES.forEach((m) => {
+          const val = classicModulesState[m.key];
+          contextMap[m.key] = val === 1 || val === true;
+          if (m.canonical) contextMap[m.canonical] = val === 1 || val === true;
+          if (m.altKey) contextMap[m.altKey] = val === 1 || val === true;
+        });
+        CLASSIC_SUBMODULES.forEach((sub) => {
+          const val = classicSubmodulesState[sub.key];
+          contextMap[sub.key] = val === 1 || val === '1' || val === true;
+        });
+        if (typeof setAllModuleStates === 'function') {
+          setAllModuleStates(contextMap);
+        }
+
+        fetchModuleData();
+      } else {
+        message.error(res.data?.message || t('invalid_license_key', 'Invalid License Activation Key. Module update denied.'));
+      }
+    } catch (err) {
+      const errMsg = err.response?.data?.message || t('license_verification_failed', 'Invalid License Activation Key. Module update denied.');
+      message.error(errMsg);
+    } finally {
+      setSubmittingModules(false);
+    }
+  };
 
   // Merge local registry with dbModules (sourced from aura_modules + aura_module_settings)
   const mergedModules = useMemo(() => {
@@ -664,46 +964,175 @@ const AdminModulesManager = () => {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      {/* 1. Header & Quick Actions */}
-      <Flex orientation="horizontal" justify="space-between" align="flex-start" wrap="wrap" gap={16}>
+      {/* Embedded Classic CSS matching AURA_v1 modules.php */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            .scheduler-border {
+              border: 1px solid #dcdfe6 !important;
+              padding: 0 1.25rem 1.25rem 1.25rem !important;
+              margin: 0 0 1.5rem 0 !important;
+              border-radius: 6px;
+            }
+            .scheduler-border legend {
+              font-size: 0.95rem !important;
+              font-weight: 600 !important;
+              text-align: left !important;
+              width: auto !important;
+              padding: 0 8px !important;
+              border-bottom: none !important;
+              margin-bottom: 12px !important;
+              background: transparent !important;
+            }
+            .classic-switch {
+              position: relative;
+              display: inline-block;
+              width: 52px;
+              height: 28px;
+              margin-top: 4px;
+            }
+            .classic-switch input {
+              opacity: 0;
+              width: 0;
+              height: 0;
+            }
+            .classic-slider {
+              position: absolute;
+              cursor: pointer;
+              top: 0; left: 0; right: 0; bottom: 0;
+              background-color: #cbd5e1;
+              transition: .3s;
+              border-radius: 28px;
+            }
+            .classic-slider:before {
+              position: absolute;
+              content: "";
+              height: 22px; width: 22px;
+              left: 3px; bottom: 3px;
+              background-color: white;
+              transition: .3s;
+              border-radius: 50%;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+            }
+            .classic-switch input:checked + .classic-slider {
+              background-color: #2196F3;
+            }
+            .classic-switch input:checked + .classic-slider:before {
+              transform: translateX(24px);
+            }
+            .classic-select {
+              width: 100%;
+              height: 38px;
+              padding: 6px 12px;
+              font-size: 13px;
+              line-height: 1.42857143;
+              color: #334155;
+              border: 1px solid #cbd5e1;
+              border-radius: 4px;
+              box-shadow: inset 0 1px 1px rgba(0,0,0,.075);
+              transition: border-color ease-in-out .15s,box-shadow ease-in-out .15s;
+            }
+            .classic-select:focus {
+              border-color: #66afe9;
+              outline: 0;
+              box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102,175,233,.6);
+            }
+            .classic-input {
+              width: 100%;
+              height: 38px;
+              padding: 6px 12px;
+              font-size: 13px;
+              color: #334155;
+              border: 1px solid #cbd5e1;
+              border-radius: 4px;
+              box-shadow: inset 0 1px 1px rgba(0,0,0,.075);
+              transition: border-color ease-in-out .15s,box-shadow ease-in-out .15s;
+            }
+            .classic-input:focus {
+              border-color: #66afe9;
+              outline: 0;
+              box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102,175,233,.6);
+            }
+            @media (max-width: 991px) {
+              .modules-classic-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+              }
+              .submodules-classic-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+              }
+            }
+            @media (max-width: 640px) {
+              .modules-classic-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+              }
+              .submodules-classic-grid {
+                grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+              }
+              .license-classic-grid {
+                grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+              }
+            }
+          `,
+        }}
+      />
+
+      {/* Global Top Header & Mode Switcher */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          paddingBottom: 14,
+          borderBottom: `1px solid ${adminTheme.isDark ? '#334155' : '#e2e8f0'}`,
+          marginBottom: 12,
+        }}
+      >
         <div>
-          <Flex align="center" gap={10}>
-            <Title level={3} style={{ margin: 0, color: adminTheme.text, fontWeight: 700 }}>
-              {t('erp_modules_switchboard', 'ERP Modules & Feature Switchboard')}
-            </Title>
-            <Tag style={{ borderRadius: 8, fontWeight: 700, padding: '2px 10px', color: adminTheme.primary, background: `${adminTheme.primary}18`, borderColor: `${adminTheme.primary}33` }}>
-              {t('single_users_db_sync', 'Single Users Database • Real-time Sync')}
-            </Tag>
-          </Flex>
-          <Text style={{ color: adminTheme.subtext, fontSize: 13, marginTop: 4, display: 'block' }}>
-            {t('erp_modules_subtitle', 'Configure active ERP modules, assign sub-module capabilities, manage per-module permissions, and enforce enterprise license authentication. Changes synchronize instantly to navigation, APIs, and database tables.')}
-          </Text>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 20, color: '#2563eb' }}>
+              <SettingOutlined />
+            </span>
+            <h2
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                color: '#2563eb',
+                margin: 0,
+              }}
+            >
+              {t('modules', 'Modules')}
+            </h2>
+          </div>
+          <p
+            style={{
+              fontSize: 13,
+              color: adminTheme.isDark ? '#94a3b8' : '#64748b',
+              margin: '4px 0 0 0',
+            }}
+          >
+            {t(
+              'update_info',
+              'Please update the information below. The field labels marked with * are required input fields.'
+            )}
+          </p>
         </div>
 
-        <Space size={10} wrap>
-          <Button
-            icon={<DashboardOutlined />}
-            onClick={() => navigate('/admins/dashboard')}
-            style={{ borderRadius: 10, fontWeight: 600 }}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Radio.Group
+            value={activeViewMode}
+            onChange={(e) => setActiveViewMode(e.target.value)}
+            buttonStyle="solid"
+            size="middle"
           >
-            {t('dashboard', 'Dashboard')}
-          </Button>
-          <Button
-            type="primary"
-            icon={<CheckOutlined />}
-            onClick={handleEnableAllLocal}
-            style={{ borderRadius: 10, fontWeight: 600, background: '#16a34a', borderColor: '#16a34a' }}
-          >
-            {t('enable_all_modules', 'Enable All Modules')}
-          </Button>
-          <Button
-            danger
-            icon={<CloseCircleOutlined />}
-            onClick={handleDisableNonCoreLocal}
-            style={{ borderRadius: 10, fontWeight: 600 }}
-          >
-            {t('disable_non_core', 'Disable Non-Core')}
-          </Button>
+            <Radio.Button value="classic">
+              <AppstoreOutlined /> {t('system_control', 'System Control (Classic)')}
+            </Radio.Button>
+            <Radio.Button value="advanced">
+              <SlidersOutlined /> {t('cards_and_permissions', 'Cards & Permissions')}
+            </Radio.Button>
+          </Radio.Group>
           <Button
             icon={<ReloadOutlined />}
             onClick={() => {
@@ -711,12 +1140,321 @@ const AdminModulesManager = () => {
               fetchModuleData();
             }}
             loading={loading}
-            style={{ borderRadius: 10 }}
           >
             {t('refresh', 'Refresh')}
           </Button>
-        </Space>
-      </Flex>
+        </div>
+      </div>
+
+      {/* ---------------------------------------------------------------------- */}
+      {/* CLASSIC BPAS SYSTEM CONTROL (MODULES & SUB-MODULES)                     */}
+      {/* Exact match to media_1793440784750_25fd2fb6.png and AURA_v1 modules.php */}
+      {/* ---------------------------------------------------------------------- */}
+      {activeViewMode === 'classic' && (
+        <div
+          style={{
+            background: adminTheme.isDark ? '#1e293b' : '#ffffff',
+            borderRadius: 8,
+            padding: '24px 28px',
+            border: `1px solid ${adminTheme.isDark ? '#334155' : '#e2e8f0'}`,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          }}
+        >
+          {/* Section 1: Modules (6 columns) */}
+          <fieldset
+            className="scheduler-border"
+            style={{
+              borderColor: adminTheme.isDark ? '#334155' : '#e2e8f0',
+              background: adminTheme.isDark ? '#1e293b' : '#ffffff',
+            }}
+          >
+            <legend
+              className="scheduler-border"
+              style={{
+                color: adminTheme.isDark ? '#f1f5f9' : '#1e293b',
+              }}
+            >
+              {t('modules', 'Modules')}
+            </legend>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+                gap: '24px 16px',
+                padding: '8px 0 16px 0',
+              }}
+              className="modules-classic-grid"
+            >
+              {CLASSIC_MODULES.map((m) => {
+                const isChecked = classicModulesState[m.key] === 1;
+                return (
+                  <div
+                    key={m.key}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <label
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: adminTheme.isDark ? '#e2e8f0' : '#334155',
+                        marginBottom: 6,
+                        userSelect: 'none',
+                      }}
+                    >
+                      {t(m.canonical || m.key, m.label)}
+                    </label>
+                    <div className="controls">
+                      <label className="classic-switch">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setClassicModulesState((prev) => ({
+                              ...prev,
+                              [m.key]: checked ? 1 : 0,
+                            }));
+                          }}
+                        />
+                        <span className="classic-slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {/* Section 2: sub_modules (4 columns) */}
+          <fieldset
+            className="scheduler-border"
+            style={{
+              borderColor: adminTheme.isDark ? '#334155' : '#e2e8f0',
+              background: adminTheme.isDark ? '#1e293b' : '#ffffff',
+              marginTop: 20,
+            }}
+          >
+            <legend
+              className="scheduler-border"
+              style={{
+                color: adminTheme.isDark ? '#f1f5f9' : '#1e293b',
+              }}
+            >
+              {t('sub_modules', 'sub_modules')}
+            </legend>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                gap: '20px 24px',
+                padding: '8px 0 16px 0',
+              }}
+              className="submodules-classic-grid"
+            >
+              {CLASSIC_SUBMODULES.map((sub) => {
+                const currentVal =
+                  classicSubmodulesState[sub.key] !== undefined
+                    ? classicSubmodulesState[sub.key]
+                    : (sub.key === 'school_level' ? 'all' : 1);
+                return (
+                  <div key={sub.key}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: adminTheme.isDark ? '#e2e8f0' : '#334155',
+                        marginBottom: 6,
+                      }}
+                    >
+                      {t(sub.key, sub.label)}
+                    </label>
+                    <select
+                      className="classic-select"
+                      style={{
+                        backgroundColor: adminTheme.isDark ? '#0f172a' : '#ffffff',
+                        borderColor: adminTheme.isDark ? '#334155' : '#cbd5e1',
+                        color: adminTheme.isDark ? '#f8fafc' : '#334155',
+                      }}
+                      value={currentVal}
+                      onChange={(e) => {
+                        const val =
+                          sub.key === 'school_level'
+                            ? e.target.value
+                            : Number(e.target.value);
+                        setClassicSubmodulesState((prev) => ({
+                          ...prev,
+                          [sub.key]: val,
+                        }));
+                      }}
+                    >
+                      {sub.options.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {t(String(opt.label).toLowerCase(), opt.label)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {/* Section 3: License Key (2 columns) */}
+          <fieldset
+            className="scheduler-border"
+            style={{
+              borderColor: adminTheme.isDark ? '#334155' : '#e2e8f0',
+              background: adminTheme.isDark ? '#1e293b' : '#ffffff',
+              marginTop: 20,
+            }}
+          >
+            <legend
+              className="scheduler-border"
+              style={{
+                color: adminTheme.isDark ? '#f1f5f9' : '#1e293b',
+              }}
+            >
+              {t('license_key', 'License Key')}
+            </legend>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: '20px 24px',
+                padding: '8px 0 16px 0',
+              }}
+              className="license-classic-grid"
+            >
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: adminTheme.isDark ? '#e2e8f0' : '#334155',
+                    marginBottom: 6,
+                  }}
+                >
+                  {t('user_name', 'User Name')} *
+                </label>
+                <input
+                  type="text"
+                  className="classic-input"
+                  style={{
+                    backgroundColor: adminTheme.isDark ? '#0f172a' : '#ffffff',
+                    borderColor: adminTheme.isDark ? '#334155' : '#cbd5e1',
+                    color: adminTheme.isDark ? '#f8fafc' : '#334155',
+                  }}
+                  value={licenseUserName}
+                  placeholder="e.g. sbcsolution or aura_erp"
+                  onChange={(e) => setLicenseUserName(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: adminTheme.isDark ? '#e2e8f0' : '#334155',
+                    marginBottom: 6,
+                  }}
+                >
+                  {t('license_key', 'License Key')} *
+                </label>
+                <input
+                  type="password"
+                  className="classic-input"
+                  style={{
+                    backgroundColor: adminTheme.isDark ? '#0f172a' : '#ffffff',
+                    borderColor: adminTheme.isDark ? '#334155' : '#cbd5e1',
+                    color: adminTheme.isDark ? '#f8fafc' : '#334155',
+                  }}
+                  value={licenseKeyInput}
+                  placeholder="e.g. Sbc@key4578"
+                  onChange={(e) => setLicenseKeyInput(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+          </fieldset>
+
+          {/* Action Button: Update Settings */}
+          <div style={{ marginTop: 24 }}>
+            <Button
+              type="primary"
+              size="large"
+              loading={submittingModules}
+              onClick={handleSubmitClassicSettings}
+              style={{
+                backgroundColor: '#337ab7',
+                borderColor: '#2e6da4',
+                borderRadius: 4,
+                fontWeight: 600,
+                fontSize: 14,
+                minWidth: 160,
+                height: 42,
+              }}
+            >
+              {t('update_settings', 'Update Settings')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------------------------- */}
+      {/* ADVANCED VIEW: MODULE CARDS & PERMISSIONS MATRIX                       */}
+      {/* ---------------------------------------------------------------------- */}
+      {activeViewMode === 'advanced' && (
+        <>
+          {/* 1. Header & Quick Actions */}
+          <Flex orientation="horizontal" justify="space-between" align="flex-start" wrap="wrap" gap={16}>
+            <div>
+              <Flex align="center" gap={10}>
+                <Title level={3} style={{ margin: 0, color: adminTheme.text, fontWeight: 700 }}>
+                  {t('erp_modules_switchboard', 'ERP Modules & Feature Switchboard')}
+                </Title>
+                <Tag style={{ borderRadius: 8, fontWeight: 700, padding: '2px 10px', color: adminTheme.primary, background: `${adminTheme.primary}18`, borderColor: `${adminTheme.primary}33` }}>
+                  {t('single_users_db_sync', 'Single Users Database • Real-time Sync')}
+                </Tag>
+              </Flex>
+              <Text style={{ color: adminTheme.subtext, fontSize: 13, marginTop: 4, display: 'block' }}>
+                {t('erp_modules_subtitle', 'Configure active ERP modules, assign sub-module capabilities, manage per-module permissions, and enforce enterprise license authentication. Changes synchronize instantly to navigation, APIs, and database tables.')}
+              </Text>
+            </div>
+
+            <Space size={10} wrap>
+              <Button
+                icon={<DashboardOutlined />}
+                onClick={() => navigate('/admins/dashboard')}
+                style={{ borderRadius: 10, fontWeight: 600 }}
+              >
+                {t('dashboard', 'Dashboard')}
+              </Button>
+              <Button
+                type="primary"
+                icon={<CheckOutlined />}
+                onClick={handleEnableAllLocal}
+                style={{ borderRadius: 10, fontWeight: 600, background: '#16a34a', borderColor: '#16a34a' }}
+              >
+                {t('enable_all_modules', 'Enable All Modules')}
+              </Button>
+              <Button
+                danger
+                icon={<CloseCircleOutlined />}
+                onClick={handleDisableNonCoreLocal}
+                style={{ borderRadius: 10, fontWeight: 600 }}
+              >
+                {t('disable_non_core', 'Disable Non-Core')}
+              </Button>
+            </Space>
+          </Flex>
 
       {/* 2. Enterprise License Banner Card */}
       <Card
@@ -995,31 +1733,27 @@ const AdminModulesManager = () => {
                       />
 
                       {/* Header with Icon, Name, and License-gated Switch */}
-                      <Flex justify="space-between" align="flex-start" style={{ marginBottom: 10 }}>
+                      <Flex justify="space-between" align="flex-start" style={{ marginBottom: 12 }}>
                         <Flex align="center" gap={12}>
                           <div
                             style={{
-                              width: 46,
-                              height: 46,
-                              borderRadius: 12,
+                              width: 48,
+                              height: 48,
+                              borderRadius: 14,
                               background: isOpen ? `${m.accent || primary}18` : adminTheme.cardMuted,
                               color: isOpen ? (m.accent || primary) : adminTheme.subtext,
                               display: 'grid',
                               placeItems: 'center',
-                              fontSize: 22,
+                              fontSize: 24,
                               transition: 'all 0.2s ease',
                               flexShrink: 0
                             }}
                           >
-                            {m.favicon ? (
-                              <i className={m.favicon} style={{ fontSize: 22 }} />
-                            ) : (
-                              <IconComponent />
-                            )}
+                            <IconComponent style={{ fontSize: 24 }} />
                           </div>
 
                           <div>
-                            <Title level={5} style={{ margin: 0, color: adminTheme.text }}>
+                            <Title level={5} style={{ margin: 0, color: adminTheme.text, fontWeight: 700 }}>
                               {t(m.label, m.label)}
                             </Title>
                             <Flex align="center" gap={6} wrap="wrap" style={{ marginTop: 4 }}>
@@ -1038,11 +1772,6 @@ const AdminModulesManager = () => {
                               {m.isDirty && (
                                 <Tag color="orange" style={{ borderRadius: 6, fontSize: 10, margin: 0, fontWeight: 700 }}>
                                   {t('pending_save', 'PENDING SAVE')}
-                                </Tag>
-                              )}
-                              {m.style && (
-                                <Tag style={{ borderRadius: 6, fontSize: 10, margin: 0, background: `${m.accent || primary}15`, color: m.accent || primary, borderColor: `${m.accent || primary}33`, fontWeight: 600 }}>
-                                  {m.style}
                                 </Tag>
                               )}
                             </Flex>
@@ -1064,27 +1793,19 @@ const AdminModulesManager = () => {
                         </Flex>
                       </Flex>
 
-                      {/* Technical Module Metadata Badges */}
+                      {/* Clean Module Route & Capability Badges */}
                       <Flex align="center" gap={6} wrap="wrap" style={{ marginBottom: 10 }}>
-                        {m.module && (
-                          <Tooltip title={t('settings_column_tooltip', 'Settings flag in aura_settings')}>
-                            <Tag style={{ borderRadius: 6, fontSize: 11, background: adminTheme.cardMuted, margin: 0 }}>
-                              <code>Settings-&gt;{m.module}</code>
-                            </Tag>
-                          </Tooltip>
-                        )}
-                        {m.controller && (
-                          <Tooltip title={t('controller_tooltip', 'Controller / Route handler')}>
-                            <Tag icon={<GlobalOutlined />} style={{ borderRadius: 6, fontSize: 11, margin: 0 }}>
-                              {m.controller}
-                            </Tag>
-                          </Tooltip>
-                        )}
-                        {m.image && (
-                          <Tag style={{ borderRadius: 6, fontSize: 10.5, margin: 0, color: adminTheme.subtext }}>
-                            {m.image}
+                        <Tag color="blue" style={{ borderRadius: 6, fontSize: 11, margin: 0, fontWeight: 500 }}>
+                          /{m.controller || m.key}
+                        </Tag>
+                        {m.submodules && m.submodules.length > 0 && (
+                          <Tag style={{ borderRadius: 6, fontSize: 11, margin: 0, background: adminTheme.cardMuted, color: adminTheme.subtext, fontWeight: 500 }}>
+                            {m.submodules.length} {t('capabilities', 'Capabilities')}
                           </Tag>
                         )}
+                        <Tag color="purple" style={{ borderRadius: 6, fontSize: 11, margin: 0, fontWeight: 500 }}>
+                          <SafetyCertificateOutlined style={{ marginRight: 4 }} /> RBAC
+                        </Tag>
                       </Flex>
 
                       {/* Description */}
@@ -1469,6 +2190,8 @@ const AdminModulesManager = () => {
           </Space>
         </div>
       )}
+      </>
+      )}
 
       {/* ---------------------------------------------------------------------- */}
       {/* ENTERPRISE LICENSE UPDATE MODAL */}
@@ -1530,154 +2253,244 @@ const AdminModulesManager = () => {
       {/* ---------------------------------------------------------------------- */}
       <Drawer
         title={
-          <Flex align="center" justify="space-between" style={{ width: '100%', paddingRight: 24 }}>
+          <Flex align="center" justify="space-between" wrap="wrap" gap={12} style={{ width: '100%', paddingRight: 16 }}>
             <Flex align="center" gap={10}>
-              <SafetyCertificateOutlined style={{ color: adminTheme.primary, fontSize: 20 }} />
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  background: `${adminTheme.primary}18`,
+                  color: adminTheme.primary,
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: 18,
+                }}
+              >
+                <SafetyCertificateOutlined />
+              </div>
               <div>
-                <Text strong style={{ fontSize: 16, color: adminTheme.text }}>
-                  {t('module_permissions_title', 'Module Permissions')}: {selectedModuleForPerms?.label}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Text strong style={{ fontSize: 16, color: adminTheme.text }}>
+                    {t('module_permissions_title', 'Module Permissions')}: {selectedModuleForPerms?.label}
+                  </Text>
+                  <Tag color="processing" style={{ borderRadius: 6, fontWeight: 600 }}>
+                    <code>{selectedModuleForPerms?.key}</code>
+                  </Tag>
+                </div>
+                <Text style={{ fontSize: 12, color: adminTheme.subtext }}>
+                  {filteredPermissionKeys.length} {t('permissions_configured', 'action permissions configured across')} {(modulePermsData.groups || []).length} {t('user_roles', 'user roles')}
                 </Text>
-                <Tag style={{ marginLeft: 8, borderRadius: 6, fontWeight: 600 }}>
-                  <code>{selectedModuleForPerms?.key}</code>
-                </Tag>
               </div>
             </Flex>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                createPermForm.setFieldsValue({
-                  module: selectedModuleForPerms?.key,
-                  area: 'admin',
-                  group_ids: [1, 2] // Default Owner & Admin
-                });
-                setCreatePermModalOpen(true);
-              }}
-              style={{ borderRadius: 8, fontWeight: 600 }}
-            >
-              {t('create_permission_in_module', 'Create Permission')}
-            </Button>
+            <Space size={8}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  createPermForm.setFieldsValue({
+                    module: selectedModuleForPerms?.key,
+                    area: 'admin',
+                    group_ids: [1, 2] // Default Owner & Admin
+                  });
+                  setCreatePermModalOpen(true);
+                }}
+                style={{ borderRadius: 8, fontWeight: 600 }}
+              >
+                {t('create_permission_in_module', 'Create Permission')}
+              </Button>
+            </Space>
           </Flex>
         }
         open={permissionsDrawerOpen}
         onClose={() => setPermissionsDrawerOpen(false)}
-        width={960}
+        width={1060}
         destroyOnHidden
       >
-        <Space orientation="vertical" size={16} style={{ width: '100%' }}>
-          {/* Instructions and Toolbar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
+          {/* Instructions and Summary Banner */}
           <Alert
             type="info"
             showIcon
+            style={{ borderRadius: 12 }}
             message={
-              <span>
-                {t('rbac_module_instructions', 'Granular Role-Based Access Control (RBAC) for')} <strong>{selectedModuleForPerms?.label}</strong>
+              <span style={{ fontWeight: 600, fontSize: 13.5 }}>
+                {t('rbac_module_instructions', 'Role-Based Access Control (RBAC) Matrix for')} {selectedModuleForPerms?.label}
               </span>
             }
-            description={t('rbac_module_desc', 'Create custom permission actions or grant/revoke access across user roles for this module. Root Owner and Admin always have full access.')}
+            description={
+              <div style={{ marginTop: 4, fontSize: 12.5, lineHeight: 1.5 }}>
+                {t(
+                  'rbac_module_desc',
+                  'Configure granular access permissions for each role. Checkboxes indicate granted access for specific module actions. Root Owner and Administrator roles maintain permanent full access.'
+                )}
+              </div>
+            }
           />
 
-          <Row gutter={[12, 12]} align="middle">
-            <Col xs={24} md={10}>
-              <Input
-                prefix={<SearchOutlined style={{ color: adminTheme.subtext }} />}
-                placeholder={t('search_permissions', 'Search permission keys or actions...')}
-                value={permSearchQuery}
-                onChange={(e) => setPermSearchQuery(e.target.value)}
-                allowClear
-                style={{ borderRadius: 8 }}
-              />
-            </Col>
-            <Col xs={24} md={8}>
-              <Radio.Group
-                value={permAreaFilter}
-                onChange={(e) => setPermAreaFilter(e.target.value)}
-                buttonStyle="solid"
-                size="middle"
-              >
-                <Radio.Button value="all">{t('all', 'All')}</Radio.Button>
-                <Radio.Button value="admin">{t('admin_area', 'Admin Portal')}</Radio.Button>
-                <Radio.Button value="website">{t('website_area', 'Website')}</Radio.Button>
-              </Radio.Group>
-            </Col>
-            <Col xs={24} md={6} style={{ textAlign: 'right' }}>
-              <Button
-                type="primary"
-                icon={<SaveOutlined />}
-                onClick={handleSaveModulePermissions}
-                loading={savingPerms}
-                style={{ borderRadius: 8, fontWeight: 600, background: '#16a34a', borderColor: '#16a34a' }}
-              >
-                {t('save_permissions_matrix', 'Save Matrix')}
-              </Button>
-            </Col>
-          </Row>
+          {/* Search, Filter, and Action Bar */}
+          <Card
+            styles={{ body: { padding: '12px 16px' } }}
+            style={{ borderRadius: 12, border: `1px solid ${adminTheme.border}` }}
+          >
+            <Row gutter={[12, 12]} align="middle" justify="space-between">
+              <Col xs={24} sm={12} md={9}>
+                <Input
+                  prefix={<SearchOutlined style={{ color: adminTheme.subtext }} />}
+                  placeholder={t('search_permissions', 'Search permission keys or actions...')}
+                  value={permSearchQuery}
+                  onChange={(e) => setPermSearchQuery(e.target.value)}
+                  allowClear
+                  style={{ borderRadius: 8 }}
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8}>
+                <Radio.Group
+                  value={permAreaFilter}
+                  onChange={(e) => setPermAreaFilter(e.target.value)}
+                  buttonStyle="solid"
+                  size="middle"
+                >
+                  <Radio.Button value="all">
+                    {t('all', 'All')} ({modulePermsData.keys?.length || 0})
+                  </Radio.Button>
+                  <Radio.Button value="admin">
+                    {t('admin_area', 'Admin Portal')} ({(modulePermsData.keys || []).filter(k => k.area === 'admin').length})
+                  </Radio.Button>
+                  <Radio.Button value="website">
+                    {t('website_area', 'Website')} ({(modulePermsData.keys || []).filter(k => k.area === 'website').length})
+                  </Radio.Button>
+                </Radio.Group>
+              </Col>
+              <Col xs={24} sm={24} md={7} style={{ textAlign: 'right' }}>
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  onClick={handleSaveModulePermissions}
+                  loading={savingPerms}
+                  style={{
+                    borderRadius: 8,
+                    fontWeight: 600,
+                    background: '#16a34a',
+                    borderColor: '#16a34a',
+                    height: 36,
+                    padding: '0 18px',
+                    boxShadow: '0 2px 8px rgba(22, 163, 74, 0.25)'
+                  }}
+                >
+                  {t('save_permissions_matrix', 'Save Permissions Matrix')}
+                </Button>
+              </Col>
+            </Row>
+          </Card>
 
           {/* Permissions Table & Role Checkboxes */}
           <Table
             dataSource={filteredPermissionKeys}
             rowKey="permission_key"
             loading={loadingPerms}
-            pagination={{ pageSize: 12, size: 'small', showTotal: (total) => `${total} permissions` }}
-            size="small"
+            pagination={{
+              pageSize: 15,
+              size: 'small',
+              showSizeChanger: true,
+              pageSizeOptions: ['15', '30', '50', '100'],
+              showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} permissions`
+            }}
+            size="middle"
             bordered
             scroll={{ x: 'max-content' }}
             columns={[
               {
-                title: t('permission_key', 'Permission Key'),
+                title: t('permission_action', 'Permission Action & Key'),
                 dataIndex: 'permission_key',
                 key: 'permission_key',
                 fixed: 'left',
-                width: 190,
-                render: (val, record) => (
-                  <div>
-                    <Text strong style={{ fontSize: 12, color: adminTheme.text }}>
-                      <code>{val}</code>
-                    </Text>
-                    {record.label && (
-                      <Text style={{ fontSize: 11, color: adminTheme.subtext, display: 'block' }}>
-                        {record.label}
-                      </Text>
-                    )}
-                  </div>
-                )
+                width: 260,
+                render: (val, record) => {
+                  const act = (record.action || '').toLowerCase();
+                  let actTagColor = 'default';
+                  if (act.includes('add') || act.includes('create')) actTagColor = 'success';
+                  else if (act.includes('edit') || act.includes('update')) actTagColor = 'processing';
+                  else if (act.includes('delete') || act.includes('remove')) actTagColor = 'error';
+                  else if (act.includes('export') || act.includes('pdf') || act.includes('email')) actTagColor = 'purple';
+                  else if (act.includes('approve')) actTagColor = 'warning';
+
+                  return (
+                    <div>
+                      <Flex align="center" gap={6}>
+                        {record.action && (
+                          <Tag color={actTagColor} style={{ borderRadius: 4, fontSize: 10, fontWeight: 700, margin: 0, textTransform: 'uppercase' }}>
+                            {record.action}
+                          </Tag>
+                        )}
+                        <Text strong style={{ fontSize: 12.5, color: adminTheme.text }}>
+                          <code>{val}</code>
+                        </Text>
+                      </Flex>
+                      {record.label && (
+                        <Text style={{ fontSize: 11, color: adminTheme.subtext, display: 'block', marginTop: 2 }}>
+                          {record.label}
+                        </Text>
+                      )}
+                    </div>
+                  );
+                }
               },
               {
-                title: t('area', 'Area'),
-                dataIndex: 'area',
-                key: 'area',
-                width: 100,
-                render: (area) => (
-                  <Tag color={area === 'admin' ? 'blue' : 'purple'} style={{ borderRadius: 6, fontSize: 11, margin: 0 }}>
-                    {area === 'admin' ? 'ADMIN' : 'WEB'}
-                  </Tag>
+                title: t('module_and_area', 'Module / Area'),
+                dataIndex: 'module',
+                key: 'module',
+                width: 140,
+                render: (mod, record) => (
+                  <Flex vertical gap={3}>
+                    <Tag style={{ borderRadius: 6, fontSize: 11, margin: 0, fontWeight: 600 }}>
+                      {mod}
+                    </Tag>
+                    <Tag color={record.area === 'admin' ? 'blue' : 'purple'} style={{ borderRadius: 6, fontSize: 10, margin: 0, width: 'fit-content' }}>
+                      {record.area === 'admin' ? 'ADMIN' : 'WEB'}
+                    </Tag>
+                  </Flex>
                 )
               },
               // Dynamic Columns for each User Group (Role)
-              ...(modulePermsData.groups || []).map((grp) => ({
-                title: (
-                  <Tooltip title={grp.description || grp.name}>
-                    <span style={{ fontSize: 12, fontWeight: 600 }}>
-                      {grp.name.toUpperCase()}
-                    </span>
-                  </Tooltip>
-                ),
-                key: `grp_${grp.id}`,
-                align: 'center',
-                width: 90,
-                render: (_, record) => {
-                  const isOwnerOrAdmin = grp.id === 1 || grp.level <= 2 || grp.name === 'owner' || grp.name === 'admin';
-                  const isAllowed = isOwnerOrAdmin || (modulePermsData.matrix?.[record.permission_key]?.[grp.id] === true);
+              ...(modulePermsData.groups || []).map((grp) => {
+                const isOwnerOrAdmin = grp.id === 1 || grp.level <= 2 || grp.name === 'owner' || grp.name === 'admin';
+                return {
+                  title: (
+                    <Tooltip title={grp.description || grp.name}>
+                      <div style={{ textAlign: 'center' }}>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, color: isOwnerOrAdmin ? '#2563eb' : adminTheme.text }}>
+                          {grp.name.toUpperCase()}
+                        </span>
+                        <div style={{ fontSize: 10, color: adminTheme.subtext, fontWeight: 500 }}>
+                          Lvl {grp.level}
+                        </div>
+                      </div>
+                    </Tooltip>
+                  ),
+                  key: `grp_${grp.id}`,
+                  align: 'center',
+                  width: 95,
+                  render: (_, record) => {
+                    const isAllowed = isOwnerOrAdmin || (modulePermsData.matrix?.[record.permission_key]?.[grp.id] === true);
 
-                  return (
-                    <Checkbox
-                      checked={isAllowed}
-                      disabled={isOwnerOrAdmin}
-                      onChange={(e) => handleMatrixCellToggle(record.permission_key, grp.id, e.target.checked)}
-                    />
-                  );
-                }
-              })),
+                    if (isOwnerOrAdmin) {
+                      return (
+                        <Tooltip title={t('root_permanent_access', 'Root administrator has permanent full access')}>
+                          <Checkbox checked disabled style={{ cursor: 'not-allowed' }} />
+                        </Tooltip>
+                      );
+                    }
+
+                    return (
+                      <Checkbox
+                        checked={isAllowed}
+                        onChange={(e) => handleMatrixCellToggle(record.permission_key, grp.id, e.target.checked)}
+                      />
+                    );
+                  }
+                };
+              }),
               {
                 title: t('action', 'Action'),
                 key: 'ops',
@@ -1691,13 +2504,15 @@ const AdminModulesManager = () => {
                     okText={t('yes', 'Yes')}
                     cancelText={t('no', 'No')}
                   >
-                    <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                    <Tooltip title={t('delete_permission_key', 'Delete custom permission key')}>
+                      <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                    </Tooltip>
                   </Popconfirm>
                 )
               }
             ]}
           />
-        </Space>
+        </div>
       </Drawer>
 
       {/* ---------------------------------------------------------------------- */}

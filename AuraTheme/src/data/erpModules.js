@@ -55,10 +55,6 @@ export const erpModules = [
         leaf('add-consignment', 'Add Consignment', 'Dispatch consigned products to customer location or shelf.', { route: '/admins/products/consignments/add' }),
         leaf('rewards-exchange', 'Rewards Exchange', 'Process customer points exchange and ring gifts catalog.', { route: '/admins/products?tab=rewards-exchange' }),
         leaf('add-reward-exchange', 'Add Rewards Exchange', 'Redeem loyalty points for reward products or gifts.', { route: '/admins/products/rewards_exchange/add' }),
-        leaf('purchase-requests', 'Purchase Requests', 'Submit and approve internal department purchase requisitions.', { route: '/admins/products?tab=purchase-requests' }),
-        leaf('add-purchase-request', 'Add Purchase Request', 'Create a new department material purchase requisition.', { route: '/admins/products/purchase_requests/add' }),
-        leaf('purchase-orders', 'Purchase Orders', 'Issue confirmed vendor purchase orders with approval workflow.', { route: '/admins/products?tab=purchase-orders' }),
-        leaf('add-purchase-order', 'Add Purchase Order', 'Create and dispatch purchase orders from scratch or approved requests.', { route: '/admins/products/purchase_orders/add' }),
       ]),
     ],
     submodules: [
@@ -68,10 +64,10 @@ export const erpModules = [
     ],
   },
 
-  // 2. PROCUREMENT / PURCHASES
+  // 2. PURCHASES
   {
     key: 'procurement',
-    label: 'Procurement',
+    label: 'Purchases',
     iconKey: 'procurement',
     accent: '#10b981',
     enabled: true,
@@ -86,8 +82,9 @@ export const erpModules = [
       'Reconcile AP requested invoices and process return shipments.',
     ],
     menus: [
-      leaf('purchase-requests', 'Purchase Request', 'Review purchase requisitions waiting for approval.', { route: '/admins/products?tab=purchase-requests' }),
-      leaf('purchase-orders', 'Purchase Order', 'Generate and track confirmed purchase orders issued to suppliers.', { route: '/admins/products?tab=purchase-orders' }),
+      leaf('purchase-requests', 'Purchase Requests', 'Review purchase requisitions waiting for approval.', { route: '/admins/products?tab=purchase-requests' }),
+      leaf('add-purchase-request', 'Add Purchase Request', 'Create a new department material purchase requisition.', { route: '/admins/products/purchase_requests/add' }),
+      leaf('purchase-orders', 'Purchase Orders', 'Generate and track confirmed purchase orders issued to suppliers.', { route: '/admins/products?tab=purchase-orders' }),
       leaf('add-purchase-order', 'Add Purchase Order', 'Create and dispatch purchase orders from scratch or approved requests.', { route: '/admins/products/purchase_orders/add' }),
       leaf('purchases-list', 'List Purchases', 'Browse purchase invoices, supplier bills, and payment statuses.', { route: '/admins?module=procurement&menu=purchases-list' }),
       leaf('purchase-by-csv', 'Purchase by Excel', 'Upload supplier shipments in bulk via standardized spreadsheets.'),
@@ -126,6 +123,8 @@ export const erpModules = [
       group('sales-orders-group', 'Orders & Invoices', 'Commercial sales execution.', [
         leaf('add-sale', 'Add Sale', 'Create and issue a new commercial sales order or invoice.', { route: '/admins/sales/add' }),
         leaf('sales-list', 'List Sales', 'Browse sales invoices, receipts, and order statuses.', { route: '/admins/sales' }),
+        leaf('add-sale-order', 'Add Sale Order', 'Create confirmed sales order quotation for customer approval.', { route: '/admins/sales/orders/add', submoduleKey: 'sale_order' }),
+        leaf('sale-orders-list', 'List Sale Orders', 'Track customer sales orders, deposits, and status progression.', { route: '/admins/sales/orders', submoduleKey: 'sale_order' }),
         leaf('monthly-auto-invoice', 'Monthly Auto Invoice', 'Automate recurring monthly retainer and subscription invoices.'),
         leaf('tax-invoices', 'List Invoices (Tax)', 'Generate and file official tax compliance invoices.'),
       ]),
@@ -141,7 +140,7 @@ export const erpModules = [
     ],
     submodules: [
       { key: 'quotation', label: 'Quotation', enabled: true, description: 'Allow presales quotation generation.' },
-      { key: 'sale-order-toggle', label: 'Sale Order', enabled: true, description: 'Enable sales order confirmation workflow.' },
+      { key: 'sale_order', label: 'Sale Order', enabled: true, description: 'Enable sales order confirmation workflow.' },
       { key: 'delivery-toggle', label: 'Delivery', enabled: true, description: 'Manage delivery notes and logistics dispatch.' },
       { key: 'maintenance-toggle', label: 'Maintenance', enabled: true, description: 'Enable post-sale maintenance service.' },
     ],
@@ -1108,9 +1107,8 @@ export const erpModules = [
       group('settings-catalog-data', 'Catalog Master Data', 'Product classification taxonomy.', [
         leaf('categories', 'Categories', 'Hierarchical category tree and subcategories for products.', { route: '/admins/settings/categories' }),
         leaf('brands', 'Brands', 'Catalog manufacturer brands, logos, and supplier links.'),
-        leaf('units', 'Units', 'Units of measurement (Piece, Box, Carton, Kilogram, Liter).'),
+        leaf('units', 'Units', 'Units of measurement (Piece, Box, Carton, Kilogram, Liter).', { route: '/admins?module=settings&menu=units' }),
         leaf('variants', 'Variants & Attributes', 'Size, color, specification, and flavor option matrices.'),
-        leaf('warehouses', 'Warehouses', 'Manage physical storage depots and rack configurations.'),
       ]),
       group('settings-security', 'Security & Administration', 'Permissions, backups, and telemetry.', [
         leaf('user-permissions', 'Permissions Matrix', 'Role-based access control (RBAC) across all 39 modules.', { route: '/admins/settings/permissions' }),
@@ -1493,7 +1491,7 @@ export const resolveActiveModuleAndMenu = (pathname = '', search = '') => {
     return { moduleKey: 'dashboard', menuKey: 'dashboard' };
   }
 
-  // Products & Inventory / Procurement sub-routes
+  // Products & Inventory / Purchases sub-routes
   if (cleanPath.startsWith('/admins/products')) {
     if (actionParam === 'add' || cleanPath.endsWith('/add')) {
       return { moduleKey: 'inventory', menuKey: 'add-product' };
@@ -1518,7 +1516,7 @@ export const resolveActiveModuleAndMenu = (pathname = '', search = '') => {
       'products'
     );
 
-    // Procurement tabs under /admins/products
+    // Purchases tabs under /admins/products
     if (effectiveTab === 'purchase-orders' || effectiveTab === 'purchase_orders') {
       if (cleanPath.endsWith('/add')) return { moduleKey: 'procurement', menuKey: 'add-purchase-order' };
       return { moduleKey: 'procurement', menuKey: 'purchase-orders' };
@@ -1578,7 +1576,11 @@ export const resolveActiveModuleAndMenu = (pathname = '', search = '') => {
     return { moduleKey: 'inventory', menuKey: 'transfers' };
   }
 
-  // Sales & Quotes
+  // Sales Orders & Commercial Sales
+  if (cleanPath.startsWith('/admins/sales/orders') || cleanPath.startsWith('/admins/sales_orders') || cleanPath.startsWith('/admins/sales-orders')) {
+    if (cleanPath.endsWith('/add')) return { moduleKey: 'sales', menuKey: 'add-sale-order' };
+    return { moduleKey: 'sales', menuKey: 'sale-orders-list' };
+  }
   if (cleanPath.startsWith('/admins/sales')) {
     if (cleanPath.endsWith('/add')) return { moduleKey: 'sales', menuKey: 'add-sale' };
     return { moduleKey: 'sales', menuKey: 'sales-list' };
@@ -1628,10 +1630,11 @@ export const resolveActiveModuleAndMenu = (pathname = '', search = '') => {
   }
 
   // Settings & Branches & Modules
-  if (cleanPath.startsWith('/admins/settings') || cleanPath.startsWith('/admins/modules') || cleanPath.startsWith('/admins/branches') || cleanPath.startsWith('/admins/billers')) {
+  if (cleanPath.startsWith('/admins/settings') || cleanPath.startsWith('/admins/system_settings') || cleanPath.startsWith('/admins/modules') || cleanPath.startsWith('/admins/branches') || cleanPath.startsWith('/admins/billers')) {
     if (cleanPath.includes('modules')) return { moduleKey: 'settings', menuKey: 'template-settings' };
     if (cleanPath.includes('branches') || cleanPath.includes('billers')) return { moduleKey: 'settings', menuKey: 'branches-list' };
-    if (cleanPath.includes('categories')) return { moduleKey: 'settings', menuKey: 'change-logo' };
+    if (cleanPath.includes('categories')) return { moduleKey: 'settings', menuKey: 'categories' };
+    if (cleanPath.includes('units')) return { moduleKey: 'settings', menuKey: 'units' };
     if (cleanPath.includes('users')) return { moduleKey: 'settings', menuKey: 'user-groups' };
     if (cleanPath.includes('roles') || cleanPath.includes('permissions') || cleanPath.includes('access')) return { moduleKey: 'settings', menuKey: 'audit-trail' };
     return { moduleKey: 'settings', menuKey: 'system-settings' };

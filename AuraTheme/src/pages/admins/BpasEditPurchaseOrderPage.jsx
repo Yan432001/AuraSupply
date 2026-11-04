@@ -30,19 +30,22 @@ import {
   ShoppingCartOutlined,
   ShopOutlined,
   LockOutlined,
-  InboxOutlined
+  InboxOutlined,
+  EditOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useNavigate, useParams } from 'react-router-dom';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import BpasItemEditModal from '../../components/common/BpasItemEditModal';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
 export default function BpasEditPurchaseOrderPage({ onBack = null, onSuccess = null }) {
   const adminTheme = useAdminTheme();
+  const isDark = adminTheme?.isDark;
   const navigate = useNavigate();
   const { id } = useParams();
   const [form] = Form.useForm();
@@ -58,11 +61,17 @@ export default function BpasEditPurchaseOrderPage({ onBack = null, onSuccess = n
   const [suppliers, setSuppliers] = useState([]);
   const [billers, setBillers] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [taxRates, setTaxRates] = useState([]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
   const [selectedSupplierId, setSelectedSupplierId] = useState(null);
 
   // Items list
   const [items, setItems] = useState([]);
+
+  // Item Edit Modal (Popup matching Image 2)
+  const [editingModalItem, setEditingModalItem] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Product Search / Autocomplete
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,21 +90,27 @@ export default function BpasEditPurchaseOrderPage({ onBack = null, onSuccess = n
     const loadData = async () => {
       setLoading(true);
       try {
-        const [metaRes, poRes] = await Promise.all([
+        const [metaRes, poRes, unitsRes] = await Promise.allSettled([
           axios.get('/api/admin/purchase_orders/meta/options'),
           axios.get(`/api/admin/purchase_orders/${id}`),
+          axios.get('/api/admin/units')
         ]);
 
-        if (metaRes.data?.success && metaRes.data.data) {
-          const d = metaRes.data.data;
+        if (metaRes.status === 'fulfilled' && metaRes.value.data?.success && metaRes.value.data.data) {
+          const d = metaRes.value.data.data;
           setWarehouses(d.warehouses || []);
           setSuppliers(d.suppliers || []);
           setBillers(d.billers || []);
           setProjects(d.projects || []);
+          setTaxRates(d.taxRates || []);
         }
 
-        if (poRes.data?.success && poRes.data.data) {
-          const po = poRes.data.data;
+        if (unitsRes.status === 'fulfilled' && unitsRes.value.data?.data) {
+          setUnits(unitsRes.value.data.data);
+        }
+
+        if (poRes.status === 'fulfilled' && poRes.value.data?.success && poRes.value.data.data) {
+          const po = poRes.value.data.data;
           setOriginalPo(po);
 
           // Check if locked
@@ -290,6 +305,39 @@ export default function BpasEditPurchaseOrderPage({ onBack = null, onSuccess = n
     if (isLocked) return;
     const updated = items.filter((_, idx) => idx !== index);
     setItems(updated);
+  };
+
+  // Open Edit Modal (matching Image 2)
+  const handleOpenEditModal = (record, idx) => {
+    if (isLocked) return;
+    setEditingModalItem({ ...record, _index: idx });
+    setIsEditModalOpen(true);
+  };
+
+  // Save Modal Item
+  const handleSaveModalItem = (updatedItem) => {
+    setItems(prev => prev.map((it, idx) => {
+      const match = updatedItem._index !== undefined ? idx === updatedItem._index : (it.key === updatedItem.key || it.product_id === updatedItem.product_id);
+      if (!match) return it;
+      const qty = parseFloat(updatedItem.unit_quantity != null ? updatedItem.unit_quantity : updatedItem.quantity) || 1;
+      const cost = parseFloat(updatedItem.unit_cost || 0);
+      const disc = parseFloat(updatedItem.item_discount || updatedItem.discount || 0);
+      const taxVal = parseFloat(updatedItem.item_tax || updatedItem.tax || 0);
+      const sub = parseFloat(updatedItem.subtotal) || Math.max(0, (qty * cost) - disc + taxVal);
+
+      return {
+        ...it,
+        ...updatedItem,
+        quantity: qty,
+        unit_cost: cost,
+        item_discount: disc,
+        item_tax: taxVal,
+        product_unit_id: updatedItem.unit_id || it.product_unit_id,
+        product_unit_code: updatedItem.unit_name || it.product_unit_code,
+        subtotal: sub
+      };
+    }));
+    message.success(`Updated item "${updatedItem.product_name}"`);
   };
 
   // Financial calculations
@@ -600,14 +648,38 @@ export default function BpasEditPurchaseOrderPage({ onBack = null, onSuccess = n
                 {
                   title: 'Product',
                   key: 'product',
-                  render: (_, r) => (
+                  render: (_, r, idx) => (
                     <div>
-                      <Text strong>{r.product_name}</Text>
-                      <div style={{ fontSize: 11, color: '#6b7280' }}>
-                        <Tag color="default" style={{ marginRight: 4 }}>{r.product_code}</Tag>
-                        Stock: {parseFloat(r.qoh || 0).toLocaleString()}
-                        {r.pri_id && <Tag color="purple" style={{ marginLeft: 6 }}>From PR</Tag>}
-                      </div>
+                      <Space size={6} align="start">
+                        <Tooltip title="Edit Item Details (Popup Image 2)">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined style={{ color: '#2563eb', fontSize: 14 }} />}
+                            onClick={() => handleOpenEditModal(r, idx)}
+                            disabled={isLocked}
+                            style={{
+                              border: '1px solid #cbd5e1',
+                              borderRadius: 4,
+                              width: 26,
+                              height: 26,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: '#f8fafc',
+                              marginTop: 2
+                            }}
+                          />
+                        </Tooltip>
+                        <div>
+                          <Text strong>{r.product_name}</Text>
+                          <div style={{ fontSize: 11, color: '#6b7280' }}>
+                            <Tag color="default" style={{ marginRight: 4 }}>{r.product_code}</Tag>
+                            Stock: {parseFloat(r.qoh || 0).toLocaleString()}
+                            {r.pri_id && <Tag color="purple" style={{ marginLeft: 6 }}>From PR</Tag>}
+                          </div>
+                        </div>
+                      </Space>
                     </div>
                   ),
                 },
@@ -615,9 +687,19 @@ export default function BpasEditPurchaseOrderPage({ onBack = null, onSuccess = n
                   title: 'Unit',
                   dataIndex: 'product_unit_code',
                   key: 'product_unit_code',
-                  width: 80,
+                  width: 90,
                   align: 'center',
-                  render: (u) => u || 'Unit',
+                  render: (u, r, idx) => (
+                    <Tooltip title="Click to change unit in edit modal">
+                      <Tag
+                        color="geekblue"
+                        style={{ cursor: isLocked ? 'default' : 'pointer', fontWeight: 600, fontSize: 11 }}
+                        onClick={() => handleOpenEditModal(r, idx)}
+                      >
+                        {r.unit_name || u || 'Unit'}
+                      </Tag>
+                    </Tooltip>
+                  ),
                 },
                 {
                   title: 'Unit Cost ($)',
@@ -725,7 +807,7 @@ export default function BpasEditPurchaseOrderPage({ onBack = null, onSuccess = n
             {/* Financial Summary & Adjustments */}
             <Row gutter={[24, 16]} style={{ marginTop: 24 }}>
               <Col xs={24} md={12}>
-                <Card size="small" title={<Text strong>Order Adjustments</Text>} style={{ background: '#f8fafc' }}>
+                <Card size="small" title={<Text strong>Order Adjustments</Text>} style={{ background: isDark ? 'rgba(30, 41, 59, 0.75)' : '#f8fafc', border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #e2e8f0' }}>
                   <Row gutter={[16, 12]}>
                     <Col span={8}>
                       <div><Text type="secondary" style={{ fontSize: 12 }}>Order Discount ($)</Text></div>
@@ -765,7 +847,15 @@ export default function BpasEditPurchaseOrderPage({ onBack = null, onSuccess = n
               </Col>
 
               <Col xs={24} md={12}>
-                <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                <div style={{
+                  background: isDark
+                    ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)'
+                    : '#f8fafc',
+                  padding: '16px 20px',
+                  borderRadius: 10,
+                  border: isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid #e2e8f0',
+                  boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : 'none'
+                }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <Text type="secondary">Total Line Items:</Text>
                     <Text strong>{items.length} lines ({totals.totalQty} total units)</Text>
@@ -798,10 +888,10 @@ export default function BpasEditPurchaseOrderPage({ onBack = null, onSuccess = n
                       <Text>+{formatCurrency(shipping)}</Text>
                     </div>
                   )}
-                  <Divider style={{ margin: '12px 0' }} />
+                  <Divider style={{ margin: '12px 0', borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : undefined }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text strong style={{ fontSize: 16 }}>Purchase Order Total:</Text>
-                    <Text strong style={{ fontSize: 24, color: '#16a34a' }}>
+                    <Text strong style={{ fontSize: 24, color: isDark ? '#4ade80' : '#16a34a' }}>
                       {formatCurrency(totals.grandTotal)}
                     </Text>
                   </div>
@@ -830,6 +920,17 @@ export default function BpasEditPurchaseOrderPage({ onBack = null, onSuccess = n
           </Card>
         </Form>
       )}
+
+      {/* Edit Item Modal (Popup matching Image 2) */}
+      <BpasItemEditModal
+        open={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        item={editingModalItem}
+        units={units}
+        taxRates={taxRates}
+        onSave={handleSaveModalItem}
+        mode="procurement"
+      />
     </div>
   );
 }

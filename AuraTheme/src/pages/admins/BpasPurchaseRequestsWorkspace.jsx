@@ -19,7 +19,8 @@ import {
   Modal,
   Spin,
   Badge,
-  Form
+  Form,
+  Dropdown
 } from 'antd';
 import {
   PlusOutlined,
@@ -40,9 +41,11 @@ import {
   ShoppingCartOutlined,
   AuditOutlined,
   RollbackOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  MoreOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
@@ -369,80 +372,66 @@ export default function BpasPurchaseRequestsWorkspace({ embedded = false }) {
     {
       title: 'Actions',
       key: 'actions',
-      align: 'right',
-      width: 160,
+      align: 'center',
+      width: 100,
       render: (_, record) => {
         const isApproved = record.status === 'approved';
         const isRejected = record.status === 'rejected' || record.status === 'reject';
         const isCompleted = record.status === 'completed';
 
-        return (
-          <Space size={4}>
-            <Tooltip title="View Details">
-              <Button
-                type="text"
-                icon={<EyeOutlined />}
-                onClick={() => handleOpenDetail(record)}
-              />
-            </Tooltip>
+        const actionItems = [
+          {
+            key: 'view',
+            icon: <EyeOutlined />,
+            label: 'View Details',
+            onClick: () => handleOpenDetail(record),
+          },
+          ...(!isApproved && !isCompleted ? [{
+            key: 'approve',
+            icon: <CheckCircleOutlined style={{ color: '#10b981' }} />,
+            label: 'Approve Request',
+            onClick: () => handleApprove(record.id),
+          }] : []),
+          ...(!isRejected && !isCompleted && !isApproved ? [{
+            key: 'reject',
+            icon: <CloseCircleOutlined style={{ color: '#ef4444' }} />,
+            label: 'Reject Request',
+            onClick: () => handleOpenRejectModal(record.id),
+          }] : []),
+          ...(isApproved ? [{
+            key: 'unapprove',
+            icon: <RollbackOutlined style={{ color: '#d97706' }} />,
+            label: 'Revert to Pending',
+            onClick: () => handleUnapprove(record.id),
+          }] : []),
+          ...(!isCompleted ? [{
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: 'Edit Request',
+            onClick: () => navigate(`/admins/products/purchase_requests/edit/${record.id}`),
+          }] : []),
+          ...(!isCompleted ? [
+            { type: 'divider' },
+            {
+              key: 'delete',
+              icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+              danger: true,
+              label: 'Delete Request',
+              onClick: () => {
+                Modal.confirm({
+                  title: 'Delete Purchase Request?',
+                  content: 'Are you sure you want to delete this purchase request?',
+                  okText: 'Yes, Delete',
+                  okType: 'danger',
+                  cancelText: 'Cancel',
+                  onOk: () => handleDelete(record.id),
+                });
+              },
+            },
+          ] : []),
+        ];
 
-            {/* Quick Approval / Rejection buttons */}
-            {!isApproved && !isCompleted && (
-              <Tooltip title="Approve Request">
-                <Button
-                  type="text"
-                  icon={<CheckCircleOutlined style={{ color: '#10b981' }} />}
-                  onClick={() => handleApprove(record.id)}
-                />
-              </Tooltip>
-            )}
-
-            {!isRejected && !isCompleted && !isApproved && (
-              <Tooltip title="Reject Request">
-                <Button
-                  type="text"
-                  icon={<CloseCircleOutlined style={{ color: '#ef4444' }} />}
-                  onClick={() => handleOpenRejectModal(record.id)}
-                />
-              </Tooltip>
-            )}
-
-            {isApproved && (
-              <Tooltip title="Revert to Pending">
-                <Button
-                  type="text"
-                  icon={<RollbackOutlined style={{ color: '#d97706' }} />}
-                  onClick={() => handleUnapprove(record.id)}
-                />
-              </Tooltip>
-            )}
-
-            {!isCompleted && (
-              <Tooltip title="Edit Request">
-                <Button
-                  type="text"
-                  icon={<EditOutlined style={{ color: '#2563eb' }} />}
-                  onClick={() => navigate(`/admins/products/purchase_requests/edit/${record.id}`)}
-                />
-              </Tooltip>
-            )}
-
-            {!isCompleted && (
-              <Tooltip title="Delete Request">
-                <Popconfirm
-                  title="Delete Purchase Request?"
-                  description="Are you sure you want to delete this purchase request?"
-                  okText="Yes, Delete"
-                  cancelText="Cancel"
-                  okButtonProps={{ danger: true }}
-                  onConfirm={() => handleDelete(record.id)}
-                >
-                  <Button type="text" danger icon={<DeleteOutlined />} />
-                </Popconfirm>
-              </Tooltip>
-            )}
-          </Space>
-        );
+        return <TableActionDropdown items={actionItems} />;
       },
     },
   ];

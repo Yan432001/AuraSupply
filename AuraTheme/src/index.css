@@ -999,76 +999,110 @@ body.admin-active.theme-dark {
 }
 
 /* ==========================================================================
-   AURA POS DEDICATED LIGHT THEME (Matches Website Default Theme Exactly)
+   AURA POS GLOBAL THEME INTEGRATION (Follows Admin Light / Dark Settings)
    ========================================================================== */
 
 /* 1. POS Viewport Container */
-.pos-standalone-viewport,
+.pos-standalone-viewport {
+  background: var(--admin-page-bg, #f8fafc) !important;
+  color: var(--admin-text-color, #0f172a) !important;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
 .pos-standalone-viewport.light,
-.pos-website-theme {
-  background-color: #f8fafc !important;
-  color: #0f172a !important;
+html[data-mode="light"] .pos-standalone-viewport {
   color-scheme: light !important;
+}
+
+.pos-standalone-viewport.dark,
+html[data-mode="dark"] .pos-standalone-viewport {
+  color-scheme: dark !important;
 }
 
 /* 2. All Modals inside POS or tagged with .pos-modal */
 .pos-modal .ant-modal-content,
 .pos-checkout-modal .ant-modal-content,
-.pos-receipt-modal .ant-modal-content,
 .ant-modal.pos-modal .ant-modal-content,
 .ant-modal.pos-checkout-modal .ant-modal-content,
 .pos-standalone-viewport .ant-modal-content,
 body.pos-active .ant-modal-content {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+  background-color: var(--admin-card-bg, #ffffff) !important;
+  color: var(--admin-text-color, #0f172a) !important;
   border-radius: 18px !important;
-  box-shadow: 0 24px 60px -15px rgba(15, 23, 42, 0.18) !important;
-  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 24px 60px -15px rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid var(--admin-border-color, rgba(226, 232, 240, 0.9)) !important;
 }
 
 .pos-modal .ant-modal-header,
 .pos-checkout-modal .ant-modal-header,
-.pos-receipt-modal .ant-modal-header,
 .ant-modal.pos-modal .ant-modal-header,
 .ant-modal.pos-checkout-modal .ant-modal-header,
 .pos-standalone-viewport .ant-modal-header,
 body.pos-active .ant-modal-header {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border-bottom: 1px solid #e2e8f0 !important;
+  background-color: var(--admin-card-bg, #ffffff) !important;
+  color: var(--admin-text-color, #0f172a) !important;
+  border-bottom: 1px solid var(--admin-border-color, rgba(226, 232, 240, 0.8)) !important;
 }
 
 .pos-modal .ant-modal-title,
 .pos-checkout-modal .ant-modal-title,
-.pos-receipt-modal .ant-modal-title,
 .ant-modal.pos-modal .ant-modal-title,
 .ant-modal.pos-checkout-modal .ant-modal-title,
 .pos-standalone-viewport .ant-modal-title,
 body.pos-active .ant-modal-title {
-  color: #0f172a !important;
+  color: var(--admin-text-color, #0f172a) !important;
   font-weight: 800 !important;
 }
 
 .pos-modal .ant-modal-body,
 .pos-checkout-modal .ant-modal-body,
-.pos-receipt-modal .ant-modal-body,
 .ant-modal.pos-modal .ant-modal-body,
 .ant-modal.pos-checkout-modal .ant-modal-body,
 .pos-standalone-viewport .ant-modal-body,
 body.pos-active .ant-modal-body {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+  background-color: var(--admin-card-bg, #ffffff) !important;
+  color: var(--admin-text-color, #0f172a) !important;
 }
 
 .pos-modal .ant-modal-footer,
 .pos-checkout-modal .ant-modal-footer,
-.pos-receipt-modal .ant-modal-footer,
 .ant-modal.pos-modal .ant-modal-footer,
 .ant-modal.pos-checkout-modal .ant-modal-footer,
 .pos-standalone-viewport .ant-modal-footer,
 body.pos-active .ant-modal-footer {
-  background-color: #ffffff !important;
-  border-top: 1px solid #e2e8f0 !important;
+  background-color: var(--admin-card-bg, #ffffff) !important;
+  border-top: 1px solid var(--admin-border-color, rgba(226, 232, 240, 0.8)) !important;
+}
+
+/* Dark-mode specific fallbacks for POS modals */
+html[data-mode="dark"] body.pos-active .ant-modal-content,
+html[data-mode="dark"] .pos-modal .ant-modal-content,
+html[data-mode="dark"] .pos-checkout-modal .ant-modal-content {
+  background-color: #161f30 !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7) !important;
+}
+html[data-mode="dark"] body.pos-active .ant-modal-header,
+html[data-mode="dark"] .pos-modal .ant-modal-header,
+html[data-mode="dark"] .pos-checkout-modal .ant-modal-header {
+  background-color: #161f30 !important;
+  color: #f8fafc !important;
+  border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+}
+html[data-mode="dark"] body.pos-active .ant-modal-title,
+html[data-mode="dark"] .pos-modal .ant-modal-title {
+  color: #f8fafc !important;
+}
+html[data-mode="dark"] body.pos-active .ant-modal-body,
+html[data-mode="dark"] .pos-modal .ant-modal-body {
+  background-color: #161f30 !important;
+  color: #f8fafc !important;
+}
+html[data-mode="dark"] body.pos-active .ant-modal-footer,
+html[data-mode="dark"] .pos-modal .ant-modal-footer {
+  background-color: #161f30 !important;
+  border-top-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 /* 3. Inputs, Selects, and Tables inside POS Modals */
@@ -1081,9 +1115,19 @@ body.pos-active .ant-modal-footer {
 body.pos-active .ant-modal .ant-input,
 body.pos-active .ant-modal .ant-input-number,
 body.pos-active .ant-modal .ant-select-selector {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
+  background-color: var(--admin-input-bg, #ffffff) !important;
+  color: var(--admin-text-color, #0f172a) !important;
+  border-color: var(--admin-border-color, #cbd5e1) !important;
+}
+
+html[data-mode="dark"] body.pos-active .ant-modal .ant-input,
+html[data-mode="dark"] body.pos-active .ant-modal .ant-input-number,
+html[data-mode="dark"] body.pos-active .ant-modal .ant-select-selector,
+html[data-mode="dark"] .pos-modal .ant-input,
+html[data-mode="dark"] .pos-modal .ant-select-selector {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
 .pos-modal .ant-input:focus,
@@ -1092,14 +1136,14 @@ body.pos-active .ant-modal .ant-select-selector {
 .pos-checkout-modal .ant-input-affix-wrapper-focused,
 body.pos-active .ant-modal .ant-input:focus,
 body.pos-active .ant-modal .ant-input-affix-wrapper-focused {
-  border-color: #2F6FED !important;
+  border-color: var(--admin-primary, #2F6FED) !important;
   box-shadow: 0 0 0 2px rgba(47, 111, 237, 0.15) !important;
 }
 
 .pos-modal .ant-input::placeholder,
 .pos-checkout-modal .ant-input::placeholder,
 body.pos-active .ant-modal .ant-input::placeholder {
-  color: #94a3b8 !important;
+  color: var(--admin-subtext-color, #94a3b8) !important;
 }
 
 /* 4. POS Held Orders and Action Pills */

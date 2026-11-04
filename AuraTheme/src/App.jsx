@@ -55,6 +55,9 @@ import SalesListPage from './pages/admins/sales/SalesListPage';
 import AddSalePage from './pages/admins/sales/AddSalePage';
 import EditSalePage from './pages/admins/sales/EditSalePage';
 import SaleDetailPage from './pages/admins/sales/SaleDetailPage';
+import SalesOrdersListPage from './pages/admins/sales/SalesOrdersListPage';
+import AddSaleOrderPage from './pages/admins/sales/AddSaleOrderPage';
+import EditSaleOrderPage from './pages/admins/sales/EditSaleOrderPage';
 import BpasTransfersWorkspace from './pages/admins/BpasTransfersWorkspace';
 import BpasAddTransferPage from './pages/admins/BpasAddTransferPage';
 import BpasEditTransferPage from './pages/admins/BpasEditTransferPage';
@@ -301,6 +304,12 @@ const AppContent = () => {
         <Route path="sales/add" element={<AddSalePage />} />
         <Route path="sales/edit/:id" element={<EditSalePage />} />
         <Route path="sales/view/:id" element={<SaleDetailPage />} />
+        <Route path="sales/orders" element={<SalesOrdersListPage />} />
+        <Route path="sales/orders/add" element={<AddSaleOrderPage />} />
+        <Route path="sales/orders/edit/:id" element={<EditSaleOrderPage />} />
+        <Route path="sales-orders" element={<SalesOrdersListPage />} />
+        <Route path="sales-orders/add" element={<AddSaleOrderPage />} />
+        <Route path="sales-orders/edit/:id" element={<EditSaleOrderPage />} />
         <Route path="orders" element={<OrdersManagement />} />
         <Route path="qrcode" element={<AdminQrCodeGeneratorPage />} />
         <Route path="qr-generator" element={<AdminQrCodeGeneratorPage />} />
@@ -312,6 +321,8 @@ const AppContent = () => {
         <Route path="settings" element={<AdminDashboardRouter />} />
         <Route path="settings/system" element={<AdminDashboardRouter />} />
         <Route path="settings/categories" element={<CategoriesPage />} />
+        <Route path="settings/units" element={<AdminDashboardRouter />} />
+        <Route path="system_settings/units" element={<AdminDashboardRouter />} />
         <Route path="settings/users" element={<UserManagement />} />
         <Route path="access-control" element={<AdminAccessControlManager />} />
         <Route path="settings/access" element={<AdminAccessControlManager />} />

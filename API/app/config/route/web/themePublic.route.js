@@ -53,9 +53,7 @@ module.exports = (app) => {
   app.get('/api/projects', ctrl.getProjects);
   app.get('/api/admin/projects', ctrl.getProjects);
 
-  // Units & Warehouses
-  app.get('/api/units', ctrl.getUnits);
-  app.get('/api/admin/units', ctrl.getUnits);
+  // Units & Warehouses (note: /api/admin/units and /api/units are handled by admin/units.route.js)
   app.get('/api/warehouses', ctrl.getWarehouses);
   app.get('/api/admin/warehouses', ctrl.getWarehouses);
 

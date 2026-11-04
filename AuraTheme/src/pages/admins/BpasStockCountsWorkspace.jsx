@@ -47,13 +47,22 @@ import {
   ApartmentOutlined,
   InboxOutlined,
   SoundOutlined,
+  CameraOutlined,
+  ThunderboltOutlined,
+  SyncOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
+import jsQR from 'jsqr';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
+import { useAdminTheme } from '../../hooks/useAdminTheme';
 
 const { Option } = Select;
 const { Text, Title } = Typography;
 
 export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }) {
+  const adminTheme = useAdminTheme();
+  const isDark = adminTheme?.isDark;
   // Theme & State
   const [loading, setLoading] = useState(false);
   const [countsList, setCountsList] = useState([]);
@@ -109,6 +118,47 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
   const [countToFinalize, setCountToFinalize] = useState(null);
   const [csvUploadText, setCsvUploadText] = useState('');
   const [submittingFinalize, setSubmittingFinalize] = useState(false);
+
+  // 5. Device Camera Barcode & QR Scanner Modal
+  const [cameraModalVisible, setCameraModalVisible] = useState(false);
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
+  const [cameraDevices, setCameraDevices] = useState([]);
+  const [selectedCameraId, setSelectedCameraId] = useState('');
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [continuousScan, setContinuousScan] = useState(true);
+  const [lastScannedFeedback, setLastScannedFeedback] = useState(null);
+  const [cameraRecentScans, setCameraRecentScans] = useState([]);
+
+  const videoRef = useRef(null);
+  const cameraStreamRef = useRef(null);
+  const barcodeDetectorRef = useRef(null);
+  const scanIntervalRef = useRef(null);
+  const lastScannedCodeRef = useRef('');
+  const lastScannedTimeRef = useRef(0);
+  const isProcessingScanRef = useRef(false);
+
+  // Stop camera stream safely
+  const stopCameraStream = () => {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (_) {}
+      });
+      cameraStreamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setTorchEnabled(false);
+    setTorchSupported(false);
+  };
 
   // Play Beep Sound on Barcode Scan
   const playScanBeep = (type = 'success') => {
@@ -228,9 +278,9 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
   };
 
   // Handle Barcode Scan Entry (USB scanner gun or manual input)
-  const handleScanBarcode = async (e) => {
-    e?.preventDefault();
-    const barcode = barcodeInput.trim();
+  const handleScanBarcode = async (e, manualCode = null) => {
+    e?.preventDefault?.();
+    const barcode = (manualCode !== null ? manualCode : barcodeInput || '').trim();
     if (!barcode) return;
 
     try {
@@ -244,10 +294,11 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
         const scannedData = res.data.data;
 
         // Update local audit item
+        let diff = 0;
         setAuditItems((prev) =>
           prev.map((it) => {
             if (it.id === scannedData.item_id) {
-              const diff = scannedData.counted - it.expected;
+              diff = scannedData.counted - it.expected;
               return {
                 ...it,
                 counted: scannedData.counted,
@@ -261,26 +312,320 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
         );
 
         // Add to recent scans log
-        setRecentScans((prev) => [
-          {
-            id: Date.now(),
-            time: new Date().toLocaleTimeString(),
-            code: scannedData.product_code,
-            name: scannedData.product_name,
-            delta: scanQuantityDelta || 1,
-            totalCounted: scannedData.counted,
-          },
-          ...prev.slice(0, 19),
-        ]);
+        const newScanEntry = {
+          id: Date.now(),
+          time: new Date().toLocaleTimeString(),
+          code: scannedData.product_code || barcode,
+          name: scannedData.product_name,
+          delta: scanQuantityDelta || 1,
+          totalCounted: scannedData.counted,
+          diff,
+        };
+        setRecentScans((prev) => [newScanEntry, ...prev.slice(0, 19)]);
 
         message.success(`Counted: ${scannedData.product_name} (${scannedData.counted} pcs)`);
-        setBarcodeInput('');
-        barcodeInputRef.current?.focus();
+        if (manualCode === null) {
+          setBarcodeInput('');
+          barcodeInputRef.current?.focus();
+        }
+        return { success: true, data: scannedData, diff };
       }
     } catch (err) {
       playScanBeep('error');
       message.error(err.response?.data?.message || 'Barcode scan failed');
-      setBarcodeInput('');
+      if (manualCode === null) {
+        setBarcodeInput('');
+      }
+      return { success: false, error: err };
+    }
+  };
+
+  // Check device camera and launch Camera Scanner
+  const handleStartCameraScan = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      message.warning('Camera is not supported on this browser or insecure connection. Please use a USB barcode scanner gun or enter code manually.');
+      barcodeInputRef.current?.focus();
+      return;
+    }
+
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((d) => d.kind === 'videoinput');
+      if (videoInputs.length === 0) {
+        message.warning('No camera device found on this computer. Please connect a webcam or use a mobile device.');
+        barcodeInputRef.current?.focus();
+        return;
+      }
+      setCameraModalVisible(true);
+    } catch (err) {
+      // If enumerateDevices needs permission first, still open modal to prompt
+      setCameraModalVisible(true);
+    }
+  };
+
+  // Button Click Handler for "Scan Count"
+  const handleScanCountClick = async (e) => {
+    e?.preventDefault?.();
+    if (barcodeInput && barcodeInput.trim()) {
+      await handleScanBarcode(e);
+    } else {
+      await handleStartCameraScan();
+    }
+  };
+
+  // Camera Barcode Scanning lifecycle & detection loop
+  useEffect(() => {
+    if (!cameraModalVisible || !activeAudit) {
+      stopCameraStream();
+      return;
+    }
+
+    let isCancelled = false;
+
+    const startCamera = async () => {
+      setCameraLoading(true);
+      setCameraError(null);
+      setLastScannedFeedback(null);
+
+      // Check BarcodeDetector support
+      if ('BarcodeDetector' in window) {
+        try {
+          barcodeDetectorRef.current = new window.BarcodeDetector({
+            formats: [
+              'code_128',
+              'code_39',
+              'code_93',
+              'codabar',
+              'data_matrix',
+              'ean_13',
+              'ean_8',
+              'itf',
+              'pdf417',
+              'qr_code',
+              'upc_a',
+              'upc_e',
+            ],
+          });
+        } catch (_) {
+          try {
+            barcodeDetectorRef.current = new window.BarcodeDetector();
+          } catch (e) {
+            barcodeDetectorRef.current = null;
+          }
+        }
+      }
+
+      // Enumerate camera devices
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter((d) => d.kind === 'videoinput');
+        setCameraDevices(videoInputs);
+      } catch (_) {}
+
+      // Constraints (prefer environment/back camera on phones/tablets)
+      const constraints = {
+        video: selectedCameraId
+          ? { deviceId: { exact: selectedCameraId } }
+          : {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+      };
+
+      let stream = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        // Fallback for laptops or webcams that don't support facingMode constraint
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        } catch (err2) {
+          if (!isCancelled) {
+            if (err2.name === 'NotAllowedError' || err2.name === 'PermissionDeniedError') {
+              setCameraError('Camera access was denied. Please allow camera permissions in your browser address bar.');
+            } else if (err2.name === 'NotFoundError' || err2.name === 'DevicesNotFoundError') {
+              setCameraError('No camera detected on this device.');
+            } else {
+              setCameraError(err2.message || 'Unable to access device camera.');
+            }
+            setCameraLoading(false);
+          }
+          return;
+        }
+      }
+
+      if (isCancelled) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      cameraStreamRef.current = stream;
+
+      // Check torch capability
+      try {
+        const track = stream.getVideoTracks()[0];
+        const capabilities = track?.getCapabilities ? track.getCapabilities() : {};
+        setTorchSupported(Boolean(capabilities?.torch));
+      } catch (_) {
+        setTorchSupported(false);
+      }
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', 'true');
+        try {
+          await videoRef.current.play();
+        } catch (_) {}
+      }
+
+      setCameraLoading(false);
+
+      // Detection Loop (BarcodeDetector + jsQR fallback)
+      const offscreenCanvas = document.createElement('canvas');
+      const decodeQR = typeof jsQR === 'function' ? jsQR : jsQR?.default || null;
+
+      scanIntervalRef.current = setInterval(async () => {
+        if (!videoRef.current || videoRef.current.readyState < 2) return;
+        if (isProcessingScanRef.current) return;
+
+        let detectedBarcode = null;
+
+        // 1. Try native BarcodeDetector
+        if (barcodeDetectorRef.current) {
+          try {
+            const detected = await barcodeDetectorRef.current.detect(videoRef.current);
+            if (detected && detected.length > 0) {
+              detectedBarcode = detected[0].rawValue;
+            }
+          } catch (_) {}
+        }
+
+        // 2. jsQR Fallback
+        if (!detectedBarcode && decodeQR) {
+          try {
+            const v = videoRef.current;
+            if (v.videoWidth && v.videoHeight) {
+              if (offscreenCanvas.width !== v.videoWidth || offscreenCanvas.height !== v.videoHeight) {
+                offscreenCanvas.width = v.videoWidth;
+                offscreenCanvas.height = v.videoHeight;
+              }
+              const ctx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+              ctx.drawImage(v, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
+              const imgData = ctx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+              const qr = decodeQR(imgData.data, imgData.width, imgData.height);
+              if (qr && qr.data) {
+                detectedBarcode = qr.data;
+              }
+            }
+          } catch (_) {}
+        }
+
+        if (detectedBarcode) {
+          const now = Date.now();
+          if (
+            detectedBarcode === lastScannedCodeRef.current &&
+            now - lastScannedTimeRef.current < 1500
+          ) {
+            return;
+          }
+          lastScannedCodeRef.current = detectedBarcode;
+          lastScannedTimeRef.current = now;
+
+          // Process the detected barcode
+          isProcessingScanRef.current = true;
+          try {
+            const res = await axios.post(`/api/admin/products/stock-counts/${activeAudit.id}/scan`, {
+              barcode: detectedBarcode,
+              quantity_delta: scanQuantityDelta || 1,
+            });
+
+            if (res.data?.success) {
+              playScanBeep('success');
+              if (navigator.vibrate) navigator.vibrate(80);
+              const scannedData = res.data.data;
+
+              let diff = 0;
+              setAuditItems((prev) =>
+                prev.map((it) => {
+                  if (it.id === scannedData.item_id) {
+                    diff = scannedData.counted - it.expected;
+                    return {
+                      ...it,
+                      counted: scannedData.counted,
+                      difference: diff,
+                      difference_cost: Math.round(diff * it.cost * 100) / 100,
+                      is_counted: true,
+                    };
+                  }
+                  return it;
+                })
+              );
+
+              const newRecord = {
+                id: Date.now(),
+                time: new Date().toLocaleTimeString(),
+                code: scannedData.product_code || detectedBarcode,
+                name: scannedData.product_name,
+                delta: scanQuantityDelta || 1,
+                totalCounted: scannedData.counted,
+                diff,
+              };
+
+              setRecentScans((prev) => [newRecord, ...prev.slice(0, 19)]);
+              setCameraRecentScans((prev) => [newRecord, ...prev.slice(0, 9)]);
+
+              setLastScannedFeedback({
+                status: 'success',
+                product_name: scannedData.product_name,
+                product_code: scannedData.product_code || detectedBarcode,
+                counted: scannedData.counted,
+                delta: scanQuantityDelta || 1,
+                diff,
+              });
+
+              if (!continuousScan) {
+                setCameraModalVisible(false);
+                message.success(`Counted: ${scannedData.product_name} (${scannedData.counted} pcs)`);
+              }
+            }
+          } catch (err) {
+            playScanBeep('error');
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            setLastScannedFeedback({
+              status: 'error',
+              product_code: detectedBarcode,
+              message: err.response?.data?.message || `Barcode "${detectedBarcode}" not found in this audit`,
+            });
+          } finally {
+            setTimeout(() => {
+              isProcessingScanRef.current = false;
+            }, 800);
+          }
+        }
+      }, 120);
+    };
+
+    startCamera();
+
+    return () => {
+      isCancelled = true;
+      stopCameraStream();
+    };
+  }, [cameraModalVisible, activeAudit, selectedCameraId, scanQuantityDelta, continuousScan]);
+
+  // Flashlight toggle
+  const handleToggleTorch = async () => {
+    if (!cameraStreamRef.current) return;
+    try {
+      const track = cameraStreamRef.current.getVideoTracks()[0];
+      const next = !torchEnabled;
+      await track.applyConstraints({
+        advanced: [{ torch: next }],
+      });
+      setTorchEnabled(next);
+    } catch (_) {
+      message.error('Flashlight could not be toggled on this device');
     }
   };
 
@@ -652,59 +997,64 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
     {
       title: 'Actions',
       key: 'actions',
-      width: 160,
+      width: 100,
+      align: 'center',
       fixed: 'right',
       render: (_, record) => {
         const isDraft = !record.finalized;
-        return (
-          <Space size={4}>
-            <Tooltip title="View Count Voucher & Summary (view_count.php)">
-              <Button
-                size="small"
-                icon={<EyeOutlined />}
-                onClick={() => handleOpenDetails(record)}
-              />
-            </Tooltip>
+        const actionItems = [
+          {
+            key: 'view',
+            icon: <EyeOutlined style={{ color: '#2563eb' }} />,
+            label: 'View Voucher & Summary',
+            onClick: () => handleOpenDetails(record),
+          },
+        ];
 
-            {isDraft ? (
-              <>
-                <Tooltip title="Scan & Count Barcodes (scan_count.php)">
-                  <Button
-                    size="small"
-                    type="primary"
-                    icon={<ScanOutlined />}
-                    onClick={() => handleOpenScanWorkspace(record)}
-                    style={{ background: '#2F6FED', borderColor: '#2F6FED' }}
-                  />
-                </Tooltip>
-                <Tooltip title="Finalize Count & Upload CSV (finalize_count.php)">
-                  <Button
-                    size="small"
-                    icon={<CheckCircleOutlined />}
-                    onClick={() => handleOpenFinalizeModal(record)}
-                    style={{ color: '#16a34a', borderColor: '#bbf7d0' }}
-                  />
-                </Tooltip>
-                <Popconfirm
-                  title="Delete this stock count audit?"
-                  onConfirm={() => handleDeleteStockCount(record.id)}
-                  okText="Yes"
-                  cancelText="No"
-                >
-                  <Button size="small" danger icon={<DeleteOutlined />} />
-                </Popconfirm>
-              </>
-            ) : (
-              <Tooltip title="Download Count Worksheet (.csv)">
-                <Button
-                  size="small"
-                  icon={<DownloadOutlined />}
-                  onClick={() => handleDownloadCsv(record.id, record.reference_no)}
-                />
-              </Tooltip>
-            )}
-          </Space>
-        );
+        if (isDraft) {
+          actionItems.push(
+            {
+              key: 'scan',
+              icon: <ScanOutlined style={{ color: '#2F6FED' }} />,
+              label: 'Scan & Count Barcodes',
+              onClick: () => handleOpenScanWorkspace(record),
+            },
+            {
+              key: 'finalize',
+              icon: <CheckCircleOutlined style={{ color: '#16a34a' }} />,
+              label: 'Finalize Count & Upload',
+              onClick: () => handleOpenFinalizeModal(record),
+            },
+            {
+              type: 'divider',
+            },
+            {
+              key: 'delete',
+              icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+              danger: true,
+              label: 'Delete Count Audit',
+              onClick: () => {
+                Modal.confirm({
+                  title: 'Delete this stock count audit?',
+                  content: 'Are you sure you want to delete this stock count audit? This action cannot be undone.',
+                  okText: 'Yes, delete',
+                  okType: 'danger',
+                  cancelText: 'Cancel',
+                  onOk: () => handleDeleteStockCount(record.id),
+                });
+              },
+            }
+          );
+        } else {
+          actionItems.push({
+            key: 'download_csv',
+            icon: <DownloadOutlined style={{ color: '#059669' }} />,
+            label: 'Download Worksheet (.csv)',
+            onClick: () => handleDownloadCsv(record.id, record.reference_no),
+          });
+        }
+
+        return <TableActionDropdown items={actionItems} />;
       },
     },
   ];
@@ -780,79 +1130,6 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
           </Button>
         </Space>
       </div>
-
-      {/* 2. STATS KPI OVERVIEW CARDS */}
-      <Row gutter={[14, 14]} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={8} md={4} lg={4}>
-          <Card
-            bordered={false}
-            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', background: '#ffffff' }}
-          >
-            <Statistic
-              title={<span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>Total Audits</span>}
-              value={stats.total_audits || 0}
-              valueStyle={{ fontWeight: 900, color: '#0f172a' }}
-              prefix={<FileTextOutlined style={{ color: '#2F6FED' }} />}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={8} md={5} lg={5}>
-          <Card
-            bordered={false}
-            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', background: '#ffffff' }}
-          >
-            <Statistic
-              title={<span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>In Progress (Draft)</span>}
-              value={stats.draft_audits || 0}
-              valueStyle={{ fontWeight: 900, color: '#d97706' }}
-              prefix={<ClockCircleOutlined style={{ color: '#f59e0b' }} />}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={8} md={5} lg={5}>
-          <Card
-            bordered={false}
-            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', background: '#ffffff' }}
-          >
-            <Statistic
-              title={<span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>Finalized / Reconciled</span>}
-              value={stats.completed_audits || 0}
-              valueStyle={{ fontWeight: 900, color: '#16a34a' }}
-              prefix={<CheckCircleOutlined style={{ color: '#10b981' }} />}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={8} md={5} lg={5}>
-          <Card
-            bordered={false}
-            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', background: '#ffffff' }}
-          >
-            <Statistic
-              title={<span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>Stock Discrepancies</span>}
-              value={stats.total_differences || 0}
-              valueStyle={{ fontWeight: 900, color: '#ef4444' }}
-              prefix={<ExclamationCircleOutlined style={{ color: '#ef4444' }} />}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={8} md={5} lg={5}>
-          <Card
-            bordered={false}
-            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', background: '#ffffff' }}
-          >
-            <Statistic
-              title={<span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>Accurate Matches</span>}
-              value={stats.total_matches || 0}
-              valueStyle={{ fontWeight: 900, color: '#2563eb' }}
-              prefix={<CheckCircleOutlined style={{ color: '#3b82f6' }} />}
-            />
-          </Card>
-        </Col>
-      </Row>
 
       {/* 3. FILTER TOOLBAR */}
       <Card
@@ -956,7 +1233,7 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
       {/* 4. MAIN STOCK COUNTS TABLE */}
       <Card
         bordered={false}
-        style={{ borderRadius: 14, boxShadow: '0 2px 10px rgba(0,0,0,0.03)', background: '#ffffff' }}
+        style={{ borderRadius: 14, boxShadow: isDark ? '0 2px 10px rgba(0,0,0,0.3)' : '0 2px 10px rgba(0,0,0,0.03)', background: isDark ? '#1e293b' : '#ffffff', border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #e2e8f0' }}
         bodyStyle={{ padding: 0 }}
       >
         <Table
@@ -1034,14 +1311,14 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
           {/* Count Scope Selection */}
           <div
             style={{
-              background: '#f8fafc',
+              background: isDark ? 'rgba(30, 41, 59, 0.7)' : '#f8fafc',
               padding: '14px',
               borderRadius: 12,
-              border: '1px solid #e2e8f0',
+              border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #e2e8f0',
               marginBottom: 16,
             }}
           >
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: isDark ? '#f8fafc' : '#0f172a', marginBottom: 8 }}>
               Audit Count Scope:
             </label>
             <Radio.Group
@@ -1193,17 +1470,17 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
               gap: 10,
-              background: '#f8fafc',
+              background: isDark ? 'rgba(30, 41, 59, 0.85)' : '#f8fafc',
               padding: '12px 16px',
               borderRadius: 12,
-              border: '1px solid #e2e8f0',
+              border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #e2e8f0',
               marginBottom: 16,
               textAlign: 'center',
             }}
           >
             <div>
-              <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Total Items</div>
-              <div style={{ fontSize: 17, fontWeight: 900, color: '#0f172a' }}>{auditSummaryStats.total}</div>
+              <div style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', fontWeight: 600 }}>Total Items</div>
+              <div style={{ fontSize: 17, fontWeight: 900, color: isDark ? '#f8fafc' : '#0f172a' }}>{auditSummaryStats.total}</div>
             </div>
             <div>
               <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 600 }}>Counted Items</div>
@@ -1231,7 +1508,7 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
                 style={{
                   fontSize: 17,
                   fontWeight: 900,
-                  color: auditSummaryStats.varianceCost < 0 ? '#dc2626' : auditSummaryStats.varianceCost > 0 ? '#16a34a' : '#0f172a',
+                  color: auditSummaryStats.varianceCost < 0 ? '#dc2626' : auditSummaryStats.varianceCost > 0 ? '#16a34a' : (isDark ? '#f8fafc' : '#0f172a'),
                 }}
               >
                 ${auditSummaryStats.varianceCost.toFixed(2)}
@@ -1242,10 +1519,10 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
           {/* Barcode Gun / Scanner Input Bar */}
           <div
             style={{
-              background: '#eff6ff',
+              background: isDark ? 'linear-gradient(135deg, rgba(30, 58, 138, 0.35) 0%, rgba(15, 23, 42, 0.8) 100%)' : '#eff6ff',
               borderRadius: 14,
               padding: '14px 18px',
-              border: '1.5px solid #bfdbfe',
+              border: isDark ? '1.5px solid rgba(96, 165, 250, 0.35)' : '1.5px solid #bfdbfe',
               marginBottom: 16,
               display: 'flex',
               gap: 12,
@@ -1253,7 +1530,7 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
               flexWrap: 'wrap',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#1e40af', fontWeight: 800 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: isDark ? '#93c5fd' : '#1e40af', fontWeight: 800 }}>
               <SoundOutlined />
               <span>Barcode Scanner Gun:</span>
             </div>
@@ -1267,6 +1544,16 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
               style={{ flex: 1, minWidth: 260, borderRadius: 8, fontWeight: 700 }}
               size="large"
               autoFocus
+              suffix={
+                <Tooltip title="Scan using Device Camera">
+                  <Button
+                    type="text"
+                    icon={<CameraOutlined style={{ color: '#7c3aed', fontSize: 18 }} />}
+                    onClick={handleStartCameraScan}
+                    style={{ padding: '0 4px', height: 'auto' }}
+                  />
+                </Tooltip>
+              }
             />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1284,9 +1571,15 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
             <Button
               type="primary"
               icon={<ScanOutlined />}
-              onClick={handleScanBarcode}
+              onClick={handleScanCountClick}
               size="large"
-              style={{ borderRadius: 8, fontWeight: 800, background: '#2563eb', borderColor: '#2563eb' }}
+              style={{
+                borderRadius: 8,
+                fontWeight: 800,
+                background: '#7c3aed',
+                borderColor: '#7c3aed',
+                boxShadow: '0 2px 8px rgba(124, 58, 237, 0.25)',
+              }}
             >
               Scan Count
             </Button>
@@ -1373,8 +1666,10 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
                       width: 110,
                       borderRadius: 6,
                       fontWeight: 800,
-                      borderColor: r.is_counted ? (r.difference === 0 ? '#10b981' : '#f87171') : '#d1d5db',
-                      background: r.is_counted ? (r.difference === 0 ? '#f0fdf4' : '#fef2f2') : '#ffffff',
+                      borderColor: r.is_counted ? (r.difference === 0 ? '#10b981' : '#f87171') : (isDark ? 'rgba(255,255,255,0.18)' : '#d1d5db'),
+                      background: r.is_counted
+                        ? (r.difference === 0 ? (isDark ? 'rgba(16, 185, 129, 0.2)' : '#f0fdf4') : (isDark ? 'rgba(239, 68, 68, 0.2)' : '#fef2f2'))
+                        : (isDark ? 'rgba(30, 41, 59, 0.8)' : '#ffffff'),
                     }}
                   />
                 ),
@@ -1425,6 +1720,344 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
       </Modal>
 
       {/* ========================================================================= */}
+      {/* MODAL 2B: LIVE DEVICE CAMERA BARCODE & QR SCANNER */}
+      {/* ========================================================================= */}
+      <Modal
+        open={cameraModalVisible}
+        onCancel={() => setCameraModalVisible(false)}
+        footer={null}
+        width={660}
+        destroyOnClose
+        centered
+        style={{ borderRadius: 20, overflow: 'hidden' }}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 30 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  background: '#ede9fe',
+                  color: '#7c3aed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 18,
+                }}
+              >
+                <CameraOutlined />
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 16, color: '#0f172a' }}>Camera Barcode Scanner</div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>Point camera at 1D Barcode (EAN, UPC, Code 128) or QR Code</div>
+              </div>
+            </div>
+            <Tag color="purple" style={{ borderRadius: 6, fontWeight: 700, padding: '2px 8px' }}>
+              Step: +{scanQuantityDelta || 1}
+            </Tag>
+          </div>
+        }
+      >
+        <style>{`
+          @keyframes scanLaserLine {
+            0% { top: 8%; opacity: 0.8; }
+            50% { top: 90%; opacity: 1; }
+            100% { top: 8%; opacity: 0.8; }
+          }
+          .camera-scan-laser-line {
+            position: absolute;
+            left: 4%;
+            right: 4%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent 0%, #ec4899 20%, #a855f7 50%, #ec4899 80%, transparent 100%);
+            box-shadow: 0 0 10px #ec4899, 0 0 20px #a855f7;
+            border-radius: 2px;
+            animation: scanLaserLine 2s infinite ease-in-out;
+          }
+          @keyframes scanFeedbackFade {
+            0% { opacity: 0; transform: translateY(-8px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+          .camera-feedback-card {
+            animation: scanFeedbackFade 0.2s ease forwards;
+          }
+        `}</style>
+
+        <div style={{ padding: '8px 0' }}>
+          {/* Camera Viewport Container */}
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '350px',
+              background: '#090d16',
+              borderRadius: 14,
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: 'inset 0 0 25px rgba(0,0,0,0.6)',
+            }}
+          >
+            {cameraLoading && (
+              <div style={{ position: 'absolute', zIndex: 10, textAlign: 'center', color: '#fff' }}>
+                <Spin size="large" />
+                <div style={{ marginTop: 12, fontSize: 13, color: '#cbd5e1' }}>Connecting to device camera...</div>
+              </div>
+            )}
+
+            {cameraError ? (
+              <div style={{ position: 'absolute', zIndex: 10, padding: 24, textAlign: 'center', maxWidth: '85%' }}>
+                <Alert
+                  type="error"
+                  showIcon
+                  message="Camera Access"
+                  description={cameraError}
+                  style={{ borderRadius: 10, textAlign: 'left' }}
+                />
+                <Button
+                  type="primary"
+                  icon={<SyncOutlined />}
+                  onClick={() => {
+                    setCameraError(null);
+                    setSelectedCameraId(selectedCameraId ? '' : 'retry');
+                  }}
+                  style={{ marginTop: 14, borderRadius: 8, background: '#7c3aed', borderColor: '#7c3aed', fontWeight: 700 }}
+                >
+                  Retry Camera
+                </Button>
+              </div>
+            ) : (
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+              />
+            )}
+
+            {/* Target Reticle Viewfinder & Laser */}
+            {!cameraError && !cameraLoading && (
+              <div
+                style={{
+                  position: 'absolute',
+                  width: '270px',
+                  height: '170px',
+                  border: '2px dashed rgba(168, 85, 247, 0.7)',
+                  borderRadius: 14,
+                  boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.42)',
+                  pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {/* 4 Corner Markers */}
+                <div style={{ position: 'absolute', top: -3, left: -3, width: 20, height: 20, borderTop: '4px solid #a855f7', borderLeft: '4px solid #a855f7', borderTopLeftRadius: 10 }} />
+                <div style={{ position: 'absolute', top: -3, right: -3, width: 20, height: 20, borderTop: '4px solid #a855f7', borderRight: '4px solid #a855f7', borderTopRightRadius: 10 }} />
+                <div style={{ position: 'absolute', bottom: -3, left: -3, width: 20, height: 20, borderBottom: '4px solid #a855f7', borderLeft: '4px solid #a855f7', borderBottomLeftRadius: 10 }} />
+                <div style={{ position: 'absolute', bottom: -3, right: -3, width: 20, height: 20, borderBottom: '4px solid #a855f7', borderRight: '4px solid #a855f7', borderBottomRightRadius: 10 }} />
+
+                {/* Sweeping Laser Line */}
+                <div className="camera-scan-laser-line" />
+
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: -28,
+                    fontSize: 11,
+                    color: '#f8fafc',
+                    fontWeight: 700,
+                    textShadow: '0 1px 4px rgba(0,0,0,0.85)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Align barcode inside frame
+                </div>
+              </div>
+            )}
+
+            {/* Floating Live Scanned Feedback Card */}
+            {lastScannedFeedback && (
+              <div
+                className="camera-feedback-card"
+                style={{
+                  position: 'absolute',
+                  top: 14,
+                  left: 14,
+                  right: 14,
+                  zIndex: 20,
+                  pointerEvents: 'none',
+                }}
+              >
+                {lastScannedFeedback.status === 'success' ? (
+                  <div
+                    style={{
+                      background: 'rgba(22, 163, 74, 0.95)',
+                      backdropFilter: 'blur(6px)',
+                      color: '#fff',
+                      padding: '10px 14px',
+                      borderRadius: 10,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: 13 }}>
+                        ✓ Counted: {lastScannedFeedback.product_name} (+{lastScannedFeedback.delta})
+                      </div>
+                      <div style={{ fontSize: 11, opacity: 0.9 }}>
+                        Code: {lastScannedFeedback.product_code} | Total Counted: {lastScannedFeedback.counted}
+                      </div>
+                    </div>
+                    <Tag color="gold" style={{ fontWeight: 800, margin: 0, fontSize: 12 }}>
+                      Diff: {lastScannedFeedback.diff > 0 ? `+${lastScannedFeedback.diff}` : lastScannedFeedback.diff}
+                    </Tag>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      background: 'rgba(220, 38, 38, 0.95)',
+                      backdropFilter: 'blur(6px)',
+                      color: '#fff',
+                      padding: '10px 14px',
+                      borderRadius: 10,
+                      fontWeight: 700,
+                      fontSize: 12,
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    ⚠️ {lastScannedFeedback.message}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Controls Bar Underneath Viewport */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: 14,
+              flexWrap: 'wrap',
+              gap: 10,
+              background: isDark ? 'rgba(30, 41, 59, 0.7)' : '#f8fafc',
+              padding: '10px 14px',
+              borderRadius: 10,
+              border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #e2e8f0',
+            }}
+          >
+            <Space wrap size={12}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#e2e8f0' : '#334155' }}>Step:</span>
+                <InputNumber
+                  min={1}
+                  max={100}
+                  value={scanQuantityDelta}
+                  onChange={setScanQuantityDelta}
+                  size="small"
+                  style={{ width: 65, borderRadius: 6 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Continuous:</span>
+                <Radio.Group
+                  size="small"
+                  value={continuousScan ? 'continuous' : 'single'}
+                  onChange={(e) => setContinuousScan(e.target.value === 'continuous')}
+                >
+                  <Radio.Button value="continuous">Continuous</Radio.Button>
+                  <Radio.Button value="single">Single Scan</Radio.Button>
+                </Radio.Group>
+              </div>
+
+              {cameraDevices.length > 1 && (
+                <Select
+                  size="small"
+                  style={{ width: 140 }}
+                  value={selectedCameraId || undefined}
+                  placeholder="Select Camera"
+                  onChange={(val) => setSelectedCameraId(val)}
+                >
+                  {cameraDevices.map((dev, idx) => (
+                    <Option key={dev.deviceId || idx} value={dev.deviceId}>
+                      {dev.label || `Camera ${idx + 1}`}
+                    </Option>
+                  ))}
+                </Select>
+              )}
+
+              {torchSupported && (
+                <Button
+                  size="small"
+                  icon={<ThunderboltOutlined />}
+                  type={torchEnabled ? 'primary' : 'default'}
+                  onClick={handleToggleTorch}
+                  style={torchEnabled ? { background: '#f59e0b', borderColor: '#f59e0b' } : {}}
+                >
+                  {torchEnabled ? 'Flash ON' : 'Flash OFF'}
+                </Button>
+              )}
+            </Space>
+
+            <Button
+              onClick={() => setCameraModalVisible(false)}
+              style={{ borderRadius: 8, fontWeight: 600 }}
+            >
+              Close Camera
+            </Button>
+          </div>
+
+          {/* Recent Scans in this Camera Session */}
+          {cameraRecentScans.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>
+                Scanned in this Session ({cameraRecentScans.length}):
+              </div>
+              <div style={{ maxHeight: 110, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {cameraRecentScans.map((scan) => (
+                  <div
+                    key={scan.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      background: '#fff',
+                      padding: '5px 10px',
+                      borderRadius: 6,
+                      border: '1px solid #f1f5f9',
+                      fontSize: 12,
+                    }}
+                  >
+                    <Space size={8}>
+                      <span style={{ color: '#94a3b8', fontSize: 11 }}>{scan.time}</span>
+                      <strong style={{ color: '#1e293b' }}>{scan.name}</strong>
+                      <Tag color="blue" style={{ fontSize: 10, margin: 0 }}>{scan.code}</Tag>
+                    </Space>
+                    <Space size={8}>
+                      <Tag color="green" style={{ margin: 0, fontWeight: 700 }}>+{scan.delta}</Tag>
+                      <span style={{ fontWeight: 800, color: '#2563eb' }}>Total: {scan.totalCounted}</span>
+                    </Space>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* ========================================================================= */}
       {/* MODAL 3: VIEW COUNT DETAILS & RECONCILIATION SHEET (view_count.php) */}
       {/* ========================================================================= */}
       <Modal
@@ -1464,17 +2097,17 @@ export default function BpasStockCountsWorkspace({ onNavigateAdjustment = null }
             {/* Header Details Table */}
             <div
               style={{
-                background: '#f8fafc',
+                background: isDark ? 'rgba(30, 41, 59, 0.7)' : '#f8fafc',
                 padding: '14px 18px',
                 borderRadius: 14,
-                border: '1px solid #e2e8f0',
+                border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #e2e8f0',
                 marginBottom: 16,
               }}
             >
               <Row gutter={[16, 10]}>
                 <Col span={8}>
-                  <div style={{ fontSize: 11, color: '#64748b' }}>Warehouse:</div>
-                  <div style={{ fontWeight: 800, color: '#0f172a' }}>{selectedCountDetails.warehouse_name}</div>
+                  <div style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#64748b' }}>Warehouse:</div>
+                  <div style={{ fontWeight: 800, color: isDark ? '#f8fafc' : '#0f172a' }}>{selectedCountDetails.warehouse_name}</div>
                 </Col>
                 <Col span={8}>
                   <div style={{ fontSize: 11, color: '#64748b' }}>Audit Reference:</div>

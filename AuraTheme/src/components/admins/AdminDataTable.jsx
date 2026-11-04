@@ -47,6 +47,7 @@ import {
 } from '@ant-design/icons';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
+import TableActionDropdown from '../common/TableActionDropdown';
 
 const { Text, Title, Paragraph } = Typography;
 const { Dragger } = Upload;
@@ -540,43 +541,45 @@ export default function AdminDataTable({
         title: 'Actions',
         key: 'actions',
         fixed: 'right',
-        width: 130,
-        render: (_, record) => (
-          <Space size="small">
-            <Tooltip title="View details">
-              <Button
-                type="text"
-                size="small"
-                icon={<EyeOutlined style={{ color: '#2563eb' }} />}
-                onClick={() => handleViewItem(record)}
-              />
-            </Tooltip>
-            {onEdit && (
-              <Tooltip title="Edit record">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<EditOutlined style={{ color: '#d97706' }} />}
-                  onClick={() => onEdit(record)}
-                />
-              </Tooltip>
-            )}
-            {onDelete && (
-              <Popconfirm
-                title="Delete Record"
-                description="Are you sure you want to delete this record? This action cannot be undone."
-                okText="Delete"
-                cancelText="Cancel"
-                okButtonProps={{ danger: true }}
-                onConfirm={() => onDelete(record)}
-              >
-                <Tooltip title="Delete record">
-                  <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                </Tooltip>
-              </Popconfirm>
-            )}
-          </Space>
-        ),
+        width: 100,
+        align: 'center',
+        render: (_, record) => {
+          const actionItems = [];
+          actionItems.push({
+            key: 'view',
+            icon: <EyeOutlined style={{ color: '#2563eb' }} />,
+            label: 'View details',
+            onClick: () => handleViewItem(record),
+          });
+          if (onEdit) {
+            actionItems.push({
+              key: 'edit',
+              icon: <EditOutlined style={{ color: '#059669' }} />,
+              label: 'Edit record',
+              onClick: () => onEdit(record),
+            });
+          }
+          if (onDelete) {
+            actionItems.push({ type: 'divider' });
+            actionItems.push({
+              key: 'delete',
+              icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+              danger: true,
+              label: 'Delete record',
+              onClick: () => {
+                Modal.confirm({
+                  title: 'Delete Record',
+                  content: 'Are you sure you want to delete this record? This action cannot be undone.',
+                  okText: 'Delete',
+                  okType: 'danger',
+                  cancelText: 'Cancel',
+                  onOk: () => onDelete(record),
+                });
+              },
+            });
+          }
+          return <TableActionDropdown items={actionItems} />;
+        },
       });
     }
 

@@ -66,9 +66,13 @@ const PosCatalog = ({
   allowOverselling = false,
   themeMode,
   adminTheme,
+  customSettings,
   t,
 }) => {
-  const isDark = false; // Always enforce clean, beautiful website light theme
+  const isDark = Boolean(adminTheme?.isDark || themeMode === 'dark');
+  const primaryColor = adminTheme?.colorPrimary || adminTheme?.primary || '#2F6FED';
+  const borderRadius = customSettings?.borderRadius ?? 12;
+  const cardBorderRadius = customSettings?.borderRadius ? Math.max(8, customSettings.borderRadius) : 14;
   const categoryScrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -133,15 +137,19 @@ const PosCatalog = ({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        background: isDark ? '#090d16' : '#f8fafc',
+        background: adminTheme?.isTransparent ? 'transparent' : (isDark ? '#090d16' : '#f8fafc'),
       }}
     >
       {/* 1. TOP SEARCH & SCANNER TOOLBAR */}
       <div
         style={{
           padding: '12px 16px',
-          background: isDark ? '#0f172a' : '#ffffff',
-          borderBottom: `1px solid ${isDark ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0'}`,
+          background: adminTheme?.isTransparent
+            ? (adminTheme?.card || (isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.85)'))
+            : (isDark ? (adminTheme?.headerBg || '#0f172a') : '#ffffff'),
+          backdropFilter: adminTheme?.isTransparent ? `blur(${adminTheme?.glassBlur || 16}px)` : 'none',
+          WebkitBackdropFilter: adminTheme?.isTransparent ? `blur(${adminTheme?.glassBlur || 16}px)` : 'none',
+          borderBottom: `1px solid ${adminTheme?.border || (isDark ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0')}`,
           display: 'flex',
           gap: 10,
           alignItems: 'center',
@@ -151,7 +159,7 @@ const PosCatalog = ({
         <Input
           ref={searchInputRef}
           size="large"
-          prefix={<BarcodeOutlined style={{ color: '#2F6FED', fontSize: 18, marginRight: 4 }} />}
+          prefix={<BarcodeOutlined style={{ color: primaryColor, fontSize: 18, marginRight: 4 }} />}
           suffix={
             <Tooltip title="Press F2 to focus scanner">
               <span
@@ -159,9 +167,9 @@ const PosCatalog = ({
                   fontSize: 10.5,
                   fontWeight: 800,
                   padding: '2px 6px',
-                  borderRadius: 6,
-                  background: isDark ? '#334155' : 'rgba(47, 111, 237, 0.08)',
-                  color: isDark ? '#94a3b8' : '#2F6FED',
+                  borderRadius: Math.min(6, borderRadius),
+                  background: isDark ? '#334155' : `${primaryColor}15`,
+                  color: isDark ? '#94a3b8' : primaryColor,
                 }}
               >
                 F2
@@ -174,9 +182,9 @@ const PosCatalog = ({
           onPressEnter={onBarcodeScanSubmit}
           allowClear
           style={{
-            borderRadius: 12,
-            background: isDark ? '#1e293b' : '#f8fafc',
-            borderColor: isDark ? '#334155' : '#cbd5e1',
+            borderRadius: borderRadius,
+            background: isDark ? 'rgba(255, 255, 255, 0.05)' : '#f8fafc',
+            borderColor: adminTheme?.border || (isDark ? '#334155' : '#cbd5e1'),
           }}
         />
 
@@ -187,7 +195,7 @@ const PosCatalog = ({
             onClick={onOpenManualAddProduct}
             size="large"
             style={{
-              borderRadius: 12,
+              borderRadius: borderRadius,
               fontWeight: 600,
               display: 'inline-flex',
               alignItems: 'center',
@@ -274,8 +282,8 @@ const PosCatalog = ({
               fontSize: 12.5,
               fontWeight: 700,
               cursor: 'pointer',
-              border: selectedCategory === 'all' ? 'none' : '1px solid rgba(226, 232, 240, 0.85)',
-              background: selectedCategory === 'all' ? 'linear-gradient(135deg, #2F6FED, #5B8DEF)' : isDark ? '#1e293b' : '#ffffff',
+              border: selectedCategory === 'all' ? 'none' : isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(226, 232, 240, 0.85)',
+              background: selectedCategory === 'all' ? `linear-gradient(135deg, ${primaryColor}, #5B8DEF)` : isDark ? '#1e293b' : '#ffffff',
               color: selectedCategory === 'all' ? '#ffffff' : isDark ? '#cbd5e1' : '#475569',
               display: 'inline-flex',
               alignItems: 'center',
@@ -290,7 +298,7 @@ const PosCatalog = ({
                 padding: '1px 6px',
                 borderRadius: 10,
                 background: selectedCategory === 'all' ? 'rgba(255,255,255,0.28)' : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(47, 111, 237, 0.08)',
-                color: selectedCategory === 'all' ? '#ffffff' : '#2F6FED',
+                color: selectedCategory === 'all' ? '#ffffff' : primaryColor,
                 fontWeight: 800,
               }}
             >
@@ -319,8 +327,8 @@ const PosCatalog = ({
                     fontSize: 12.5,
                     fontWeight: 700,
                     cursor: 'pointer',
-                    border: isSelected ? 'none' : '1px solid rgba(226, 232, 240, 0.85)',
-                    background: isSelected ? 'linear-gradient(135deg, #2F6FED, #5B8DEF)' : isDark ? '#1e293b' : '#ffffff',
+                    border: isSelected ? 'none' : isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(226, 232, 240, 0.85)',
+                    background: isSelected ? `linear-gradient(135deg, ${primaryColor}, #5B8DEF)` : isDark ? '#1e293b' : '#ffffff',
                     color: isSelected ? '#ffffff' : isDark ? '#cbd5e1' : '#475569',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -335,7 +343,7 @@ const PosCatalog = ({
                       padding: '1px 6px',
                       borderRadius: 10,
                       background: isSelected ? 'rgba(255,255,255,0.28)' : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(47, 111, 237, 0.08)',
-                      color: isSelected ? '#ffffff' : '#2F6FED',
+                      color: isSelected ? '#ffffff' : primaryColor,
                       fontWeight: 800,
                     }}
                   >
@@ -405,9 +413,13 @@ const PosCatalog = ({
                   className={`pos-press ${!isBlocked ? 'pos-product-card' : ''}`}
                   style={{
                     padding: '12px 16px',
-                    borderRadius: 14,
-                    background: isDark ? '#0f172a' : '#ffffff',
-                    border: `1px solid ${isDark ? '#1e293b' : '#e2e8f0'}`,
+                    borderRadius: cardBorderRadius,
+                    background: adminTheme?.isTransparent
+                      ? (adminTheme?.card || (isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.85)'))
+                      : (isDark ? (adminTheme?.cardBg || '#0f172a') : '#ffffff'),
+                    backdropFilter: adminTheme?.isTransparent ? `blur(${adminTheme?.glassBlur || 12}px)` : 'none',
+                    WebkitBackdropFilter: adminTheme?.isTransparent ? `blur(${adminTheme?.glassBlur || 12}px)` : 'none',
+                    border: `1px solid ${adminTheme?.border || (isDark ? '#1e293b' : '#e2e8f0')}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -546,7 +558,7 @@ const PosCatalog = ({
                     </span>
 
                     <div style={{ textAlign: 'right', minWidth: 85 }}>
-                      <div style={{ fontSize: 17, fontWeight: 900, color: '#2F6FED' }}>${parseFloat(p.price || 0).toFixed(2)}</div>
+                      <div style={{ fontSize: 17, fontWeight: 900, color: primaryColor }}>${parseFloat(p.price || 0).toFixed(2)}</div>
                       <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>៛{khrPrice.toLocaleString()}</div>
                     </div>
 
@@ -556,16 +568,16 @@ const PosCatalog = ({
                       disabled={isBlocked}
                       className="pos-add-btn"
                       style={{
-                        background: 'linear-gradient(135deg, #2F6FED 0%, #5B8DEF 100%)',
+                        background: `linear-gradient(135deg, ${primaryColor} 0%, #5B8DEF 100%)`,
                         border: 'none',
-                        borderRadius: 10,
+                        borderRadius: Math.min(10, borderRadius),
                         fontWeight: 700,
                         height: 38,
                         padding: '0 14px',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 4,
-                        boxShadow: '0 3px 10px rgba(47, 111, 237, 0.28)',
+                        boxShadow: `0 3px 10px ${primaryColor}48`,
                       }}
                     >
                       Add
@@ -600,9 +612,13 @@ const PosCatalog = ({
                   onClick={() => !isBlocked && onAddToCart(p)}
                   className={`pos-press ${!isBlocked ? 'pos-product-card' : ''}`}
                   style={{
-                    borderRadius: 16,
-                    background: isDark ? '#0f172a' : '#ffffff',
-                    border: `1px solid ${isDark ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0'}`,
+                    borderRadius: cardBorderRadius,
+                    background: adminTheme?.isTransparent
+                      ? (adminTheme?.card || (isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.85)'))
+                      : (isDark ? (adminTheme?.cardBg || '#0f172a') : '#ffffff'),
+                    backdropFilter: adminTheme?.isTransparent ? `blur(${adminTheme?.glassBlur || 12}px)` : 'none',
+                    WebkitBackdropFilter: adminTheme?.isTransparent ? `blur(${adminTheme?.glassBlur || 12}px)` : 'none',
+                    border: `1px solid ${adminTheme?.border || (isDark ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0')}`,
                     padding: 10,
                     display: 'flex',
                     flexDirection: 'column',
@@ -747,7 +763,7 @@ const PosCatalog = ({
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: 16, fontWeight: 900, color: '#2F6FED', lineHeight: 1 }}>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: primaryColor, lineHeight: 1 }}>
                         ${parseFloat(p.price || 0).toFixed(2)}
                       </div>
                       <div style={{ fontSize: 10.5, fontWeight: 600, color: '#94a3b8', marginTop: 2 }}>
@@ -760,14 +776,14 @@ const PosCatalog = ({
                       style={{
                         width: 30,
                         height: 30,
-                        borderRadius: 10,
-                        background: 'linear-gradient(135deg, #2F6FED 0%, #5B8DEF 100%)',
+                        borderRadius: Math.min(10, borderRadius),
+                        background: `linear-gradient(135deg, ${primaryColor} 0%, #5B8DEF 100%)`,
                         color: '#ffffff',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: 14,
-                        boxShadow: '0 3px 10px rgba(47, 111, 237, 0.35)',
+                        boxShadow: `0 3px 10px ${primaryColor}55`,
                         cursor: 'pointer',
                       }}
                     >

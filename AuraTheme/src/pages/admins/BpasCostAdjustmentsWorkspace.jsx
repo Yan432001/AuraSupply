@@ -49,6 +49,7 @@ import {
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -480,86 +481,13 @@ export default function BpasCostAdjustmentsWorkspace({ embedded = false }) {
           }
         ];
 
-        return (
-          <Dropdown menu={{ items: menuItems }} trigger={['click']}>
-            <Button type="text" icon={<MoreOutlined />} />
-          </Dropdown>
-        );
+        return <TableActionDropdown items={menuItems} />;
       }
     }
   ];
 
   const content = (
     <div>
-      {/* 1. Statistics Cards */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={6} md={6}>
-          <Card
-            bordered={false}
-            style={{ borderRadius: 12, border: `1px solid ${adminTheme.border}` }}
-            styles={{ body: { padding: '14px 18px' } }}
-          >
-            <Statistic
-              title={<span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>TOTAL COST ADJUSTMENTS</span>}
-              value={stats.total_adjustments || pagination.total || 0}
-              prefix={<FileTextOutlined style={{ color: '#2563eb' }} />}
-              valueStyle={{ fontWeight: 800, color: '#0f172a', fontSize: 22 }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={6} md={6}>
-          <Card
-            bordered={false}
-            style={{ borderRadius: 12, border: `1px solid ${adminTheme.border}` }}
-            styles={{ body: { padding: '14px 18px' } }}
-          >
-            <Statistic
-              title={<span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>ACTIVE REVALUATION IMPACT</span>}
-              value={Math.abs(stats.total_revaluation || 0)}
-              precision={2}
-              prefix={Number(stats.total_revaluation || 0) >= 0 ? '+$' : '-$'}
-              valueStyle={{
-                fontWeight: 900,
-                color: Number(stats.total_revaluation || 0) >= 0 ? '#16a34a' : '#dc2626',
-                fontSize: 22
-              }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={6} md={6}>
-          <Card
-            bordered={false}
-            style={{ borderRadius: 12, border: `1px solid ${adminTheme.border}` }}
-            styles={{ body: { padding: '14px 18px' } }}
-          >
-            <Statistic
-              title={<span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>TOTAL PRODUCTS REVALUED</span>}
-              value={stats.total_items_adjusted || 0}
-              prefix={<DollarOutlined style={{ color: '#f59e0b' }} />}
-              valueStyle={{ fontWeight: 800, color: '#0f172a', fontSize: 22 }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={6} md={6}>
-          <Card
-            bordered={false}
-            style={{ borderRadius: 12, border: `1px solid ${adminTheme.border}` }}
-            styles={{ body: { padding: '14px 18px' } }}
-          >
-            <Statistic
-              title={<span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>COMPLETED STATUS</span>}
-              value={stats.completed_adjustments || 0}
-              suffix={`/ ${stats.total_adjustments || 0}`}
-              prefix={<CheckCircleOutlined style={{ color: '#10b981' }} />}
-              valueStyle={{ fontWeight: 800, color: '#10b981', fontSize: 22 }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
       {/* 2. Filter Bar & Quick Actions */}
       <Card
         bordered={false}

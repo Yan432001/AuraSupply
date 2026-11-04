@@ -53,6 +53,7 @@ import {
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { getMenuByKey, getModuleByKey } from '../../data/erpModules';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
@@ -457,22 +458,7 @@ const BpasUnifiedModuleWorkspace = () => {
             }
           ];
 
-          return (
-            <Space size={6}>
-              <Button
-                size="small"
-                type="text"
-                icon={<EyeOutlined style={{ color: '#2563eb' }} />}
-                onClick={() => {
-                  setSelectedRecord(record);
-                  setViewModalVisible(true);
-                }}
-              />
-              <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
-                <Button size="small" type="text" icon={<EllipsisOutlined />} />
-              </Dropdown>
-            </Space>
-          );
+          return <TableActionDropdown items={menuItems} />;
         }
       }
     ];

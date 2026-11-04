@@ -13,64 +13,8 @@ import axios from 'axios';
 // Contexts & Hooks
 import { useAuth } from '../../../contexts/AuthContext';
 import { useTranslation } from '../../../contexts/LanguageContext';
-import { publicTheme } from '../../../utils/webTheme';
-
-// Fixed, immutable website color theme configuration for POS Terminal
-const websitePosThemeConfig = {
-  token: {
-    colorPrimary: publicTheme.primary, // #2f6fed
-    colorLink: publicTheme.primary,
-    colorSuccess: publicTheme.success, // #10b981
-    colorWarning: publicTheme.warning, // #f59e0b
-    colorError: publicTheme.danger, // #ef4444
-    colorInfo: publicTheme.secondary, // #5b8def
-    colorTextBase: '#0f172a',
-    colorTextSecondary: '#64748b',
-    colorBgBase: '#ffffff',
-    colorBgLayout: '#f8fafc',
-    colorBgContainer: '#ffffff',
-    colorBgElevated: '#ffffff',
-    colorBorder: 'rgba(226, 232, 240, 0.85)',
-    borderRadius: 12,
-    fontFamily: '"Plus Jakarta Sans", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  },
-  components: {
-    Modal: {
-      contentBg: '#ffffff',
-      headerBg: '#ffffff',
-      footerBg: '#ffffff',
-      titleColor: '#0f172a',
-      borderRadiusLG: 18,
-    },
-    Button: {
-      colorPrimary: publicTheme.primary,
-      borderRadius: 10,
-    },
-    Card: {
-      colorBgContainer: '#ffffff',
-      borderRadiusLG: 14,
-    },
-    Input: {
-      colorBgContainer: '#ffffff',
-      activeBorderColor: publicTheme.primary,
-      hoverBorderColor: publicTheme.secondary,
-      borderRadius: 10,
-    },
-    Select: {
-      colorBgContainer: '#ffffff',
-      colorPrimary: publicTheme.primary,
-      borderRadius: 10,
-    },
-    Table: {
-      colorBgContainer: '#ffffff',
-      headerBg: '#f8fafc',
-      headerColor: '#475569',
-    },
-    Drawer: {
-      colorBgElevated: '#ffffff',
-    },
-  },
-};
+import { useTheme } from '../../../contexts/ThemeContext';
+import { useAdminTheme } from '../../../hooks/useAdminTheme';
 
 // Modular Creative POS Components matching cyspharma & AURA_v1
 import PosHeader from './components/PosHeader';
@@ -185,6 +129,9 @@ export default function PosTerminal() {
   const location = useLocation();
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { themeMode, toggleThemeMode, currentTheme, themePreset, customSettings } = useTheme();
+  const adminTheme = useAdminTheme();
+  const isDark = adminTheme.isDark;
 
   // 1. Clock, Sound & Fullscreen
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -1246,7 +1193,7 @@ export default function PosTerminal() {
   // Loading Screen for Initial Gatekeeper Check
   if (loadingRegister) {
     return (
-      <ConfigProvider theme={websitePosThemeConfig}>
+      <ConfigProvider theme={currentTheme}>
         <div
           style={{
             width: '100vw',
@@ -1255,13 +1202,15 @@ export default function PosTerminal() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            background: publicTheme.pageBackground || '#f8fafc',
-            color: publicTheme.text,
+            background: isDark ? (adminTheme.cardMuted || adminTheme.pageBackground || '#090d16') : (adminTheme.pageBackground || '#f8fafc'),
+            color: adminTheme.text || (isDark ? '#f8fafc' : '#0f172a'),
             gap: 16,
           }}
         >
           <Spin size="large" />
-          <span style={{ fontSize: 15, fontWeight: 700, color: publicTheme.text }}>Loading POS Cash Register session...</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: adminTheme.text || (isDark ? '#f8fafc' : '#0f172a') }}>
+            Loading POS Cash Register session...
+          </span>
         </div>
       </ConfigProvider>
     );
@@ -1272,7 +1221,7 @@ export default function PosTerminal() {
   // =========================================================================
   if (!isRegisterOpen) {
     return (
-      <ConfigProvider theme={websitePosThemeConfig}>
+      <ConfigProvider theme={currentTheme}>
         <PosOpenRegisterView
           user={user}
           openRegisterCashInHand={openRegisterCashInHand}
@@ -1284,6 +1233,9 @@ export default function PosTerminal() {
           billerName={billers.find((b) => b.id === selectedBillerId)?.name || user?.biller_name || 'Main Store'}
           warehouseName={warehouses.find((w) => w.id === selectedWarehouseId)?.name || currentWarehouse}
           onExit={() => navigate('/admins')}
+          themeMode={themeMode}
+          isDark={isDark}
+          adminTheme={adminTheme}
           t={t}
         />
       </ConfigProvider>
@@ -1291,11 +1243,14 @@ export default function PosTerminal() {
   }
 
   // =========================================================================
-  // CREATIVE POS TERMINAL MAIN VIEW (Website Default Theme Style)
+  // CREATIVE POS TERMINAL MAIN VIEW (Full Theme Settings Integration)
   // =========================================================================
   return (
-    <ConfigProvider theme={websitePosThemeConfig}>
+    <ConfigProvider theme={currentTheme}>
       <div
+        className={`pos-terminal-root ${isDark ? 'dark theme-dark' : 'light theme-light'}`}
+        data-mode={isDark ? 'dark' : 'light'}
+        data-theme={themePreset || 'default'}
         style={{
           width: '100vw',
           height: '100vh',
@@ -1304,12 +1259,14 @@ export default function PosTerminal() {
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          background: 'radial-gradient(circle at 10% 8%, rgba(47, 111, 237, 0.04), transparent 30%), radial-gradient(circle at 90% 4%, rgba(255, 122, 61, 0.03), transparent 26%), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
-          color: publicTheme.text,
-          fontFamily: '"Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif',
+          background: adminTheme.pageBackground || (isDark
+            ? `radial-gradient(circle at 10% 8%, ${adminTheme.colorPrimary || '#2F6FED'}18, transparent 35%), radial-gradient(circle at 90% 4%, #f59e0b12, transparent 30%), linear-gradient(180deg, #090d16 0%, #060911 100%)`
+            : `radial-gradient(circle at 10% 8%, ${adminTheme.colorPrimary || '#2F6FED'}12, transparent 30%), radial-gradient(circle at 90% 4%, rgba(255, 122, 61, 0.03), transparent 26%), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)`),
+          color: adminTheme.text || (isDark ? '#f8fafc' : '#0f172a'),
+          fontFamily: customSettings?.fontFamily || adminTheme.fontFamily || '"Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif',
         }}
       >
-        {/* 1. PROFESSIONAL POS TOP HEADER (Website Default Theme Style) */}
+        {/* 1. PROFESSIONAL POS TOP HEADER (Controlled by Theme Settings) */}
         <PosHeader
           user={user}
           currentRegister={currentRegister}
@@ -1347,6 +1304,11 @@ export default function PosTerminal() {
           posType={posSettingsData?.pos_type || 'pos'}
           currentTable={currentTable}
           currentTableId={selectedTableId}
+          themeMode={themeMode}
+          isDark={isDark}
+          adminTheme={adminTheme}
+          toggleThemeMode={toggleThemeMode}
+          customSettings={customSettings}
           t={t}
         />
 
@@ -1385,6 +1347,10 @@ export default function PosTerminal() {
               setCatalogViewMode={setCatalogViewMode}
               khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
               allowOverselling={allowOverselling}
+              themeMode={themeMode}
+              isDark={isDark}
+              adminTheme={adminTheme}
+              customSettings={customSettings}
               t={t}
             />
           </div>
@@ -1399,9 +1365,13 @@ export default function PosTerminal() {
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                borderLeft: '1px solid rgba(226, 232, 240, 0.85)',
-                background: '#ffffff',
-                boxShadow: '-4px 0 24px rgba(15, 23, 42, 0.03)',
+                borderLeft: `1px solid ${adminTheme.border || (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(226, 232, 240, 0.85)')}`,
+                background: adminTheme.isTransparent
+                  ? (adminTheme.card || (isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)'))
+                  : (isDark ? (adminTheme.cardBg || '#111827') : '#ffffff'),
+                backdropFilter: adminTheme.isTransparent ? `blur(${adminTheme.glassBlur || 20}px)` : 'none',
+                WebkitBackdropFilter: adminTheme.isTransparent ? `blur(${adminTheme.glassBlur || 20}px)` : 'none',
+                boxShadow: isDark ? '-4px 0 24px rgba(0, 0, 0, 0.35)' : '-4px 0 24px rgba(15, 23, 42, 0.03)',
                 zIndex: 10,
               }}
             >
@@ -1452,6 +1422,10 @@ export default function PosTerminal() {
               grandTotal={grandTotalUSD}
               khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
               thbExchangeRate={THB_EXCHANGE_RATE}
+              themeMode={themeMode}
+              isDark={isDark}
+              adminTheme={adminTheme}
+              customSettings={customSettings}
               t={t}
             />
           </div>
@@ -1466,22 +1440,22 @@ export default function PosTerminal() {
               left: 0,
               right: 0,
               padding: '10px 16px',
-              background: '#ffffff',
-              borderTop: '1px solid #cbd5e1',
+              background: isDark ? (adminTheme.cardBg || '#111827') : '#ffffff',
+              borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #cbd5e1',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               zIndex: 100,
-              boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.1)',
+              boxShadow: isDark ? '0 -4px 16px rgba(0, 0, 0, 0.4)' : '0 -4px 12px rgba(0, 0, 0, 0.1)',
             }}
           >
             <div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
+              <div style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>
                 Cart ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)
               </div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#2F6FED' }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: adminTheme.colorPrimary || '#2F6FED' }}>
                 ${grandTotalUSD.toFixed(2)}{' '}
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b' }}>
                   (៛{(grandTotalUSD * (posSettingsData.exchange_rate || KHR_EXCHANGE_RATE)).toLocaleString()})
                 </span>
               </div>
@@ -1494,13 +1468,15 @@ export default function PosTerminal() {
                 style={{
                   padding: '8px 16px',
                   borderRadius: 10,
-                  background: 'linear-gradient(135deg, #2F6FED 0%, #1D4ED8 100%)',
+                  background: isDark
+                    ? `linear-gradient(135deg, ${adminTheme.colorPrimary || '#2F6FED'} 0%, #1e40af 100%)`
+                    : 'linear-gradient(135deg, #2F6FED 0%, #1D4ED8 100%)',
                   color: '#fff',
                   border: 'none',
                   fontWeight: 700,
                   fontSize: 14,
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(47, 111, 237, 0.35)',
+                  boxShadow: `0 4px 12px ${adminTheme.colorPrimary || '#2F6FED'}44`,
                 }}
               >
                 View Cart & Pay
@@ -1517,7 +1493,7 @@ export default function PosTerminal() {
         height="90vh"
         onClose={() => setMobileCartDrawerOpen(false)}
         open={mobileCartDrawerOpen && !isDesktop}
-        bodyStyle={{ padding: 0 }}
+        bodyStyle={{ padding: 0, background: isDark ? (adminTheme.cardBg || '#111827') : '#ffffff' }}
       >
         <PosCart
           cart={cart}
@@ -1567,6 +1543,10 @@ export default function PosTerminal() {
           grandTotal={grandTotalUSD}
           khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
           thbExchangeRate={THB_EXCHANGE_RATE}
+          themeMode={themeMode}
+          isDark={isDark}
+          adminTheme={adminTheme}
+          customSettings={customSettings}
           t={t}
         />
       </Drawer>
@@ -1592,6 +1572,9 @@ export default function PosTerminal() {
         billers={billers}
         selectedBillerId={selectedBillerId}
         currentTable={currentTable}
+        themeMode={themeMode}
+        adminTheme={adminTheme}
+        customSettings={customSettings}
         t={t}
       />
 
@@ -1605,8 +1588,11 @@ export default function PosTerminal() {
         onSelectTable={handleSelectTable}
         onLoadTableOrder={handleLoadTableOrder}
         onStartNewSubBill={handleStartNewSubBill}
-        activeBillerColor={billers.find((b) => b.id === selectedBillerId)?.theme_color || '#2F6FED'}
+        activeBillerColor={billers.find((b) => b.id === selectedBillerId)?.theme_color || adminTheme?.colorPrimary || '#2F6FED'}
         khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
+        themeMode={themeMode}
+        adminTheme={adminTheme}
+        customSettings={customSettings}
         t={t}
       />
 
@@ -1634,6 +1620,8 @@ export default function PosTerminal() {
         loadingSummary={loadingSummary}
         onConfirmClose={handleConfirmCloseRegister}
         isClosing={isClosingRegister}
+        themeMode={themeMode}
+        adminTheme={adminTheme}
         t={t}
       />
 
@@ -1643,6 +1631,7 @@ export default function PosTerminal() {
         onClose={() => setRegisterDetailsVisible(false)}
         shiftSummary={shiftSummary}
         currentRegister={currentRegister}
+        themeMode={themeMode}
         t={t}
       />
 
@@ -1651,6 +1640,7 @@ export default function PosTerminal() {
         visible={todaySaleModalVisible}
         onClose={() => setTodaySaleModalVisible(false)}
         khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
+        themeMode={themeMode}
         t={t}
       />
 
@@ -1662,6 +1652,7 @@ export default function PosTerminal() {
           setCurrentRegister(reg);
           setRegisterDetailsVisible(true);
         }}
+        themeMode={themeMode}
         t={t}
       />
 
@@ -1685,6 +1676,7 @@ export default function PosTerminal() {
             setReceiptModalVisible(true);
           }
         }}
+        themeMode={themeMode}
         t={t}
       />
 
@@ -1695,6 +1687,7 @@ export default function PosTerminal() {
         onSelectCardForSale={(card) => {
           message.success(`Card #${card.card_no} selected for sale!`);
         }}
+        themeMode={themeMode}
         t={t}
       />
 
@@ -1707,6 +1700,7 @@ export default function PosTerminal() {
           setOrderDiscountType('fixed');
           message.success(`Coupon applied: $${coupon.value} off`);
         }}
+        themeMode={themeMode}
         t={t}
       />
 
@@ -1728,6 +1722,7 @@ export default function PosTerminal() {
           });
           message.success('Stock deposit item added to cart for redemption ($0)!');
         }}
+        themeMode={themeMode}
         t={t}
       />
 
@@ -1735,6 +1730,7 @@ export default function PosTerminal() {
       <PosPrintersModal
         visible={printersModalVisible}
         onClose={() => setPrintersModalVisible(false)}
+        themeMode={themeMode}
         t={t}
       />
 
@@ -1745,6 +1741,7 @@ export default function PosTerminal() {
         onAddExpense={(expense) => {
           message.success(`Drawer cash expense of $${expense.amount} recorded!`);
         }}
+        themeMode={themeMode}
         t={t}
       />
 
@@ -1752,6 +1749,7 @@ export default function PosTerminal() {
       <PosShortcutsModal
         visible={shortcutsModalVisible}
         onClose={() => setShortcutsModalVisible(false)}
+        themeMode={themeMode}
         t={t}
       />
 
@@ -1759,6 +1757,7 @@ export default function PosTerminal() {
       <PosCalculatorModal
         visible={calculatorModalVisible}
         onClose={() => setCalculatorModalVisible(false)}
+        themeMode={themeMode}
         t={t}
       />
 
@@ -1770,6 +1769,7 @@ export default function PosTerminal() {
           setEditingItem(null);
         }}
         item={editingItem}
+        themeMode={themeMode}
         onSave={(updated) => {
           setCart((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
           message.success('Item details updated');
@@ -1784,6 +1784,7 @@ export default function PosTerminal() {
           setCommentingItem(null);
         }}
         item={commentingItem}
+        themeMode={themeMode}
         onSave={(itemId, note) => {
           setCart((prev) => prev.map((item) => (item.id === itemId ? { ...item, item_note: note } : item)));
           message.success('Item instruction saved');
@@ -1798,6 +1799,7 @@ export default function PosTerminal() {
         discountType={orderDiscountType}
         cartSubtotal={cartSubtotal}
         khrExchangeRate={posSettingsData.exchange_rate || KHR_EXCHANGE_RATE}
+        themeMode={themeMode}
         onApply={(val, type) => {
           setOrderDiscountValue(val);
           setOrderDiscountType(type);
@@ -1809,6 +1811,7 @@ export default function PosTerminal() {
         visible={orderTaxModalVisible}
         onClose={() => setOrderTaxModalVisible(false)}
         taxRate={orderTaxRate}
+        themeMode={themeMode}
         onApply={(rate) => {
           setOrderTaxRate(rate);
         }}
@@ -1819,6 +1822,7 @@ export default function PosTerminal() {
         visible={deliveryFeeModalVisible}
         onClose={() => setDeliveryFeeModalVisible(false)}
         shippingFee={shippingFee}
+        themeMode={themeMode}
         onApply={(fee) => {
           setShippingFee(fee);
         }}
@@ -1828,6 +1832,7 @@ export default function PosTerminal() {
       <QuickAddCustomerModal
         visible={quickAddCustomerVisible}
         onClose={() => setQuickAddCustomerVisible(false)}
+        themeMode={themeMode}
         onAddCustomer={(newCust) => {
           setCustomers((prev) => [newCust, ...prev]);
           setSelectedCustomerId(newCust.id);
@@ -1840,6 +1845,7 @@ export default function PosTerminal() {
       <CustomerDetailsModal
         visible={viewCustomerModalVisible}
         onClose={() => setViewCustomerModalVisible(false)}
+        themeMode={themeMode}
         customer={customers.find((c) => c.id === selectedCustomerId)}
       />
 
@@ -1847,6 +1853,7 @@ export default function PosTerminal() {
       <ManualAddProductModal
         visible={manualAddProductModalVisible}
         onClose={() => setManualAddProductModalVisible(false)}
+        themeMode={themeMode}
         onAddProduct={(customItem) => {
           handleAddToCart(customItem);
           message.success(`Added custom item: ${customItem.name}`);

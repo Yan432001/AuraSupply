@@ -34,13 +34,15 @@ import {
   ShopOutlined,
   ShoppingCartOutlined,
   FileTextOutlined,
-  AuditOutlined
+  AuditOutlined,
+  EditOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useNavigate, useParams } from 'react-router-dom';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import BpasItemEditModal from '../../components/common/BpasItemEditModal';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -61,11 +63,17 @@ export default function BpasEditPurchaseRequestPage({ onBack = null, onSuccess =
   const [departments, setDepartments] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [billers, setBillers] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [taxRates, setTaxRates] = useState([]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
   const [currentStatus, setCurrentStatus] = useState('pending');
 
   // Items
   const [items, setItems] = useState([]);
+
+  // Item Edit Modal (Popup matching Image 2)
+  const [editingModalItem, setEditingModalItem] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Product Search / Autocomplete
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,21 +86,30 @@ export default function BpasEditPurchaseRequestPage({ onBack = null, onSuccess =
     const initData = async () => {
       setLoadingRecord(true);
       try {
-        const [metaRes, recordRes] = await Promise.all([
+        const [metaRes, recordRes, unitsRes, optRes] = await Promise.allSettled([
           axios.get('/api/admin/purchase_requests/meta/options'),
-          axios.get(`/api/admin/purchase_requests/${id}`)
+          axios.get(`/api/admin/purchase_requests/${id}`),
+          axios.get('/api/admin/units'),
+          axios.get('/api/admin/products/quantity_adjustments/meta/options')
         ]);
 
-        if (metaRes.data?.success && metaRes.data.data) {
-          const d = metaRes.data.data;
+        if (metaRes.status === 'fulfilled' && metaRes.value.data?.success && metaRes.value.data.data) {
+          const d = metaRes.value.data.data;
           setWarehouses(d.warehouses || []);
           setDepartments(d.departments || []);
           setSuppliers(d.suppliers || []);
           setBillers(d.billers || []);
         }
 
-        if (recordRes.data?.success && recordRes.data.data) {
-          const rec = recordRes.data.data;
+        if (unitsRes.status === 'fulfilled' && unitsRes.value.data?.data) {
+          setUnits(unitsRes.value.data.data);
+        }
+        if (optRes.status === 'fulfilled' && optRes.value.data?.data?.taxRates) {
+          setTaxRates(optRes.value.data.data.taxRates);
+        }
+
+        if (recordRes.status === 'fulfilled' && recordRes.value.data?.success && recordRes.value.data.data) {
+          const rec = recordRes.value.data.data;
           setSelectedWarehouseId(rec.warehouse_id);
           setCurrentStatus(rec.status);
 
@@ -334,41 +351,113 @@ export default function BpasEditPurchaseRequestPage({ onBack = null, onSuccess =
     }
   };
 
+  // Open Edit Modal (matching Image 2)
+  const handleOpenEditModal = (record, idx) => {
+    setEditingModalItem({ ...record, _index: idx });
+    setIsEditModalOpen(true);
+  };
+
+  // Save Modal Item
+  const handleSaveModalItem = (updatedItem) => {
+    setItems(prev => prev.map((it, idx) => {
+      const match = updatedItem._index !== undefined ? idx === updatedItem._index : (it.key === updatedItem.key || it.product_id === updatedItem.product_id);
+      if (!match) return it;
+      const sub = parseFloat(updatedItem.subtotal) || (parseFloat(updatedItem.quantity) * parseFloat(updatedItem.unit_cost));
+      return {
+        ...it,
+        ...updatedItem,
+        quantity: updatedItem.unit_quantity != null ? updatedItem.unit_quantity : updatedItem.quantity,
+        product_unit_id: updatedItem.unit_id || it.product_unit_id,
+        product_unit_code: updatedItem.unit_name || it.product_unit_code,
+        subtotal: sub
+      };
+    }));
+    message.success(`Updated item "${updatedItem.product_name}"`);
+  };
+
   const itemColumns = [
     {
-      title: 'Product Information',
+      title: 'Product (Code - Name)',
       key: 'product_info',
-      render: (_, r) => (
+      render: (_, r, idx) => (
         <div>
-          <Text strong>{r.product_name}</Text>
+          <Text strong>{r.product_code ? `${r.product_code} - ` : ''}{r.product_name}</Text>
           <div>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Code: {r.product_code} | Unit: {r.product_unit_code || 'Unit'}
-            </Text>
+            <Tooltip title="Click to change unit in edit modal">
+              <Tag
+                color="geekblue"
+                style={{ cursor: 'pointer', fontWeight: 600, fontSize: 11, marginTop: 3 }}
+                onClick={() => handleOpenEditModal(r, idx)}
+              >
+                Unit: {r.unit_name || r.product_unit_code || 'Unit'}
+              </Tag>
+            </Tooltip>
           </div>
         </div>
       ),
     },
     {
-      title: 'Current QOH',
+      title: 'Description',
+      key: 'desc',
+      width: 170,
+      render: (_, r, idx) => (
+        <Space align="center" size={6}>
+          <Tooltip title="Edit Item Details (Popup Image 2)">
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined style={{ color: '#2563eb', fontSize: 14 }} />}
+              onClick={() => handleOpenEditModal(r, idx)}
+              disabled={isCompleted}
+              style={{
+                border: '1px solid #cbd5e1',
+                borderRadius: 4,
+                width: 26,
+                height: 26,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#f8fafc'
+              }}
+            />
+          </Tooltip>
+          <span style={{ fontSize: 12, color: r.description ? '#334155' : '#94a3b8' }}>
+            {r.description || '—'}
+          </span>
+        </Space>
+      ),
+    },
+    {
+      title: 'Net Unit Cost',
+      key: 'net_unit_cost',
+      width: 120,
+      align: 'right',
+      render: (_, r) => (
+        <span style={{ fontWeight: 600, color: '#334155' }}>
+          {formatCurrency(parseFloat(r.net_unit_cost != null ? r.net_unit_cost : r.unit_cost || 0))}
+        </span>
+      )
+    },
+    {
+      title: 'QOH',
       key: 'qoh',
       align: 'center',
-      width: 130,
+      width: 90,
       render: (_, r) => (
-        <Tag color={r.qoh > 0 ? 'blue' : 'default'}>
-          {r.qoh} in stock
+        <Tag color={r.qoh > 0 ? 'blue' : 'default'} style={{ fontWeight: 700 }}>
+          {r.qoh}
         </Tag>
       ),
     },
     {
-      title: 'Requested Qty',
+      title: 'Quantity',
       key: 'qty',
-      width: 140,
+      width: 120,
       align: 'center',
       render: (_, r, idx) => (
         <InputNumber
           min={1}
-          value={r.quantity}
+          value={r.unit_quantity != null ? r.unit_quantity : r.quantity}
           onChange={(val) => handleItemChange(idx, 'quantity', val)}
           style={{ width: '100%' }}
           disabled={isCompleted}
@@ -376,50 +465,34 @@ export default function BpasEditPurchaseRequestPage({ onBack = null, onSuccess =
       ),
     },
     {
-      title: 'Est. Unit Cost',
-      key: 'unit_cost',
-      width: 140,
-      align: 'center',
-      render: (_, r, idx) => (
-        <InputNumber
-          min={0}
-          step={0.1}
-          value={r.unit_cost}
-          onChange={(val) => handleItemChange(idx, 'unit_cost', val)}
-          style={{ width: '100%' }}
-          prefix="$"
-          disabled={isCompleted}
-        />
-      ),
+      title: 'product discount',
+      key: 'discount',
+      width: 110,
+      align: 'right',
+      render: (_, r) => <span>{r.discount || 0}</span>
     },
     {
-      title: 'Subtotal',
+      title: 'Product Tax',
+      key: 'tax',
+      width: 110,
+      align: 'right',
+      render: (_, r) => <span>{formatCurrency(parseFloat(r.tax || 0))}</span>
+    },
+    {
+      title: 'Estimated Cost',
       key: 'subtotal',
-      width: 140,
+      width: 130,
       align: 'right',
       render: (_, r) => (
-        <Text strong style={{ fontSize: 13 }}>
+        <Text strong style={{ fontSize: 13, color: '#0f172a' }}>
           {formatCurrency(parseFloat(r.subtotal || 0))}
         </Text>
       ),
     },
     {
-      title: 'Remarks / Item Note',
-      key: 'desc',
-      width: 200,
-      render: (_, r, idx) => (
-        <Input
-          placeholder="Specification or remarks..."
-          value={r.description}
-          onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
-          disabled={isCompleted}
-        />
-      ),
-    },
-    {
       title: 'Action',
       key: 'action',
-      width: 70,
+      width: 60,
       align: 'center',
       render: (_, __, idx) => (
         <Button
@@ -779,6 +852,17 @@ export default function BpasEditPurchaseRequestPage({ onBack = null, onSuccess =
           </Row>
         </Card>
       </Form>
+
+      {/* Edit Item Modal (Popup matching Image 2) */}
+      <BpasItemEditModal
+        open={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        item={editingModalItem}
+        units={units}
+        taxRates={taxRates}
+        onSave={handleSaveModalItem}
+        mode="procurement"
+      />
     </div>
   );
 }

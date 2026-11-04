@@ -293,11 +293,12 @@ export default function BpasAddTransferPage({ onBack = null, onSuccess = null })
   };
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 8px' }}>
+    <div style={{ padding: '20px 24px', width: '100%', boxSizing: 'border-box' }}>
       {/* Top Banner & Header */}
       <Card
         style={{
           marginBottom: 16,
+          borderRadius: 12,
           background: adminTheme.surface,
           borderColor: adminTheme.border,
           boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
@@ -306,7 +307,7 @@ export default function BpasAddTransferPage({ onBack = null, onSuccess = null })
       >
         <Row justify="space-between" align="middle" gutter={[16, 16]}>
           <Col xs={24} sm={16}>
-            <Space align="center" size={14}>
+            <Space align="center" size={14} wrap>
               <Button icon={<RollbackOutlined />} onClick={handleBackNavigation}>
                 Back
               </Button>
@@ -335,363 +336,377 @@ export default function BpasAddTransferPage({ onBack = null, onSuccess = null })
               </div>
             </Space>
           </Col>
-          <Col xs={24} sm={8} style={{ textAlign: 'right' }}>
-            <Space orientation="horizontal">
-              <Button
-                type="primary"
-                icon={<SaveOutlined />}
-                loading={submitting}
-                onClick={() => form.submit()}
-                style={{ background: '#16a34a', borderColor: '#16a34a', fontWeight: 700 }}
-              >
-                Submit Transfer
-              </Button>
-            </Space>
-          </Col>
         </Row>
       </Card>
 
       {/* Main Form */}
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Row gutter={[16, 16]}>
-          {/* Left Column: Form Inputs & Product Search */}
-          <Col xs={24} lg={17}>
-            <Card
-              title={
-                <Space>
-                  <ApartmentOutlined style={{ color: '#2563eb' }} />
-                  <span>Transfer Information</span>
-                </Space>
-              }
-              style={{
-                marginBottom: 16,
-                background: adminTheme.surface,
-                borderColor: adminTheme.border,
-              }}
-            >
-              <Row gutter={[16, 8]}>
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    name="date"
-                    label={<strong>Date & Time</strong>}
-                    rules={[{ required: true, message: 'Please select transfer date' }]}
-                  >
-                    <DatePicker showTime style={{ width: '100%' }} format="YYYY-MM-DD HH:mm:ss" />
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    name="transfer_no"
-                    label={<strong>Reference No</strong>}
-                    rules={[{ required: true, message: 'Reference No is required' }]}
-                  >
-                    <Input placeholder="TR-XXXXXX" />
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    name="status"
-                    label={<strong>Transfer Status</strong>}
-                    rules={[{ required: true, message: 'Select initial status' }]}
-                  >
-                    <Select>
-                      <Option value="pending">
-                        <Tag color="orange">Pending (Transfer Request)</Tag>
-                      </Option>
-                      <Option value="approved">
-                        <Tag color="blue">Approved (Transfer Order)</Tag>
-                      </Option>
-                      <Option value="in_transit">
-                        <Tag color="purple">In Transit (Dispatch Now)</Tag>
-                      </Option>
-                      <Option value="completed">
-                        <Tag color="green">Completed (Direct Transfer)</Tag>
-                      </Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="from_warehouse_id"
-                    label={<strong>From Warehouse (Source) *</strong>}
-                    rules={[{ required: true, message: 'Source warehouse is required' }]}
-                  >
-                    <Select
-                      placeholder="Select source warehouse"
-                      onChange={(val) => {
-                        setFromWarehouseId(val);
-                        setItems([]); // Clear items if warehouse changes
-                      }}
-                    >
-                      {warehouses.map((wh) => (
-                        <Option key={wh.id} value={wh.id}>
-                          <strong>{wh.name}</strong> ({wh.code})
-                        </Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="to_warehouse_id"
-                    label={<strong>To Warehouse (Destination) *</strong>}
-                    rules={[{ required: true, message: 'Destination warehouse is required' }]}
-                  >
-                    <Select
-                      placeholder="Select destination warehouse"
-                      onChange={(val) => setToWarehouseId(val)}
-                    >
-                      {warehouses.map((wh) => (
-                        <Option key={wh.id} value={wh.id} disabled={wh.id === fromWarehouseId}>
-                          <strong>{wh.name}</strong> ({wh.code})
-                        </Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={12}>
-                  <Form.Item name="from_biller" label="From Biller / Entity">
-                    <Select placeholder="Select sender entity" allowClear>
-                      {billers.map((b) => (
-                        <Option key={b.id} value={b.id}>
-                          {b.company || b.name}
-                        </Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={12}>
-                  <Form.Item name="to_biller" label="To Biller / Entity">
-                    <Select placeholder="Select recipient entity" allowClear>
-                      {billers.map((b) => (
-                        <Option key={b.id} value={b.id}>
-                          {b.company || b.name}
-                        </Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Card>
-
-            {/* Product Search & Barcode Input */}
-            <Card
-              style={{
-                marginBottom: 16,
-                background: adminTheme.surface,
-                borderColor: adminTheme.border,
-              }}
-              bodyStyle={{ padding: '16px' }}
-            >
-              <div style={{ marginBottom: 8 }}>
-                <Text strong style={{ fontSize: 14 }}>
-                  Scan Barcode or Search Products from{' '}
-                  <span style={{ color: '#2563eb' }}>
-                    {warehouses.find((w) => w.id === fromWarehouseId)?.name || 'Selected Warehouse'}
-                  </span>
-                </Text>
-              </div>
-              <AutoComplete
-                options={productOptions}
-                onSelect={handleSelectProduct}
-                style={{ width: '100%' }}
-                value={searchQuery}
-                onChange={(val) => setSearchQuery(val)}
+        {/* Transfer Information */}
+        <Card
+          title={
+            <Space>
+              <ApartmentOutlined style={{ color: '#2563eb' }} />
+              <span style={{ color: adminTheme.text }}>Transfer Information</span>
+            </Space>
+          }
+          style={{
+            marginBottom: 16,
+            borderRadius: 12,
+            background: adminTheme.surface,
+            borderColor: adminTheme.border,
+          }}
+        >
+          <Row gutter={[16, 8]}>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                name="date"
+                label={<strong>Date & Time</strong>}
+                rules={[{ required: true, message: 'Please select transfer date' }]}
               >
-                <Input
-                  size="large"
-                  placeholder="Scan barcode or enter product code / name..."
-                  prefix={<BarcodeOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
-                  suffix={searchingProducts ? <Spin size="small" /> : <SearchOutlined />}
+                <DatePicker showTime style={{ width: '100%' }} format="YYYY-MM-DD HH:mm:ss" />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                name="transfer_no"
+                label={<strong>Reference No</strong>}
+                rules={[{ required: true, message: 'Reference No is required' }]}
+              >
+                <Input placeholder="TR-XXXXXX" />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                name="status"
+                label={<strong>Transfer Status</strong>}
+                rules={[{ required: true, message: 'Select initial status' }]}
+              >
+                <Select>
+                  <Option value="pending">
+                    <Tag color="orange">Pending (Transfer Request)</Tag>
+                  </Option>
+                  <Option value="approved">
+                    <Tag color="blue">Approved (Transfer Order)</Tag>
+                  </Option>
+                  <Option value="in_transit">
+                    <Tag color="purple">In Transit (Dispatch Now)</Tag>
+                  </Option>
+                  <Option value="completed">
+                    <Tag color="green">Completed (Direct Transfer)</Tag>
+                  </Option>
+                </Select>
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item name="shipping" label={<strong>Shipping / Transport Charge</strong>}>
+                <InputNumber
+                  min={0}
+                  style={{ width: '100%' }}
+                  prefix="$"
+                  placeholder="0.00"
+                  onChange={(val) => setShippingCost(val || 0)}
                 />
-              </AutoComplete>
-            </Card>
+              </Form.Item>
+            </Col>
 
-            {/* Transfer Items Table */}
-            <Card
-              title={
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>Transfer Items ({items.length})</span>
-                  {items.length > 0 && (
-                    <Button danger size="small" onClick={() => setItems([])}>
-                      Clear All Items
-                    </Button>
-                  )}
-                </div>
-              }
-              style={{
-                background: adminTheme.surface,
-                borderColor: adminTheme.border,
-              }}
-            >
-              <Table
-                dataSource={items}
-                rowKey="key"
-                pagination={false}
-                locale={{ emptyText: 'No products added to transfer yet. Scan or search above.' }}
-                columns={[
-                  {
-                    title: 'Product (Code - Name)',
-                    key: 'product',
-                    render: (_, r) => (
-                      <div>
-                        <strong style={{ color: adminTheme.text }}>{r.product_name}</strong>
-                        {r.variant_name && <Tag color="blue" style={{ marginLeft: 6 }}>{r.variant_name}</Tag>}
-                        <div style={{ fontSize: 12, color: adminTheme.subtext }}>
-                          Code: {r.product_code} | Unit: {r.unit_code}
-                        </div>
-                      </div>
-                    ),
-                  },
-                  {
-                    title: 'On-Hand Stock',
-                    dataIndex: 'available_quantity',
-                    key: 'available_quantity',
-                    align: 'center',
-                    width: 130,
-                    render: (q) => (
-                      <Tag color={q > 0 ? 'green' : 'red'} style={{ fontWeight: 700 }}>
-                        {Number(q).toLocaleString()}
-                      </Tag>
-                    ),
-                  },
-                  {
-                    title: 'Transfer Qty',
-                    key: 'quantity',
-                    width: 140,
-                    align: 'center',
-                    render: (_, r) => (
-                      <InputNumber
-                        min={0.01}
-                        value={r.quantity}
-                        onChange={(val) => handleQuantityChange(r.key, val)}
-                        style={{ width: '100%', fontWeight: 700 }}
-                      />
-                    ),
-                  },
-                  {
-                    title: 'Unit Cost',
-                    dataIndex: 'unit_cost',
-                    key: 'unit_cost',
-                    align: 'right',
-                    width: 120,
-                    render: (c) => formatCurrency(c),
-                  },
-                  {
-                    title: 'Subtotal',
-                    dataIndex: 'subtotal',
-                    key: 'subtotal',
-                    align: 'right',
-                    width: 130,
-                    render: (s) => <strong style={{ color: '#0284c7' }}>{formatCurrency(s)}</strong>,
-                  },
-                  {
-                    title: '',
-                    key: 'action',
-                    width: 60,
-                    align: 'center',
-                    render: (_, r) => (
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleRemoveItem(r.key)}
-                      />
-                    ),
-                  },
-                ]}
-              />
-            </Card>
-          </Col>
-
-          {/* Right Column: Summary, Notes, and Dispatch Details */}
-          <Col xs={24} lg={7}>
-            {/* Summary Card */}
-            <Card
-              title={<strong>Summary & Totals</strong>}
-              style={{
-                marginBottom: 16,
-                background: adminTheme.surface,
-                borderColor: adminTheme.border,
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text type="secondary">Total Line Items:</Text>
-                  <strong>{totalItemsCount}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text type="secondary">Total Transfer Units:</Text>
-                  <strong>{totalQuantity.toLocaleString()}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text type="secondary">Items Total Cost:</Text>
-                  <strong>{formatCurrency(totalItemsCost)}</strong>
-                </div>
-                <Divider style={{ margin: '8px 0' }} />
-                <div>
-                  <Form.Item name="shipping" label="Shipping / Transport Charge">
-                    <InputNumber
-                      min={0}
-                      style={{ width: '100%' }}
-                      placeholder="0.00"
-                      onChange={(val) => setShippingCost(val || 0)}
-                    />
-                  </Form.Item>
-                </div>
-                <Divider style={{ margin: '8px 0' }} />
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    background: '#f8fafc',
-                    padding: '12px 14px',
-                    borderRadius: 8,
-                    border: '1px solid #e2e8f0',
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                name="from_warehouse_id"
+                label={<strong>From Warehouse (Source) *</strong>}
+                rules={[{ required: true, message: 'Source warehouse is required' }]}
+              >
+                <Select
+                  placeholder="Select source warehouse"
+                  onChange={(val) => {
+                    setFromWarehouseId(val);
+                    setItems([]); // Clear items if warehouse changes
                   }}
                 >
-                  <Text strong style={{ fontSize: 15 }}>
-                    Grand Total:
-                  </Text>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: '#16a34a' }}>
+                  {warehouses.map((wh) => (
+                    <Option key={wh.id} value={wh.id}>
+                      <strong>{wh.name}</strong> ({wh.code})
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                name="to_warehouse_id"
+                label={<strong>To Warehouse (Destination) *</strong>}
+                rules={[{ required: true, message: 'Destination warehouse is required' }]}
+              >
+                <Select
+                  placeholder="Select destination warehouse"
+                  onChange={(val) => setToWarehouseId(val)}
+                >
+                  {warehouses.map((wh) => (
+                    <Option key={wh.id} value={wh.id} disabled={wh.id === fromWarehouseId}>
+                      <strong>{wh.name}</strong> ({wh.code})
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item name="from_biller" label="From Biller / Entity">
+                <Select placeholder="Select sender entity" allowClear>
+                  {billers.map((b) => (
+                    <Option key={b.id} value={b.id}>
+                      {b.company || b.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item name="to_biller" label="To Biller / Entity">
+                <Select placeholder="Select recipient entity" allowClear>
+                  {billers.map((b) => (
+                    <Option key={b.id} value={b.id}>
+                      {b.company || b.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+        </Card>
+
+        {/* Product Search & Barcode Input */}
+        <Card
+          style={{
+            marginBottom: 16,
+            borderRadius: 12,
+            background: adminTheme.surface,
+            borderColor: adminTheme.border,
+          }}
+          bodyStyle={{ padding: '16px 20px' }}
+        >
+          <div style={{ marginBottom: 8 }}>
+            <Text strong style={{ fontSize: 14, color: adminTheme.text }}>
+              Scan Barcode or Search Products from{' '}
+              <span style={{ color: '#2563eb' }}>
+                {warehouses.find((w) => w.id === fromWarehouseId)?.name || 'Selected Warehouse'}
+              </span>
+            </Text>
+          </div>
+          <AutoComplete
+            options={productOptions}
+            onSelect={handleSelectProduct}
+            style={{ width: '100%' }}
+            value={searchQuery}
+            onChange={(val) => setSearchQuery(val)}
+          >
+            <Input
+              size="large"
+              placeholder="Scan barcode or enter product code / name..."
+              prefix={<BarcodeOutlined style={{ color: '#2563eb', fontSize: 20 }} />}
+              suffix={searchingProducts ? <Spin size="small" /> : <SearchOutlined />}
+            />
+          </AutoComplete>
+        </Card>
+
+        {/* Transfer Items Table */}
+        <Card
+          title={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: adminTheme.text, fontWeight: 700 }}>Transfer Items ({items.length})</span>
+              {items.length > 0 && (
+                <Button danger size="small" onClick={() => setItems([])}>
+                  Clear All Items
+                </Button>
+              )}
+            </div>
+          }
+          style={{
+            marginBottom: 16,
+            borderRadius: 12,
+            background: adminTheme.surface,
+            borderColor: adminTheme.border,
+          }}
+        >
+          <Table
+            dataSource={items}
+            rowKey="key"
+            pagination={false}
+            locale={{ emptyText: 'No products added to transfer yet. Scan or search above.' }}
+            summary={() => items.length > 0 && (
+              <Table.Summary fixed>
+                <Table.Summary.Row style={{ background: adminTheme.isDark ? 'rgba(255, 255, 255, 0.04)' : '#f8fafc', fontWeight: 600 }}>
+                  <Table.Summary.Cell index={0}>
+                    <Text strong style={{ color: adminTheme.text }}>Total ({totalItemsCount} items)</Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} />
+                  <Table.Summary.Cell index={2} align="center">
+                    <Tag color="blue" style={{ fontSize: 13, padding: '2px 10px', fontWeight: 700 }}>
+                      {totalQuantity.toLocaleString()} units
+                    </Tag>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={3} />
+                  <Table.Summary.Cell index={4} align="right">
+                    <span style={{ fontSize: 15, fontWeight: 800, color: '#0284c7' }}>
+                      {formatCurrency(totalItemsCost)}
+                    </span>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={5} />
+                </Table.Summary.Row>
+              </Table.Summary>
+            )}
+            columns={[
+              {
+                title: 'Product (Code - Name)',
+                key: 'product',
+                render: (_, r) => (
+                  <div>
+                    <strong style={{ color: adminTheme.text }}>{r.product_name}</strong>
+                    {r.variant_name && <Tag color="blue" style={{ marginLeft: 6 }}>{r.variant_name}</Tag>}
+                    <div style={{ fontSize: 12, color: adminTheme.subtext }}>
+                      Code: {r.product_code} | Unit: {r.unit_code}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                title: 'On-Hand Stock',
+                dataIndex: 'available_quantity',
+                key: 'available_quantity',
+                align: 'center',
+                width: 140,
+                render: (q) => (
+                  <Tag color={q > 0 ? 'green' : 'red'} style={{ fontWeight: 700 }}>
+                    {Number(q).toLocaleString()}
+                  </Tag>
+                ),
+              },
+              {
+                title: 'Transfer Qty',
+                key: 'quantity',
+                width: 150,
+                align: 'center',
+                render: (_, r) => (
+                  <InputNumber
+                    min={0.01}
+                    value={r.quantity}
+                    onChange={(val) => handleQuantityChange(r.key, val)}
+                    style={{ width: '100%', fontWeight: 700 }}
+                  />
+                ),
+              },
+              {
+                title: 'Unit Cost',
+                dataIndex: 'unit_cost',
+                key: 'unit_cost',
+                align: 'right',
+                width: 130,
+                render: (c) => formatCurrency(c),
+              },
+              {
+                title: 'Subtotal',
+                dataIndex: 'subtotal',
+                key: 'subtotal',
+                align: 'right',
+                width: 140,
+                render: (s) => <strong style={{ color: '#0284c7' }}>{formatCurrency(s)}</strong>,
+              },
+              {
+                title: 'Action',
+                key: 'action',
+                width: 70,
+                align: 'center',
+                render: (_, r) => (
+                  <Button
+                    type="text"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => handleRemoveItem(r.key)}
+                  />
+                ),
+              },
+            ]}
+          />
+
+          <Divider style={{ margin: '16px 0' }} />
+
+          {/* Notes & Memo */}
+          <Form.Item name="note" label={<strong>Remarks / Transport Memo</strong>}>
+            <Input.TextArea
+              rows={3}
+              placeholder="Enter logistics notes, vehicle details, driver name, or transfer reason..."
+            />
+          </Form.Item>
+
+          <Alert
+            message="Workflow Rule"
+            description="Creating in 'Pending' reserves item intention without deducting stock. Selecting 'In Transit' deducts stock from the source warehouse immediately."
+            type="info"
+            showIcon
+            style={{ fontSize: 12 }}
+          />
+        </Card>
+
+        {/* Bottom Action & Summary Strip */}
+        <Card
+          bordered={false}
+          style={{
+            borderRadius: 12,
+            marginBottom: 24,
+            boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+            background: adminTheme.surface,
+            borderColor: adminTheme.border,
+          }}
+        >
+          <Row justify="space-between" align="middle" gutter={[16, 16]}>
+            <Col xs={24} md={14}>
+              <Space size={24} wrap>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', color: adminTheme.subtext }}>Total Line Items</Text>
+                  <Text strong style={{ fontSize: 16, color: adminTheme.text }}>{totalItemsCount}</Text>
+                </div>
+                <Divider type="vertical" style={{ height: 32 }} />
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', color: adminTheme.subtext }}>Total Transfer Units</Text>
+                  <Text strong style={{ fontSize: 16, color: adminTheme.text }}>{totalQuantity.toLocaleString()} units</Text>
+                </div>
+                <Divider type="vertical" style={{ height: 32 }} />
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', color: adminTheme.subtext }}>Items Total Cost</Text>
+                  <Text strong style={{ fontSize: 16, color: adminTheme.text }}>{formatCurrency(totalItemsCost)}</Text>
+                </div>
+                <Divider type="vertical" style={{ height: 32 }} />
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', color: adminTheme.subtext }}>Grand Total</Text>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: '#16a34a' }}>
                     {formatCurrency(grandTotal)}
                   </span>
                 </div>
-              </div>
-            </Card>
-
-            {/* Notes & Memo */}
-            <Card
-              title={<strong>Transfer Notes & Instructions</strong>}
-              style={{
-                background: adminTheme.surface,
-                borderColor: adminTheme.border,
-              }}
-            >
-              <Form.Item name="note" label="Remarks / Transport Memo">
-                <Input.TextArea
-                  rows={4}
-                  placeholder="Enter logistics notes, vehicle details, driver name, or transfer reason..."
-                />
-              </Form.Item>
-
-              <Alert
-                message="Workflow Rule"
-                description="Creating in 'Pending' reserves item intention without deducting stock. Selecting 'In Transit' deducts stock from the source warehouse immediately."
-                type="info"
-                showIcon
-                style={{ fontSize: 12, marginTop: 12 }}
-              />
-            </Card>
-          </Col>
-        </Row>
+              </Space>
+            </Col>
+            <Col xs={24} md={10} style={{ textAlign: 'right' }}>
+              <Space size={12}>
+                <Button size="large" onClick={handleBackNavigation} style={{ minWidth: 100 }}>
+                  Cancel
+                </Button>
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<SaveOutlined />}
+                  loading={submitting}
+                  onClick={() => form.submit()}
+                  style={{ background: '#16a34a', borderColor: '#16a34a', fontWeight: 700, minWidth: 160 }}
+                >
+                  Submit Transfer
+                </Button>
+              </Space>
+            </Col>
+          </Row>
+        </Card>
       </Form>
     </div>
   );

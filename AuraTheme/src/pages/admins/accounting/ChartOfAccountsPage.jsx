@@ -35,6 +35,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import { useTranslation } from '../../../contexts/LanguageContext';
+import TableActionDropdown from '../../../components/common/TableActionDropdown';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -232,57 +233,55 @@ const ChartOfAccountsPage = ({ onSelectAccountForLedger }) => {
     {
       title: t('actions', 'Actions'),
       key: 'actions',
-      width: 150,
+      width: 100,
       align: 'center',
-      render: (_, r) => (
-        <Space size="small">
-          <Tooltip title={t('view_ledger', 'View Ledger / Details')}>
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetails(r)}
-            />
-          </Tooltip>
+      render: (_, r) => {
+        const actionItems = [
+          {
+            key: 'view',
+            icon: <EyeOutlined style={{ color: '#2563eb' }} />,
+            label: t('view_ledger', 'View Ledger / Details'),
+            onClick: () => handleViewDetails(r),
+          },
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#059669' }} />,
+            label: t('edit_account', 'Edit Account'),
+            onClick: () => {
+              setSelectedAccount(r);
+              editForm.setFieldsValue({
+                accountname: r.accountname,
+                parent_acc: r.parent_acc || undefined,
+                sectionid: r.sectionid,
+                bank: r.bank === 1,
+                inactive: r.inactive === 1,
+              });
+              setEditModalVisible(true);
+            },
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: t('delete_account', 'Delete Account'),
+            onClick: () => {
+              Modal.confirm({
+                title: t('confirm_delete_account', 'Delete Account?'),
+                content: t('delete_account_warn', 'This account will be permanently removed if it has no posted transactions.'),
+                okText: t('yes_delete', 'Yes, Delete'),
+                okType: 'danger',
+                cancelText: t('cancel', 'Cancel'),
+                onOk: () => handleDelete(r.id),
+              });
+            },
+          },
+        ];
 
-          <Tooltip title={t('edit_account', 'Edit Account')}>
-            <Button
-              type="text"
-              size="small"
-              icon={<EditOutlined style={{ color: '#2563eb' }} />}
-              onClick={() => {
-                setSelectedAccount(r);
-                editForm.setFieldsValue({
-                  accountname: r.accountname,
-                  parent_acc: r.parent_acc || undefined,
-                  sectionid: r.sectionid,
-                  bank: r.bank === 1,
-                  inactive: r.inactive === 1
-                });
-                setEditModalVisible(true);
-              }}
-            />
-          </Tooltip>
-
-          <Tooltip title={t('delete_account', 'Delete Account')}>
-            <Popconfirm
-              title={t('confirm_delete_account', 'Delete Account?')}
-              description={t('delete_account_warn', 'This account will be permanently removed if it has no posted transactions.')}
-              onConfirm={() => handleDelete(r.id)}
-              okText={t('yes_delete', 'Yes, Delete')}
-              cancelText={t('cancel', 'Cancel')}
-              okButtonProps={{ danger: true }}
-            >
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Popconfirm>
-          </Tooltip>
-        </Space>
-      )
+        return <TableActionDropdown items={actionItems} />;
+      },
     }
   ];
 

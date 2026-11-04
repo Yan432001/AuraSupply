@@ -25,6 +25,7 @@ import {
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useTranslation } from '../../../contexts/LanguageContext';
+import TableActionDropdown from '../../../components/common/TableActionDropdown';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -210,22 +211,20 @@ const AssetAssignmentsPage = () => {
     {
       title: t('actions', 'Actions'),
       key: 'actions',
+      width: 100,
       align: 'center',
-      render: (_, r) => (
-        r.status === 'active' ? (
-          <Button
-            type="primary"
-            size="small"
-            icon={<RollbackOutlined />}
-            onClick={() => openReturnModal(r)}
-            style={{ backgroundColor: '#16a34a', borderColor: '#16a34a' }}
-          >
-            {t('return_asset', 'Process Return')}
-          </Button>
-        ) : (
-          <span style={{ fontSize: 12, color: '#94a3b8' }}>Completed</span>
-        )
-      )
+      render: (_, r) => {
+        const actionItems = [];
+        if (r.status === 'active') {
+          actionItems.push({
+            key: 'return',
+            icon: <RollbackOutlined style={{ color: '#16a34a' }} />,
+            label: t('return_asset', 'Process Return'),
+            onClick: () => openReturnModal(r),
+          });
+        }
+        return <TableActionDropdown items={actionItems} disabled={actionItems.length === 0} />;
+      },
     }
   ];
 

@@ -54,6 +54,7 @@ import dayjs from 'dayjs';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
+import { unitToBaseQty, convertFromBasePrice } from '../../utils/unitConverter';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -92,6 +93,152 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
 
   // Multi-Warehouse allocations state
   const [warehouseAllocations, setWarehouseAllocations] = useState([]);
+
+  // Multi-Unit state (replicates AURA_v1 products/add.php #unit -> getSubUnits -> #show_units)
+  const [subUnitsList, setSubUnitsList] = useState([]);
+  const [unitPrices, setUnitPrices] = useState([]);
+  const [quickUnitModalOpen, setQuickUnitModalOpen] = useState(false);
+  const [quickUnitSaving, setQuickUnitSaving] = useState(false);
+  const [quickUnitForm] = Form.useForm();
+  const quickSelectedBaseUnit = Form.useWatch('base_unit', quickUnitForm);
+
+  // Base units only (where base_unit IS NULL or 0) for Product Unit dropdown
+  const baseUnitsOnly = React.useMemo(() => {
+    const roots = unitsList.filter((u) => !u.base_unit || Number(u.base_unit) === 0);
+    return roots.length > 0 ? roots : unitsList;
+  }, [unitsList]);
+
+  // Fetch Base Unit + Derived Sub-Units (replicates AURA_v1 products/getSubUnits/$unit_id)
+  const handleUnitChange = async (baseUnitId, existingUnitPrices = null, keepSalePurchaseUnits = false) => {
+    if (!baseUnitId) {
+      setSubUnitsList([]);
+      setUnitPrices([]);
+      return;
+    }
+
+    try {
+      const res = await axios.get(`/api/admin/units/by-base/${baseUnitId}`);
+      const family = res.data?.status && Array.isArray(res.data.data)
+        ? res.data.data
+        : unitsList.filter((u) => Number(u.id) === Number(baseUnitId) || Number(u.base_unit) === Number(baseUnitId));
+
+      setSubUnitsList(family);
+
+      if (!keepSalePurchaseUnits) {
+        form.setFieldsValue({
+          sale_unit: baseUnitId,
+          purchase_unit: baseUnitId
+        });
+      }
+
+      const baseCost = parseFloat(form.getFieldValue('cost')) || 0;
+      const basePrice = parseFloat(form.getFieldValue('price')) || 0;
+      const baseCode = form.getFieldValue('code') || '';
+
+      const mappedPrices = family.map((u) => {
+        const isBase = Number(u.id) === Number(baseUnitId);
+        const existingRow = Array.isArray(existingUnitPrices)
+          ? existingUnitPrices.find((ep) => Number(ep.unit_id || ep.id) === Number(u.id))
+          : null;
+
+        const defaultCost = isBase ? baseCost : +(convertFromBasePrice(baseCost, u)).toFixed(4);
+        const defaultPrice = isBase ? basePrice : +(convertFromBasePrice(basePrice, u)).toFixed(4);
+
+        return {
+          unit_id: u.id,
+          code: u.code,
+          name: u.name,
+          base_unit: u.base_unit,
+          operator: u.operator,
+          operation_value: u.operation_value,
+          unit_qty: isBase ? 1 : unitToBaseQty(1, u),
+          product_code: existingRow?.product_code ?? existingRow?.unit_barcode ?? (isBase ? baseCode : ''),
+          cost: existingRow?.cost !== undefined ? parseFloat(existingRow.cost) || 0 : defaultCost,
+          price: existingRow?.price !== undefined ? parseFloat(existingRow.price) || 0 : defaultPrice,
+          duplicate_error: false
+        };
+      });
+
+      setUnitPrices(mappedPrices);
+    } catch (err) {
+      console.warn('Failed to load unit family:', err.message);
+    }
+  };
+
+  // Update a row in unitPrices and sync Base Unit cost/price/code with main form
+  const handleUnitRowChange = (unitId, field, val) => {
+    const currentBaseUnit = form.getFieldValue('unit');
+    setUnitPrices((prev) =>
+      prev.map((row) => {
+        if (Number(row.unit_id) !== Number(unitId)) return row;
+        return { ...row, [field]: val };
+      })
+    );
+
+    if (Number(unitId) === Number(currentBaseUnit)) {
+      if (field === 'cost') form.setFieldsValue({ cost: parseFloat(val) || 0 });
+      if (field === 'price') form.setFieldsValue({ price: parseFloat(val) || 0 });
+      if (field === 'product_code' && val) form.setFieldsValue({ code: val, barcode: val });
+    }
+  };
+
+  // Check duplicate unit barcode/code (replicates AURA_v1 products/add.php .code_by_unit change)
+  const handleCheckUnitBarcode = async (unitId, barcodeVal) => {
+    if (!barcodeVal || !String(barcodeVal).trim()) return;
+    try {
+      const res = await axios.get('/api/admin/units/check-duplicate-code', {
+        params: {
+          product_code: String(barcodeVal).trim(),
+          exclude_product_id: editProduct?.id || undefined
+        }
+      });
+      if (res.data?.exists) {
+        message.warning(`Barcode/Code "${barcodeVal}" already exists in catalog! Clearing duplicate code.`);
+        setUnitPrices((prev) =>
+          prev.map((row) =>
+            Number(row.unit_id) === Number(unitId) ? { ...row, product_code: '' } : row
+          )
+        );
+      }
+    } catch (_) {}
+  };
+
+  // Quick Add Unit Modal handler (replicates inline + button next to Product Unit in AURA_v1 add.php)
+  const handleQuickAddUnit = async () => {
+    try {
+      const vals = await quickUnitForm.validateFields();
+      setQuickUnitSaving(true);
+      const isSub = vals.base_unit && Number(vals.base_unit) > 0;
+      const res = await axios.post('/api/admin/units', {
+        code: vals.code,
+        name: vals.name,
+        base_unit: isSub ? vals.base_unit : null,
+        operator: isSub ? vals.operator : null,
+        operation_value: isSub ? vals.operation_value : null
+      });
+      if (res.data?.status && res.data?.data) {
+        const created = res.data.data;
+        setUnitsList((prev) => [...prev, created]);
+        message.success(`Unit "${created.name} (${created.code})" added!`);
+        setQuickUnitModalOpen(false);
+        quickUnitForm.resetFields();
+
+        if (!isSub) {
+          form.setFieldsValue({ unit: created.id, sale_unit: created.id, purchase_unit: created.id });
+          handleUnitChange(created.id);
+        } else {
+          const currentBu = form.getFieldValue('unit');
+          if (Number(currentBu) === Number(created.base_unit)) {
+            handleUnitChange(currentBu, unitPrices, true);
+          }
+        }
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Failed to add unit');
+    } finally {
+      setQuickUnitSaving(false);
+    }
+  };
 
   // Real-time watched form fields for calculation
   const watchPrice = Form.useWatch('price', form) || 0;
@@ -142,6 +289,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
       setCoverImageUrl(editProduct.image || '');
       setProductType(editProduct.type || 'standard');
 
+      const initialUnitId = Number(editProduct.unit_id || editProduct.unit) || undefined;
       form.setFieldsValue({
         type: editProduct.type || 'standard',
         name: editProduct.name || '',
@@ -152,9 +300,9 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
         category_id: editProduct.category_id || undefined,
         subcategory_id: editProduct.subcategory_id || undefined,
         brand_id: editProduct.brand_id || editProduct.brand || undefined,
-        unit: editProduct.unit || undefined,
-        purchase_unit: editProduct.purchase_unit || editProduct.unit || undefined,
-        sale_unit: editProduct.sale_unit || editProduct.unit || undefined,
+        unit: initialUnitId,
+        purchase_unit: Number(editProduct.purchase_unit) || initialUnitId,
+        sale_unit: Number(editProduct.sale_unit) || initialUnitId,
         currency: editProduct.currency || 'USD',
         price: parseFloat(editProduct.price) || 0,
         cost: parseFloat(editProduct.cost) || 0,
@@ -188,6 +336,10 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
         start_date: editProduct.start_date ? dayjs(editProduct.start_date) : undefined,
         end_date: editProduct.end_date ? dayjs(editProduct.end_date) : undefined,
       });
+
+      if (initialUnitId) {
+        handleUnitChange(initialUnitId, editProduct.unit_prices || null, true);
+      }
 
       if (Array.isArray(editProduct.variants) && editProduct.variants.length > 0) {
         setVariantRows(
@@ -346,6 +498,7 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
           status: v.status !== 0 ? 1 : 0,
           attributes: v.attributes || null
         })),
+        unit_prices: unitPrices,
         warehouse_allocations: warehouseAllocations
       };
 
@@ -431,33 +584,6 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
           </Button>
         </Space>
       </div>
-
-      {/* 
-        =========================================================================
-        PROFIT MARGIN & VALUATION SUMMARY STRIP
-        =========================================================================
-      */}
-      <Card size="small" style={{ background: adminTheme.surface, borderColor: adminTheme.border }}>
-        <Row gutter={[16, 8]} align="middle">
-          <Col xs={12} sm={6}>
-            <Statistic title="Selling Price" value={watchPrice} prefix="$" precision={2} valueStyle={{ color: '#16a34a', fontWeight: 800 }} />
-          </Col>
-          <Col xs={12} sm={6}>
-            <Statistic title="Unit Cost" value={watchCost} prefix="$" precision={2} valueStyle={{ color: adminTheme.subtext, fontWeight: 700 }} />
-          </Col>
-          <Col xs={12} sm={6}>
-            <Statistic
-              title="Profit Margin"
-              value={profitMargin}
-              suffix="%"
-              valueStyle={{ color: profitMargin > 20 ? '#16a34a' : profitMargin > 0 ? '#d97706' : '#dc2626', fontWeight: 800 }}
-            />
-          </Col>
-          <Col xs={12} sm={6}>
-            <Statistic title="Markup" value={markupPercentage} suffix="%" valueStyle={{ color: '#2563eb', fontWeight: 700 }} />
-          </Col>
-        </Row>
-      </Card>
 
       {/* 
         =========================================================================
@@ -560,9 +686,35 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                           </Col>
 
                           <Col xs={24} sm={8}>
-                            <Form.Item label={<strong>Base Unit</strong>} name="unit" rules={[{ required: true }]}>
-                              <Select placeholder="Select Base Unit">
-                                {unitsList.map((u) => (
+                            <Form.Item
+                              label={
+                                <Space size={6}>
+                                  <strong>Product Unit (Base)</strong>
+                                  <Tooltip title="Quick Add Unit (AURA_v1)">
+                                    <Button
+                                      type="link"
+                                      size="small"
+                                      icon={<PlusOutlined />}
+                                      style={{ padding: 0, height: 'auto' }}
+                                      onClick={() => {
+                                        quickUnitForm.resetFields();
+                                        quickUnitForm.setFieldsValue({ base_unit: 0, operator: '*', operation_value: '1' });
+                                        setQuickUnitModalOpen(true);
+                                      }}
+                                    />
+                                  </Tooltip>
+                                </Space>
+                              }
+                              name="unit"
+                              rules={[{ required: true, message: 'Please select Product Base Unit' }]}
+                            >
+                              <Select
+                                placeholder="Select Product Unit"
+                                showSearch
+                                optionFilterProp="children"
+                                onChange={(val) => handleUnitChange(val)}
+                              >
+                                {baseUnitsOnly.map((u) => (
                                   <Option key={u.id} value={u.id}>
                                     {u.name} ({u.code})
                                   </Option>
@@ -572,9 +724,12 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                           </Col>
 
                           <Col xs={24} sm={8}>
-                            <Form.Item label="Purchase Unit" name="purchase_unit">
-                              <Select placeholder="Select Purchase Unit">
-                                {unitsList.map((u) => (
+                            <Form.Item label="Default Sale Unit" name="sale_unit">
+                              <Select
+                                placeholder="Select Default Sale Unit"
+                                disabled={!subUnitsList.length && !form.getFieldValue('unit')}
+                              >
+                                {(subUnitsList.length > 0 ? subUnitsList : unitsList).map((u) => (
                                   <Option key={u.id} value={u.id}>
                                     {u.name} ({u.code})
                                   </Option>
@@ -584,9 +739,12 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                           </Col>
 
                           <Col xs={24} sm={8}>
-                            <Form.Item label="Sale Unit" name="sale_unit">
-                              <Select placeholder="Select Sale Unit">
-                                {unitsList.map((u) => (
+                            <Form.Item label="Default Purchase Unit" name="purchase_unit">
+                              <Select
+                                placeholder="Select Default Purchase Unit"
+                                disabled={!subUnitsList.length && !form.getFieldValue('unit')}
+                              >
+                                {(subUnitsList.length > 0 ? subUnitsList : unitsList).map((u) => (
                                   <Option key={u.id} value={u.id}>
                                     {u.name} ({u.code})
                                   </Option>
@@ -594,6 +752,135 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
                               </Select>
                             </Form.Item>
                           </Col>
+
+                          {/* AURA_v1 #show_units table: Barcode, Cost, and Price by Unit (aura_cost_price_by_units & aura_product_units) */}
+                          {unitPrices.length > 0 && (
+                            <Col span={24}>
+                              <Card
+                                size="small"
+                                title={
+                                  <Space>
+                                    <CalculatorOutlined style={{ color: '#0284c7' }} />
+                                    <span style={{ fontWeight: 700 }}>
+                                      Unit Barcodes, Costs & Selling Prices (AURA_v1 Multi-Unit Control)
+                                    </span>
+                                    <Tag color="blue">{unitPrices.length} Unit(s)</Tag>
+                                  </Space>
+                                }
+                                extra={
+                                  <Button
+                                    size="small"
+                                    icon={<PlusOutlined />}
+                                    onClick={() => {
+                                      const currBu = form.getFieldValue('unit') || 0;
+                                      quickUnitForm.resetFields();
+                                      quickUnitForm.setFieldsValue({
+                                        base_unit: currBu,
+                                        operator: '*',
+                                        operation_value: '12'
+                                      });
+                                      setQuickUnitModalOpen(true);
+                                    }}
+                                  >
+                                    Add Sub-Unit
+                                  </Button>
+                                }
+                                style={{
+                                  marginBottom: 8,
+                                  background: adminTheme.subtle || '#f8fafc',
+                                  border: `1px solid ${adminTheme.border}`
+                                }}
+                              >
+                                <Table
+                                  dataSource={unitPrices}
+                                  rowKey="unit_id"
+                                  pagination={false}
+                                  size="small"
+                                  columns={[
+                                    {
+                                      title: 'Unit',
+                                      key: 'unit_label',
+                                      width: 190,
+                                      render: (_, r) => {
+                                        const isBase = !r.base_unit || Number(r.unit_id) === Number(form.getFieldValue('unit'));
+                                        return (
+                                          <Space direction="vertical" size={0}>
+                                            <Space size={6}>
+                                              <Tag color={isBase ? 'green' : 'geekblue'} style={{ margin: 0, fontWeight: 700 }}>
+                                                {r.code}
+                                              </Tag>
+                                              <Text strong style={{ color: adminTheme.text }}>
+                                                {r.name}
+                                              </Text>
+                                            </Space>
+                                            <Text type="secondary" style={{ fontSize: 11 }}>
+                                              {isBase
+                                                ? 'Base Unit (1.0)'
+                                                : `1 ${r.name} = 1 ${r.operator || '*'} ${r.operation_value} (${r.unit_qty} Base)`}
+                                            </Text>
+                                          </Space>
+                                        );
+                                      }
+                                    },
+                                    {
+                                      title: 'Barcode / Code by Unit',
+                                      dataIndex: 'product_code',
+                                      key: 'product_code',
+                                      render: (val, r) => (
+                                        <Input
+                                          placeholder={`${r.code} Barcode / Code`}
+                                          value={val || ''}
+                                          onChange={(e) => handleUnitRowChange(r.unit_id, 'product_code', e.target.value)}
+                                          onBlur={(e) => handleCheckUnitBarcode(r.unit_id, e.target.value)}
+                                          suffix={
+                                            <Tooltip title="Generate Random Unit Barcode">
+                                              <ThunderboltOutlined
+                                                style={{ cursor: 'pointer', color: '#0284c7' }}
+                                                onClick={() => {
+                                                  const rnd = `${Math.floor(10000000 + Math.random() * 90000000)}`;
+                                                  handleUnitRowChange(r.unit_id, 'product_code', rnd);
+                                                }}
+                                              />
+                                            </Tooltip>
+                                          }
+                                        />
+                                      )
+                                    },
+                                    {
+                                      title: 'Unit Cost ($)',
+                                      dataIndex: 'cost',
+                                      key: 'cost',
+                                      width: 150,
+                                      render: (val, r) => (
+                                        <InputNumber
+                                          min={0}
+                                          step={0.01}
+                                          style={{ width: '100%' }}
+                                          value={val}
+                                          onChange={(v) => handleUnitRowChange(r.unit_id, 'cost', v)}
+                                        />
+                                      )
+                                    },
+                                    {
+                                      title: 'Unit Price ($)',
+                                      dataIndex: 'price',
+                                      key: 'price',
+                                      width: 150,
+                                      render: (val, r) => (
+                                        <InputNumber
+                                          min={0}
+                                          step={0.01}
+                                          style={{ width: '100%' }}
+                                          value={val}
+                                          onChange={(v) => handleUnitRowChange(r.unit_id, 'price', v)}
+                                        />
+                                      )
+                                    }
+                                  ]}
+                                />
+                              </Card>
+                            </Col>
+                          )}
 
                           <Col xs={24} sm={8}>
                             <Form.Item label={<strong>Cost ($)</strong>} name="cost" rules={[{ required: true }]}>
@@ -1273,6 +1560,87 @@ export default function BpasAddProductPage({ onBack, editProduct = null }) {
             </div>
           ))}
         </Space>
+      </Modal>
+
+      {/* 
+        =========================================================================
+        QUICK ADD UNIT MODAL (Replicating AURA_v1 system_settings/add_unit popup)
+        =========================================================================
+      */}
+      <Modal
+        title={
+          <Space>
+            <CalculatorOutlined style={{ color: '#0284c7' }} />
+            <span>Add New Unit (AURA_v1)</span>
+          </Space>
+        }
+        open={quickUnitModalOpen}
+        onCancel={() => setQuickUnitModalOpen(false)}
+        onOk={handleQuickAddUnit}
+        confirmLoading={quickUnitSaving}
+        okText="Add Unit"
+        destroyOnHidden
+        width={500}
+      >
+        <Form form={quickUnitForm} layout="vertical">
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item
+                name="code"
+                label="Unit Code *"
+                rules={[{ required: true, message: 'Unit Code is required' }]}
+              >
+                <Input placeholder="e.g. Case, Box, Pcs" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="name"
+                label="Unit Name *"
+                rules={[{ required: true, message: 'Unit Name is required' }]}
+              >
+                <Input placeholder="e.g. Case of 24" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="base_unit" label="Base Unit">
+            <Select>
+              <Option value={0}>Select Unit (Primary Base Unit / Root)</Option>
+              {baseUnitsOnly.map((bu) => (
+                <Option key={bu.id} value={bu.id}>
+                  {bu.name} ({bu.code})
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+          {quickSelectedBaseUnit > 0 && (
+            <Row gutter={12}>
+              <Col span={10}>
+                <Form.Item
+                  name="operator"
+                  label="Operator *"
+                  rules={[{ required: true }]}
+                >
+                  <Select>
+                    <Option value="*">* (Multiply)</Option>
+                    <Option value="/">/ (Divide)</Option>
+                    <Option value="+">+ (Add)</Option>
+                    <Option value="-">- (Subtract)</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={14}>
+                <Form.Item
+                  name="operation_value"
+                  label="Operation Value *"
+                  rules={[{ required: true, message: 'Required' }]}
+                >
+                  <Input placeholder="e.g. 24, 12, 1000" />
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
+        </Form>
       </Modal>
     </div>
   );

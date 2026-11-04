@@ -40,6 +40,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -379,72 +380,13 @@ export default function BpasQuantityAdjustmentsWorkspace({ embedded = false }) {
           }
         ];
 
-        return (
-          <Dropdown menu={{ items: menuItems }} trigger={['click']}>
-            <Button size="small" icon={<MoreOutlined />}>
-              Actions
-            </Button>
-          </Dropdown>
-        );
+        return <TableActionDropdown items={menuItems} />;
       }
     }
   ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* 1. Top KPI Metrics */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}>
-            <Statistic
-              title={<span style={{ color: adminTheme?.subtext || '#64748b' }}>Total Adjustments</span>}
-              value={stats.total_adjustments || records.length || 0}
-              prefix={<ToolOutlined style={{ color: '#2563eb' }} />}
-              valueStyle={{ fontWeight: 800, color: adminTheme?.text || '#0f172a' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}>
-            <Statistic
-              title={<span style={{ color: adminTheme?.subtext || '#64748b' }}>Total Added Quantity</span>}
-              value={stats.total_added_qty || 0}
-              prefix={<ArrowUpOutlined style={{ color: '#16a34a' }} />}
-              valueStyle={{ fontWeight: 800, color: '#16a34a' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}>
-            <Statistic
-              title={<span style={{ color: adminTheme?.subtext || '#64748b' }}>Total Subtracted Quantity</span>}
-              value={stats.total_subtracted_qty || 0}
-              prefix={<ArrowDownOutlined style={{ color: '#dc2626' }} />}
-              valueStyle={{ fontWeight: 800, color: '#dc2626' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ background: adminTheme?.card || '#ffffff', borderColor: adminTheme?.border || '#e2e8f0' }}>
-            <Statistic
-              title={<span style={{ color: adminTheme?.subtext || '#64748b' }}>Net Quantity Difference</span>}
-              value={(Number(stats.total_added_qty) || 0) - (Number(stats.total_subtracted_qty) || 0)}
-              prefix={<SwapOutlined style={{ color: '#6366f1' }} />}
-              valueStyle={{
-                fontWeight: 800,
-                color:
-                  (Number(stats.total_added_qty) || 0) - (Number(stats.total_subtracted_qty) || 0) >= 0
-                    ? '#16a34a'
-                    : '#dc2626'
-              }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
       {/* 2. Filter & Toolbar */}
       <Card
         size="small"

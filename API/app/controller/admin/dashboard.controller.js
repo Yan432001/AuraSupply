@@ -41,7 +41,10 @@ exports.getDashboardStats = async (req, res) => {
     const [purchaseStats] = await db.query(`
       SELECT 
         COUNT(*) AS total_purchases,
-        COALESCE(SUM(grand_total), 0) AS total_purchase_spend
+        COALESCE(SUM(grand_total), 0) AS total_purchase_spend,
+        COALESCE(SUM(paid), 0) AS total_purchase_paid,
+        COALESCE(SUM(grand_total - COALESCE(paid, 0)), 0) AS total_purchase_balance,
+        SUM(CASE WHEN status = 'received' THEN 1 ELSE 0 END) AS received_purchases
       FROM aura_purchases
     `);
 
@@ -108,6 +111,9 @@ exports.getDashboardStats = async (req, res) => {
         totalSuppliers: parseInt(c.total_suppliers) || 0,
         totalPurchases: parseInt(pur.total_purchases) || 0,
         totalPurchaseSpend: parseFloat(pur.total_purchase_spend) || 0,
+        totalPurchasePaid: parseFloat(pur.total_purchase_paid) || 0,
+        totalPurchaseBalance: parseFloat(pur.total_purchase_balance) || 0,
+        receivedPurchases: parseInt(pur.received_purchases) || 0,
         totalUsers: parseInt(u.total_users) || 0,
         activeUsers: parseInt(u.active_users) || 0
       },

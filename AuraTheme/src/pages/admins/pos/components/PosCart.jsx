@@ -79,9 +79,13 @@ const PosCart = ({
   thbExchangeRate = 36.5,
   themeMode,
   adminTheme,
+  customSettings,
   t,
 }) => {
-  const isDark = false; // Always enforce clean, crisp website light theme in POS
+  const isDark = Boolean(adminTheme?.isDark || themeMode === 'dark');
+  const primaryColor = adminTheme?.colorPrimary || adminTheme?.primary || '#2F6FED';
+  const borderRadius = customSettings?.borderRadius ?? 10;
+  const cardBorderRadius = customSettings?.borderRadius ? Math.max(8, customSettings.borderRadius) : 14;
   const totalKHR = Math.round(grandTotal * khrExchangeRate);
   const totalTHB = (grandTotal * thbExchangeRate).toFixed(2);
   const isOrderDiscountPercent = orderDiscountType === 'percent' || orderDiscountType === 'percentage';
@@ -93,16 +97,20 @@ const PosCart = ({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        background: isDark ? '#0f172a' : '#ffffff',
-        borderLeft: `1px solid ${isDark ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0'}`,
+        background: adminTheme?.isTransparent
+          ? (adminTheme?.card || (isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.8)'))
+          : (isDark ? (adminTheme?.cardBg || '#0f172a') : '#ffffff'),
+        backdropFilter: adminTheme?.isTransparent ? `blur(${adminTheme?.glassBlur || 16}px)` : 'none',
+        WebkitBackdropFilter: adminTheme?.isTransparent ? `blur(${adminTheme?.glassBlur || 16}px)` : 'none',
+        borderLeft: `1px solid ${adminTheme?.border || (isDark ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0')}`,
       }}
     >
       {/* 1. TOP CONTROLS: Customer & Table / Order Type */}
       <div
         style={{
           padding: '12px 14px',
-          borderBottom: `1px solid ${isDark ? 'rgba(51, 65, 85, 0.4)' : '#f1f5f9'}`,
-          background: isDark ? 'rgba(15, 23, 42, 0.6)' : '#fafafa',
+          borderBottom: `1px solid ${adminTheme?.border || (isDark ? 'rgba(51, 65, 85, 0.4)' : '#f1f5f9')}`,
+          background: isDark ? 'rgba(15, 23, 42, 0.5)' : (adminTheme?.isTransparent ? 'rgba(255, 255, 255, 0.4)' : '#fafafa'),
         }}
       >
         {/* Customer Selector & Quick Add */}
@@ -129,8 +137,9 @@ const PosCart = ({
               icon={<UserAddOutlined />}
               onClick={onOpenQuickAddCustomer}
               style={{
-                borderRadius: 8,
-                background: '#2F6FED',
+                borderRadius: Math.min(8, borderRadius),
+                background: primaryColor,
+                borderColor: primaryColor,
                 height: 36,
                 padding: '0 12px',
               }}
@@ -207,9 +216,9 @@ const PosCart = ({
                   borderRadius: 6,
                   fontWeight: 700,
                   fontSize: 11,
-                  background: '#fffaf5',
-                  borderColor: '#fed7aa',
-                  color: '#b45309',
+                  background: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffaf5',
+                  borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : '#fed7aa',
+                  color: isDark ? '#fbbf24' : '#b45309',
                   padding: '0 8px',
                 }}
               >
@@ -244,16 +253,16 @@ const PosCart = ({
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
-                    background: '#eff6ff',
-                    border: '1px solid #bfdbfe',
-                    color: '#1d4ed8',
+                    background: isDark ? 'rgba(255, 255, 255, 0.08)' : `${primaryColor}14`,
+                    border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.15)' : `${primaryColor}40`}`,
+                    color: isDark ? '#93c5fd' : primaryColor,
                     whiteSpace: 'nowrap',
-                    boxShadow: '0 1px 3px rgba(47, 111, 237, 0.08)',
+                    boxShadow: `0 1px 3px ${primaryColor}22`,
                   }}
                 >
-                  <ClockCircleOutlined style={{ fontSize: 11, color: '#2F6FED' }} />
+                  <ClockCircleOutlined style={{ fontSize: 11, color: primaryColor }} />
                   <span>{h.reference || `Hold #${idx + 1}`}</span>
-                  <span style={{ fontSize: 10.5, fontWeight: 800, color: '#2F6FED' }}>(${parseFloat(h.total || 0).toFixed(2)})</span>
+                  <span style={{ fontSize: 10.5, fontWeight: 800, color: primaryColor }}>(${parseFloat(h.total || 0).toFixed(2)})</span>
                 </div>
               ))
             ) : (
@@ -632,7 +641,7 @@ const PosCart = ({
                                 }
                               }}
                               style={{
-                                background: !isItemPercent ? '#2F6FED' : 'transparent',
+                                background: !isItemPercent ? primaryColor : 'transparent',
                                 color: !isItemPercent ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
                                 border: 'none',
                                 borderRadius: 4,
@@ -739,7 +748,7 @@ const PosCart = ({
                                 </div>
 
                                 {/* Fixed Dollar Presets */}
-                                <div style={{ fontSize: 10, fontWeight: 700, color: '#2F6FED', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: primaryColor, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                   Fixed Dollar ($)
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, marginBottom: 10 }}>
@@ -763,9 +772,9 @@ const PosCart = ({
                                         fontSize: 11,
                                         fontWeight: 700,
                                         borderRadius: 6,
-                                        border: rawDiscountVal === fix && !isItemPercent ? '1.5px solid #2F6FED' : '1px solid #e2e8f0',
-                                        background: rawDiscountVal === fix && !isItemPercent ? '#eff6ff' : '#f8fafc',
-                                        color: rawDiscountVal === fix && !isItemPercent ? '#2F6FED' : '#334155',
+                                        border: rawDiscountVal === fix && !isItemPercent ? `1.5px solid ${primaryColor}` : `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+                                        background: rawDiscountVal === fix && !isItemPercent ? (isDark ? 'rgba(255, 255, 255, 0.12)' : `${primaryColor}15`) : (isDark ? '#1e293b' : '#f8fafc'),
+                                        color: rawDiscountVal === fix && !isItemPercent ? primaryColor : (isDark ? '#cbd5e1' : '#334155'),
                                       }}
                                     >
                                       ${fix}
@@ -928,7 +937,7 @@ const PosCart = ({
                             ${(unitPrice * qty).toFixed(2)}
                           </div>
                         )}
-                        <div style={{ fontSize: 15.5, fontWeight: 900, color: '#2F6FED', lineHeight: 1.2 }}>
+                        <div style={{ fontSize: 15.5, fontWeight: 900, color: primaryColor, lineHeight: 1.2 }}>
                           ${lineTotal.toFixed(2)}
                         </div>
                       </div>
@@ -945,7 +954,7 @@ const PosCart = ({
       <div
         style={{
           padding: '12px 14px',
-          borderTop: `1px solid ${isDark ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0'}`,
+          borderTop: `1px solid ${adminTheme?.border || (isDark ? 'rgba(51, 65, 85, 0.4)' : '#e2e8f0')}`,
           background: isDark ? 'rgba(15, 23, 42, 0.8)' : '#f8fafc',
         }}
       >
@@ -957,7 +966,7 @@ const PosCart = ({
             icon={<PercentageOutlined />}
             onClick={onOpenOrderDiscount}
             style={{
-              borderRadius: 8,
+              borderRadius: Math.min(8, borderRadius),
               fontSize: 11,
               fontWeight: 700,
               height: 30,
@@ -979,13 +988,13 @@ const PosCart = ({
             icon={<TagOutlined />}
             onClick={onOpenOrderTax}
             style={{
-              borderRadius: 8,
+              borderRadius: Math.min(8, borderRadius),
               fontSize: 11.5,
               fontWeight: 700,
               height: 30,
-              color: orderTaxRate > 0 ? '#2F6FED' : undefined,
-              borderColor: orderTaxRate > 0 ? 'rgba(47, 111, 237, 0.4)' : undefined,
-              background: orderTaxRate > 0 ? 'rgba(47, 111, 237, 0.08)' : undefined,
+              color: orderTaxRate > 0 ? primaryColor : undefined,
+              borderColor: orderTaxRate > 0 ? `${primaryColor}66` : undefined,
+              background: orderTaxRate > 0 ? `${primaryColor}15` : undefined,
             }}
           >
             {orderTaxRate > 0 ? `Tax ${orderTaxRate}%` : 'Order Tax'}
@@ -1076,9 +1085,11 @@ const PosCart = ({
         {/* High-Contrast Creative Total Payable Card */}
         <div
           style={{
-            background: isDark ? 'rgba(30, 41, 59, 0.7)' : 'linear-gradient(135deg, rgba(47, 111, 237, 0.06) 0%, rgba(91, 141, 239, 0.06) 100%)',
-            border: `1.5px solid ${isDark ? '#334155' : 'rgba(47, 111, 237, 0.2)'}`,
-            borderRadius: 14,
+            background: isDark
+              ? 'rgba(30, 41, 59, 0.7)'
+              : `linear-gradient(135deg, ${primaryColor}12 0%, ${primaryColor}06 100%)`,
+            border: `1.5px solid ${isDark ? '#334155' : `${primaryColor}33`}`,
+            borderRadius: cardBorderRadius,
             padding: '10px 14px',
             marginBottom: 10,
             display: 'flex',
@@ -1087,7 +1098,7 @@ const PosCart = ({
           }}
         >
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#2F6FED', letterSpacing: '0.6px' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: primaryColor, letterSpacing: '0.6px' }}>
               Total Payable
             </div>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#059669', marginTop: 2 }}>
@@ -1095,7 +1106,7 @@ const PosCart = ({
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 27, fontWeight: 900, color: '#2F6FED', lineHeight: 1 }}>
+            <div style={{ fontSize: 27, fontWeight: 900, color: primaryColor, lineHeight: 1 }}>
               ${grandTotal.toFixed(2)}
             </div>
           </div>
@@ -1152,14 +1163,15 @@ const PosCart = ({
           className="pos-checkout-btn pos-press"
           style={{
             height: 52,
-            borderRadius: 14,
+            borderRadius: cardBorderRadius,
             fontSize: 16,
             fontWeight: 800,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 10,
-            boxShadow: cart.length > 0 ? '0 8px 24px rgba(47, 111, 237, 0.35)' : 'none',
+            background: cart.length > 0 ? `linear-gradient(135deg, ${primaryColor} 0%, #1D4ED8 100%)` : undefined,
+            boxShadow: cart.length > 0 ? `0 8px 24px ${primaryColor}55` : 'none',
             border: 'none',
             cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
           }}

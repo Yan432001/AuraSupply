@@ -13,9 +13,19 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useAdminTheme } from '../../../hooks/useAdminTheme';
 
 const PosKitchenDisplay = () => {
   const navigate = useNavigate();
+  const adminTheme = useAdminTheme();
+  const isDark = Boolean(adminTheme?.isDark);
+  const primaryColor = adminTheme?.colorPrimary || '#2563eb';
+  const pageBg = adminTheme?.pageBackground || (isDark ? '#0b1120' : '#f8fafc');
+  const cardBg = adminTheme?.card || (isDark ? '#1e293b' : '#ffffff');
+  const borderColor = adminTheme?.border || (isDark ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0');
+  const textColor = adminTheme?.text || (isDark ? '#f8fafc' : '#0f172a');
+  const subtextColor = adminTheme?.subtext || (isDark ? '#94a3b8' : '#64748b');
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -134,10 +144,10 @@ const PosKitchenDisplay = () => {
     <div
       style={{
         minHeight: '100vh',
-        background: '#f8fafc',
+        background: pageBg,
         fontFamily: "'Segoe UI', Aptos, -apple-system, sans-serif",
         padding: '20px 24px',
-        color: '#1e293b',
+        color: textColor,
       }}
     >
       {/* Top Navigation & Controls Bar */}
@@ -147,11 +157,11 @@ const PosKitchenDisplay = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 16,
-          background: '#ffffff',
+          background: cardBg,
           padding: '12px 20px',
           borderRadius: 12,
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+          border: `1px solid ${borderColor}`,
+          boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.03)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -162,8 +172,8 @@ const PosKitchenDisplay = () => {
           >
             Back to POS
           </Button>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>
-            Active Tickets: <span style={{ color: '#2563eb', fontWeight: 900 }}>{filteredOrders.length}</span>
+          <div style={{ fontSize: 13, fontWeight: 700, color: subtextColor }}>
+            Active Tickets: <span style={{ color: primaryColor, fontWeight: 900 }}>{filteredOrders.length}</span>
           </div>
         </div>
 
@@ -185,9 +195,9 @@ const PosKitchenDisplay = () => {
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: 'pointer',
-                border: selectedStation === st.id ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
-                background: selectedStation === st.id ? '#eff6ff' : '#ffffff',
-                color: selectedStation === st.id ? '#1d4ed8' : '#475569',
+                border: selectedStation === st.id ? `1.5px solid ${primaryColor}` : `1px solid ${isDark ? '#334155' : '#cbd5e1'}`,
+                background: selectedStation === st.id ? (isDark ? 'rgba(37, 99, 235, 0.2)' : '#eff6ff') : cardBg,
+                color: selectedStation === st.id ? (isDark ? '#60a5fa' : '#1d4ed8') : subtextColor,
                 transition: 'all 0.15s ease',
               }}
             >
@@ -227,13 +237,13 @@ const PosKitchenDisplay = () => {
             fontSize: 28,
             fontWeight: 800,
             margin: 0,
-            color: '#0f172a',
+            color: textColor,
             letterSpacing: 0.5,
           }}
         >
           Kitchen Display
         </h1>
-        <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+        <div style={{ fontSize: 12, color: subtextColor, marginTop: 4 }}>
           Real-time order tickets queue for chefs and bartenders
         </div>
       </div>
@@ -242,7 +252,7 @@ const PosKitchenDisplay = () => {
       {loading && orders.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
           <Spin size="large" />
-          <div style={{ marginTop: 12, color: '#64748b', fontWeight: 600 }}>Loading active kitchen orders...</div>
+          <div style={{ marginTop: 12, color: subtextColor, fontWeight: 600 }}>Loading active kitchen orders...</div>
         </div>
       ) : filteredOrders.length === 0 ? (
         <div
@@ -250,16 +260,16 @@ const PosKitchenDisplay = () => {
             maxWidth: 480,
             margin: '60px auto',
             textAlign: 'center',
-            background: '#ffffff',
+            background: cardBg,
             padding: '40px 30px',
             borderRadius: 16,
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+            border: `1px solid ${borderColor}`,
+            boxShadow: isDark ? '0 4px 16px rgba(0,0,0,0.3)' : '0 4px 16px rgba(0,0,0,0.03)',
           }}
         >
           <div style={{ fontSize: 50, marginBottom: 12 }}>👨‍🍳</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>All Clear! No Pending Orders</div>
-          <div style={{ fontSize: 13, color: '#64748b', marginTop: 6 }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: textColor }}>All Clear! No Pending Orders</div>
+          <div style={{ fontSize: 13, color: subtextColor, marginTop: 6 }}>
             When cashiers hold or send orders to the kitchen, tickets will immediately appear here.
           </div>
         </div>
@@ -298,13 +308,14 @@ const PosKitchenDisplay = () => {
               <div
                 key={order.id || orderIdx}
                 style={{
-                  border: '1px solid #000000',
-                  borderRadius: 8,
-                  background: '#ffffff',
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: 12,
+                  background: cardBg,
                   padding: 16,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                  boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.06)',
                   position: 'relative',
                   transition: 'all 0.15s ease',
+                  color: textColor,
                 }}
               >
                 {/* Order Header Matching Image 3: Order : #X in red, Date, Customer, Raised By */}
@@ -321,7 +332,7 @@ const PosKitchenDisplay = () => {
                   Order : #{order.refer || order.id}
                 </h2>
 
-                <div style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 12, color: '#1e293b' }}>
+                <div style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 12, color: textColor }}>
                   <div>
                     <strong>Date :</strong> {dateStr}
                   </div>

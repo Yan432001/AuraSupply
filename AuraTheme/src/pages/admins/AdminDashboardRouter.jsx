@@ -9,6 +9,10 @@ import AdminSimpleDataManager from './AdminSimpleDataManager';
 import AdminProductsManager from './AdminProductsManager';
 import BpasInventoryWorkspace from './BpasInventoryWorkspace';
 import BpasPurchasesWorkspace from './BpasPurchasesWorkspace';
+import BpasPurchaseRequestsWorkspace from './BpasPurchaseRequestsWorkspace';
+import BpasAddPurchaseRequestPage from './BpasAddPurchaseRequestPage';
+import BpasPurchaseOrdersWorkspace from './BpasPurchaseOrdersWorkspace';
+import BpasAddPurchaseOrderPage from './BpasAddPurchaseOrderPage';
 import AdminModulesManager from './AdminModulesManager';
 import AdminBranchesManager from './AdminBranchesManager';
 import AdminFrontEndManager from './AdminFrontEndManager';
@@ -21,6 +25,8 @@ import { getModuleByKey } from '../../data/erpModules';
 import OrdersManagement from './OrdersManagement';
 import SalesListPage from './sales/SalesListPage';
 import AddSalePage from './sales/AddSalePage';
+import SalesOrdersListPage from './sales/SalesOrdersListPage';
+import AddSaleOrderPage from './sales/AddSaleOrderPage';
 import CustomersManagement from './CustomersManagement';
 import UserManagement from './UserManagement';
 import AdminAccessControlManager from './AdminAccessControlManager';
@@ -56,7 +62,7 @@ const AdminDashboardRouter = () => {
     menuKey === 'branches' ||
     menuKey === 'billers' ||
     menuKey === 'shops' ||
-    (moduleKey === 'settings' && (menuKey === 'branches' || menuKey === 'billers' || menuKey === 'warehouses'))
+    (moduleKey === 'settings' && (menuKey === 'branches' || menuKey === 'billers'))
   ) {
     return <AdminBranchesManager />;
   }
@@ -170,6 +176,36 @@ const AdminDashboardRouter = () => {
     return <BpasInventoryWorkspace />;
   }
 
+  // Purchase Requests Requisitions
+  if (
+    menuKey === 'purchase-requests' ||
+    menuKey === 'purchase_requests'
+  ) {
+    return <BpasPurchaseRequestsWorkspace />;
+  }
+  if (
+    menuKey === 'add-purchase-request' ||
+    menuKey === 'add_purchase_request'
+  ) {
+    return <BpasAddPurchaseRequestPage />;
+  }
+
+  // Purchase Orders
+  if (
+    menuKey === 'purchase-orders' ||
+    menuKey === 'purchase_orders' ||
+    menuKey === 'purchases-orders' ||
+    menuKey === 'purchases_orders'
+  ) {
+    return <BpasPurchaseOrdersWorkspace />;
+  }
+  if (
+    menuKey === 'add-purchase-order' ||
+    menuKey === 'add_purchase_order'
+  ) {
+    return <BpasAddPurchaseOrderPage />;
+  }
+
   // Purchases & Procurement (AURA_v1 BPAS Procurement UI)
   if (
     moduleKey === 'procurement' ||
@@ -177,8 +213,6 @@ const AdminDashboardRouter = () => {
     menuKey === 'purchases' ||
     menuKey === 'purchases-list' ||
     menuKey === 'add-purchase' ||
-    menuKey === 'purchase-orders' ||
-    menuKey === 'purchase-requests' ||
     menuKey === 'report-purchases' ||
     menuKey === 'report-daily-purchases'
   ) {
@@ -244,13 +278,20 @@ const AdminDashboardRouter = () => {
     return <AddSalePage />;
   }
 
+  // Sales Orders (AURA_v1 sales_order)
+  if (menuKey === 'add-sale-order' || menuKey === 'create-sale-order') {
+    return <AddSaleOrderPage />;
+  }
+  if (menuKey === 'sale-orders-list' || menuKey === 'sales-orders' || menuKey === 'sales_orders' || menuKey === 'list-sales-order' || menuKey === 'list_sales_order') {
+    return <SalesOrdersListPage />;
+  }
+
   // Sales Orders, Commercial Invoices & POS Sales
   if (
     moduleKey === 'sales' ||
     menuKey === 'sales' ||
     menuKey === 'sales-list' ||
     menuKey === 'list-sales' ||
-    menuKey === 'sales-orders' ||
     menuKey === 'sales-invoices' ||
     menuKey === 'pos-sales' ||
     menuKey === 'list_pos' ||

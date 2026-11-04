@@ -46,6 +46,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -359,24 +360,39 @@ export default function AdminFrontEndController({ embedded = false }) {
     {
       title: 'Actions',
       key: 'actions',
-      width: 120,
-      render: (_, record) => (
-        <Space size={6}>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleOpenEditProduct(record)}
-          />
-          <Popconfirm
-            title="Delete this product from store?"
-            onConfirm={() => handleDeleteProduct(record.id)}
-            okText="Yes"
-            cancelText="No"
-          >
-            <Button size="small" danger icon={<CloseCircleFilled />} />
-          </Popconfirm>
-        </Space>
-      ),
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: 'Edit Product',
+            onClick: () => handleOpenEditProduct(record),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <CloseCircleFilled style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: 'Delete Product',
+            onClick: () => {
+              Modal.confirm({
+                title: 'Delete this product from store?',
+                content: `Product: ${record.name || record.id}`,
+                okText: 'Yes, Delete',
+                okType: 'danger',
+                cancelText: 'Cancel',
+                onOk: () => handleDeleteProduct(record.id),
+              });
+            },
+          },
+        ];
+
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 

@@ -61,6 +61,7 @@ import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { exportSingleOrderPdf, exportOrderHistoryPdf } from '../../utils/orderPdfExporter';
 import OrderReceiptModal from '../../components/common/OrderReceiptModal';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 
 const { Text, Title } = Typography;
 
@@ -678,45 +679,39 @@ const OrdersManagement = () => {
     {
       title: t('actions', 'Actions'),
       key: 'action',
-      width: 195,
-      render: (_, record) => (
-        <Space size={4}>
-          <Button
-            type="link"
-            size="small"
-            icon={<PrinterOutlined style={{ color: '#0d9488' }} />}
-            onClick={() => setReceiptModalOrder(record)}
-            style={{ fontWeight: 600, color: '#0d9488' }}
-            title="Open Order Receipt (Print-Friendly Breakdown)"
-          >
-            {t('receipt', 'Receipt')}
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => {
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'view',
+            icon: <EyeOutlined />,
+            label: t('view', 'View Details'),
+            onClick: () => {
               setSelectedOrder(record);
               setDetailModalOpen(true);
-            }}
-          >
-            {t('view', 'View')}
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<FilePdfOutlined style={{ color: '#ef4444' }} />}
-            onClick={() => {
+            },
+          },
+          {
+            key: 'receipt',
+            icon: <PrinterOutlined style={{ color: '#0d9488' }} />,
+            label: t('receipt', 'Print Receipt'),
+            onClick: () => setReceiptModalOrder(record),
+          },
+          {
+            key: 'pdf',
+            icon: <FilePdfOutlined style={{ color: '#ef4444' }} />,
+            label: 'Download PDF',
+            onClick: () => {
               exportSingleOrderPdf(record);
               message.success(`Exported PDF for ${record.referenceNo || record.id}`);
-            }}
-            title="Download Order PDF Summary"
-          >
-            PDF
-          </Button>
-        </Space>
-      )
-    }
+            },
+          },
+        ];
+
+        return <TableActionDropdown items={actionItems} />;
+      },
+    },
   ];
 
   return (

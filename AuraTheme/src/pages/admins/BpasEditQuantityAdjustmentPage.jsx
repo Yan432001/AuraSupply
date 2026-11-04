@@ -29,18 +29,21 @@ import {
   DeleteOutlined,
   WarningOutlined,
   InfoCircleOutlined,
-  CheckCircleOutlined
+  CheckCircleOutlined,
+  EditOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import BpasItemEditModal from '../../components/common/BpasItemEditModal';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, onSuccess }) {
   const adminTheme = useAdminTheme();
+  const isDark = adminTheme?.isDark;
   const [form] = Form.useForm();
 
   // State
@@ -48,6 +51,8 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
   const [submitting, setSubmitting] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
   const [billers, setBillers] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [taxRates, setTaxRates] = useState([]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(1);
   const [adjustmentRecord, setAdjustmentRecord] = useState(null);
 
@@ -56,6 +61,10 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
   const [searchingProducts, setSearchingProducts] = useState(false);
   const [productOptions, setProductOptions] = useState([]);
   const [items, setItems] = useState([]);
+
+  // Item Edit Modal (Popup matching Image 2)
+  const [editingModalItem, setEditingModalItem] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // 1. Fetch Metadata and Adjustment Data
   useEffect(() => {
@@ -70,6 +79,8 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
         if (metaRes.data?.success) {
           setWarehouses(metaRes.data.data.warehouses || []);
           setBillers(metaRes.data.data.billers || []);
+          setUnits(metaRes.data.data.units || []);
+          setTaxRates(metaRes.data.data.taxRates || []);
         }
 
         if (adjRes.data?.success) {
@@ -92,14 +103,22 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
             product_id: i.product_id,
             product_code: i.product_code,
             product_name: i.product_name,
+            unit_id: i.unit_id || 1,
+            base_unit_id: i.base_unit_id || i.unit_id || 1,
             unit_name: i.unit_name || 'Unit',
+            unit_code: i.product_unit_code || i.unit_name || 'Unit',
+            unit_operator: i.unit_operator || null,
+            unit_operation_value: i.unit_operation_value || null,
             unit_cost: Number(i.unit_cost) || 0,
+            cost: Number(i.unit_cost) || 0,
             option_id: i.option_id,
             variant_name: i.variant_name,
             variants: i.variants || [],
             warehouse_qoh: Number(i.warehouse_qoh) || 0,
             type: i.type || 'addition',
             quantity: Number(i.quantity) || 1,
+            unit_quantity: Number(i.unit_quantity != null ? i.unit_quantity : i.quantity) || 1,
+            description: i.description || '',
             serial_no: i.serial_no || '',
             expiry: i.expiry ? dayjs(i.expiry) : null
           }));
@@ -180,13 +199,23 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
       product_id: prod.id,
       product_code: prod.code,
       product_name: prod.name,
+      unit_id: prod.unit_id || 1,
+      base_unit_id: prod.base_unit_id || prod.unit_id || 1,
       unit_name: prod.unit_name || 'Unit',
+      unit_code: prod.unit_code || 'Unit',
+      unit_operator: prod.unit_operator || null,
+      unit_operation_value: prod.unit_operation_value || null,
       unit_cost: Number(prod.cost) || 0,
+      cost: Number(prod.cost) || 0,
       variants: prod.variants || [],
       option_id: defaultVariant ? defaultVariant.id : null,
       warehouse_qoh: initialQoh,
       type: 'addition',
       quantity: 1,
+      unit_quantity: 1,
+      discount: '0',
+      tax_rate_id: prod.tax_rate_id || null,
+      description: '',
       serial_no: '',
       expiry: null
     };
@@ -196,12 +225,50 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
     setProductOptions([]);
   };
 
+  // Open Edit Modal for a row item (Image 2)
+  const handleOpenEditModal = (item) => {
+    setEditingModalItem(item);
+    setIsEditModalOpen(true);
+  };
+
+  // Save changes from Edit Modal
+  const handleSaveModalItem = (updatedItem) => {
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.key !== updatedItem.key) return i;
+        const merged = { ...i, ...updatedItem };
+        if (updatedItem.option_id && updatedItem.variants?.length > 0) {
+          const selectedVar = updatedItem.variants.find((v) => v.id === updatedItem.option_id);
+          if (selectedVar) {
+            merged.warehouse_qoh = Number(selectedVar.variant_warehouse_stock || 0);
+          }
+        }
+        return merged;
+      })
+    );
+    message.success(`Updated item "${updatedItem.product_name}"`);
+  };
+
   // 4. Update Item
   const handleUpdateItem = (key, field, val) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.key !== key) return item;
         const updated = { ...item, [field]: val };
+
+        // If unit_quantity or quantity changed, recalculate base quantity
+        if (field === 'unit_quantity' || field === 'quantity') {
+          const uQty = Number(val) || 0;
+          updated.unit_quantity = uQty;
+          let bQty = uQty;
+          if (item.unit_operator && item.unit_operation_value) {
+            const opVal = parseFloat(item.unit_operation_value) || 1;
+            if (item.unit_operator === '*') bQty = uQty * opVal;
+            else if (item.unit_operator === '/') bQty = opVal !== 0 ? uQty / opVal : uQty;
+          }
+          updated.quantity = bQty;
+        }
+
         if (field === 'option_id' && item.variants) {
           const selectedVar = item.variants.find((v) => v.id === val);
           if (selectedVar) {
@@ -236,11 +303,19 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
         items: items.map((i) => ({
           product_id: i.product_id,
           option_id: i.option_id || null,
+          unit_id: i.unit_id || i.product_unit_id || null,
+          product_unit_id: i.unit_id || i.product_unit_id || null,
+          unit_name: i.unit_name || i.product_unit_code || 'Unit',
+          product_unit_code: i.unit_name || i.product_unit_code || 'Unit',
+          unit_operator: i.unit_operator || null,
+          unit_operation_value: i.unit_operation_value || null,
+          unit_quantity: Number(i.unit_quantity != null ? i.unit_quantity : i.quantity),
           quantity: Number(i.quantity),
           type: i.type,
           serial_no: i.serial_no || null,
           expiry: i.expiry ? dayjs(i.expiry).format('YYYY-MM-DD') : null,
-          unit_cost: Number(i.unit_cost)
+          unit_cost: Number(i.unit_cost),
+          description: i.description || null
         }))
       };
 
@@ -266,21 +341,67 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
       render: (_, __, idx) => idx + 1
     },
     {
-      title: 'Product',
+      title: 'Product (Code - Name)',
       key: 'product',
-      width: 260,
+      width: 240,
       render: (_, r) => (
         <div>
-          <strong style={{ color: '#1e293b' }}>{r.product_code}</strong> - {r.product_name}
-          <div style={{ fontSize: 12, color: '#64748b' }}>Unit: {r.unit_name}</div>
+          <strong style={{ color: isDark ? '#f8fafc' : '#1e293b' }}>{r.product_code}</strong> - {r.product_name}
         </div>
+      )
+    },
+    {
+      title: 'Description',
+      key: 'description',
+      width: 170,
+      render: (_, r) => (
+        <Space align="center" size={6}>
+          <Tooltip title="Edit Item Details (Popup Image 2)">
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined style={{ color: '#2563eb', fontSize: 14 }} />}
+              onClick={() => handleOpenEditModal(r)}
+              style={{
+                border: isDark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid #cbd5e1',
+                borderRadius: 4,
+                width: 26,
+                height: 26,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: isDark ? 'rgba(255, 255, 255, 0.08)' : '#f8fafc'
+              }}
+            />
+          </Tooltip>
+          <span style={{ fontSize: 12, color: r.description ? (isDark ? '#cbd5e1' : '#334155') : '#94a3b8' }}>
+            {r.description || '—'}
+          </span>
+        </Space>
+      )
+    },
+    {
+      title: 'Unit',
+      key: 'unit',
+      width: 110,
+      render: (_, r) => (
+        <Tooltip title="Click to change unit in edit modal">
+          <Tag
+            color="geekblue"
+            style={{ cursor: 'pointer', fontWeight: 600, fontSize: 12 }}
+            onClick={() => handleOpenEditModal(r)}
+          >
+            {r.unit_name || 'Unit'}
+            {r.unit_operator && r.unit_operation_value ? ` (${r.unit_operator}${r.unit_operation_value})` : ''}
+          </Tag>
+        </Tooltip>
       )
     },
     {
       title: 'Current QOH',
       dataIndex: 'warehouse_qoh',
       key: 'warehouse_qoh',
-      width: 110,
+      width: 105,
       align: 'right',
       render: (qoh) => (
         <Tag color={Number(qoh) > 0 ? 'blue' : 'default'} style={{ fontWeight: 700 }}>
@@ -289,9 +410,9 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
       )
     },
     {
-      title: 'Variant',
+      title: 'Variant Option',
       key: 'option_id',
-      width: 170,
+      width: 160,
       render: (_, r) => {
         if (!r.variants || r.variants.length === 0) {
           return <span style={{ color: '#94a3b8' }}>{r.variant_name || 'n/a'}</span>;
@@ -315,7 +436,7 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
     {
       title: 'Adjustment Type',
       key: 'type',
-      width: 160,
+      width: 155,
       render: (_, r) => (
         <Select
           size="small"
@@ -335,22 +456,41 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
     {
       title: 'Adjustment Qty',
       key: 'quantity',
-      width: 130,
-      render: (_, r) => (
-        <InputNumber
-          size="small"
-          min={0.01}
-          step={1}
-          style={{ width: '100%' }}
-          value={r.quantity}
-          onChange={(val) => handleUpdateItem(r.key, 'quantity', val)}
-        />
-      )
+      width: 140,
+      render: (_, r) => {
+        const isSub = r.type === 'subtraction';
+        const isExceed = isSub && Number(r.quantity) > Number(r.warehouse_qoh);
+        const displayVal = r.unit_quantity != null ? r.unit_quantity : r.quantity;
+        const hasConversion = r.unit_operator && r.unit_operation_value;
+
+        return (
+          <div>
+            <InputNumber
+              size="small"
+              min={0.01}
+              step={1}
+              style={{ width: '100%', borderColor: isExceed ? '#ef4444' : undefined }}
+              value={displayVal}
+              onChange={(val) => handleUpdateItem(r.key, 'unit_quantity', val)}
+            />
+            {hasConversion && (
+              <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>
+                = {r.quantity} Base Units
+              </div>
+            )}
+            {isExceed && (
+              <div style={{ color: '#ef4444', fontSize: 10, fontWeight: 700, marginTop: 2 }}>
+                <WarningOutlined /> Exceeds QOH ({r.warehouse_qoh})
+              </div>
+            )}
+          </div>
+        );
+      }
     },
     {
       title: 'Serial No',
       key: 'serial_no',
-      width: 140,
+      width: 130,
       render: (_, r) => (
         <Input
           size="small"
@@ -363,7 +503,7 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
     {
       title: 'Expiry',
       key: 'expiry',
-      width: 130,
+      width: 125,
       render: (_, r) => (
         <DatePicker
           size="small"
@@ -376,7 +516,7 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
     {
       title: 'Action',
       key: 'action',
-      width: 60,
+      width: 55,
       align: 'center',
       render: (_, r) => (
         <Button
@@ -474,9 +614,16 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
           </Row>
 
           {/* Barcode Search Bar */}
-          <div style={{ margin: '14px 0 20px', background: '#f8fafc', padding: '16px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-            <Text strong style={{ fontSize: 13, color: '#334155', display: 'block', marginBottom: 8 }}>
-              <BarcodeOutlined style={{ marginRight: 6, color: '#2563eb' }} />
+          <div style={{
+            margin: '14px 0 20px',
+            background: isDark ? 'rgba(30, 41, 59, 0.85)' : '#f8fafc',
+            padding: '16px',
+            borderRadius: 8,
+            border: isDark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid #e2e8f0',
+            boxShadow: isDark ? '0 2px 8px rgba(0, 0, 0, 0.3)' : 'none'
+          }}>
+            <Text strong style={{ fontSize: 13, color: isDark ? '#e2e8f0' : '#334155', display: 'block', marginBottom: 8 }}>
+              <BarcodeOutlined style={{ marginRight: 6, color: isDark ? '#a78bfa' : '#2563eb' }} />
               Add More Products (Scan Barcode or Search):
             </Text>
             <AutoComplete
@@ -532,6 +679,17 @@ export default function BpasEditQuantityAdjustmentPage({ adjustmentId, onBack, o
           </div>
         </Card>
       </Form>
+
+      {/* Edit Item Modal (Popup matching Image 2) */}
+      <BpasItemEditModal
+        open={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        item={editingModalItem}
+        units={units}
+        taxRates={taxRates}
+        onSave={handleSaveModalItem}
+        mode="quantity-adjustment"
+      />
     </div>
   );
 }

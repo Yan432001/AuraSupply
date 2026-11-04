@@ -44,6 +44,7 @@ import {
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { formatCurrency } from '../../utils/uiTheme';
 
@@ -298,108 +299,50 @@ export default function BpasRewardsExchangeWorkspace({ embedded = false }) {
     {
       title: 'Actions',
       key: 'actions',
-      align: 'right',
-      width: 140,
-      render: (_, record) => (
-        <Space size={6}>
-          <Tooltip title="View Rewards Voucher">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
-              onClick={() => handleOpenDetail(record)}
-            />
-          </Tooltip>
+      align: 'center',
+      width: 100,
+      render: (_, record) => {
+        const actionItems = [
+          {
+            key: 'view',
+            icon: <EyeOutlined />,
+            label: 'View Rewards Voucher',
+            onClick: () => handleOpenDetail(record),
+          },
+          {
+            key: 'edit',
+            icon: <EditOutlined style={{ color: '#2563eb' }} />,
+            label: 'Edit Exchange',
+            onClick: () => navigate(`/admins/products/rewards_exchange/edit/${record.id}`),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+            danger: true,
+            label: 'Delete & Restore Points',
+            onClick: () => {
+              Modal.confirm({
+                title: 'Delete Rewards Exchange?',
+                content: 'Customer redeemed points and warehouse stock will be safely refunded and restored.',
+                okText: 'Yes, Delete',
+                okType: 'danger',
+                cancelText: 'Cancel',
+                onOk: () => handleDelete(record.id),
+              });
+            },
+          },
+        ];
 
-          <Tooltip title="Edit Exchange">
-            <Button
-              type="text"
-              icon={<EditOutlined style={{ color: '#2563eb' }} />}
-              onClick={() => {
-                const targetUrl = `/admins/products/rewards_exchange/edit/${record.id}`;
-                navigate(targetUrl);
-              }}
-            />
-          </Tooltip>
-
-          <Tooltip title="Delete & Restore Points">
-            <Popconfirm
-              title="Delete Rewards Exchange?"
-              description="Customer redeemed points and warehouse stock will be safely refunded and restored."
-              okText="Yes, Delete"
-              cancelText="Cancel"
-              okButtonProps={{ danger: true }}
-              onConfirm={() => handleDelete(record.id)}
-            >
-              <Button type="text" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Tooltip>
-        </Space>
-      ),
+        return <TableActionDropdown items={actionItems} />;
+      },
     },
   ];
 
   return (
     <div style={{ padding: embedded ? '0' : '20px' }}>
-      {/* KPI Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        <Col xs={24} sm={12} md={6} lg={4.8}>
-          <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <Statistic
-              title={<span style={{ color: '#64748b', fontSize: 13, fontWeight: 500 }}>Total Exchanges</span>}
-              value={metrics.total_exchanges || 0}
-              prefix={<GiftOutlined style={{ color: '#2563eb', marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 700, color: '#1e293b' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} md={6} lg={4.8}>
-          <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <Statistic
-              title={<span style={{ color: '#64748b', fontSize: 13, fontWeight: 500 }}>Points Redeemed</span>}
-              value={metrics.total_points_redeemed || 0}
-              suffix="pts"
-              prefix={<TrophyOutlined style={{ color: '#d97706', marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 700, color: '#d97706' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} md={6} lg={4.8}>
-          <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <Statistic
-              title={<span style={{ color: '#64748b', fontSize: 13, fontWeight: 500 }}>Items Issued</span>}
-              value={metrics.total_items_issued || 0}
-              suffix="units"
-              prefix={<ShoppingOutlined style={{ color: '#10b981', marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 700, color: '#10b981' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} md={6} lg={4.8}>
-          <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <Statistic
-              title={<span style={{ color: '#64748b', fontSize: 13, fontWeight: 500 }}>Completed</span>}
-              value={metrics.completed_count || 0}
-              prefix={<CheckCircleOutlined style={{ color: '#059669', marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 700, color: '#059669' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} md={6} lg={4.8}>
-          <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <Statistic
-              title={<span style={{ color: '#64748b', fontSize: 13, fontWeight: 500 }}>Pending</span>}
-              value={metrics.pending_count || 0}
-              prefix={<ClockCircleOutlined style={{ color: '#eab308', marginRight: 6 }} />}
-              valueStyle={{ fontWeight: 700, color: '#eab308' }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
       {/* Main Workspace Card */}
       <Card
         bordered={false}

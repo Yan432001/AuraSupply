@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Card,
   Table,
@@ -15,36 +15,45 @@ import {
   message,
   Divider,
   Empty,
-  Modal
+  Modal,
+  Tooltip,
+  AutoComplete
 } from 'antd';
 import {
   ShoppingOutlined,
   DeleteOutlined,
   ArrowLeftOutlined,
-  PlusOutlined,
   DollarOutlined,
   CheckOutlined,
   UserOutlined,
-  BarcodeOutlined
+  BarcodeOutlined,
+  EditOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  CameraOutlined,
+  CalculatorOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { formatCurrency } from '../../../utils/uiTheme';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
 import { useTranslation } from '../../../contexts/LanguageContext';
+import BpasItemEditModal from '../../../components/common/BpasItemEditModal';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { TextArea } = Input;
 
 const API_BASE = '/api/admin/sales';
 
 const AddSalePage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { themeTokens } = useAdminTheme();
+  const { themeTokens, isDark } = useAdminTheme();
   const [form] = Form.useForm();
+  const searchInputRef = useRef(null);
 
-  // State
+  // States
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [metadata, setMetadata] = useState({
@@ -52,12 +61,18 @@ const AddSalePage = () => {
     billers: [],
     warehouses: [],
     units: [],
+    taxRates: [],
     nextReference: ''
   });
 
   const [formItems, setFormItems] = useState([]);
-  const [availableProducts, setAvailableProducts] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [searchingProducts, setSearchingProducts] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+
+  // Item Edit Modal (BpasItemEditModal / Image 2)
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
   // Variant selector modal state
   const [variantModalVisible, setVariantModalVisible] = useState(false);
@@ -78,8 +93,8 @@ const AddSalePage = () => {
           warehouse_id: meta.warehouses[0]?.id || 1,
           date: new Date().toISOString().slice(0, 10),
           sale_status: 'completed',
-          order_discount: 0,
-          order_tax: 0,
+          order_tax_id: meta.taxRates[0]?.id || 1,
+          order_discount: '0',
           shipping: 0,
           paid: 0,
           paid_by: 'cash'
@@ -92,18 +107,23 @@ const AddSalePage = () => {
     }
   };
 
-  // Search Products for Catalog Selector
-  const searchProducts = async (term = '') => {
+  // Search product suggestions from API
+  const fetchSuggestions = async (term = '') => {
     setSearchingProducts(true);
     try {
-      const res = await axios.get('/api/admin/products', {
-        params: { search: term, limit: 30 }
+      const currentWh = form.getFieldValue('warehouse_id') || 1;
+      const res = await axios.get(`${API_BASE}/suggestions`, {
+        params: {
+          term: term.trim(),
+          warehouse_id: currentWh,
+          limit: 20
+        }
       });
-      if (res.data?.data) {
-        setAvailableProducts(res.data.data);
+      if (res.data?.status && Array.isArray(res.data.data)) {
+        setSuggestions(res.data.data);
       }
     } catch (err) {
-      console.error('Failed to search products:', err);
+      console.error('Failed to search suggestions:', err);
     } finally {
       setSearchingProducts(false);
     }
@@ -111,15 +131,83 @@ const AddSalePage = () => {
 
   useEffect(() => {
     fetchMetadata();
-    searchProducts('');
+    fetchSuggestions('');
   }, []);
 
-  // Handle Product Select
-  const handleSelectProduct = (productId) => {
-    const prod = availableProducts.find(p => p.id === productId);
+  // When warehouse changes, re-fetch suggestions with updated QOH
+  const handleWarehouseChange = (whId) => {
+    fetchSuggestions(searchValue);
+  };
+
+  // Add Item to Order list
+  const addItemToCart = (product, variant = null) => {
+    const optId = variant ? variant.id : null;
+    const existingIndex = formItems.findIndex(
+      it => it.product_id === product.id && (optId ? it.option_id === optId : !it.option_id)
+    );
+
+    if (existingIndex >= 0) {
+      const updated = [...formItems];
+      const cur = updated[existingIndex];
+      const newQty = (parseFloat(cur.unit_quantity || cur.quantity) || 1) + 1;
+      cur.unit_quantity = newQty;
+      cur.quantity = newQty; // Base calculation
+      const price = parseFloat(cur.unit_price) || 0;
+      const disc = parseFloat(cur.item_discount) || 0;
+      const tax = parseFloat(cur.item_tax) || 0;
+      cur.subtotal = Math.max(0, (newQty * price) - disc + tax);
+      setFormItems(updated);
+      message.info(`${product.name} quantity increased to ${newQty}`);
+    } else {
+      const price = variant ? parseFloat(variant.price || product.price || 0) : parseFloat(product.price || 0);
+      const cost = variant ? parseFloat(variant.cost || product.cost || 0) : parseFloat(product.cost || 0);
+
+      const newItem = {
+        key: `item_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        product_id: product.id,
+        product_code: product.code || '',
+        product_name: product.name,
+        product_type: product.type || 'standard',
+        option_id: optId,
+        variant_name: variant ? variant.name : null,
+        product_unit_id: product.unit_id || 1,
+        unit_id: product.unit_id || 1,
+        product_unit_code: product.unit_code || 'Unit',
+        unit_name: product.unit_name || 'Unit',
+        base_unit_price: price,
+        unit_price: price,
+        real_unit_price: price,
+        net_unit_price: price,
+        cost: cost,
+        qoh: parseFloat(product.qoh || 0),
+        quantity: 1,
+        unit_quantity: 1,
+        item_discount: 0,
+        discount: '0',
+        item_tax: 0,
+        tax_rate_id: product.tax_rate_id || null,
+        subtotal: price,
+        serial_no: '',
+        comment: '',
+        variants: product.variants || [],
+        units: product.units || []
+      };
+
+      setFormItems(prev => [...prev, newItem]);
+      message.success(`${product.name} added to order`);
+    }
+
+    setSearchValue('');
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  // Handle selection from autocomplete or scanner
+  const handleSelectProduct = (codeOrId) => {
+    const prod = suggestions.find(p => p.code === codeOrId || p.id === codeOrId);
     if (!prod) return;
 
-    // If product has variants, prompt variant selector
     if (prod.variants && prod.variants.length > 0) {
       setSelectedProductForVariant(prod);
       setVariantModalVisible(true);
@@ -128,131 +216,145 @@ const AddSalePage = () => {
     }
   };
 
-  // Add Item to Sale Table
-  const addItemToCart = (product, variant = null) => {
-    const existingIndex = formItems.findIndex(
-      it => it.product_id === product.id && (variant ? it.option_id === variant.id : !it.option_id)
-    );
-
-    if (existingIndex >= 0) {
-      const updated = [...formItems];
-      updated[existingIndex].quantity = (parseFloat(updated[existingIndex].quantity) || 1) + 1;
-      const unitPrice = parseFloat(updated[existingIndex].unit_price) || 0;
-      const disc = parseFloat(updated[existingIndex].item_discount) || 0;
-      const tax = parseFloat(updated[existingIndex].item_tax) || 0;
-      updated[existingIndex].subtotal = Math.max(0, (updated[existingIndex].quantity * unitPrice) - disc + tax);
-      setFormItems(updated);
-    } else {
-      const price = variant ? parseFloat(variant.price || product.price || 0) : parseFloat(product.price || 0);
-      const cost = variant ? parseFloat(variant.cost || product.cost || 0) : parseFloat(product.cost || 0);
-
-      const newItem = {
-        key: Date.now() + Math.random(),
-        product_id: product.id,
-        product_code: product.code || '',
-        product_name: product.name,
-        product_type: product.type || 'standard',
-        option_id: variant ? variant.id : null,
-        variant_name: variant ? variant.name : null,
-        product_unit_id: product.sale_unit || product.unit || 1,
-        product_unit_code: product.unit_name || 'Unit',
-        quantity: 1,
-        unit_price: price,
-        cost: cost,
-        item_discount: 0,
-        item_tax: 0,
-        subtotal: price,
-        serial_no: '',
-        comment: ''
-      };
-      setFormItems([...formItems, newItem]);
-    }
+  // Open item edit popup (BpasItemEditModal / Image 2)
+  const handleOpenItemEditModal = (item) => {
+    setEditingItem(item);
+    setEditModalVisible(true);
   };
 
-  // Update item in table
-  const handleUpdateItem = (key, field, value) => {
-    const updated = formItems.map(it => {
+  // Save changes from BpasItemEditModal
+  const handleSaveEditedItem = (updatedItem) => {
+    setFormItems(prev => prev.map(it => it.key === updatedItem.key ? updatedItem : it));
+    message.success(t('item_updated_success', 'Item details updated'));
+  };
+
+  // Quick quantity change directly from table input
+  const handleQuantityChange = (key, newQty) => {
+    const qty = Math.max(parseFloat(newQty) || 1, 0.01);
+    setFormItems(prev => prev.map(it => {
       if (it.key === key) {
-        const item = { ...it, [field]: value };
-        const qty = parseFloat(field === 'quantity' ? value : item.quantity) || 0;
-        const price = parseFloat(field === 'unit_price' ? value : item.unit_price) || 0;
-        const disc = parseFloat(field === 'item_discount' ? value : item.item_discount) || 0;
-        const tax = parseFloat(field === 'item_tax' ? value : item.item_tax) || 0;
-        item.subtotal = Math.max(0, (qty * price) - disc + tax);
-        return item;
+        const price = parseFloat(it.unit_price) || 0;
+        const disc = parseFloat(it.item_discount) || 0;
+        const tax = parseFloat(it.item_tax) || 0;
+        return {
+          ...it,
+          quantity: qty,
+          unit_quantity: qty,
+          subtotal: Math.max(0, (qty * price) - disc + tax)
+        };
       }
       return it;
-    });
-    setFormItems(updated);
+    }));
   };
 
-  // Remove item
+  // Remove item from table
   const handleRemoveItem = (key) => {
-    setFormItems(formItems.filter(it => it.key !== key));
+    setFormItems(prev => prev.filter(it => it.key !== key));
   };
 
-  // Live Calculations
+  // Live order calculations
   const calculations = useMemo(() => {
-    const itemsSubtotal = formItems.reduce((acc, it) => acc + (parseFloat(it.subtotal) || 0), 0);
-    const orderDiscount = parseFloat(form.getFieldValue('order_discount') || 0);
-    const orderTax = parseFloat(form.getFieldValue('order_tax') || 0);
-    const shipping = parseFloat(form.getFieldValue('shipping') || 0);
-    const grandTotal = Math.max(0, (itemsSubtotal - orderDiscount) + orderTax + shipping);
-    const paid = parseFloat(form.getFieldValue('paid') || 0);
-    const balance = Math.max(0, grandTotal - paid);
+    const itemsTotal = formItems.reduce((acc, it) => acc + (parseFloat(it.subtotal) || 0), 0);
+    const totalQty = formItems.reduce((acc, it) => acc + (parseFloat(it.unit_quantity || it.quantity) || 0), 0);
+
+    // Order Discount (numeric or percentage e.g. 5%)
+    let orderDiscountVal = 0;
+    const orderDiscRaw = String(form.getFieldValue('order_discount') || '0').trim();
+    if (orderDiscRaw.endsWith('%')) {
+      const pct = parseFloat(orderDiscRaw.replace('%', '')) || 0;
+      orderDiscountVal = (itemsTotal * pct) / 100;
+    } else {
+      orderDiscountVal = parseFloat(orderDiscRaw) || 0;
+    }
+
+    const netAfterDiscount = Math.max(0, itemsTotal - orderDiscountVal);
+
+    // Order Tax
+    const taxId = form.getFieldValue('order_tax_id');
+    const taxObj = metadata.taxRates?.find(t => t.id === taxId);
+    let orderTaxVal = 0;
+    if (taxObj && taxObj.rate > 0) {
+      orderTaxVal = (netAfterDiscount * taxObj.rate) / 100;
+    }
+
+    const shippingVal = parseFloat(form.getFieldValue('shipping') || 0);
+    const grandTotal = Math.max(0, netAfterDiscount + orderTaxVal + shippingVal);
+    const paidVal = parseFloat(form.getFieldValue('paid') || 0);
+    const balance = Math.max(0, grandTotal - paidVal);
 
     return {
-      itemsSubtotal,
-      orderDiscount,
-      orderTax,
-      shipping,
+      itemsTotal,
+      totalQty,
+      orderDiscountVal,
+      orderTaxVal,
+      shippingVal,
       grandTotal,
-      paid,
+      paidVal,
       balance
     };
   }, [
     formItems,
+    metadata.taxRates,
     Form.useWatch('order_discount', form),
-    Form.useWatch('order_tax', form),
+    Form.useWatch('order_tax_id', form),
     Form.useWatch('shipping', form),
     Form.useWatch('paid', form)
   ]);
 
-  // Submit Sale
+  // Submit Sale Invoice
   const handleSubmit = async (values) => {
     if (formItems.length === 0) {
-      message.error(t('please_add_sale_items', 'Please add at least one product item to the sale.'));
+      message.error(t('please_add_sale_items', 'Please scan or add at least one product item to the order list.'));
       return;
     }
 
     setSubmitting(true);
     try {
       const payload = {
-        ...values,
-        pos: 0, // Commercial Sale
+        date: values.date,
+        due_date: values.due_date || null,
+        reference_no: values.reference_no,
+        customer_id: values.customer_id,
+        biller_id: values.biller_id,
+        warehouse_id: values.warehouse_id,
+        sale_status: values.sale_status || 'completed',
+        order_discount: calculations.orderDiscountVal,
+        order_tax: calculations.orderTaxVal,
+        order_tax_id: values.order_tax_id || null,
+        shipping: parseFloat(values.shipping) || 0,
+        paid: parseFloat(values.paid) || 0,
+        paid_by: values.paid_by || 'cash',
+        note: values.note || '',
+        staff_note: values.staff_note || '',
+        pos: 0,
         items: formItems.map(it => ({
           product_id: it.product_id,
           product_code: it.product_code,
           product_name: it.product_name,
           product_type: it.product_type,
-          option_id: it.option_id,
-          product_unit_id: it.product_unit_id,
+          option_id: it.option_id || null,
+          product_unit_id: it.product_unit_id || it.unit_id,
+          product_unit_code: it.product_unit_code || it.unit_name || 'Unit',
           quantity: it.quantity,
+          unit_quantity: it.unit_quantity,
           unit_price: it.unit_price,
-          cost: it.cost,
-          item_discount: it.item_discount,
-          item_tax: it.item_tax,
+          net_unit_price: it.net_unit_price || it.unit_price,
+          cost: it.cost || 0,
+          item_discount: it.item_discount || 0,
+          discount: it.discount || '0',
+          item_tax: it.item_tax || 0,
           subtotal: it.subtotal,
-          serial_no: it.serial_no,
-          comment: it.comment
+          serial_no: it.serial_no || '',
+          comment: it.comment || ''
         }))
       };
 
-      if (parseFloat(values.paid) > 0) {
+      if (payload.paid > 0) {
         payload.payment = {
-          amount: parseFloat(values.paid),
+          amount: payload.paid,
           paid_by: values.paid_by || 'cash',
-          reference_no: `PAY-${values.reference_no}`
+          reference_no: `PAY-${values.reference_no}`,
+          note: values.payment_note || 'Initial payment for sale'
         };
       }
 
@@ -262,6 +364,7 @@ const AddSalePage = () => {
         navigate(`/admins/sales/view/${res.data.data.id}`);
       }
     } catch (err) {
+      console.error('Failed to create sale:', err);
       message.error(err.response?.data?.message || err.message || 'Failed to create sale');
     } finally {
       setSubmitting(false);
@@ -270,20 +373,20 @@ const AddSalePage = () => {
 
   return (
     <div style={{ padding: '24px', minHeight: '100vh', background: themeTokens.colorBgLayout || '#f8fafc' }}>
-      {/* Page Title & Back Button */}
+      {/* Header bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <Space>
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admins/sales')}>
-              {t('back_to_sales', 'Back to Sales List')}
+              {t('back_to_sales', 'Back to Sales')}
             </Button>
-            <Title level={3} style={{ margin: 0 }}>
-              {t('add_sale', 'Add New Sale Invoice')}
+            <Title level={3} style={{ margin: 0, color: '#1e293b' }}>
+              {t('add_sale', 'Add Sale Invoice')}
             </Title>
           </Space>
           <div style={{ marginTop: 4 }}>
             <Text type="secondary">
-              {t('add_sale_desc', 'Create a new commercial sales order, select product variants, apply discounts/taxes, and deduct warehouse stock.')}
+              {t('add_sale_instruction', 'Please fill in the information below. Field labels marked with * are required.')}
             </Text>
           </div>
         </div>
@@ -294,21 +397,60 @@ const AddSalePage = () => {
         layout="vertical"
         onFinish={handleSubmit}
       >
+        {/* Top Information Card (AURA_v1 Add Form) */}
         <Card bordered={false} style={{ borderRadius: 8, marginBottom: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <Row gutter={16}>
             <Col xs={24} md={6}>
               <Form.Item
+                name="date"
+                label={<span>{t('date', 'Date')} <span style={{ color: 'red' }}>*</span></span>}
+                rules={[{ required: true, message: 'Please select sale date' }]}
+              >
+                <Input type="date" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item
                 name="reference_no"
-                label={t('invoice_reference', 'Invoice / Reference No')}
-                rules={[{ required: true, message: 'Please provide reference number' }]}
+                label={t('reference_no', 'Reference No')}
+                rules={[{ required: true, message: 'Please enter reference no' }]}
               >
                 <Input placeholder="SALE-YYYYMM-XXXX" />
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
               <Form.Item
+                name="biller_id"
+                label={t('biller', 'Biller / Branch')}
+                rules={[{ required: true, message: 'Please select biller' }]}
+              >
+                <Select placeholder="Select biller">
+                  {metadata.billers.map(b => (
+                    <Option key={b.id} value={b.id}>{b.name} ({b.company || '-'})</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item
+                name="warehouse_id"
+                label={<span>{t('warehouse', 'Warehouse')} <span style={{ color: 'red' }}>*</span></span>}
+                rules={[{ required: true, message: 'Please select warehouse' }]}
+              >
+                <Select placeholder="Select warehouse" onChange={handleWarehouseChange}>
+                  {metadata.warehouses.map(w => (
+                    <Option key={w.id} value={w.id}>{w.name} ({w.code})</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col xs={24} md={6}>
+              <Form.Item
                 name="customer_id"
-                label={t('customer', 'Customer')}
+                label={<span>{t('customer', 'Customer')} <span style={{ color: 'red' }}>*</span></span>}
                 rules={[{ required: true, message: 'Please select customer' }]}
               >
                 <Select placeholder="Select customer" showSearch optionFilterProp="children">
@@ -319,182 +461,202 @@ const AddSalePage = () => {
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
-              <Form.Item
-                name="warehouse_id"
-                label={t('dispatch_warehouse', 'Dispatch Warehouse')}
-                rules={[{ required: true, message: 'Please select warehouse' }]}
-              >
-                <Select placeholder="Select warehouse">
-                  {metadata.warehouses.map(w => (
-                    <Option key={w.id} value={w.id}>{w.name} ({w.code})</Option>
-                  ))}
-                </Select>
+              <Form.Item name="due_date" label={t('due_date', 'Required / Due Date')}>
+                <Input type="date" />
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
-              <Form.Item
-                name="sale_status"
-                label={t('sale_status', 'Sale Status')}
-                rules={[{ required: true }]}
-              >
+              <Form.Item name="sale_status" label={t('sale_status', 'Sale Status')}>
                 <Select>
-                  <Option value="completed">{t('status_completed_desc', 'Completed (Deducts stock immediately)')}</Option>
-                  <Option value="pending">{t('status_pending_desc', 'Pending (Stock reserved / not deducted)')}</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col xs={24} md={6}>
-              <Form.Item name="date" label={t('date', 'Sale Date')} rules={[{ required: true }]}>
-                <Input type="date" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item name="due_date" label={t('due_date', 'Payment Due Date')}>
-                <Input type="date" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item name="biller_id" label={t('biller_branch', 'Biller / Store Branch')}>
-                <Select placeholder="Select biller">
-                  {metadata.billers.map(b => (
-                    <Option key={b.id} value={b.id}>{b.name}</Option>
-                  ))}
+                  <Option value="completed">{t('completed', 'Completed (Stock Deducted)')}</Option>
+                  <Option value="pending">{t('pending', 'Pending (Draft / Quotation)')}</Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
-              <Form.Item name="note" label={t('invoice_note', 'Invoice Note')}>
-                <Input placeholder="Notes visible to customer..." />
+              <Form.Item name="note" label={t('note', 'Note')}>
+                <Input placeholder="Invoice note for customer..." />
               </Form.Item>
             </Col>
           </Row>
         </Card>
 
-        {/* Product Catalog & Item Selector Card */}
-        <Card bordered={false} style={{ borderRadius: 8, marginBottom: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <Divider orientation="left" style={{ margin: '0 0 16px 0' }}>
-            <Space>
-              <ShoppingOutlined style={{ color: themeTokens.colorPrimary }} />
-              <Text strong>{t('order_items', 'Order Items & Variants')}</Text>
-            </Space>
-          </Divider>
-
-          {/* Product Quick-Search Bar */}
-          <div style={{ marginBottom: 16, background: '#f1f5f9', padding: 12, borderRadius: 6 }}>
-            <Row gutter={12} align="middle">
-              <Col xs={24} md={18}>
-                <Select
-                  showSearch
-                  placeholder={t('search_products_to_add', 'Type product name, SKU or barcode to add to sale...')}
-                  style={{ width: '100%' }}
-                  loading={searchingProducts}
-                  filterOption={false}
-                  onSearch={(val) => searchProducts(val)}
-                  onChange={(val) => handleSelectProduct(val)}
-                  value={null}
-                >
-                  {availableProducts.map(p => (
-                    <Option key={p.id} value={p.id}>
-                      {p.code} - {p.name} (Price: {formatCurrency(p.price || 0)})
-                    </Option>
-                  ))}
-                </Select>
-              </Col>
-              <Col xs={24} md={6}>
-                <Text type="secondary">
-                  <BarcodeOutlined /> {availableProducts.length} {t('products_catalog', 'catalog items loaded')}
-                </Text>
-              </Col>
-            </Row>
+        {/* Scan / Add Products Bar & Items List */}
+        <Card bordered={false} style={{ borderRadius: 8, marginBottom: 20, boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.05)', background: themeTokens.colorBgContainer }}>
+          {/* Autocomplete Bar matching AURA_v1 #add_item search */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              border: isDark ? '1px solid rgba(255, 255, 255, 0.16)' : '1px solid #cbd5e1',
+              borderRadius: 8,
+              padding: '6px 14px',
+              background: isDark ? '#1e293b' : '#f8fafc',
+              marginBottom: 16,
+              boxShadow: isDark ? '0 2px 8px rgba(0, 0, 0, 0.35)' : '0 1px 2px rgba(0, 0, 0, 0.04)',
+              transition: 'all 0.2s'
+            }}
+          >
+            <BarcodeOutlined style={{ fontSize: 22, color: isDark ? '#a78bfa' : '#64748b', marginRight: 12 }} />
+            <AutoComplete
+              style={{ flex: 1, background: 'transparent' }}
+              value={searchValue}
+              options={suggestions.map(s => ({
+                value: s.code,
+                label: (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
+                    <div>
+                      <span style={{ fontWeight: 600, color: isDark ? '#f1f5f9' : '#1e293b' }}>{s.name}</span>
+                      <span style={{ color: isDark ? '#94a3b8' : '#64748b', marginLeft: 8, fontSize: 12 }}>({s.code})</span>
+                      {s.unit_name && <Tag color="blue" style={{ marginLeft: 6 }}>{s.unit_name}</Tag>}
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 700, color: isDark ? '#38bdf8' : '#0284c7', marginRight: 12 }}>
+                        ${s.price.toFixed(2)}
+                      </span>
+                      <Tag color={s.qoh > 0 ? 'green' : 'red'}>
+                        QOH: {s.qoh}
+                      </Tag>
+                    </div>
+                  </div>
+                )
+              }))}
+              onSearch={(val) => {
+                setSearchValue(val);
+                fetchSuggestions(val);
+              }}
+              onSelect={(val) => handleSelectProduct(val)}
+              placeholder={t('scan_or_search_products', 'Please Scan barcode or add products to order list...')}
+            >
+              <Input
+                ref={searchInputRef}
+                bordered={false}
+                style={{ fontSize: 14, color: isDark ? '#f8fafc' : '#1e293b', background: 'transparent' }}
+                onPressEnter={(e) => {
+                  if (searchValue && suggestions.length > 0) {
+                    handleSelectProduct(suggestions[0].code);
+                  }
+                }}
+              />
+            </AutoComplete>
+            <Tooltip title={t('refresh_catalog', 'Reload product catalog')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined style={{ color: isDark ? '#94a3b8' : '#64748b' }} />}
+                onClick={() => fetchSuggestions(searchValue)}
+                loading={searchingProducts}
+              />
+            </Tooltip>
           </div>
 
-          {/* Items Table */}
+          {/* Request / Order Items Table (AURA_v1 Table with Edit Icon) */}
           <Table
             dataSource={formItems}
             rowKey="key"
             pagination={false}
             bordered
             size="middle"
+            className="aura-bpas-items-table"
             locale={{
-              emptyText: <Empty description={t('no_items_in_sale', 'No items added. Use the product selector above to search and add items.')} />
+              emptyText: <Empty description={t('no_items_in_sale', 'No items in order list. Scan barcode or type product name above to add items.')} />
             }}
             columns={[
               {
-                title: t('product', 'Product'),
+                title: t('product_code_name', 'Product (Code - Name)'),
                 key: 'product',
                 render: (_, item) => (
                   <div>
-                    <Text strong>{item.product_name}</Text>
-                    {item.variant_name && (
-                      <div><Tag color="cyan">{item.variant_name}</Tag></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Text strong style={{ color: isDark ? '#f8fafc' : '#1e293b', fontSize: 13 }}>
+                        {item.product_name}
+                      </Text>
+                      {/* Edit Icon to open popup Image 2 */}
+                      <Tooltip title={t('edit_item_popup', 'Edit Unit, Price, Discount, Tax')}>
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EditOutlined style={{ color: '#2563eb', fontSize: 15 }} />}
+                          onClick={() => handleOpenItemEditModal(item)}
+                          style={{ padding: '0 4px', height: 22 }}
+                        />
+                      </Tooltip>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                      <span>{item.product_code}</span>
+                      {item.variant_name && <Tag color="cyan" style={{ marginLeft: 6 }}>{item.variant_name}</Tag>}
+                      {item.unit_name && <Tag color="blue" style={{ marginLeft: 4 }}>{item.unit_name}</Tag>}
+                    </div>
+                    {item.description && (
+                      <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', marginTop: 2 }}>
+                        {item.description}
+                      </div>
                     )}
-                    <div><Text type="secondary" style={{ fontSize: 11 }}>SKU: {item.product_code}</Text></div>
                   </div>
                 )
               },
               {
-                title: t('unit', 'Unit'),
-                dataIndex: 'product_unit_code',
-                key: 'unit',
-                width: 90,
-                render: (val) => <Tag color="blue">{val || 'Unit'}</Tag>
-              },
-              {
-                title: t('unit_price', 'Price ($)'),
-                dataIndex: 'unit_price',
-                key: 'unit_price',
+                title: t('net_unit_price', 'Net Unit Price'),
+                dataIndex: 'net_unit_price',
+                key: 'net_unit_price',
                 width: 130,
+                align: 'right',
                 render: (val, item) => (
-                  <InputNumber
-                    min={0}
-                    step={0.5}
-                    precision={2}
-                    value={val}
-                    onChange={(newVal) => handleUpdateItem(item.key, 'unit_price', newVal)}
-                    style={{ width: '100%' }}
-                  />
+                  <Text>{formatCurrency(val != null ? val : item.unit_price || 0)}</Text>
                 )
               },
               {
+                title: t('qoh', 'QOH'),
+                dataIndex: 'qoh',
+                key: 'qoh',
+                width: 90,
+                align: 'center',
+                render: (val) => {
+                  const q = parseFloat(val) || 0;
+                  return (
+                    <Tag color={q > 0 ? 'green' : q === 0 ? 'default' : 'red'}>
+                      {q}
+                    </Tag>
+                  );
+                }
+              },
+              {
                 title: t('quantity', 'Quantity'),
-                dataIndex: 'quantity',
+                dataIndex: 'unit_quantity',
                 key: 'quantity',
                 width: 120,
                 render: (val, item) => (
                   <InputNumber
                     min={0.01}
                     step={1}
-                    value={val}
-                    onChange={(newVal) => handleUpdateItem(item.key, 'quantity', newVal)}
+                    value={val != null ? val : item.quantity}
+                    onChange={(newVal) => handleQuantityChange(item.key, newVal)}
                     style={{ width: '100%' }}
                   />
                 )
               },
               {
-                title: t('discount', 'Discount ($)'),
+                title: t('product_discount', 'Product Discount'),
                 dataIndex: 'item_discount',
                 key: 'item_discount',
-                width: 110,
-                render: (val, item) => (
-                  <InputNumber
-                    min={0}
-                    step={0.5}
-                    value={val}
-                    onChange={(newVal) => handleUpdateItem(item.key, 'item_discount', newVal)}
-                    style={{ width: '100%' }}
-                  />
-                )
+                width: 120,
+                align: 'right',
+                render: (val) => <Text>{formatCurrency(val || 0)}</Text>
               },
               {
-                title: t('subtotal', 'Subtotal ($)'),
+                title: t('product_tax', 'Product Tax'),
+                dataIndex: 'item_tax',
+                key: 'item_tax',
+                width: 110,
+                align: 'right',
+                render: (val) => <Text>{formatCurrency(val || 0)}</Text>
+              },
+              {
+                title: t('subtotal', 'Subtotal'),
                 dataIndex: 'subtotal',
                 key: 'subtotal',
-                align: 'right',
                 width: 130,
-                render: (val) => <Text strong>{formatCurrency(val)}</Text>
+                align: 'right',
+                render: (val) => <Text strong style={{ color: '#0f172a' }}>{formatCurrency(val || 0)}</Text>
               },
               {
                 title: '',
@@ -512,147 +674,192 @@ const AddSalePage = () => {
               }
             ]}
           />
+
+          {/* Grand Total Summary Strip (Dark/Light mode adaptive) */}
+          <div
+            style={{
+              background: isDark
+                ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)'
+                : '#fef9c3',
+              border: isDark
+                ? '1px solid rgba(245, 158, 11, 0.35)'
+                : '1px solid #fde047',
+              borderRadius: 8,
+              padding: '12px 18px',
+              marginTop: 14,
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: 13,
+              fontWeight: 600,
+              color: isDark ? '#f8fafc' : '#854d0e',
+              boxShadow: isDark
+                ? '0 4px 14px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06)'
+                : 'none'
+            }}
+          >
+            <div>
+              <span style={{ color: isDark ? '#94a3b8' : '#854d0e' }}>{t('items', 'Items')}: </span>
+              <strong style={{ color: isDark ? '#f1f5f9' : '#854d0e' }}>{formItems.length} ({calculations.totalQty})</strong>
+            </div>
+            <div>
+              <span style={{ color: isDark ? '#94a3b8' : '#854d0e' }}>{t('total', 'Total')}: </span>
+              <strong style={{ color: isDark ? '#f1f5f9' : '#854d0e' }}>{formatCurrency(calculations.itemsTotal)}</strong>
+            </div>
+            <div>
+              <span style={{ color: isDark ? '#94a3b8' : '#854d0e' }}>{t('order_discount', 'Order Discount')}: </span>
+              <strong style={{ color: isDark ? '#f87171' : '#dc2626' }}>{formatCurrency(calculations.orderDiscountVal)}</strong>
+            </div>
+            <div>
+              <span style={{ color: isDark ? '#94a3b8' : '#854d0e' }}>{t('order_tax', 'Order Tax')}: </span>
+              <strong style={{ color: isDark ? '#60a5fa' : '#2563eb' }}>{formatCurrency(calculations.orderTaxVal)}</strong>
+            </div>
+            <div>
+              <span style={{ color: isDark ? '#94a3b8' : '#854d0e' }}>{t('shipping', 'Shipping')}: </span>
+              <strong style={{ color: isDark ? '#fbbf24' : '#d97706' }}>{formatCurrency(calculations.shippingVal)}</strong>
+            </div>
+            <div style={{ fontSize: 16 }}>
+              <span style={{ color: isDark ? '#e2e8f0' : '#854d0e', fontWeight: 700 }}>{t('grand_total', 'Grand Total')}: </span>
+              <strong style={{ color: isDark ? '#4ade80' : '#15803d', fontSize: 18 }}>{formatCurrency(calculations.grandTotal)}</strong>
+            </div>
+          </div>
         </Card>
 
-        {/* Calculations and Payment Details Card */}
-        <Card bordered={false} style={{ borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <Row gutter={24}>
-            <Col xs={24} md={12}>
-              <Title level={5}>{t('additional_charges_and_payment', 'Additional Adjustments & Payment')}</Title>
-              <Row gutter={16}>
-                <Col span={8}>
-                  <Form.Item name="order_discount" label={t('order_discount', 'Order Discount ($)')}>
-                    <InputNumber min={0} step={1} precision={2} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-                <Col span={8}>
-                  <Form.Item name="order_tax" label={t('order_tax', 'Order Tax ($)')}>
-                    <InputNumber min={0} step={1} precision={2} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-                <Col span={8}>
-                  <Form.Item name="shipping" label={t('shipping', 'Shipping ($)')}>
-                    <InputNumber min={0} step={1} precision={2} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Divider style={{ margin: '12px 0' }} />
-              <Title level={5}>{t('payment_receipt', 'Initial Payment Collection')}</Title>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item name="paid" label={t('amount_paid', 'Amount Paid ($)')}>
-                    <InputNumber min={0} step={1} precision={2} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="paid_by" label={t('payment_method', 'Payment Method')}>
-                    <Select>
-                      <Option value="cash">{t('cash', 'Cash')}</Option>
-                      <Option value="bank_transfer">{t('bank_transfer', 'Bank Transfer')}</Option>
-                      <Option value="khqr">{t('khqr', 'ABA KHQR')}</Option>
-                      <Option value="cheque">{t('cheque', 'Cheque')}</Option>
-                      <Option value="credit_card">{t('credit_card', 'Credit Card')}</Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-              </Row>
+        {/* Order Discount, Tax, Shipping & Payment Section */}
+        <Card bordered={false} style={{ borderRadius: 8, marginBottom: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <Row gutter={16}>
+            <Col xs={24} md={6}>
+              <Form.Item name="order_discount" label={t('order_discount', 'Order Discount (0 or 5%)')}>
+                <Input placeholder="e.g. 10 or 5%" />
+              </Form.Item>
             </Col>
-
-            <Col xs={24} md={12}>
-              <Card size="small" style={{ background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text type="secondary">{t('items_subtotal', 'Items Subtotal')}:</Text>
-                  <Text strong>{formatCurrency(calculations.itemsSubtotal)}</Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text type="secondary">{t('order_discount', 'Order Discount')}:</Text>
-                  <Text style={{ color: '#dc2626' }}>- {formatCurrency(calculations.orderDiscount)}</Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text type="secondary">{t('order_tax', 'Order Tax')}:</Text>
-                  <Text>+ {formatCurrency(calculations.orderTax)}</Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text type="secondary">{t('shipping', 'Shipping')}:</Text>
-                  <Text>+ {formatCurrency(calculations.shipping)}</Text>
-                </div>
-                <Divider style={{ margin: '8px 0' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Title level={4} style={{ margin: 0 }}>{t('grand_total', 'Grand Total')}:</Title>
-                  <Title level={4} style={{ margin: 0, color: themeTokens.colorPrimary }}>
-                    {formatCurrency(calculations.grandTotal)}
-                  </Title>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text style={{ color: '#16a34a' }}>{t('paid', 'Paid')}:</Text>
-                  <Text style={{ color: '#16a34a', fontWeight: 600 }}>{formatCurrency(calculations.paid)}</Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text strong>{t('balance_due', 'Balance Due')}:</Text>
-                  <Text strong style={{ color: calculations.balance > 0 ? '#dc2626' : '#16a34a' }}>
-                    {formatCurrency(calculations.balance)}
-                  </Text>
-                </div>
-              </Card>
+            <Col xs={24} md={6}>
+              <Form.Item name="order_tax_id" label={t('order_tax', 'Order Tax')}>
+                <Select placeholder="Select order tax" allowClear>
+                  {metadata.taxRates?.map(t => (
+                    <Option key={t.id} value={t.id}>{t.name} ({t.rate}%)</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item name="shipping" label={t('shipping', 'Shipping Cost')}>
+                <InputNumber min={0} step={1} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item name="staff_note" label={t('staff_note', 'Staff Note (Private)')}>
+                <Input placeholder="Internal remarks..." />
+              </Form.Item>
             </Col>
           </Row>
 
-          <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-            <Button onClick={() => navigate('/admins/sales')}>
-              {t('cancel', 'Cancel')}
-            </Button>
+          <Divider orientation="left" style={{ margin: '12px 0 16px 0' }}>
+            <Space>
+              <DollarOutlined style={{ color: '#16a34a' }} />
+              <Text strong>{t('payment_collection', 'Payment Collection (Optional / Counter)')}</Text>
+            </Space>
+          </Divider>
+
+          <Row gutter={16}>
+            <Col xs={24} md={6}>
+              <Form.Item name="paid" label={t('amount_paid', 'Amount Paid')}>
+                <InputNumber
+                  min={0}
+                  step={5}
+                  precision={2}
+                  style={{ width: '100%' }}
+                  placeholder="0.00"
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item name="paid_by" label={t('paying_by', 'Paying By')}>
+                <Select>
+                  <Option value="cash">{t('cash', 'Cash (Counter USD/KHR)')}</Option>
+                  <Option value="bank_transfer">{t('bank_transfer', 'Bank Transfer / ABA KHQR')}</Option>
+                  <Option value="credit_card">{t('credit_card', 'Credit / Debit Card')}</Option>
+                  <Option value="cheque">{t('cheque', 'Cheque')}</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="payment_note" label={t('payment_note', 'Payment Note / Transaction ID')}>
+                <Input placeholder="e.g. ABA Bank Ref #12345678" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* Form Actions */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
             <Button
               type="primary"
               htmlType="submit"
               loading={submitting}
-              icon={<CheckOutlined />}
-              style={{ background: themeTokens.colorPrimary }}
+              style={{
+                background: '#337ab7',
+                borderColor: '#2e6da4',
+                padding: '0 32px',
+                height: 38,
+                fontWeight: 600
+              }}
             >
-              {t('finalize_sale', 'Create Sale Invoice')}
+              {t('submit', 'Submit Sale')}
+            </Button>
+            <Button
+              danger
+              onClick={() => {
+                form.resetFields();
+                setFormItems([]);
+                fetchMetadata();
+              }}
+              style={{ height: 38 }}
+            >
+              {t('reset', 'Reset')}
             </Button>
           </div>
         </Card>
       </Form>
 
-      {/* Product Variant Picker Modal */}
+      {/* Item Edit Modal (BpasItemEditModal / Image 2) */}
+      <BpasItemEditModal
+        open={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        item={editingItem}
+        units={metadata.units}
+        taxRates={metadata.taxRates}
+        onSave={handleSaveEditedItem}
+        mode="sales"
+      />
+
+      {/* Variant Selector Modal (if product has variants) */}
       <Modal
-        title={t('select_variant_attributes', 'Select Product Variant')}
+        title={t('select_variant', 'Select Product Variant')}
         open={variantModalVisible}
         onCancel={() => setVariantModalVisible(false)}
         footer={null}
+        width={400}
       >
-        <Text strong>{selectedProductForVariant?.name}</Text>
-        <div style={{ margin: '16px 0' }}>
-          {selectedProductForVariant?.variants?.map(v => (
-            <div
-              key={v.id}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '10px 12px',
-                border: '1px solid #e2e8f0',
-                borderRadius: 6,
-                marginBottom: 8,
-                cursor: 'pointer'
-              }}
-              onClick={() => {
-                addItemToCart(selectedProductForVariant, v);
-                setVariantModalVisible(false);
-              }}
-            >
-              <div>
-                <Text strong>{v.name}</Text>
-                {v.sku && <div><Text type="secondary" style={{ fontSize: 11 }}>SKU: {v.sku}</Text></div>}
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <Text strong style={{ color: themeTokens.colorPrimary }}>{formatCurrency(v.price || selectedProductForVariant.price)}</Text>
-                <div><Button size="small" type="primary">{t('select', 'Select')}</Button></div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {selectedProductForVariant && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <Text>{selectedProductForVariant.name}</Text>
+            {selectedProductForVariant.variants?.map(v => (
+              <Button
+                key={v.id}
+                type="default"
+                style={{ textAlign: 'left', height: 42, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                onClick={() => {
+                  addItemToCart(selectedProductForVariant, v);
+                  setVariantModalVisible(false);
+                }}
+              >
+                <span>{v.name}</span>
+                <strong style={{ color: '#2563eb' }}>${v.price}</strong>
+              </Button>
+            ))}
+          </div>
+        )}
       </Modal>
     </div>
   );

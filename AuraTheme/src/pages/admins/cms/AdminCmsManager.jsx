@@ -16,6 +16,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import AdminFrontEndController from '../AdminFrontEndController';
 import AdminQrCodeGenerator from '../../../components/admins/AdminQrCodeGenerator';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
+import TableActionDropdown from '../../../components/common/TableActionDropdown';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -419,6 +420,36 @@ export default function AdminCmsManager() {
     </Card>
   );
 
+  const renderCmsActions = (type, record, label) => {
+    const actionItems = [
+      {
+        key: 'edit',
+        icon: <EditOutlined style={{ color: '#2563eb' }} />,
+        label: `Edit ${label}`,
+        onClick: () => openModal(type, record),
+      },
+      {
+        type: 'divider',
+      },
+      {
+        key: 'delete',
+        icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+        danger: true,
+        label: `Delete ${label}`,
+        onClick: () => {
+          Modal.confirm({
+            title: `Delete this ${label.toLowerCase()}?`,
+            okText: 'Yes, Delete',
+            okType: 'danger',
+            cancelText: 'Cancel',
+            onOk: () => handleDeleteItem(type, record.id),
+          });
+        },
+      },
+    ];
+    return <TableActionDropdown items={actionItems} />;
+  };
+
   // -------------------------------------------------------------
   // TAB 2: NAVIGATION MENUS
   // -------------------------------------------------------------
@@ -443,15 +474,9 @@ export default function AdminCmsManager() {
       {
         title: 'Actions',
         key: 'actions',
-        width: 140,
-        render: (_, record) => (
-          <Space>
-            <Button size="small" icon={<EditOutlined />} onClick={() => openModal('menu', record)} />
-            <Popconfirm title="Delete this menu item?" onConfirm={() => handleDeleteItem('menu', record.id)}>
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Space>
-        ),
+        width: 100,
+        align: 'center',
+        render: (_, record) => renderCmsActions('menu', record, 'Menu Item'),
       },
     ];
 
@@ -501,15 +526,9 @@ export default function AdminCmsManager() {
       {
         title: 'Actions',
         key: 'actions',
-        width: 140,
-        render: (_, record) => (
-          <Space>
-            <Button size="small" icon={<EditOutlined />} onClick={() => openModal('hero', record)} />
-            <Popconfirm title="Delete slide?" onConfirm={() => handleDeleteItem('hero', record.id)}>
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Space>
-        ),
+        width: 100,
+        align: 'center',
+        render: (_, record) => renderCmsActions('hero', record, 'Hero Slide'),
       },
     ];
 
@@ -538,15 +557,9 @@ export default function AdminCmsManager() {
       {
         title: 'Actions',
         key: 'actions',
-        width: 140,
-        render: (_, record) => (
-          <Space>
-            <Button size="small" icon={<EditOutlined />} onClick={() => openModal('page', record)} />
-            <Popconfirm title="Delete page?" onConfirm={() => handleDeleteItem('page', record.id)}>
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Space>
-        ),
+        width: 100,
+        align: 'center',
+        render: (_, record) => renderCmsActions('page', record, 'Page'),
       },
     ];
 
@@ -585,15 +598,9 @@ export default function AdminCmsManager() {
       {
         title: 'Actions',
         key: 'actions',
-        width: 140,
-        render: (_, record) => (
-          <Space>
-            <Button size="small" icon={<EditOutlined />} onClick={() => openModal('post', record)} />
-            <Popconfirm title="Delete post?" onConfirm={() => handleDeleteItem('post', record.id)}>
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Space>
-        ),
+        width: 100,
+        align: 'center',
+        render: (_, record) => renderCmsActions('post', record, 'Article'),
       },
     ];
 
@@ -631,15 +638,9 @@ export default function AdminCmsManager() {
       {
         title: 'Actions',
         key: 'actions',
-        width: 140,
-        render: (_, record) => (
-          <Space>
-            <Button size="small" icon={<EditOutlined />} onClick={() => openModal('team', record)} />
-            <Popconfirm title="Delete team member?" onConfirm={() => handleDeleteItem('team', record.id)}>
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Space>
-        ),
+        width: 100,
+        align: 'center',
+        render: (_, record) => renderCmsActions('team', record, 'Team Member'),
       },
     ];
 
@@ -674,15 +675,9 @@ export default function AdminCmsManager() {
       {
         title: 'Actions',
         key: 'actions',
-        width: 140,
-        render: (_, record) => (
-          <Space>
-            <Button size="small" icon={<EditOutlined />} onClick={() => openModal('testimonial', record)} />
-            <Popconfirm title="Delete testimonial?" onConfirm={() => handleDeleteItem('testimonial', record.id)}>
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Space>
-        ),
+        width: 100,
+        align: 'center',
+        render: (_, record) => renderCmsActions('testimonial', record, 'Testimonial'),
       },
     ];
 
@@ -712,15 +707,9 @@ export default function AdminCmsManager() {
       {
         title: 'Actions',
         key: 'actions',
-        width: 140,
-        render: (_, record) => (
-          <Space>
-            <Button size="small" icon={<EditOutlined />} onClick={() => openModal('faq', record)} />
-            <Popconfirm title="Delete FAQ?" onConfirm={() => handleDeleteItem('faq', record.id)}>
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Space>
-        ),
+        width: 100,
+        align: 'center',
+        render: (_, record) => renderCmsActions('faq', record, 'FAQ'),
       },
     ];
 
@@ -755,15 +744,9 @@ export default function AdminCmsManager() {
       {
         title: 'Actions',
         key: 'actions',
-        width: 140,
-        render: (_, record) => (
-          <Space>
-            <Button size="small" icon={<EditOutlined />} onClick={() => openModal('partner', record)} />
-            <Popconfirm title="Delete partner?" onConfirm={() => handleDeleteItem('partner', record.id)}>
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Space>
-        ),
+        width: 100,
+        align: 'center',
+        render: (_, record) => renderCmsActions('partner', record, 'Partner'),
       },
     ];
 
@@ -805,13 +788,15 @@ export default function AdminCmsManager() {
       {
         title: 'Actions',
         key: 'actions',
-        width: 140,
-        render: (_, record) => (
-          <Space>
-            <Button
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => {
+        width: 100,
+        align: 'center',
+        render: (_, record) => {
+          const actionItems = [
+            {
+              key: 'view',
+              icon: <EyeOutlined style={{ color: '#2563eb' }} />,
+              label: 'View Message',
+              onClick: () => {
                 const infoFn = modal?.info || Modal.info;
                 infoFn({
                   title: `Inquiry from ${record.name}`,
@@ -827,13 +812,31 @@ export default function AdminCmsManager() {
                     </div>
                   ),
                 });
-              }}
-            />
-            <Popconfirm title="Delete inquiry?" onConfirm={() => handleDeleteItem('inquiry', record.id)}>
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Space>
-        ),
+              },
+            },
+            {
+              type: 'divider',
+            },
+            {
+              key: 'delete',
+              icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+              danger: true,
+              label: 'Delete Inquiry',
+              onClick: () => {
+                Modal.confirm({
+                  title: 'Delete inquiry?',
+                  content: `From: ${record.name} (${record.email})`,
+                  okText: 'Yes, Delete',
+                  okType: 'danger',
+                  cancelText: 'Cancel',
+                  onOk: () => handleDeleteItem('inquiry', record.id),
+                });
+              },
+            },
+          ];
+
+          return <TableActionDropdown items={actionItems} />;
+        },
       },
     ];
 
@@ -868,11 +871,29 @@ export default function AdminCmsManager() {
         title: 'Actions',
         key: 'actions',
         width: 100,
-        render: (_, record) => (
-          <Popconfirm title="Remove subscriber?" onConfirm={() => handleDeleteItem('subscriber', record.id)}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        ),
+        align: 'center',
+        render: (_, record) => {
+          const actionItems = [
+            {
+              key: 'delete',
+              icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
+              danger: true,
+              label: 'Remove Subscriber',
+              onClick: () => {
+                Modal.confirm({
+                  title: 'Remove subscriber?',
+                  content: record.email,
+                  okText: 'Yes, Remove',
+                  okType: 'danger',
+                  cancelText: 'Cancel',
+                  onOk: () => handleDeleteItem('subscriber', record.id),
+                });
+              },
+            },
+          ];
+
+          return <TableActionDropdown items={actionItems} />;
+        },
       },
     ];
 

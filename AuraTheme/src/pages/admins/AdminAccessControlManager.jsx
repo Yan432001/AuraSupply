@@ -50,6 +50,7 @@ import {
   ApartmentOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
+import TableActionDropdown from '../../components/common/TableActionDropdown';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -752,31 +753,29 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                       {
                         title: t('actions', 'Actions'),
                         key: 'actions',
-                        width: 220,
+                        width: 100,
                         align: 'center',
-                        render: (_, record) => (
-                          <Space>
-                            <Button
-                              size="small"
-                              icon={<KeyOutlined />}
-                              onClick={() => {
+                        render: (_, record) => {
+                          const actionItems = [
+                            {
+                              key: 'permissions',
+                              icon: <KeyOutlined style={{ color: '#7c3aed' }} />,
+                              label: t('permissions', 'Permissions Matrix'),
+                              onClick: () => {
                                 setSelectedGroupId(record.id);
                                 setActiveTab('matrix');
-                              }}
-                              style={{ borderRadius: 6 }}
-                            >
-                              {t('permissions', 'Permissions')}
-                            </Button>
-                            <Button
-                              size="small"
-                              icon={<EditOutlined />}
-                              onClick={() => handleOpenEditGroup(record)}
-                              style={{ borderRadius: 6 }}
-                            >
-                              {t('policy', 'Policy')}
-                            </Button>
-                          </Space>
-                        )
+                              },
+                            },
+                            {
+                              key: 'policy',
+                              icon: <EditOutlined style={{ color: '#2563eb' }} />,
+                              label: t('policy', 'Edit Group Policy'),
+                              onClick: () => handleOpenEditGroup(record),
+                            },
+                          ];
+
+                          return <TableActionDropdown items={actionItems} />;
+                        },
                       }
                     ]}
                   />
@@ -1092,40 +1091,41 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                           )
                         },
                         {
-                          title: t('decision_action', 'Decision Action'),
+                          title: t('actions', 'Actions'),
                           key: 'actions',
+                          width: 100,
                           align: 'center',
-                          render: (_, record) => (
-                            <Space>
-                              <Button
-                                type="primary"
-                                size="small"
-                                icon={<CheckOutlined />}
-                                loading={actionLoadingId === record.id}
-                                onClick={() => handleApproveSupplier(record.id, record.username)}
-                                style={{ background: '#16a34a', borderColor: '#16a34a', borderRadius: 6 }}
-                              >
-                                {t('approve', 'Approve')}
-                              </Button>
-                              <Popconfirm
-                                title={t('reject_supplier', 'Reject Supplier')}
-                                description={t('confirm_reject_supplier', "Are you sure you want to decline this supplier's application?")}
-                                onConfirm={() => handleRejectSupplier(record.id, record.username)}
-                                okText={t('yes_reject', 'Yes, Reject')}
-                                cancelText={t('cancel', 'Cancel')}
-                              >
-                                <Button
-                                  danger
-                                  size="small"
-                                  icon={<CloseCircleOutlined />}
-                                  loading={actionLoadingId === record.id}
-                                  style={{ borderRadius: 6 }}
-                                >
-                                  {t('reject', 'Reject')}
-                                </Button>
-                              </Popconfirm>
-                            </Space>
-                          )
+                          render: (_, record) => {
+                            const actionItems = [
+                              {
+                                key: 'approve',
+                                icon: <CheckOutlined style={{ color: '#16a34a' }} />,
+                                label: t('approve', 'Approve Application'),
+                                onClick: () => handleApproveSupplier(record.id, record.username),
+                              },
+                              {
+                                type: 'divider',
+                              },
+                              {
+                                key: 'reject',
+                                icon: <CloseCircleOutlined style={{ color: '#dc2626' }} />,
+                                danger: true,
+                                label: t('reject', 'Reject Application'),
+                                onClick: () => {
+                                  Modal.confirm({
+                                    title: t('reject_supplier', 'Reject Supplier'),
+                                    content: t('confirm_reject_supplier', "Are you sure you want to decline this supplier's application?"),
+                                    okText: t('yes_reject', 'Yes, Reject'),
+                                    okType: 'danger',
+                                    cancelText: t('cancel', 'Cancel'),
+                                    onOk: () => handleRejectSupplier(record.id, record.username),
+                                  });
+                                },
+                              },
+                            ];
+
+                            return <TableActionDropdown items={actionItems} />;
+                          },
                         }
                       ]}
                     />
@@ -1221,29 +1221,28 @@ export default function AdminAccessControlManager({ initialTab = 'groups' }) {
                         )
                       },
                       {
-                        title: 'Governance Actions',
+                        title: t('actions', 'Actions'),
                         key: 'actions',
+                        width: 100,
                         align: 'center',
-                        render: (_, record) => (
-                          <Space>
-                            <Button
-                              size="small"
-                              icon={<ShopOutlined />}
-                              onClick={() => handleOpenUserBranches(record)}
-                              style={{ borderRadius: 6 }}
-                            >
-                              Assign Branches
-                            </Button>
-                            <Button
-                              size="small"
-                              icon={<LockOutlined />}
-                              onClick={() => handleOpenUserOverrides(record)}
-                              style={{ borderRadius: 6 }}
-                            >
-                              Overrides
-                            </Button>
-                          </Space>
-                        )
+                        render: (_, record) => {
+                          const actionItems = [
+                            {
+                              key: 'branches',
+                              icon: <ShopOutlined style={{ color: '#0284c7' }} />,
+                              label: 'Assign Branches',
+                              onClick: () => handleOpenUserBranches(record),
+                            },
+                            {
+                              key: 'overrides',
+                              icon: <LockOutlined style={{ color: '#7c3aed' }} />,
+                              label: 'Permission Overrides',
+                              onClick: () => handleOpenUserOverrides(record),
+                            },
+                          ];
+
+                          return <TableActionDropdown items={actionItems} />;
+                        },
                       }
                     ]}
                   />
