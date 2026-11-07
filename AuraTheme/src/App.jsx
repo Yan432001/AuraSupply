@@ -79,6 +79,12 @@ import BpasEditPurchaseRequestPage from './pages/admins/BpasEditPurchaseRequestP
 import BpasPurchaseOrdersWorkspace from './pages/admins/BpasPurchaseOrdersWorkspace';
 import BpasAddPurchaseOrderPage from './pages/admins/BpasAddPurchaseOrderPage';
 import BpasEditPurchaseOrderPage from './pages/admins/BpasEditPurchaseOrderPage';
+import MoneyExchangeListPage from './pages/admins/money/MoneyExchangeListPage';
+import AddMoneyExchangePage from './pages/admins/money/AddMoneyExchangePage';
+import EditMoneyExchangePage from './pages/admins/money/EditMoneyExchangePage';
+import MoneyExchangeRatePage from './pages/admins/money/MoneyExchangeRatePage';
+import TransferCompaniesPage from './pages/admins/money/TransferCompaniesPage';
+import TransferRangePage from './pages/admins/money/TransferRangePage';
 import { AdminModulesProvider } from './contexts/AdminModulesContext';
 
 // E-Menu Telegram Mini App Layout & Views
@@ -310,6 +316,19 @@ const AppContent = () => {
         <Route path="sales-orders" element={<SalesOrdersListPage />} />
         <Route path="sales-orders/add" element={<AddSaleOrderPage />} />
         <Route path="sales-orders/edit/:id" element={<EditSaleOrderPage />} />
+        <Route path="money" element={<MoneyExchangeListPage />} />
+        <Route path="money/add" element={<AddMoneyExchangePage />} />
+        <Route path="money/add_exchange" element={<AddMoneyExchangePage />} />
+        <Route path="money/edit/:id" element={<EditMoneyExchangePage />} />
+        <Route path="money/exchange_rate" element={<MoneyExchangeRatePage />} />
+        <Route path="money/exchange-rate" element={<MoneyExchangeRatePage />} />
+        <Route path="money/transfer_companies" element={<TransferCompaniesPage />} />
+        <Route path="money/transfer-companies" element={<TransferCompaniesPage />} />
+        <Route path="money/transfer_range/:companyId" element={<TransferRangePage />} />
+        <Route path="money/transfer-range/:companyId" element={<TransferRangePage />} />
+        <Route path="money_exchange" element={<MoneyExchangeListPage />} />
+        <Route path="money_exchange/add" element={<AddMoneyExchangePage />} />
+        <Route path="money_exchange/edit/:id" element={<EditMoneyExchangePage />} />
         <Route path="orders" element={<OrdersManagement />} />
         <Route path="qrcode" element={<AdminQrCodeGeneratorPage />} />
         <Route path="qr-generator" element={<AdminQrCodeGeneratorPage />} />

@@ -748,25 +748,25 @@ export const erpModules = [
   // 24. MONEY CHANGE & CURRENCY EXCHANGE
   {
     key: 'money_change',
-    label: 'Money Change',
+    label: 'Money Exchange',
     iconKey: 'money_change',
     accent: '#10b981',
     enabled: true,
     health: 'stable',
     kpiLabel: 'Daily Turnover',
     kpiValue: '$340K',
-    description: 'Bureau de change, foreign currency conversion, buy/sell rate spreads, vault positions, and profit/loss.',
-    statusNote: 'Forex board rates updated to morning market fixings.',
+    description: 'Money exchange counter, multi-currency conversion rates, transfer companies, and tiered fee/commission ranges.',
+    statusNote: 'Forex board rates and transfer fee tiers synchronized.',
     detailBullets: [
-      'Instant counter currency conversions (USD, KHR, THB, CNY, EUR, VND).',
-      'Set dynamic Buy / Sell rate spreads with automatic counter calculations.',
-      'Audit physical vault cash drawer positions per foreign currency note.',
+      'Instant counter & invoice currency conversions (USD, KHR, BAHT, and custom currencies).',
+      'Configure directional From → To currency pair rates and base currency rates.',
+      'Manage money transfer providers (Wing, TrueMoney, eMoney, ABA) with tiered fee & commission brackets.',
     ],
     menus: [
-      leaf('money-change-counter', 'Exchange Counter', 'Fast teller window for retail foreign currency exchange.'),
-      leaf('exchange-transactions', 'Transactions', 'Historical exchange audit log and customer receipt vouchers.'),
-      leaf('exchange-rates', 'Currency Rates', 'Configure live counter Buy and Sell rates per currency pair.'),
-      leaf('forex-vault', 'Forex Vault', 'Physical foreign currency cash inventory held across tellers.'),
+      leaf('list-exchange-money', 'List Exchange Money', 'Historical money exchange transactions, receipts, and payments.', { route: '/admins/money' }),
+      leaf('add-exchange', 'Add Exchange', 'Create multi-currency or counter exchange transactions.', { route: '/admins/money/add' }),
+      leaf('money-exchange-rate', 'Exchange Rate', 'Configure live counter Buy and Sell rates per currency pair.', { route: '/admins/money/exchange_rate' }),
+      leaf('transfer-companies', 'Transfer Companies', 'Manage money transfer providers and tiered transfer fee/commission ranges.', { route: '/admins/money/transfer_companies' }),
     ],
     submodules: [
       { key: 'digital-rate-board', label: 'Digital Rate Board', enabled: true, description: 'Broadcast live exchange rates to lobby TV screens.' },
@@ -1607,6 +1607,20 @@ export const resolveActiveModuleAndMenu = (pathname = '', search = '') => {
     if (cleanPath.includes('/journal')) return { moduleKey: 'accounting', menuKey: 'journal' };
     if (cleanPath.includes('/chart')) return { moduleKey: 'accounting', menuKey: 'chart-of-accounts' };
     return { moduleKey: 'accounting', menuKey: 'chart-of-accounts' };
+  }
+
+  // Money Exchange Management (AURA_v1 Money module)
+  if (cleanPath.startsWith('/admins/money')) {
+    if (cleanPath.includes('transfer_companies') || cleanPath.includes('transfer-companies') || cleanPath.includes('transfer_range') || cleanPath.includes('transfer-range')) {
+      return { moduleKey: 'money_change', menuKey: 'transfer-companies' };
+    }
+    if (cleanPath.includes('exchange_rate') || cleanPath.includes('exchange-rate')) {
+      return { moduleKey: 'money_change', menuKey: 'money-exchange-rate' };
+    }
+    if (cleanPath.endsWith('/add') || cleanPath.includes('add_exchange') || cleanPath.includes('/edit/')) {
+      return { moduleKey: 'money_change', menuKey: 'add-exchange' };
+    }
+    return { moduleKey: 'money_change', menuKey: 'list-exchange-money' };
   }
 
   // CRM / Customers / Suppliers

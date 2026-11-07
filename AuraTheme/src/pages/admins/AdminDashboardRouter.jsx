@@ -37,6 +37,10 @@ import SalesReport from './SalesReport';
 import PosSettingsPage from './pos/PosSettingsPage';
 import AccountingWorkspace from './accounting/AccountingWorkspace';
 import AssetWorkspace from './assets/AssetWorkspace';
+import MoneyExchangeListPage from './money/MoneyExchangeListPage';
+import AddMoneyExchangePage from './money/AddMoneyExchangePage';
+import MoneyExchangeRatePage from './money/MoneyExchangeRatePage';
+import TransferCompaniesPage from './money/TransferCompaniesPage';
 import AdminErrorBoundary from '../../components/common/AdminErrorBoundary';
 
 const AdminDashboardRouter = () => {
@@ -261,6 +265,31 @@ const AdminDashboardRouter = () => {
     menuKey === 'asset-reports'
   ) {
     return <AssetWorkspace />;
+  }
+
+  // Money Exchange Management (AURA_v1 Money module)
+  if (
+    moduleKey === 'money_change' ||
+    moduleKey === 'money' ||
+    moduleKey === 'module_exchange' ||
+    menuKey === 'list-exchange-money' ||
+    menuKey === 'add-exchange' ||
+    menuKey === 'money-exchange-rate' ||
+    menuKey === 'transfer-companies' ||
+    menuKey === 'money-change-counter' ||
+    menuKey === 'exchange-transactions' ||
+    menuKey === 'exchange-rates'
+  ) {
+    if (menuKey === 'add-exchange' || menuKey === 'money-change-counter') {
+      return <AddMoneyExchangePage />;
+    }
+    if (menuKey === 'money-exchange-rate' || menuKey === 'exchange-rates') {
+      return <MoneyExchangeRatePage />;
+    }
+    if (menuKey === 'transfer-companies') {
+      return <TransferCompaniesPage />;
+    }
+    return <MoneyExchangeListPage />;
   }
 
   // Categories

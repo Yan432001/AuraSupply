@@ -1,0 +1,11 @@
+[07/11/2026 10:33:46]Error: Column 'end_date' cannot be null
+    at Object.query (C:\AuraSupply\API\app\config\utill\connection.js:180:39)
+    at ProjectsModel.createTask (C:\AuraSupply\API\app\models\admins\projects.model.js:1051:28)
+    at exports.createTask (C:\AuraSupply\API\app\controller\admin\projects.controller.js:265:38)
+    at Layer.handle [as handle_request] (C:\AuraSupply\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\AuraSupply\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\AuraSupply\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\AuraSupply\node_modules\express\lib\router\layer.js:95:5)
+    at C:\AuraSupply\node_modules\express\lib\router\index.js:284:15
+    at param (C:\AuraSupply\node_modules\express\lib\router\index.js:365:14)
+    at param (C:\AuraSupply\node_modules\express\lib\router\index.js:376:14)

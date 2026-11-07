@@ -81,6 +81,7 @@ const moduleIconMap = {
   sales: ShoppingCartOutlined,
   pos: CreditCardOutlined,
   loans: MoneyCollectOutlined,
+  money_change: MoneyCollectOutlined,
   property: HomeOutlined,
   accounting: BankOutlined,
   hr: TeamOutlined,
@@ -102,6 +103,7 @@ const moduleCategories = {
   ecommerce: 'Commerce & Orders',
   'front-end': 'Commerce & Orders',
   accounting: 'Finance & Banking',
+  money_change: 'Finance & Banking',
   loan: 'Finance & Banking',
   loans: 'Finance & Banking',
   installment: 'Finance & Banking',
@@ -171,6 +173,7 @@ export const CLASSIC_MODULES = [
 
   // Row 6
   { key: 'reward_exchange', label: 'Reward Exchange', canonical: 'reward_exchange' },
+  { key: 'module_exchange', label: 'Money Exchange', canonical: 'money_change' },
   { key: 'module_fuel', label: 'Module fuel', canonical: 'fuel' },
   { key: 'module_e_ticket', label: 'E ticket', canonical: 'e_ticket', altKey: 'e_ticket' },
   { key: 'module_expense', label: 'Module expense', canonical: 'expense' },

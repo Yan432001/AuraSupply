@@ -1,0 +1,15 @@
+# PROJECT RULES & CONSTRAINTS
+
+## 1. FILE MANAGEMENT POLICY (STRICT)
+- DO NOT create new files or folders unless explicitly approved.
+- ALWAYS modify and refactor existing files within the current directory structure.
+- If a task strictly requires creating a new file, STOP immediately and ask for user confirmation first. Explain why a new file is required and wait for approval.
+
+## 2. CODING STANDARDS
+- Follow TypeScript best practices with explicit types (avoid using `any`).
+- Use existing project conventions, folder patterns, and naming standards.
+- Prefer updating existing controllers, services, and routes directly.
+
+## 3. RESPONSE LANGUAGE & STYLE
+- Understand and respond to instructions in Khmer and English technical terms seamlessly.
+- Keep responses concise, direct, and focused on modified lines of code.

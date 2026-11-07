@@ -18,8 +18,6 @@ import {
   TeamOutlined,
   UsergroupAddOutlined,
   SearchOutlined,
-  StarFilled,
-  StarOutlined,
   CarOutlined,
   WalletOutlined,
   CalendarOutlined,
@@ -282,24 +280,6 @@ const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigat
   const activeLineage = useMemo(() => getMenuLineage(activeModuleKey, activeMenuKey), [activeMenuKey, activeModuleKey]);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [favorites, setFavorites] = useState(() => {
-    try {
-      const saved = localStorage.getItem('aura_erp_favorites');
-      return saved ? JSON.parse(saved) : ['inventory', 'sales', 'reports', 'settings'];
-    } catch (_) {
-      return ['inventory', 'sales', 'reports', 'settings'];
-    }
-  });
-
-  const toggleFavorite = (modKey, e) => {
-    e.stopPropagation();
-    setFavorites(prev => {
-      const next = prev.includes(modKey) ? prev.filter(k => k !== modKey) : [...prev, modKey];
-      localStorage.setItem('aura_erp_favorites', JSON.stringify(next));
-      return next;
-    });
-  };
-
   const [openModuleKey, setOpenModuleKey] = useState(activeModuleKey);
   const [openGroups, setOpenGroups] = useState(() => new Set(activeLineage));
 
@@ -680,44 +660,6 @@ const hasUserPermission = (user, moduleKey) => {
           </div>
         );
       })()}
-
-      {/* 3. Pinned Favorites Quick Links */}
-      {!searchTerm && favorites.length > 0 && (
-        <div style={{ padding: '0 6px 4px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <Text style={{ fontSize: 9.5, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1.2 }}>
-              ★ {t('pinned_favorites', 'Pinned Favorites')}
-            </Text>
-          </div>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {favorites.map(favKey => {
-              const favMod = modulesByKey[favKey];
-              if (!favMod || !isModuleOpen(favKey) || !hasUserPermission(user, favKey)) return null;
-              const isFavActive = activeModuleKey === favKey;
-              return (
-                <button
-                  key={favKey}
-                  type="button"
-                  onClick={() => onNavigate(favKey, null)}
-                  style={{
-                    border: isFavActive ? `1px solid ${adminTheme.primary}` : `1px solid ${adminTheme.sidebarBorder}`,
-                    background: isFavActive ? adminTheme.sidebarActiveBg : (adminTheme.isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)'),
-                    color: isFavActive ? adminTheme.sidebarActiveText : adminTheme.subtext,
-                    borderRadius: 6,
-                    padding: '3px 8px',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {t(favMod.key, favMod.label)}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* 3. Grouped Sections */}
       {visibleSectionGroups.map((section, idx) => (
